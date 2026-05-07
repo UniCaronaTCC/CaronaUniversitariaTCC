@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart'; // Importa os componentes visuais do Flutter
+import '../config/app_colors.dart';
 
 class LoginTela extends StatelessWidget { // Cria a tela 'LoginTela'
   const LoginTela({super.key});           // Construtor da tela LoginTela
@@ -21,10 +22,10 @@ class LoginTela extends StatelessWidget { // Cria a tela 'LoginTela'
               decoration: InputDecoration(
                 labelText: 'E-mail', // nome do campo
                 enabledBorder: OutlineInputBorder( // cria aquela borda em volta do campo
-                  borderSide: BorderSide(color: Color(0xFF8F16D9)),
+                  borderSide: BorderSide(color: AppColors.primary),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFF8F16D9), width: 2),
+                  borderSide: BorderSide(color: AppColors.primary, width: 2),
                 ),
               ),
             ),
@@ -36,10 +37,10 @@ class LoginTela extends StatelessWidget { // Cria a tela 'LoginTela'
               decoration: InputDecoration(
                 labelText: 'Senha',
                 enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFF8F16D9)),
+                  borderSide: BorderSide(color: AppColors.primary),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: Color(0xFF8F16D9), width: 2),
+                  borderSide: BorderSide(color: AppColors.primary, width: 2),
                 ),
               ),
             ),
