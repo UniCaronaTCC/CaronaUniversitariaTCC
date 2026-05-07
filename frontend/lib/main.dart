@@ -1,11 +1,9 @@
 import 'package:flutter/material.dart';
-import 'auth/cadastro.dart';
+import 'auth/login.dart';
 
 void main() {
-  runApp(
-    MaterialApp(
-      debugShowCheckedModeBanner: false,
-      home: CadastroTela(),
-    ),
-  );
+  runApp(const MaterialApp(
+    debugShowCheckedModeBanner: false,
+    home: LoginTela(),
+  ));
 }
