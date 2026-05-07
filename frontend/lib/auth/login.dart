@@ -25,7 +25,7 @@ class LoginTela extends StatelessWidget { // Cria a tela 'LoginTela'
                   borderSide: BorderSide(color: AppColors.primary),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primary, width: 2),
+                  borderSide: BorderSide(color: AppColors.primary, width: 3), // expessura da borda do campo
                 ),
               ),
             ),
@@ -40,7 +40,7 @@ class LoginTela extends StatelessWidget { // Cria a tela 'LoginTela'
                   borderSide: BorderSide(color: AppColors.primary),
                 ),
                 focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primary, width: 2),
+                  borderSide: BorderSide(color: AppColors.primary, width: 3),
                 ),
               ),
             ),
@@ -52,10 +52,32 @@ class LoginTela extends StatelessWidget { // Cria a tela 'LoginTela'
 
               // cria o botão 'Entrar'
               child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).colorScheme.primaryContainer, // cor de fundo do botão, puxada do tema global
+                  foregroundColor: Theme.of(context).colorScheme.primary, // cor do texto do botão, puxada do tema global
+                ),
                 onPressed: () {
                   print('Entrar clicado'); // isso só aparece no terminal
                 },
                 child: const Text('Entrar'),
+              ),
+            ),
+
+            const SizedBox(height: 16), // cria um espaço entre o botão entrar e o botão cadastre-se
+
+            // cria o botão 'cadastre-se'
+            TextButton(
+              style: TextButton.styleFrom(
+                foregroundColor: Theme.of(context).colorScheme.primary, // cor do texto, puxada do tema global
+              ),
+              onPressed: () {
+                print('Ir para cadastro'); // isso só aparece no terminal também
+              },
+              child: const Text(
+                'Não tem uma conta? Cadastre-se',
+                style: TextStyle(
+                  decoration: TextDecoration.underline,
+                ),
               ),
             ),
           ],
