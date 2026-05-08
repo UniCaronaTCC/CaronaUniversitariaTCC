@@ -46,3 +46,8 @@ app.*.map.json
 **/build/
 **/.dart_tool/
 .idea/
+
+# Node / NestJS
+backend/node_modules/
+backend/dist/
+backend/.env
