@@ -22,16 +22,16 @@ class CadastroTela extends StatelessWidget { //cria a tela de cadastro
                 enabledBorder: OutlineInputBorder( //cria a borda em volta do campo
                   borderSide: BorderSide(color: AppColors.primary), //para definir a cor da borda, aqui esta usando a predefinida do app
                 ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primary, width: 2),
+                focusedBorder: OutlineInputBorder( // para realçar a borada quando o usuario clica
+                  borderSide: BorderSide(color: AppColors.primary, width: 2), //define a cor da borda e colocamos a padrao do app
                 ),
               ),
             ),
 
-            const SizedBox(height: 16),
+            const SizedBox(height: 16), // cria um espaco verticla entre os elemmentos de 16px
 
-            const TextField(
-              decoration: InputDecoration(
+            const TextField( //campo pro usuario digital
+              decoration: InputDecoration( // para escrever algo no campo
                 labelText: 'E-mail',
                 enabledBorder: OutlineInputBorder(
                   borderSide: BorderSide(color: AppColors.primary),
@@ -45,7 +45,7 @@ class CadastroTela extends StatelessWidget { //cria a tela de cadastro
             const SizedBox(height: 16),
 
             const TextField(
-              obscureText: true,
+              obscureText: true, //esconde o texto digitado para usar em senhas
               decoration: InputDecoration(
                 labelText: 'Senha',
                 enabledBorder: OutlineInputBorder(
@@ -60,10 +60,10 @@ class CadastroTela extends StatelessWidget { //cria a tela de cadastro
             const SizedBox(height: 24),
 
             SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                onPressed: () {
-                  print('Cadastro clicado');
+              width: double.infinity, // para o botao ocupar toda a largura disponivel
+              child: ElevatedButton( // cria o botao com efeito de elevado
+                onPressed: () { //funcao executada ao clicar
+                  print('Cadastro clicado'); //mensagem que aparece no terminal apos executar
                 },
                 child: const Text('Cadastrar'),
               ),
