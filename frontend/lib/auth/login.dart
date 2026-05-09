@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart'; // Importa os componentes visuais do Flutter
-import '../config/app_colors.dart';
+import 'cadastro.dart'; // Importa a tela de cadastro para permitir a navegação
 import '../services/auth_service.dart'; // Importa o service responsável por conversar com o backend
+import '../widgets/componentes_padrao.dart'; // Importa os componentes visuais padronizados do app
 
 class LoginTela extends StatefulWidget { // Cria a tela 'LoginTela'
   const LoginTela({super.key});           // Construtor da tela LoginTela
@@ -16,6 +17,20 @@ class _LoginTelaState extends State<LoginTela> { // Classe que controla o estado
   bool carregando = false; // Controla se o botão está em estado de carregamento ou não
 
   Future<void> fazerLogin() async { // Função responsável por tentar fazer login usando o backend
+    if (emailController.text.isEmpty) { // Verifica se o campo de e-mail está vazio
+      ScaffoldMessenger.of(context).showSnackBar( // Mostra uma mensagem temporária na parte de baixo da tela
+        const SnackBar(content: Text('Informe seu e-mail')), // Mostra aviso caso o e-mail não tenha sido preenchido
+      );
+      return; // Para a função aqui para não chamar o backend sem e-mail
+    }
+
+    if (senhaController.text.isEmpty) { // Verifica se o campo de senha está vazio
+      ScaffoldMessenger.of(context).showSnackBar( // Mostra uma mensagem temporária na parte de baixo da tela
+        const SnackBar(content: Text('Informe sua senha')), // Mostra aviso caso a senha não tenha sido preenchida
+      );
+      return; // Para a função aqui para não chamar o backend sem senha
+    }
+
     setState(() { // Atualiza a tela
       carregando = true; // Ativa o carregamento do botão
     });
@@ -61,49 +76,27 @@ class _LoginTelaState extends State<LoginTela> { // Classe que controla o estado
         child: Column( // O Column organiza os elementos um embaixo do outro
           mainAxisAlignment: MainAxisAlignment.center, // centraliza esses elementos na vertical da tela
           children: [ // O children é a lista de coisas que vão aparecer dentro da coluna
-            TextField( // Cria um campo para o usuário digitar
+
+            CampoTextoPadrao( // Cria um campo de texto usando o visual padrão do app
+              label: 'E-mail', // nome do campo
               controller: emailController, // Liga esse campo ao controller que guarda o e-mail digitado
-              decoration: const InputDecoration(
-                labelText: 'E-mail', // nome do campo
-                enabledBorder: OutlineInputBorder( // cria aquela borda em volta do campo
-                  borderSide: BorderSide(color: AppColors.primary),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primary, width: 3), // espessura da borda do campo
-                ),
-              ),
+              keyboardType: TextInputType.emailAddress, // Abre o teclado próprio para digitar e-mail
             ),
 
             const SizedBox(height: 16), // Cria um espaço vertical de 16 pixels
 
-            TextField( // outro campo de texto
+            CampoTextoPadrao( // Cria outro campo de texto usando o visual padrão do app
+              label: 'Senha', // nome do campo
               controller: senhaController, // Liga esse campo ao controller que guarda a senha digitada
               obscureText: true, // esconde o que for digitado
-              decoration: const InputDecoration(
-                labelText: 'Senha',
-                enabledBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primary),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderSide: BorderSide(color: AppColors.primary, width: 3),
-                ),
-              ),
             ),
 
             const SizedBox(height: 24), // cria espaço maior antes do botão
 
-            SizedBox( // controla o tamanho
-              width: double.infinity, // significa que o botão vai ocupar toda largura disponível
-
-              // cria o botão 'Entrar'
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Theme.of(context).colorScheme.primaryContainer, // cor de fundo do botão, puxada do tema global
-                  foregroundColor: Theme.of(context).colorScheme.primary, // cor do texto do botão, puxada do tema global
-                ),
-                onPressed: carregando ? null : fazerLogin, // Se estiver carregando, desativa o botão; se não, chama a função de login
-                child: Text(carregando ? 'Entrando...' : 'Entrar'), // Muda o texto do botão enquanto o login está sendo feito
-              ),
+            // cria o botão 'Entrar'
+            BotaoPadrao( // Cria o botão usando o visual padrão do app
+              texto: carregando ? 'Entrando...' : 'Entrar', // Muda o texto do botão enquanto o login está sendo feito
+              onPressed: carregando ? null : fazerLogin, // Se estiver carregando, desativa o botão; se não, chama a função de login
             ),
 
             const SizedBox(height: 16), // cria um espaço entre o botão entrar e o botão cadastre-se
@@ -114,7 +107,12 @@ class _LoginTelaState extends State<LoginTela> { // Classe que controla o estado
                 foregroundColor: Theme.of(context).colorScheme.primary, // cor do texto, puxada do tema global
               ),
               onPressed: () {
-                print('Ir para cadastro'); // isso só aparece no terminal também
+                Navigator.push( // Abre uma nova tela por cima da tela atual
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const CadastroTela(), // Define que a tela aberta será a tela de cadastro
+                  ),
+                );
               },
               child: const Text(
                 'Não tem uma conta? Cadastre-se',

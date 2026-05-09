@@ -1,18 +1,14 @@
 import 'dart:convert'; // Permite converter os dados para JSON e ler respostas em JSON
-
 import 'package:http/http.dart' as http; // Importa o pacote http para fazer requisições ao backend
+import '../config/api_config.dart'; // Importa a URL base do backend
 
 class AuthService { // Classe responsável pela comunicação de autenticação com o backend
-
-  // URL base do backend
-  // No emulador Android, usamos 10.0.2.2 para acessar o localhost do computador
-  static const String baseUrl = 'http://10.0.2.2:3000';
 
   // Função responsável por enviar e-mail e senha para o backend
   static Future<Map<String, dynamic>> fazerLogin(String email, String senha) async {
 
     // Monta o endereço completo da rota de login do backend
-    final url = Uri.parse('$baseUrl/auth/login');
+    final url = Uri.parse('${ApiConfig.baseUrl}/auth/login');
 
     // Faz uma requisição POST para o backend enviando os dados do login
     final resposta = await http.post(
