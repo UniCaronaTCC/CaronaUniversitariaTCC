@@ -1,0 +1,19 @@
+import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from 'typeorm'; // Importa os decorators do TypeORM para mapear a tabela
+
+@Entity('usuarios') // Define que esta classe representa a tabela usuarios no banco
+export class User { // Classe que representa um usuário do sistema
+  @PrimaryGeneratedColumn({ name: 'id_usuario' }) // Define a chave primária com auto incremento
+  idUsuario: number;
+
+  @Column({ length: 100 }) // Define a coluna nome com limite de 100 caracteres
+  nome: string;
+
+  @Column({ length: 100, unique: true }) // Define a coluna email com limite de 100 caracteres e valor único
+  email: string;
+
+  @Column({ length: 255 }) // Define a coluna senha com limite de 255 caracteres
+  senha: string;
+
+  @CreateDateColumn({ name: 'criado_em' }) // Define a coluna criado_em como data automática de criação
+  criadoEm: Date;
+}
