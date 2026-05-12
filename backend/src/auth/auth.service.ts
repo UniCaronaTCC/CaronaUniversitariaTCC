@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 // Importa recursos do NestJS
 
 import { UsersService } from '../users/users.service';
@@ -61,10 +61,9 @@ export class AuthService {
     // se existir retorna erro
     if (usuarioExistente) {
 
-      throw new UnauthorizedException(
-        'E-mail já cadastrado',
-      );
-    }
+    throw new ConflictException(
+      'E-mail já cadastrado',
+  );
 
     // cria usuario no banco
     const novoUsuario =
