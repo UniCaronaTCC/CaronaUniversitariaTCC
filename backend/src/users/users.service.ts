@@ -16,4 +16,21 @@ export class UsersService {
       where: { email }, // Procura na coluna email
     });
   }
+
+  async criarUsuario(
+    nome: string,
+    email: string,
+    senha: string,
+  ): Promise<User> { // cria um novo usuario no banco
+
+    const novoUsuario = this.usersRepository.create({
+      nome,
+      email,
+      senha,
+    });
+    // monta o objeto do novo usuario
+
+    return this.usersRepository.save(novoUsuario);
+    // salva no banco e retorna o usuario criado
+  }
 }
