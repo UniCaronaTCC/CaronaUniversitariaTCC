@@ -97,7 +97,7 @@ class _CadastroTelaState extends State<CadastroTela> {
           resultado['sucesso'] == true
 
           // mensagem de sucesso
-              ? resultado['dados']['mensagem']
+              ? resultado['dados']['message']
               ?? 'Cadastro realizado com sucesso'
 
           // mensagem de erro
@@ -105,9 +105,6 @@ class _CadastroTelaState extends State<CadastroTela> {
         ),
       ),
     );
-    if (resultado['sucesso'] == true) { // Se o cadastro deu certo
-      Navigator.pop(context); // Volta para a tela anterior, que é o login
-    }
   }
 
   @override
