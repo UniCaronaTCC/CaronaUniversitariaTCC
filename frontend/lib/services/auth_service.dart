@@ -14,11 +14,11 @@ class AuthService { // Classe responsável pela comunicação de autenticação 
     final resposta = await http.post(
       url,
       headers: {
-        'Content-Type': 'application/json', // Informa que os dados enviados estão em formato JSON
+        'Content-Type': 'application/json',
       },
       body: jsonEncode({
-        'email': email, // Envia o e-mail digitado pelo usuário
-        'senha': senha, // Envia a senha digitada pelo usuário
+        'email': email,
+        'senha': senha,
       }),
     );
 
@@ -28,15 +28,56 @@ class AuthService { // Classe responsável pela comunicação de autenticação 
     // Verifica se o backend respondeu com sucesso
     if (resposta.statusCode == 200 || resposta.statusCode == 201) {
       return {
-        'sucesso': true, // Indica que o login deu certo
-        'dados': dados, // Guarda os dados retornados pelo backend
+        'sucesso': true,
+        'dados': dados,
       };
     }
 
-    // Caso o backend retorne erro, envia a mensagem de erro para a tela
+    // Caso o backend retorne erro
     return {
-      'sucesso': false, // Indica que o login falhou
-      'mensagem': dados['message'] ?? 'Erro ao fazer login', // Mensagem que será exibida ao usuário
+      'sucesso': false,
+      'mensagem': dados['message'] ?? 'Erro ao fazer login',
+    };
+  }
+
+  // Função responsável por enviar nome, e-mail e senha para o backend
+  static Future<Map<String, dynamic>> fazerCadastro(
+      String nome,
+      String email,
+      String senha,
+      ) async {
+
+    // Monta o endereço completo da rota de cadastro do backend
+    final url = Uri.parse('${ApiConfig.baseUrl}/auth/cadastro');
+
+    // Faz uma requisição POST para o backend enviando os dados do cadastro
+    final resposta = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'nome': nome,
+        'email': email,
+        'senha': senha,
+      }),
+    );
+
+    // Converte a resposta do backend de JSON para Map
+    final dados = jsonDecode(resposta.body);
+
+    // Verifica se o backend respondeu com sucesso
+    if (resposta.statusCode == 200 || resposta.statusCode == 201) {
+      return {
+        'sucesso': true,
+        'dados': dados,
+      };
+    }
+
+    // Caso o backend retorne erro
+    return {
+      'sucesso': false,
+      'mensagem': dados['message'] ?? 'Erro ao cadastrar',
     };
   }
 }

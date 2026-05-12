@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/componentes_padrao.dart';
+import '../services/auth_service.dart';
+// importa o service responsavel por conversar com o backend
 
 class CadastroTela extends StatefulWidget { // cria a tela de cadastro
   const CadastroTela({super.key}); // construtor padrao da tela
@@ -22,7 +24,7 @@ class _CadastroTelaState extends State<CadastroTela> {
   bool carregando = false;
 
   // funcao que vai rodar quando clicar no botao cadastrar
-  void fazerCadastro() {
+  Future<void> fazerCadastro() async {
 
     // verifica se o campo nome esta vazio
     if (nomeController.text.isEmpty) {
@@ -61,12 +63,48 @@ class _CadastroTelaState extends State<CadastroTela> {
       return;
     }
 
-    // printa os dados no terminal so pra teste
-    print(nomeController.text);
+    // ativa o loading da tela
+    setState(() {
+      carregando = true;
+    });
 
-    print(emailController.text);
+    // chama o backend enviando os dados do cadastro
+    final resultado = await AuthService.fazerCadastro(
 
-    print(senhaController.text);
+      // pega o nome digitado
+      nomeController.text,
+
+      // pega o email digitado
+      emailController.text,
+
+      // pega a senha digitada
+      senhaController.text,
+    );
+
+    // desativa o loading
+    setState(() {
+      carregando = false;
+    });
+
+    // mostra a resposta do backend na tela
+    ScaffoldMessenger.of(context).showSnackBar(
+
+      SnackBar(
+
+        content: Text(
+
+          // verifica se deu sucesso ou erro
+          resultado['sucesso'] == true
+
+          // mensagem de sucesso
+              ? resultado['dados']['message']
+              ?? 'Cadastro realizado com sucesso'
+
+          // mensagem de erro
+              : resultado['mensagem'],
+        ),
+      ),
+    );
   }
 
   @override
