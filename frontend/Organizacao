@@ -1,0 +1,307 @@
+ORGANIZAÇÃO GERAL DO FRONTEND
+
+Este arquivo serve como um guia rápido para entender a organização do frontend do projeto.
+A ideia é facilitar a localização dos arquivos quando for necessário alterar telas, componentes, cores, tema ou comunicação com o backend.
+
+
+==================================================
+1. PASTAS PRINCIPAIS
+==================================================
+
+frontend/
+Pasta principal do aplicativo Flutter.
+Aqui ficam os arquivos do app mobile, dependências, configurações e código das telas.
+
+frontend/lib/
+Pasta principal do código-fonte Flutter.
+É aqui que ficam as telas, configurações, services e componentes reutilizáveis do app.
+
+frontend/lib/auth/
+Pasta responsável pelas telas ligadas à autenticação.
+Aqui ficam as telas de login e cadastro.
+
+frontend/lib/config/
+Pasta responsável pelas configurações gerais do app.
+Aqui ficam arquivos como cores, tema visual e endereço base do backend.
+
+frontend/lib/services/
+Pasta responsável pela comunicação do app com o backend.
+Aqui ficam arquivos que fazem requisições HTTP para a API.
+
+frontend/lib/widgets/
+Pasta responsável por componentes visuais reutilizáveis.
+Aqui ficam campos, botões e outros widgets padronizados para evitar repetição de código.
+
+frontend/assets/
+Pasta usada para imagens, ícones, fontes ou outros arquivos visuais do app.
+Sempre que adicionar assets, conferir se eles também foram declarados no pubspec.yaml.
+
+frontend/android/
+Pasta com arquivos específicos da versão Android do app.
+Normalmente não deve ser alterada manualmente, exceto quando for necessário configurar permissões ou ajustes nativos.
+
+frontend/ios/
+Pasta com arquivos específicos da versão iOS do app.
+Como o foco inicial é Android, provavelmente será usada mais futuramente.
+
+frontend/build/
+Pasta gerada automaticamente pelo Flutter durante builds e execuções.
+Não deve ser alterada manualmente e não deve ir para o GitHub.
+
+frontend/.dart_tool/
+Pasta gerada automaticamente pelo Flutter/Dart.
+Não deve ser alterada manualmente e não deve ir para o GitHub.
+
+
+==================================================
+2. ARQUIVOS PRINCIPAIS DO FRONTEND
+==================================================
+
+frontend/lib/main.dart
+Arquivo inicial do app Flutter.
+É o ponto de entrada da aplicação.
+Define qual tela abre primeiro e aplica o tema visual do app.
+
+frontend/pubspec.yaml
+Arquivo principal de configuração do Flutter.
+Nele ficam:
+- nome do app
+- versão
+- dependências
+- assets
+- fontes
+- configurações gerais do projeto
+
+Sempre que instalar um pacote novo, o pubspec.yaml é alterado.
+
+frontend/pubspec.lock
+Arquivo gerado automaticamente pelo Flutter.
+Guarda as versões exatas das dependências instaladas.
+Ajuda a manter o projeto igual entre computadores diferentes.
+
+frontend/analysis_options.yaml
+Arquivo de configuração de análise do Dart.
+Ajuda a definir regras de boas práticas e avisos no código.
+
+frontend/.gitignore
+Arquivo que define o que o Git deve ignorar dentro do projeto Flutter.
+Geralmente ignora arquivos gerados automaticamente, como build e .dart_tool.
+
+
+==================================================
+3. ARQUIVOS DA PASTA auth/
+==================================================
+
+frontend/lib/auth/login.dart
+Tela de login do aplicativo.
+É responsável por mostrar os campos de e-mail e senha, validar campos vazios e chamar o service de autenticação.
+
+Atualmente o fluxo do login é:
+1. Usuário digita e-mail e senha.
+2. A tela valida se os campos foram preenchidos.
+3. A tela chama o AuthService.
+4. O AuthService envia os dados para o backend.
+5. A tela mostra mensagem de sucesso ou erro.
+
+Essa tela também possui navegação para a tela de cadastro.
+
+frontend/lib/auth/cadastro.dart
+Tela de cadastro do aplicativo.
+É responsável por mostrar os campos iniciais de cadastro, como nome, e-mail e senha.
+Futuramente deve chamar o backend para salvar o usuário no banco.
+
+O ideal é que essa tela também use os componentes padronizados da pasta widgets.
+
+
+==================================================
+4. ARQUIVOS DA PASTA config/
+==================================================
+
+frontend/lib/config/app_colors.dart
+Arquivo responsável por centralizar as cores do app.
+Sempre que for necessário alterar a cor principal ou outras cores fixas, o ideal é mudar aqui.
+
+Exemplo:
+- cor principal do app
+- cores secundárias
+- cores usadas em botões, bordas e textos
+
+frontend/lib/config/app_theme.dart
+Arquivo responsável por centralizar o tema visual do app.
+Define configurações globais, como:
+- tema claro ou escuro
+- cores globais
+- estilo de AppBar
+- estilo geral da aplicação
+
+O ideal é evitar definir cores repetidas em várias telas quando elas podem ser puxadas do tema.
+
+frontend/lib/config/api_config.dart
+Arquivo responsável por guardar a URL base do backend.
+
+Exemplo atual:
+http://10.0.2.2:3000
+
+Essa URL é usada no emulador Android para acessar o localhost do computador.
+Se futuramente o backend for para nuvem, provavelmente será necessário alterar esse arquivo.
+
+Importante:
+As telas não devem escrever a URL do backend diretamente.
+O ideal é sempre puxar de ApiConfig.baseUrl.
+
+
+==================================================
+5. ARQUIVOS DA PASTA services/
+==================================================
+
+frontend/lib/services/auth_service.dart
+Service responsável pela comunicação de autenticação com o backend.
+
+Atualmente ele faz:
+- envio de e-mail e senha para a rota de login
+- leitura da resposta do backend
+- retorno de sucesso ou erro para a tela
+
+O AuthService não deve cuidar do visual da tela.
+Ele serve apenas para comunicação com a API.
+
+Futuramente pode conter:
+- login
+- cadastro
+- logout
+- recuperação de senha
+- armazenamento de token
+
+Se outras áreas do app forem criadas, o ideal é criar novos services separados.
+
+Exemplos futuros:
+carona_service.dart
+usuario_service.dart
+veiculo_service.dart
+avaliacao_service.dart
+
+
+==================================================
+6. ARQUIVOS DA PASTA widgets/
+==================================================
+
+frontend/lib/widgets/componentes_padrao.dart
+Arquivo responsável por guardar componentes visuais reutilizáveis do app.
+
+Atualmente pode conter:
+- CampoTextoPadrao
+- BotaoPadrao
+
+A ideia é evitar que cada tela recrie campos e botões do zero.
+Assim, login e cadastro podem usar o mesmo padrão visual.
+
+Exemplo:
+Se a cor, borda ou estilo dos campos mudar, alteramos nesse arquivo e todas as telas que usam o componente são atualizadas.
+
+CampoTextoPadrao
+Componente reutilizável para campos de texto.
+Pode receber:
+- label
+- controller
+- obscureText
+- keyboardType
+
+BotaoPadrao
+Componente reutilizável para botões principais.
+Pode receber:
+- texto
+- função ao clicar
+
+
+==================================================
+7. FLUXO GERAL DO LOGIN NO FRONTEND
+==================================================
+
+O fluxo do login no frontend funciona assim:
+
+1. O usuário abre a tela login.dart.
+2. O usuário digita e-mail e senha.
+3. A tela verifica se os campos estão vazios.
+4. Se estiverem preenchidos, chama AuthService.fazerLogin.
+5. O AuthService usa ApiConfig.baseUrl para montar a URL do backend.
+6. O AuthService envia uma requisição POST para /auth/login.
+7. O backend responde sucesso ou erro.
+8. O login.dart mostra uma mensagem na tela usando SnackBar.
+
+
+==================================================
+8. FLUXO VISUAL ENTRE TELAS
+==================================================
+
+O fluxo inicial do app é:
+
+Login -> Cadastro
+
+A tela de Login possui um botão/texto "Não tem uma conta? Cadastre-se".
+Ao clicar, ela usa Navigator.push para abrir a CadastroTela.
+
+Exemplo do fluxo:
+LoginTela
+-> CadastroTela
+
+Futuramente, após o cadastro ser concluído, a tela de cadastro pode voltar para o login ou entrar direto no app, dependendo da regra definida pelo grupo.
+
+
+==================================================
+9. REGRA DE ORGANIZAÇÃO DO FRONTEND
+==================================================
+
+Para manter o frontend organizado:
+
+Tela:
+Cuida da interface e interação com o usuário.
+Exemplo: login.dart e cadastro.dart.
+
+Service:
+Cuida da comunicação com o backend.
+Exemplo: auth_service.dart.
+
+Config:
+Guarda configurações reutilizáveis.
+Exemplo: cores, tema e URL da API.
+
+Widget:
+Guarda componentes visuais reutilizáveis.
+Exemplo: botão padrão e campo de texto padrão.
+
+Assets:
+Guarda imagens, ícones, fontes e arquivos visuais.
+
+A tela não deve concentrar tudo.
+O ideal é separar:
+- visual da tela
+- comunicação com backend
+- componentes reutilizáveis
+- configurações globais
+
+
+==================================================
+10. OBSERVAÇÕES IMPORTANTES
+==================================================
+
+Não colocar URL do backend diretamente nas telas.
+Usar sempre ApiConfig.baseUrl.
+
+Não repetir o mesmo visual de campo e botão em várias telas.
+Usar os componentes de componentes_padrao.dart.
+
+Sempre que adicionar imagem ou fonte, conferir o pubspec.yaml.
+
+Sempre que instalar uma dependência nova, enviar pubspec.yaml e pubspec.lock para o GitHub.
+
+Não alterar manualmente pastas geradas automaticamente, como build e .dart_tool.
+
+Antes de começar a trabalhar, usar:
+git pull --rebase origin master
+
+Depois de terminar uma alteração importante, usar:
+git status
+git add .
+git commit -m "mensagem do commit"
+git pull --rebase origin master
+git push

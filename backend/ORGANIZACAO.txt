@@ -1,0 +1,265 @@
+ORGANIZAÇÃO GERAL DO BACKEND
+
+
+==================================================
+1. PASTAS PRINCIPAIS
+==================================================
+
+backend/src/
+Pasta principal do código-fonte do backend. É aqui que ficam os módulos, controllers, services e arquivos principais da aplicação NestJS.
+
+backend/src/auth/
+Pasta responsável pela autenticação do sistema.
+Aqui ficam os arquivos relacionados ao login e, futuramente, validações de autenticação, token, sessão ou segurança de acesso.
+
+backend/src/users/
+Pasta responsável pelos usuários do sistema.
+Aqui ficam os arquivos relacionados à tabela usuarios, busca de usuários, criação de usuários e regras ligadas aos dados dos usuários.
+
+backend/database/
+Pasta responsável pelos scripts do banco de dados.
+Aqui ficam arquivos SQL usados para criar ou atualizar a estrutura do banco, como tabelas, campos e relacionamentos.
+
+backend/test/
+Pasta de testes automáticos criada pelo NestJS.
+No momento não é o foco principal do projeto, mas pode ser usada futuramente para testes mais avançados.
+
+backend/node_modules/
+Pasta criada automaticamente quando rodamos npm install.
+Ela guarda as dependências do projeto. Não deve ser alterada manualmente e não deve ser enviada para o GitHub.
+
+backend/dist/
+Pasta gerada automaticamente quando o backend é compilado.
+Ela guarda a versão compilada do projeto. Não deve ser alterada manualmente e não deve ser enviada para o GitHub.
+
+
+==================================================
+2. ARQUIVOS DA RAIZ DO BACKEND
+==================================================
+
+backend/package.json
+Arquivo que guarda as informações principais do backend.
+Nele ficam o nome do projeto, scripts de execução e as dependências instaladas.
+
+Exemplos de scripts importantes:
+npm run start:dev  -> inicia o backend em modo desenvolvimento
+npm run build      -> compila o backend
+npm run start      -> inicia o backend
+
+backend/package-lock.json
+Arquivo gerado automaticamente pelo npm.
+Ele registra as versões exatas das dependências instaladas para manter o projeto consistente entre computadores diferentes.
+
+backend/.env
+Arquivo de configuração local do backend.
+Guarda informações como host, porta, usuário, senha e nome do banco de dados.
+Esse arquivo não deve ir para o GitHub, pois pode conter senhas e dados sensíveis.
+
+backend/.env.example
+Arquivo de exemplo para configuração do ambiente.
+Ele mostra quais variáveis precisam existir no .env.
+Esse arquivo deve ir para o GitHub para que outros integrantes saibam como configurar o projeto.
+
+backend/.gitignore
+Arquivo que define o que deve ser ignorado pelo Git dentro do backend.
+Pode ignorar pastas como node_modules, dist e arquivos locais.
+
+backend/nest-cli.json
+Arquivo de configuração do NestJS CLI.
+Ele ajuda o Nest a entender como gerar arquivos e compilar o projeto.
+
+backend/tsconfig.json
+Arquivo de configuração do TypeScript.
+Define como o TypeScript deve interpretar e compilar o código do backend.
+
+backend/tsconfig.build.json
+Arquivo de configuração usado especificamente durante o build do projeto.
+
+backend/eslint.config.mjs
+Arquivo de configuração do ESLint.
+Ajuda a identificar problemas de estilo, padrão e possíveis erros no código.
+
+backend/.prettierrc
+Arquivo de configuração do Prettier.
+Ajuda a manter a formatação do código padronizada.
+
+backend/README.md
+Arquivo de documentação inicial criado pelo NestJS.
+Pode ser adaptado futuramente com instruções específicas do backend do projeto.
+
+
+==================================================
+3. ARQUIVOS PRINCIPAIS EM src/
+==================================================
+
+backend/src/main.ts
+Arquivo de entrada do backend.
+É o primeiro arquivo executado quando a aplicação NestJS inicia.
+Ele cria a aplicação e define em qual porta o backend vai rodar.
+
+backend/src/app.module.ts
+Módulo principal da aplicação.
+Ele organiza e conecta os módulos principais do backend, como AuthModule, UsersModule, ConfigModule e TypeOrmModule.
+Também é onde fica a configuração principal da conexão com o banco de dados.
+
+backend/src/app.controller.ts
+Controller principal criado automaticamente pelo NestJS.
+Normalmente é usado apenas para testes iniciais, como retornar "Hello World".
+Pode ser removido ou deixado como rota básica de teste.
+
+backend/src/app.service.ts
+Service principal criado automaticamente pelo NestJS.
+Geralmente trabalha junto com o app.controller.ts.
+No começo, costuma conter apenas uma função simples de teste.
+
+backend/src/app.controller.spec.ts
+Arquivo de teste automático do AppController.
+Não é prioridade no momento, mas pode ser usado futuramente caso o projeto adote testes automatizados.
+
+
+==================================================
+4. ARQUIVOS DA PASTA auth/
+==================================================
+
+backend/src/auth/auth.module.ts
+Módulo de autenticação.
+Ele organiza os arquivos relacionados ao login e permite que o AuthService e AuthController funcionem dentro do NestJS.
+Também importa o UsersModule para que o login consiga consultar usuários no banco.
+
+backend/src/auth/auth.controller.ts
+Controller de autenticação.
+É responsável por receber requisições relacionadas ao login.
+
+Exemplo:
+POST /auth/login
+
+Ele recebe os dados enviados pelo front-end e chama o AuthService para validar o login.
+
+backend/src/auth/auth.service.ts
+Service de autenticação.
+É onde fica a lógica do login.
+Ele verifica se o usuário existe e se a senha está correta.
+No futuro, também pode gerar token JWT, validar senha criptografada e controlar regras de segurança.
+
+backend/src/auth/auth.controller.spec.ts
+Arquivo de teste automático do AuthController.
+Criado automaticamente pelo NestJS. Não é prioridade agora.
+
+backend/src/auth/auth.service.spec.ts
+Arquivo de teste automático do AuthService.
+Criado automaticamente pelo NestJS. Não é prioridade agora.
+
+
+==================================================
+5. ARQUIVOS DA PASTA users/
+==================================================
+
+backend/src/users/users.module.ts
+Módulo de usuários.
+Organiza os arquivos relacionados aos usuários.
+Registra a entidade User no TypeORM e permite que outros módulos usem o UsersService.
+
+backend/src/users/users.service.ts
+Service de usuários.
+Responsável por acessar a tabela usuarios no banco.
+Pode ter funções como buscar usuário por e-mail, cadastrar usuário, listar usuários ou atualizar dados.
+
+backend/src/users/user.entity.ts
+Entity do usuário.
+Representa a tabela usuarios dentro do backend.
+Cada propriedade da classe representa uma coluna da tabela.
+
+Exemplo:
+idUsuario -> id_usuario
+nome      -> nome
+email     -> email
+senha     -> senha
+criadoEm  -> criado_em
+
+A entity é usada pelo TypeORM para conectar o código TypeScript com a tabela do banco de dados.
+
+
+==================================================
+6. ARQUIVOS DA PASTA database/
+==================================================
+
+backend/database/schema.sql
+Arquivo SQL com a estrutura inicial do banco de dados.
+Serve para criar o banco e as tabelas necessárias para o projeto.
+
+No momento, ele cria:
+- banco carona_universitaria
+- tabela usuarios
+
+Esse arquivo deve ser mantido atualizado sempre que a estrutura do banco mudar.
+
+
+==================================================
+7. FLUXO GERAL DO LOGIN
+==================================================
+
+O fluxo do login funciona assim:
+
+1. O usuário digita e-mail e senha no app Flutter.
+2. O login.dart chama o auth_service.dart no front-end.
+3. O auth_service.dart envia uma requisição POST para /auth/login.
+4. O auth.controller.ts recebe a requisição.
+5. O auth.controller.ts chama o auth.service.ts.
+6. O auth.service.ts usa o users.service.ts para buscar o usuário no banco.
+7. O users.service.ts consulta a tabela usuarios.
+8. O backend retorna sucesso ou erro para o app.
+
+
+==================================================
+8. REGRA DE ORGANIZAÇÃO DO PROJETO
+==================================================
+
+Para manter o backend organizado:
+
+Controller:
+Recebe requisições e chama o service.
+Não deve ter regra de negócio pesada.
+
+Service:
+Guarda a lógica principal da funcionalidade.
+Exemplo: validar login, buscar usuário, cadastrar usuário.
+
+Module:
+Organiza os controllers, services e entidades de cada parte do sistema.
+
+Entity:
+Representa uma tabela do banco de dados.
+
+.env:
+Guarda configurações locais e sensíveis.
+
+.env.example:
+Mostra quais configurações são necessárias, sem expor dados sensíveis.
+
+schema.sql:
+Documenta e cria a estrutura do banco.
+
+
+==================================================
+9. OBSERVAÇÕES IMPORTANTES
+==================================================
+
+Não enviar o arquivo .env para o GitHub.
+
+Não enviar node_modules para o GitHub.
+
+Não alterar manualmente a pasta dist.
+
+Sempre que alterar a estrutura do banco, atualizar o schema.sql.
+
+Sempre que instalar uma dependência nova, o package.json e package-lock.json devem ser enviados para o GitHub.
+
+Antes de começar a trabalhar, usar:
+git pull --rebase origin master
+
+Depois de terminar uma alteração importante, usar:
+git status
+git add .
+git commit -m "mensagem do commit"
+git pull --rebase origin master
+git push
