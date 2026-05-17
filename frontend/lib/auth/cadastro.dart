@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/componentes_padrao.dart';
 import '../services/auth_service.dart';
+import 'login.dart';
 // importa o service responsavel por conversar com o backend
 
 class CadastroTela extends StatefulWidget { // cria a tela de cadastro
@@ -184,16 +185,33 @@ class _CadastroTelaState extends State<CadastroTela> {
 
             // botao de cadastrar
             BotaoPadrao(
-
-              // se tiver carregando muda o texto do botao
               texto: carregando
                   ? 'Cadastrando...'
                   : 'Cadastrar',
 
-              // se tiver carregando desativa o botao
               onPressed: carregando
                   ? null
                   : fazerCadastro,
+            ),
+
+            //para voltar pro login se ja tiver cadastro
+            const SizedBox(height: 16),
+
+            TextButton(
+              onPressed: () {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const LoginTela(),
+                  ),
+                );
+              },
+              child: const Text(
+                'Já tem uma conta? Entrar',
+                style: TextStyle(
+                  decoration: TextDecoration.underline,
+                ),
+              ),
             ),
           ],
         ),
