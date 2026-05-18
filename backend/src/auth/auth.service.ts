@@ -20,7 +20,6 @@ export class AuthService {
 
     // verifica se usuario existe
     if (!usuario) {
-
       throw new UnauthorizedException(
         'E-mail ou senha inválidos',
       );
@@ -28,7 +27,6 @@ export class AuthService {
 
     // verifica se senha esta correta
     if (usuario.senha !== senha) {
-
       throw new UnauthorizedException(
         'E-mail ou senha inválidos',
       );
@@ -36,7 +34,6 @@ export class AuthService {
 
     // retorna sucesso
     return {
-
       mensagem: 'Login realizado com sucesso',
 
       usuario: {
@@ -56,26 +53,25 @@ export class AuthService {
 
     // verifica se ja existe usuario com esse email
     const usuarioExistente =
-    await this.usersService.buscarPorEmail(email);
+      await this.usersService.buscarPorEmail(email);
 
     // se existir retorna erro
     if (usuarioExistente) {
-
-    throw new ConflictException(
-      'E-mail já cadastrado',
-  );
+      throw new ConflictException(
+        'E-mail já cadastrado',
+      );
+    }
 
     // cria usuario no banco
     const novoUsuario =
-    await this.usersService.criarUsuario(
-      nome,
-      email,
-      senha,
-    );
+      await this.usersService.criarUsuario(
+        nome,
+        email,
+        senha,
+      );
 
     // retorna sucesso
     return {
-
       mensagem: 'Cadastro realizado com sucesso',
 
       usuario: {
