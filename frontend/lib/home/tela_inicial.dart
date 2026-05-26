@@ -6,7 +6,12 @@ import '../widgets/card_destino_home.dart'; // Importa o card de destino da tela
 import '../widgets/barra_navegacao_home.dart'; // Importa a barra inferior da tela inicial
 
 class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
-  const TelaInicial({super.key}); // Construtor da tela inicial
+  final String nomeUsuario; // Guarda o nome do usuário logado
+
+  const TelaInicial({
+    super.key,
+    required this.nomeUsuario, // Obriga receber o nome do usuário ao abrir a tela
+  });
 
   @override
   Widget build(BuildContext context) { // Tudo que aparece visualmente na tela fica aqui
@@ -21,10 +26,10 @@ class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
             child: Column( // Organiza os elementos um embaixo do outro
               crossAxisAlignment: CrossAxisAlignment.start, // Alinha os itens à esquerda
               children: [
-                RichText( // Permite colocar estilos diferentes no mesmo texto
-                  text: const TextSpan(
+                Text.rich( // Permite colocar estilos diferentes no mesmo texto
+                  TextSpan(
                     children: [
-                      TextSpan(
+                      const TextSpan(
                         text: 'Olá, ', // Primeira parte do título
                         style: TextStyle(
                           color: AppColors.text,
@@ -33,8 +38,8 @@ class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
                         ),
                       ),
                       TextSpan(
-                        text: 'usuário', // Nome do usuário em destaque
-                        style: TextStyle(
+                        text: nomeUsuario.isNotEmpty ? nomeUsuario : 'usuário', // Mostra o nome real ou um texto padrão
+                        style: const TextStyle(
                           color: AppColors.primary,
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
@@ -42,6 +47,8 @@ class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
                       ),
                     ],
                   ),
+                  maxLines: 2, // Permite no máximo duas linhas
+                  overflow: TextOverflow.ellipsis, // Se o nome for muito grande, corta com "..."
                 ),
 
                 const SizedBox(height: 8), // Espaço entre o título e o subtítulo
