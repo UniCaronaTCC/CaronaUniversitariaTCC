@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart'; // Importa os componentes visuais do Flutter
 import 'cadastro.dart'; // Importa a tela de cadastro para permitir a navegação
 import '../services/auth_service.dart'; // Importa o service responsável por conversar com o backend
-import '../widgets/componentes_padrao.dart'; // Importa os componentes visuais padronizados do app
 import '../home/tela_inicial.dart'; // Importa a tela inicial para abrir depois do login
 import '../config/app_colors.dart'; // Importa as cores principais do app
 import '../widgets/auth_widgets.dart'; // Importa os componentes visuais de login/cadastro
 
 class LoginTela extends StatefulWidget { // Cria a tela 'LoginTela'
-  const LoginTela({super.key});           // Construtor da tela LoginTela
+  const LoginTela({super.key}); // Construtor da tela LoginTela
 
   @override
   State<LoginTela> createState() => _LoginTelaState(); // Cria o estado da tela, permitindo guardar dados digitados e atualizar a interface
@@ -57,7 +56,7 @@ class _LoginTelaState extends State<LoginTela> { // Classe que controla o estado
         MaterialPageRoute(
           builder: (context) => TelaInicial(
             nomeUsuario: resultado['dados']['usuario']['nome'].toString(), // Envia o nome real do usuário para a tela inicial
-          ), // Abre a tela principal do app
+          ),
         ),
       );
     } else { // Caso o login tenha falhado
@@ -75,102 +74,85 @@ class _LoginTelaState extends State<LoginTela> { // Classe que controla o estado
   }
 
   @override
-// Tudo que aparece visualmente no app fica aqui
+  // Tudo que aparece visualmente no app fica aqui
   Widget build(BuildContext context) {
     return Scaffold( // Estrutura base da tela
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.background, // Define a cor de fundo usando a cor padrão do app
 
       body: SafeArea( // Evita que fique embaixo da barra do celular
-        child: Align(
-          alignment: Alignment.center,
+        child: Align( // Controla o alinhamento do conteúdo
+          alignment: Alignment.center, // Centraliza o card na tela
           child: SingleChildScrollView( // Permite rolar se a tela for pequena
             padding: const EdgeInsets.all(24), // Espaçamento externo
-            child: Container( // Card principal do login
-              width: double.infinity, // Ocupa toda a largura disponível
-              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 36), // Espaçamento interno
-              decoration: BoxDecoration(
-                color: AppColors.primary, // Fundo roxo do card
-                borderRadius: BorderRadius.circular(28), // Bordas arredondadas
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withAlpha(35), // Cor da sombra
-                    blurRadius: 18, // Suaviza a sombra
-                    offset: const Offset(0, 8), // Move a sombra para baixo
+            child: AuthCard( // Card visual reutilizável para login/cadastro
+              children: [
+                const Text(
+                  'ENTRAR',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
                   ),
-                ],
-              ),
+                ),
 
-              child: Column( // Organiza os elementos em coluna
-                mainAxisSize: MainAxisSize.min, // Usa só o espaço necessário
-                children: [
-                  const Text(
-                    'LOGIN',
+                const SizedBox(height: 6), // Espaço entre o título e o subtítulo
+
+                const Text(
+                  'Bem-vindo ao app',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                    letterSpacing: 1,
+                  ),
+                ),
+
+                const SizedBox(height: 36), // Espaço antes dos campos
+
+                AuthCampoTexto( // Campo de e-mail estilizado
+                  hint: 'E-mail',
+                  icone: Icons.email,
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+
+                const SizedBox(height: 16), // Espaço entre os campos
+
+                AuthCampoTexto( // Campo de senha estilizado
+                  hint: 'Senha',
+                  icone: Icons.lock,
+                  controller: senhaController,
+                  obscureText: true,
+                ),
+
+                const SizedBox(height: 24), // Espaço antes do botão
+
+                AuthBotaoPrincipal( // Botão principal de login
+                  texto: carregando ? 'ENTRANDO...' : 'ENTRAR',
+                  onPressed: carregando ? null : fazerLogin,
+                ),
+
+                const SizedBox(height: 18), // Espaço antes do botão de cadastro
+
+                TextButton(
+                  onPressed: () {
+                    Navigator.push( // Abre a tela de cadastro
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CadastroTela(),
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'Não tem uma conta? Cadastre-se',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1.5,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Colors.white,
                     ),
                   ),
-
-                  const SizedBox(height: 6),
-
-                  const Text(
-                    'Entre na sua conta',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 16,
-                      letterSpacing: 1,
-                    ),
-                  ),
-
-                  const SizedBox(height: 36),
-
-                  AuthCampoTexto( // Campo de e-mail estilizado
-                    hint: 'E-mail',
-                    icone: Icons.email,
-                    controller: emailController,
-                    keyboardType: TextInputType.emailAddress,
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  AuthCampoTexto( // Campo de senha estilizado
-                    hint: 'Senha',
-                    icone: Icons.lock,
-                    controller: senhaController,
-                    obscureText: true,
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  AuthBotaoPrincipal( // Botão principal de login
-                    texto: carregando ? 'ENTRANDO...' : 'ENTRAR',
-                    onPressed: carregando ? null : fazerLogin,
-                  ),
-
-                  const SizedBox(height: 18),
-
-                  TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const CadastroTela(),
-                        ),
-                      );
-                    },
-                    child: const Text(
-                      'Não tem uma conta? Cadastre-se',
-                      style: TextStyle(
-                        color: Colors.white,
-                        decoration: TextDecoration.underline,
-                        decorationColor: Colors.white,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         ),
