@@ -2,6 +2,7 @@ import 'package:flutter/material.dart'; // Importa os componentes visuais do Flu
 import 'cadastro.dart'; // Importa a tela de cadastro para permitir a navegação
 import '../services/auth_service.dart'; // Importa o service responsável por conversar com o backend
 import '../widgets/componentes_padrao.dart'; // Importa os componentes visuais padronizados do app
+import '../home/tela_inicial.dart'; // Importa a tela inicial para abrir depois do login
 
 class LoginTela extends StatefulWidget { // Cria a tela 'LoginTela'
   const LoginTela({super.key});           // Construtor da tela LoginTela
@@ -44,9 +45,16 @@ class _LoginTelaState extends State<LoginTela> { // Classe que controla o estado
       carregando = false; // Desativa o carregamento do botão
     });
 
-    if (resultado['sucesso'] == true) { // Verifica se o backend respondeu que o login deu certo
-      ScaffoldMessenger.of(context).showSnackBar( // Mostra uma mensagem temporária na parte de baixo da tela
-        SnackBar(content: Text(resultado['dados']['mensagem'])), // Mostra a mensagem de sucesso enviada pelo backend
+    if (resultado['sucesso'] == true) { // Verifica se o login deu certo
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(resultado['dados']['mensagem'])), // Mostra mensagem de sucesso
+      );
+
+      Navigator.pushReplacement( // Troca a tela de login pela tela inicial
+        context,
+        MaterialPageRoute(
+          builder: (context) => const TelaInicial(), // Abre a tela principal do app
+        ),
       );
     } else { // Caso o login tenha falhado
       ScaffoldMessenger.of(context).showSnackBar( // Mostra uma mensagem temporária na parte de baixo da tela
