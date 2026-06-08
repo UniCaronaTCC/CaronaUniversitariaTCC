@@ -56,22 +56,23 @@ export class AuthService {
 
     // verifica se ja existe usuario com esse email
     const usuarioExistente =
-    await this.usersService.buscarPorEmail(email);
+      await this.usersService.buscarPorEmail(email);
 
     // se existir retorna erro
     if (usuarioExistente) {
 
-    throw new ConflictException(
-      'E-mail já cadastrado',
-  );
+      throw new ConflictException(
+        'E-mail já cadastrado',
+      );
+    }
 
     // cria usuario no banco
     const novoUsuario =
-    await this.usersService.criarUsuario(
-      nome,
-      email,
-      senha,
-    );
+      await this.usersService.criarUsuario(
+        nome,
+        email,
+        senha,
+      );
 
     // retorna sucesso
     return {
