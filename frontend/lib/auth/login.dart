@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart'; // Importa os componentes visuais do Flutter
 import 'cadastro.dart'; // Importa a tela de cadastro para permitir a navegação
 import '../services/auth_service.dart'; // Importa o service responsável por conversar com o backend
-import '../widgets/componentes_padrao.dart'; // Importa os componentes visuais padronizados do app
+import '../home/tela_inicial.dart'; // Importa a tela inicial para abrir depois do login
+import '../config/app_colors.dart'; // Importa as cores principais do app
+import '../widgets/auth_widgets.dart'; // Importa os componentes visuais de login/cadastro
 
 class LoginTela extends StatefulWidget { // Cria a tela 'LoginTela'
-  const LoginTela({super.key});           // Construtor da tela LoginTela
+  const LoginTela({super.key}); // Construtor da tela LoginTela
 
   @override
   State<LoginTela> createState() => _LoginTelaState(); // Cria o estado da tela, permitindo guardar dados digitados e atualizar a interface
@@ -44,9 +46,18 @@ class _LoginTelaState extends State<LoginTela> { // Classe que controla o estado
       carregando = false; // Desativa o carregamento do botão
     });
 
-    if (resultado['sucesso'] == true) { // Verifica se o backend respondeu que o login deu certo
-      ScaffoldMessenger.of(context).showSnackBar( // Mostra uma mensagem temporária na parte de baixo da tela
-        SnackBar(content: Text(resultado['dados']['mensagem'])), // Mostra a mensagem de sucesso enviada pelo backend
+    if (resultado['sucesso'] == true) { // Verifica se o login deu certo
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(resultado['dados']['mensagem'])), // Mostra mensagem de sucesso
+      );
+
+      Navigator.pushReplacement( // Troca a tela de login pela tela inicial
+        context,
+        MaterialPageRoute(
+          builder: (context) => TelaInicial(
+            nomeUsuario: resultado['dados']['usuario']['nome'].toString(), // Envia o nome real do usuário para a tela inicial
+          ),
+        ),
       );
     } else { // Caso o login tenha falhado
       ScaffoldMessenger.of(context).showSnackBar( // Mostra uma mensagem temporária na parte de baixo da tela
@@ -65,63 +76,85 @@ class _LoginTelaState extends State<LoginTela> { // Classe que controla o estado
   @override
   // Tudo que aparece visualmente no app fica aqui
   Widget build(BuildContext context) {
-    return Scaffold( // 'Scaffold' é a estrutura base de tela do Flutter
-      appBar: AppBar( // Cria a barra no topo da tela
-        title: const Text('Login'),
-      ),
+    return Scaffold( // Estrutura base da tela
+      backgroundColor: AppColors.background, // Define a cor de fundo usando a cor padrão do app
 
-      // conteúdo principal da tela fica no 'body'
-      body: Padding(
-        padding: const EdgeInsets.all(24), // padding é o espaço, 24px em todos lados
-        child: Column( // O Column organiza os elementos um embaixo do outro
-          mainAxisAlignment: MainAxisAlignment.center, // centraliza esses elementos na vertical da tela
-          children: [ // O children é a lista de coisas que vão aparecer dentro da coluna
-
-            CampoTextoPadrao( // Cria um campo de texto usando o visual padrão do app
-              label: 'E-mail', // nome do campo
-              controller: emailController, // Liga esse campo ao controller que guarda o e-mail digitado
-              keyboardType: TextInputType.emailAddress, // Abre o teclado próprio para digitar e-mail
-            ),
-
-            const SizedBox(height: 16), // Cria um espaço vertical de 16 pixels
-
-            CampoTextoPadrao( // Cria outro campo de texto usando o visual padrão do app
-              label: 'Senha', // nome do campo
-              controller: senhaController, // Liga esse campo ao controller que guarda a senha digitada
-              obscureText: true, // esconde o que for digitado
-            ),
-
-            const SizedBox(height: 24), // cria espaço maior antes do botão
-
-            // cria o botão 'Entrar'
-            BotaoPadrao( // Cria o botão usando o visual padrão do app
-              texto: carregando ? 'Entrando...' : 'Entrar', // Muda o texto do botão enquanto o login está sendo feito
-              onPressed: carregando ? null : fazerLogin, // Se estiver carregando, desativa o botão; se não, chama a função de login
-            ),
-
-            const SizedBox(height: 16), // cria um espaço entre o botão entrar e o botão cadastre-se
-
-            // cria o botão 'cadastre-se'
-            TextButton(
-              style: TextButton.styleFrom(
-                foregroundColor: Theme.of(context).colorScheme.primary, // cor do texto, puxada do tema global
-              ),
-              onPressed: () {
-                Navigator.push( // Abre uma nova tela por cima da tela atual
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const CadastroTela(), // Define que a tela aberta será a tela de cadastro
+      body: SafeArea( // Evita que fique embaixo da barra do celular
+        child: Align( // Controla o alinhamento do conteúdo
+          alignment: Alignment.center, // Centraliza o card na tela
+          child: SingleChildScrollView( // Permite rolar se a tela for pequena
+            padding: const EdgeInsets.all(24), // Espaçamento externo
+            child: AuthCard( // Card visual reutilizável para login/cadastro
+              children: [
+                const Text(
+                  'ENTRAR',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
                   ),
-                );
-              },
-              child: const Text(
-                'Não tem uma conta? Cadastre-se',
-                style: TextStyle(
-                  decoration: TextDecoration.underline,
                 ),
-              ),
+
+                const SizedBox(height: 6), // Espaço entre o título e o subtítulo
+
+                const Text(
+                  'Bem-vindo ao app',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                    letterSpacing: 1,
+                  ),
+                ),
+
+                const SizedBox(height: 36), // Espaço antes dos campos
+
+                AuthCampoTexto( // Campo de e-mail estilizado
+                  hint: 'E-mail',
+                  icone: Icons.email,
+                  controller: emailController,
+                  keyboardType: TextInputType.emailAddress,
+                ),
+
+                const SizedBox(height: 16), // Espaço entre os campos
+
+                AuthCampoTexto( // Campo de senha estilizado
+                  hint: 'Senha',
+                  icone: Icons.lock,
+                  controller: senhaController,
+                  obscureText: true,
+                ),
+
+                const SizedBox(height: 24), // Espaço antes do botão
+
+                AuthBotaoPrincipal( // Botão principal de login
+                  texto: carregando ? 'ENTRANDO...' : 'ENTRAR',
+                  onPressed: carregando ? null : fazerLogin,
+                ),
+
+                const SizedBox(height: 18), // Espaço antes do botão de cadastro
+
+                TextButton(
+                  onPressed: () {
+                    Navigator.push( // Abre a tela de cadastro
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const CadastroTela(),
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'Não tem uma conta? Cadastre-se',
+                    style: TextStyle(
+                      color: Colors.white,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );
