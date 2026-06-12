@@ -98,7 +98,7 @@ class _CadastroTelaState extends State<CadastroTela> {
           resultado['sucesso'] == true
 
           // mensagem de sucesso
-              ? resultado['dados']['message']
+              ? resultado['dados']['mensagem']
               ?? 'Cadastro realizado com sucesso'
 
           // mensagem de erro
