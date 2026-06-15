@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import '../widgets/componentes_padrao.dart';
 import '../services/auth_service.dart';
+import '../config/app_colors.dart';
+import '../widgets/auth_widgets.dart';
 import 'login.dart';
 // importa o service responsavel por conversar com o backend
 
@@ -130,90 +131,124 @@ class _CadastroTelaState extends State<CadastroTela> {
 
     return Scaffold( // estrutura base da tela
 
-      appBar: AppBar( // barra de cima
-        title: const Text('Cadastro'),
-      ),
+      backgroundColor: AppColors.background, // define a cor de fundo usando a cor padrao do app
 
-      body: Padding( // espacamento interno da tela
+      body: SafeArea( // evita que fique embaixo da barra do celular
 
-        padding: const EdgeInsets.all(24),
+        child: Align( // controla o alinhamento do conteudo
 
-        child: Column( // organiza tudo em coluna
+          alignment: Alignment.center, // centraliza o card na tela
 
-          mainAxisAlignment: MainAxisAlignment.center,
-          // centraliza os itens verticalmente
+          child: SingleChildScrollView( // permite rolar se a tela for pequena
 
-          children: [
+            padding: const EdgeInsets.all(24), // espacamento externo
 
-            // campo de nome
-            CampoTextoPadrao(
+            child: AuthCard( // card visual reutilizavel para login/cadastro
 
-              label: 'Nome',
+              children: [
 
-              // conecta o campo ao controller
-              controller: nomeController,
-            ),
-
-            const SizedBox(height: 16),
-            // espacamento entre os campos
-
-            // campo de email
-            CampoTextoPadrao(
-
-              label: 'E-mail',
-
-              controller: emailController,
-
-              // abre teclado apropriado pra email
-              keyboardType: TextInputType.emailAddress,
-            ),
-
-            const SizedBox(height: 16),
-
-            // campo de senha
-            CampoTextoPadrao(
-
-              label: 'Senha',
-
-              controller: senhaController,
-
-              // esconde o texto digitado
-              obscureText: true,
-            ),
-
-            const SizedBox(height: 24),
-
-            // botao de cadastrar
-            BotaoPadrao(
-              texto: carregando
-                  ? 'Cadastrando...'
-                  : 'Cadastrar',
-
-              onPressed: carregando
-                  ? null
-                  : fazerCadastro,
-            ),
-
-            //para voltar pro login se ja tiver cadastro
-            const SizedBox(height: 16),
-
-            TextButton(
-              onPressed: () {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const LoginTela(),
+                const Text(
+                  'CADASTRO',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 28,
+                    fontWeight: FontWeight.bold,
+                    letterSpacing: 1.5,
                   ),
-                );
-              },
-              child: const Text(
-                'Já tem uma conta? Entrar',
-                style: TextStyle(
-                  decoration: TextDecoration.underline,
                 ),
-              ),
+
+                const SizedBox(height: 6),
+
+                const Text(
+                  'Crie sua conta',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 16,
+                    letterSpacing: 1,
+                  ),
+                ),
+
+                const SizedBox(height: 36),
+
+                // campo de nome
+                AuthCampoTexto(
+
+                  hint: 'Nome',
+
+                  icone: Icons.person,
+
+                  // conecta o campo ao controller
+                  controller: nomeController,
+                ),
+
+                const SizedBox(height: 16),
+                // espacamento entre os campos
+
+                // campo de email
+                AuthCampoTexto(
+
+                  hint: 'E-mail',
+
+                  icone: Icons.email,
+
+                  controller: emailController,
+
+                  // abre teclado apropriado pra email
+                  keyboardType: TextInputType.emailAddress,
+                ),
+
+                const SizedBox(height: 16),
+
+                // campo de senha
+                AuthCampoTexto(
+
+                  hint: 'Senha',
+
+                  icone: Icons.lock,
+
+                  controller: senhaController,
+
+                  // esconde o texto digitado
+                  obscureText: true,
+                ),
+
+                const SizedBox(height: 24),
+
+                // botao de cadastrar
+                AuthBotaoPrincipal(
+                  texto: carregando
+                      ? 'CADASTRANDO...'
+                      : 'CADASTRAR',
+
+                  onPressed: carregando
+                      ? null
+                      : fazerCadastro,
+                ),
+
+                //para voltar pro login se ja tiver cadastro
+                const SizedBox(height: 18),
+
+                TextButton(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const LoginTela(),
+                      ),
+                    );
+                  },
+                  child: const Text(
+                    'Já tem uma conta? Entrar',
+                    style: TextStyle(
+                      color: Colors.white,
+                      decoration: TextDecoration.underline,
+                      decorationColor: Colors.white,
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
       ),
     );

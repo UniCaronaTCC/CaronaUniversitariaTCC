@@ -4,6 +4,7 @@ import '../widgets/botao_acao_home.dart'; // Importa o botão grande usado na te
 import '../widgets/card_carona_disponivel.dart'; // Importa o card de carona disponível
 import '../widgets/card_destino_home.dart'; // Importa o card de destino da tela inicial
 import '../widgets/barra_navegacao_home.dart'; // Importa a barra inferior da tela inicial
+import 'solicitar_carona.dart'; // import para o caminho de solicitar carona
 
 class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
   final String nomeUsuario; // Guarda o nome do usuário logado
@@ -73,7 +74,12 @@ class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
                   texto: 'SOLICITAR',
                   icone: Icons.directions_car_outlined,
                   onPressed: () {
-                    print('Solicitar carona clicado');
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const SolicitarCaronaTela(),
+                      ),
+                    );
                   },
                 ),
 
