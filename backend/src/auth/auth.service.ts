@@ -1,8 +1,11 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
-// Importa recursos do NestJS
+// Importa recursos do NestJS para criar serviços e lançar erros HTTP
+
+import * as bcrypt from 'bcrypt';
+// Importa o bcrypt, usado para gerar hash da senha e comparar senha no login
 
 import { UsersService } from '../users/users.service';
-// Importa o service de usuários para buscar dados no banco
+// Importa o service de usuários para buscar e criar usuários no banco
 
 @Injectable()
 export class AuthService {
@@ -12,31 +15,31 @@ export class AuthService {
     // Permite usar funções do UsersService dentro do AuthService
   ) {}
 
-  // FUNCAO DE LOGIN
+  // FUNÇÃO DE LOGIN
   async login(email: string, senha: string) {
 
-    // busca usuario pelo email
+    // Busca o usuário pelo e-mail informado
     const usuario = await this.usersService.buscarPorEmail(email);
 
-    // verifica se usuario existe
+    // Verifica se o usuário existe
     if (!usuario) {
-
       throw new UnauthorizedException(
         'E-mail ou senha inválidos',
       );
     }
 
-    // verifica se senha esta correta
-    if (usuario.senha !== senha) {
+    // Compara a senha digitada com o hash salvo no banco
+    const senhaCorreta = await bcrypt.compare(senha, usuario.senha);
 
+    // Se a senha estiver errada, retorna erro de login
+    if (!senhaCorreta) {
       throw new UnauthorizedException(
         'E-mail ou senha inválidos',
       );
     }
 
-    // retorna sucesso
+    // Retorna sucesso sem enviar a senha para o frontend
     return {
-
       mensagem: 'Login realizado com sucesso',
 
       usuario: {
@@ -47,36 +50,38 @@ export class AuthService {
     };
   }
 
-  // FUNCAO DE CADASTRO
+  // FUNÇÃO DE CADASTRO
   async cadastro(
     nome: string,
     email: string,
     senha: string,
   ) {
 
-    // verifica se ja existe usuario com esse email
+    // Verifica se já existe usuário com esse e-mail
     const usuarioExistente =
       await this.usersService.buscarPorEmail(email);
 
-    // se existir retorna erro
+    // Se existir, retorna erro de conflito
     if (usuarioExistente) {
-
       throw new ConflictException(
         'E-mail já cadastrado',
       );
     }
 
-    // cria usuario no banco
+    // Gera o hash da senha antes de salvar no banco
+    // O número 10 é o custo do hash: bom equilíbrio para projeto acadêmico
+    const senhaHash = await bcrypt.hash(senha, 10);
+
+    // Cria usuário no banco usando a senha em hash, não a senha original
     const novoUsuario =
       await this.usersService.criarUsuario(
         nome,
         email,
-        senha,
+        senhaHash,
       );
 
-    // retorna sucesso
+    // Retorna sucesso sem enviar a senha para o frontend
     return {
-
       mensagem: 'Cadastro realizado com sucesso',
 
       usuario: {
