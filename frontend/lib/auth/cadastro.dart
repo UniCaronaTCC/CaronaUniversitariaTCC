@@ -83,27 +83,45 @@ class _CadastroTelaState extends State<CadastroTela> {
       senhaController.text,
     );
 
-    // desativa o loading
+// Verifica se a tela ainda está aberta depois da resposta do backend
+    if (!mounted) {
+      return;
+    }
+
+// Desativa o loading
     setState(() {
       carregando = false;
     });
 
-    // mostra a resposta do backend na tela
+// Verifica se o cadastro foi realizado com sucesso
+    if (resultado['sucesso'] == true) {
+
+      // Mostra a mensagem de sucesso
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            resultado['dados']['mensagem']
+                ?? 'Cadastro realizado com sucesso',
+          ),
+        ),
+      );
+
+      // Substitui a tela de cadastro pela tela de login
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const LoginTela(),
+        ),
+      );
+
+      return; // Encerra a função para não mostrar mensagem de erro
+    }
+
+// Mostra a mensagem recebida caso o cadastro falhe
     ScaffoldMessenger.of(context).showSnackBar(
-
       SnackBar(
-
         content: Text(
-
-          // verifica se deu sucesso ou erro
-          resultado['sucesso'] == true
-
-          // mensagem de sucesso
-              ? resultado['dados']['mensagem']
-              ?? 'Cadastro realizado com sucesso'
-
-          // mensagem de erro
-              : resultado['mensagem'],
+          resultado['mensagem'],
         ),
       ),
     );
