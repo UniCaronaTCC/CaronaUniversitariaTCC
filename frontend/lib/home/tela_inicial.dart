@@ -4,7 +4,7 @@ import '../widgets/botao_acao_home.dart'; // Importa o botão grande usado na te
 import '../widgets/card_carona_disponivel.dart'; // Importa o card de carona disponível
 import '../widgets/card_destino_home.dart'; // Importa o card de destino da tela inicial
 import '../widgets/barra_navegacao_home.dart'; // Importa a barra inferior da tela inicial
-import 'solicitar_carona.dart'; // import para o caminho de solicitar carona
+import 'buscar_carona.dart'; // Importa a tela responsável pela busca de caronas
 
 class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
   final String nomeUsuario; // Guarda o nome do usuário logado
@@ -18,28 +18,35 @@ class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
   Widget build(BuildContext context) { // Tudo que aparece visualmente na tela fica aqui
     return Scaffold(
       backgroundColor: AppColors.background, // Define a cor de fundo da tela
-      bottomNavigationBar: const BarraNavegacaoHome(), // Adiciona a barra inferior de navegação
+
+      // Adiciona a barra inferior de navegação
+      bottomNavigationBar: const BarraNavegacaoHome(),
 
       body: SafeArea(
         child: SingleChildScrollView( // Permite rolar a tela se o conteúdo passar do tamanho disponível
           child: Padding(
             padding: const EdgeInsets.all(24), // Espaçamento interno da tela
+
             child: Column( // Organiza os elementos um embaixo do outro
               crossAxisAlignment: CrossAxisAlignment.start, // Alinha os itens à esquerda
+
               children: [
                 Text.rich( // Permite colocar estilos diferentes no mesmo texto
                   TextSpan(
                     children: [
                       const TextSpan(
-                        text: 'Olá, ', // Primeira parte do título
+                        text: 'Olá, ',
                         style: TextStyle(
                           color: AppColors.text,
                           fontSize: 32,
                           fontWeight: FontWeight.w400,
                         ),
                       ),
+
                       TextSpan(
-                        text: nomeUsuario.isNotEmpty ? nomeUsuario : 'usuário', // Mostra o nome real ou um texto padrão
+                        text: nomeUsuario.isNotEmpty
+                            ? nomeUsuario
+                            : 'usuário',
                         style: const TextStyle(
                           color: AppColors.primary,
                           fontSize: 32,
@@ -48,11 +55,12 @@ class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
                       ),
                     ],
                   ),
+
                   maxLines: 2, // Permite no máximo duas linhas
-                  overflow: TextOverflow.ellipsis, // Se o nome for muito grande, corta com "..."
+                  overflow: TextOverflow.ellipsis, // Corta nomes muito grandes com reticências
                 ),
 
-                const SizedBox(height: 8), // Espaço entre o título e o subtítulo
+                const SizedBox(height: 8),
 
                 const Text(
                   'Para onde você vai hoje?',
@@ -62,41 +70,54 @@ class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
                   ),
                 ),
 
-                const SizedBox(height: 36), // Cria um espaço antes do card de destino
+                const SizedBox(height: 36),
 
+                // Card que mostra o destino principal
                 const CardDestinoHome(
                   destino: 'AVENIDA UNISALESIANO, NÚMERO 2026',
                 ),
 
-                const SizedBox(height: 36), // Espaço antes dos botões principais
+                const SizedBox(height: 36),
 
-                BotaoAcaoHome( // Botão para solicitar uma carona
-                  texto: 'SOLICITAR',
+                // Botão que abre a tela de busca de caronas
+                BotaoAcaoHome(
+                  texto: 'BUSCAR',
                   icone: Icons.directions_car_outlined,
+
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => const SolicitarCaronaTela(),
+                        builder: (context) => const BuscarCaronaTela(),
                       ),
                     );
                   },
                 ),
 
-                const SizedBox(height: 20), // Espaço entre os botões
+                const SizedBox(height: 20),
 
-                BotaoAcaoHome( // Botão para ofertar uma carona
+                // Botão que futuramente abrirá a tela de oferta de carona
+                BotaoAcaoHome(
                   texto: 'OFERTAR',
                   icone: Icons.groups_outlined,
+
                   onPressed: () {
-                    print('Ofertar carona clicado');
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Tela de oferta de carona ainda será criada',
+                        ),
+                      ),
+                    );
                   },
                 ),
 
-                const SizedBox(height: 36), // Espaço antes da seção de caronas disponíveis
+                const SizedBox(height: 36),
 
-                Row( // Linha com o título e o botão "Ver todas"
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween, // Coloca um item em cada lado
+                // Linha com o título da seção e o botão para visualizar todas
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+
                   children: [
                     const Text(
                       'Caronas disponíveis',
@@ -109,8 +130,15 @@ class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
 
                     TextButton(
                       onPressed: () {
-                        print('Ver todas clicado');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Lista completa de caronas ainda será criada',
+                            ),
+                          ),
+                        );
                       },
+
                       child: const Text(
                         'Ver todas',
                         style: TextStyle(
@@ -122,8 +150,9 @@ class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
                   ],
                 ),
 
-                const SizedBox(height: 12), // Espaço entre o título da seção e o card
+                const SizedBox(height: 12),
 
+                // Card temporário de exemplo
                 const CardCaronaDisponivel(
                   origem: 'Araçatuba',
                   destino: 'UniSalesiano',
