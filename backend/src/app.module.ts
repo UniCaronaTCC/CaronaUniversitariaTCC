@@ -6,6 +6,7 @@ import { AppController } from './app.controller'; // Importa o controller princi
 import { AppService } from './app.service'; // Importa o service principal criado pelo NestJS
 import { AuthModule } from './auth/auth.module'; // Importa o módulo de autenticação
 import { UsersModule } from './users/users.module'; // Importa o módulo de usuários
+import { CaronasModule } from './caronas/caronas.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { UsersModule } from './users/users.module'; // Importa o módulo de usu�
 
     AuthModule, // Carrega o módulo de autenticação
     UsersModule, // Carrega o módulo de usuários
+    CaronasModule,
   ],
   controllers: [AppController],
   providers: [AppService],
