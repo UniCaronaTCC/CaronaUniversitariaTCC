@@ -15,6 +15,9 @@ export class Carona { // Classe que representa uma carona no sistema
   @PrimaryGeneratedColumn({ name: 'id_carona' }) // Define a chave primária com auto incremento
   idCarona: number;
 
+  @Column({ length: 20 }) // Define se o usuário quer oferecer ou buscar carona
+tipo: string;
+
   @Column({ length: 100 }) // Define a coluna origem com limite de 100 caracteres
   origem: string;
 

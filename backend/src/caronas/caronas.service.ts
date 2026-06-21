@@ -12,6 +12,7 @@ export class CaronasService {
   ) {}
 
   async solicitarCarona(
+    tipo: string,
     origem: string,
     destino: string,
     data: string,
@@ -20,6 +21,7 @@ export class CaronasService {
   ): Promise<Carona> { // Cria uma nova solicitação de carona no banco
 
     const novaCarona = this.caronasRepository.create({
+      tipo,
       origem,
       destino,
       data,

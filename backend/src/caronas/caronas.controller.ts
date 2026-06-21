@@ -11,13 +11,14 @@ export class CaronasController {
   @Post('solicitar') // POST /caronas/solicitar
   async solicitarCarona(@Body() body: any) {
 
-    const carona = await this.caronasService.solicitarCarona(
-      body.origem,
-      body.destino,
-      body.data,
-      body.horario,
-      body.observacoes,
-    );
+   const carona = await this.caronasService.solicitarCarona(
+  body.tipo,
+  body.origem,
+  body.destino,
+  body.data,
+  body.horario,
+  body.observacoes,
+);
 
     return {
       sucesso: true,
