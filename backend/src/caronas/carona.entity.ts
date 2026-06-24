@@ -57,13 +57,13 @@ export class Carona { // Classe que representa uma oferta de carona
   // Define se a carona será repetida
   recorrente: boolean = false;
 
-  @Column({
-    name: 'dias_semana',
-    type: 'simple-json',
-    nullable: true,
-  })
-  // Exemplo: ["segunda", "quarta", "sexta"]
-  diasSemana: string[] | null = null;
+@Column({
+  name: 'dias_semana',
+  type: 'json',
+  nullable: true,
+})
+// Guarda os dias escolhidos quando a carona for recorrente
+diasSemana: string[] | null = null;
 
   @Column({
     type: 'text',
