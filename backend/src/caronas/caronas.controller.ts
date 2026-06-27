@@ -8,21 +8,25 @@ export class CaronasController {
     private readonly caronasService: CaronasService,
   ) {}
 
-  @Post('solicitar') // POST /caronas/solicitar
-  async solicitarCarona(@Body() body: any) {
+  @Post() // POST /caronas
+  async criarCarona(@Body() body: any) {
 
-   const carona = await this.caronasService.solicitarCarona(
-  body.tipo,
-  body.origem,
-  body.destino,
-  body.data,
-  body.horario,
-  body.observacoes,
-);
+    const carona = await this.caronasService.criarCarona(
+      body.origem,
+      body.destino,
+      body.dataInicio,
+      body.dataFim ?? null,
+      body.horario,
+      body.vagas,
+      body.valor,
+      body.recorrente ?? false,
+      body.diasSemana,
+      body.observacoes,
+    );
 
     return {
       sucesso: true,
-      mensagem: 'Carona solicitada com sucesso',
+      mensagem: 'Carona criada com sucesso',
       dados: carona,
     };
   }

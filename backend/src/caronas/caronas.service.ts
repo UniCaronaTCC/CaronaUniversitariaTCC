@@ -1,42 +1,51 @@
-import { Injectable } from '@nestjs/common'; // Importa o Injectable para permitir que o service seja usado pelo NestJS
-import { InjectRepository } from '@nestjs/typeorm'; // Permite injetar o repositório da tabela
-import { Repository } from 'typeorm'; // Importa o tipo Repository do TypeORM
+import { Injectable } from '@nestjs/common'; // Permite que o service seja usado pelo NestJS
+import { InjectRepository } from '@nestjs/typeorm'; // Permite injetar o repositório da entidade
+import { Repository } from 'typeorm'; // Tipo usado para acessar o banco
 
-import { Carona } from './carona.entity'; // Importa a entidade Carona, que representa a tabela caronas
+import { Carona } from './carona.entity'; // Entidade que representa a tabela caronas
 
 @Injectable()
 export class CaronasService {
   constructor(
-    @InjectRepository(Carona) // Injeta o repositório da entidade Carona
-    private readonly caronasRepository: Repository<Carona>, // Cria o acesso à tabela caronas
+    @InjectRepository(Carona)
+    private readonly caronasRepository: Repository<Carona>,
   ) {}
 
-  async solicitarCarona(
-    tipo: string,
+  async criarCarona(
     origem: string,
     destino: string,
-    data: string,
+    dataInicio: string,
+    dataFim: string | null,
     horario: string,
+    vagas: number,
+    valor: number,
+    recorrente: boolean,
+    diasSemana?: string[],
     observacoes?: string,
-  ): Promise<Carona> { // Cria uma nova solicitação de carona no banco
+  ): Promise<Carona> { // Cria uma oferta de carona no banco
 
     const novaCarona = this.caronasRepository.create({
-      tipo,
       origem,
       destino,
-      data,
+      dataInicio,
+      dataFim,
       horario,
+      vagas,
+      valor,
+      recorrente,
+      diasSemana,
       observacoes,
       status: 'ATIVA',
     });
-    // monta o objeto da nova carona
 
     return this.caronasRepository.save(novaCarona);
-    // salva no banco e retorna a carona criada
   }
 
-  async listarCaronas(): Promise<Carona[]> { // Lista todas as caronas cadastradas
+  async listarCaronas(): Promise<Carona[]> { // Lista as caronas mais recentes
     return this.caronasRepository.find({
+      where: {
+        status: 'ATIVA',
+      },
       order: {
         criadoEm: 'DESC',
       },
