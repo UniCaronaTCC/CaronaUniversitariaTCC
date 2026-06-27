@@ -5,6 +5,7 @@ import '../widgets/card_carona_disponivel.dart'; // Importa o card de carona dis
 import '../widgets/card_destino_home.dart'; // Importa o card de destino da tela inicial
 import '../widgets/barra_navegacao_home.dart'; // Importa a barra inferior da tela inicial
 import 'buscar_carona.dart'; // Importa a tela responsável pela busca de caronas
+import 'ofertar_carona.dart'; // Importa a tela responsável por ofertar caronas
 
 class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
   final String nomeUsuario; // Guarda o nome do usuário logado
@@ -96,17 +97,16 @@ class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
 
                 const SizedBox(height: 20),
 
-                // Botão que futuramente abrirá a tela de oferta de carona
+                // Botão que abre a tela de oferta de carona
                 BotaoAcaoHome(
                   texto: 'OFERTAR',
                   icone: Icons.groups_outlined,
 
                   onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Tela de oferta de carona ainda será criada',
-                        ),
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => const OfertarCaronaTela(),
                       ),
                     );
                   },
