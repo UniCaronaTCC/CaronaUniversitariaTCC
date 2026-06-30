@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart'; // Importa os componentes visuais do Flutter
 import '../config/app_colors.dart'; // Importa as cores principais do aplicativo
 import '../widgets/botao_acao_home.dart'; // Importa o botão reutilizável da tela inicial
+import '../services/carona_service.dart'; // Importa o service que conversa com o backend
 
 class BuscarCaronaTela extends StatefulWidget { // Cria a tela usada para buscar caronas disponíveis
   const BuscarCaronaTela({super.key});
@@ -14,8 +15,25 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> { // Controla os da
   // Controllers responsáveis por controlar os textos digitados nos campos
   final TextEditingController origemController = TextEditingController();
   final TextEditingController destinoController = TextEditingController();
+  final TextEditingController dataController = TextEditingController();
   final TextEditingController horarioController = TextEditingController();
   final TextEditingController observacaoController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Assim que a tela abre, busca as caronas disponíveis no backend
+    carregarCaronas();
+  }
+
+  // Função usada para testar se o Flutter consegue buscar as caronas no backend
+  Future<void> carregarCaronas() async {
+    final resultado = await CaronaService.listarCaronas();
+
+    print('RESULTADO DAS CARONAS:');
+    print(resultado);
+  }
 
   // Função executada quando o usuário clicar no botão
   void buscarCarona() {
@@ -23,19 +41,20 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> { // Controla os da
     // Verifica se os campos obrigatórios foram preenchidos
     if (origemController.text.isEmpty ||
         destinoController.text.isEmpty ||
+        dataController.text.isEmpty ||
         horarioController.text.isEmpty) {
 
       // Mostra uma mensagem caso algum campo obrigatório esteja vazio
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Preencha origem, destino e horário'),
+          content: Text('Preencha origem, destino, data e horário'),
         ),
       );
 
       return; // Encerra a função
     }
 
-    // Mensagem temporária enquanto a busca real ainda não está conectada ao backend
+    // Mensagem temporária enquanto o filtro real ainda não está conectado
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Busca de caronas realizada'),
@@ -49,6 +68,7 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> { // Controla os da
     // Libera os controllers da memória
     origemController.dispose();
     destinoController.dispose();
+    dataController.dispose();
     horarioController.dispose();
     observacaoController.dispose();
 
@@ -139,6 +159,15 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> { // Controla os da
                 label: 'Destino',
                 icone: Icons.location_on_outlined,
                 controller: destinoController,
+              ),
+
+              const SizedBox(height: 16),
+
+              // Campo de data da viagem
+              campoTexto(
+                label: 'Data da viagem',
+                icone: Icons.calendar_today,
+                controller: dataController,
               ),
 
               const SizedBox(height: 16),
