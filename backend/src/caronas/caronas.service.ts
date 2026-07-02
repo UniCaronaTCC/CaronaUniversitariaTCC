@@ -15,11 +15,13 @@ export class CaronasService {
   constructor(
     @InjectRepository(Carona)
     // Injeta o repositório da entidade Carona
+
     private readonly caronasRepository: Repository<Carona>,
     // Cria o acesso à tabela caronas
   ) {}
 
   async criarCarona(
+    idUsuario: number,
     origem: string,
     destino: string,
     dataInicio: string,
@@ -40,8 +42,10 @@ export class CaronasService {
       origem,
       destino,
 
-      // Só guarda uma data final quando a carona for recorrente
+      // Data da carona única ou início da recorrência
       dataInicio,
+
+      // Só guarda uma data final quando a carona for recorrente
       dataFim: possuiRecorrencia ? dataFim : null,
 
       horario,
@@ -57,6 +61,11 @@ export class CaronasService {
       observacoes: observacoes ?? null,
 
       status: 'ATIVA',
+
+      // Associa a carona ao usuário logado
+      usuario: {
+        idUsuario,
+      },
     });
 
     // Salva a carona no banco e retorna o registro criado
