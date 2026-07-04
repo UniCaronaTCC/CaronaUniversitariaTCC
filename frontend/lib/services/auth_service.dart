@@ -4,6 +4,21 @@ import '../config/api_config.dart'; // Importa a URL base do backend
 
 class AuthService { // Classe responsável pela comunicação de autenticação com o backend
 
+  // Guarda o token JWT do usuário logado enquanto o app estiver aberto
+  static String? tokenUsuarioLogado;
+
+  // Guarda os dados básicos do usuário logado enquanto o app estiver aberto
+  static Map<String, dynamic>? usuarioLogado;
+
+  // Verifica se existe usuário logado no app
+  static bool get estaLogado => tokenUsuarioLogado != null;
+
+  // Função responsável por limpar os dados do usuário logado
+  static void sair() {
+    tokenUsuarioLogado = null;
+    usuarioLogado = null;
+  }
+
   // Função responsável por enviar e-mail e senha para o backend
   static Future<Map<String, dynamic>> fazerLogin(String email, String senha) async {
     try { // Tenta executar a requisição normalmente
@@ -31,11 +46,23 @@ class AuthService { // Classe responsável pela comunicação de autenticação 
 
       // Verifica se o backend respondeu com sucesso
       if (resposta.statusCode == 200 || resposta.statusCode == 201) {
+
+        // Guarda o token JWT retornado pelo backend
+        tokenUsuarioLogado = dados['token'];
+
+        // Guarda os dados do usuário retornado pelo backend
+        if (dados['usuario'] is Map<String, dynamic>) {
+          usuarioLogado = dados['usuario'];
+        }
+
         return {
           'sucesso': true,
           'dados': dados,
         };
       }
+
+      // Se o login falhar, limpa qualquer token antigo
+      sair();
 
       // Caso o backend retorne erro
       // Usa 'mensagem' se existir, senão usa 'message', que é comum nos erros do NestJS
@@ -44,6 +71,9 @@ class AuthService { // Classe responsável pela comunicação de autenticação 
         'mensagem': dados['mensagem'] ?? dados['message'] ?? 'Erro ao fazer login',
       };
     } catch (erro) { // Captura erro de conexão, backend desligado ou resposta inesperada
+
+      // Se ocorrer erro inesperado, limpa qualquer token antigo
+      sair();
 
       // Retorna uma mensagem amigável para o app não quebrar
       return {

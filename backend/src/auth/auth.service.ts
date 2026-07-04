@@ -1,6 +1,9 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 // Importa recursos do NestJS para criar serviços e lançar erros HTTP
 
+import { JwtService } from '@nestjs/jwt';
+// Importa o serviço responsável por gerar tokens JWT
+
 import * as bcrypt from 'bcrypt';
 // Importa o bcrypt, usado para gerar hash da senha e comparar senha no login
 
@@ -13,6 +16,9 @@ export class AuthService {
   constructor(
     private readonly usersService: UsersService,
     // Permite usar funções do UsersService dentro do AuthService
+
+    private readonly jwtService: JwtService,
+    // Permite gerar tokens JWT dentro do AuthService
   ) {}
 
   // FUNÇÃO DE LOGIN
@@ -38,9 +44,21 @@ export class AuthService {
       );
     }
 
+    // Define os dados que serão guardados dentro do token
+    const payload = {
+      sub: usuario.idUsuario,
+      email: usuario.email,
+      nome: usuario.nome,
+    };
+
+    // Gera o token JWT usando o payload acima
+    const token = await this.jwtService.signAsync(payload);
+
     // Retorna sucesso sem enviar a senha para o frontend
     return {
       mensagem: 'Login realizado com sucesso',
+
+      token,
 
       usuario: {
         id: usuario.idUsuario,
