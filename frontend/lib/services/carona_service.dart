@@ -13,6 +13,9 @@ class CaronaService {
 
       // Faz a requisição ao backend
       final resposta = await http.get(url);
+      print('URL CHAMADA: $url');
+      print('STATUS: ${resposta.statusCode}');
+      print('BODY: ${resposta.body}');
 
       // Converte a resposta para JSON
       final Map<String, dynamic> dados = resposta.body.isNotEmpty
