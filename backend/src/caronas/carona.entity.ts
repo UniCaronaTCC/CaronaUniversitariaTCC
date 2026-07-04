@@ -17,8 +17,50 @@ export class Carona {
   @Column({ length: 100 })
   origem!: string;
 
+  @Column({ name: 'origem_cidade', length: 100, nullable: true })
+  origemCidade: string | null = null;
+
+  @Column({
+    name: 'origem_latitude',
+    type: 'decimal',
+    precision: 10,
+    scale: 8,
+    nullable: true,
+  })
+  origemLatitude: number | null = null;
+
+  @Column({
+    name: 'origem_longitude',
+    type: 'decimal',
+    precision: 11,
+    scale: 8,
+    nullable: true,
+  })
+  origemLongitude: number | null = null;
+
   @Column({ length: 100 })
   destino!: string;
+
+  @Column({ name: 'destino_cidade', length: 100, nullable: true })
+  destinoCidade: string | null = null;
+
+  @Column({
+    name: 'destino_latitude',
+    type: 'decimal',
+    precision: 10,
+    scale: 8,
+    nullable: true,
+  })
+  destinoLatitude: number | null = null;
+
+  @Column({
+    name: 'destino_longitude',
+    type: 'decimal',
+    precision: 11,
+    scale: 8,
+    nullable: true,
+  })
+  destinoLongitude: number | null = null;
 
   @Column({ name: 'data_inicio', type: 'date' })
   dataInicio!: string;
