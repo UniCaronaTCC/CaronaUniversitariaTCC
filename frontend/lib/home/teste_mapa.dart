@@ -20,6 +20,10 @@ class _TesteMapaState extends State<TesteMapa> {
 
   // Armazena a localização atual do usuário.
   LatLng? _localizacaoAtual;
+// agr guarda a localizacão do ponto de encontro
+  LatLng? _pontoEncontro;
+
+  // o "_" na variavel acima significa q e uma variavel privada a esse arquivo
 
   @override
   void initState() {
@@ -64,12 +68,17 @@ class _TesteMapaState extends State<TesteMapa> {
       body: FlutterMap(
         // Controlador do mapa.
         mapController: _mapController,
-        options: const MapOptions(
+        options: MapOptions(
           // Localização fixa apenas para teste.
-          // Assim que o GPS responder, o mapa será centralizado
-          // automaticamente na posição do usuário.
-          initialCenter: LatLng(-21.2080, -50.4320),
+          initialCenter: const LatLng(-21.2080, -50.4320),
           initialZoom: 14,
+
+          // Executado quando o usuário toca no mapa.
+          onTap: (tapPosition, point) {
+            setState(() {
+              _pontoEncontro = point;
+            });
+          },
         ),
         children: [
           TileLayer(
@@ -88,6 +97,22 @@ class _TesteMapaState extends State<TesteMapa> {
                   child: const Icon(
                     Icons.location_on,
                     color: Colors.red,
+                    size: 40,
+                  ),
+                ),
+              ],
+            ),
+          // Exibe o marcador do ponto de encontro escolhido pelo usuário.
+          if (_pontoEncontro != null)
+            MarkerLayer(
+              markers: [
+                Marker(
+                  point: _pontoEncontro!,
+                  width: 50,
+                  height: 50,
+                  child: const Icon(
+                    Icons.place,
+                    color: Colors.blue,
                     size: 40,
                   ),
                 ),
