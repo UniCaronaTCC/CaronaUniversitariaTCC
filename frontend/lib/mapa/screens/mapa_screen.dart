@@ -120,6 +120,35 @@ class _TesteMapaState extends State<TesteMapa> {
             ),
         ],
       ),
+      bottomNavigationBar: _pontoEncontro == null
+          ? null
+          : Container(
+        padding: const EdgeInsets.all(16),
+        color: Colors.white,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Ponto de encontro selecionado',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 16,
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              'Latitude: ${_pontoEncontro!.latitude.toStringAsFixed(6)}',
+            ),
+
+            Text(
+              'Longitude: ${_pontoEncontro!.longitude.toStringAsFixed(6)}',
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
