@@ -4,14 +4,11 @@ import 'package:flutter/services.dart';
 class FormatadorMoedaReal extends TextInputFormatter {
   @override
   TextEditingValue formatEditUpdate(
-      TextEditingValue valorAntigo,
-      TextEditingValue valorNovo,
-      ) {
+    TextEditingValue valorAntigo,
+    TextEditingValue valorNovo,
+  ) {
     // Mantem somente os numeros digitados
-    final numeros = valorNovo.text.replaceAll(
-      RegExp(r'[^0-9]'),
-      '',
-    );
+    final numeros = valorNovo.text.replaceAll(RegExp(r'[^0-9]'), '');
 
     // Permite apagar completamente o campo
     if (numeros.isEmpty) {
@@ -29,9 +26,7 @@ class FormatadorMoedaReal extends TextInputFormatter {
     final centavos = valorEmCentavos % 100;
 
     // Adiciona pontos para separar os milhares
-    final reaisFormatados = _adicionarSeparadores(
-      reais.toString(),
-    );
+    final reaisFormatados = _adicionarSeparadores(reais.toString());
 
     // Monta o valor no formato brasileiro
     final textoFormatado =
@@ -40,9 +35,7 @@ class FormatadorMoedaReal extends TextInputFormatter {
     // Mantem o cursor no final do campo
     return TextEditingValue(
       text: textoFormatado,
-      selection: TextSelection.collapsed(
-        offset: textoFormatado.length,
-      ),
+      selection: TextSelection.collapsed(offset: textoFormatado.length),
     );
   }
 
@@ -65,10 +58,7 @@ class FormatadorMoedaReal extends TextInputFormatter {
 
 // Converte "R$ 1.234,56" para 1234.56
 double converterMoedaRealParaDouble(String valorFormatado) {
-  final numeros = valorFormatado.replaceAll(
-    RegExp(r'[^0-9]'),
-    '',
-  );
+  final numeros = valorFormatado.replaceAll(RegExp(r'[^0-9]'), '');
 
   if (numeros.isEmpty) {
     return 0;

@@ -6,15 +6,12 @@ import '../models/localizacao_selecionada.dart'; // Model com ponto e endereco e
 class EnderecoService {
   // Converte latitude e longitude em um texto de endereco
   Future<String> buscarEnderecoPorCoordenadas(
-      double latitude,
-      double longitude,
-      ) async {
+    double latitude,
+    double longitude,
+  ) async {
     try {
       // Busca informacoes do local a partir das coordenadas
-      final locais = await placemarkFromCoordinates(
-        latitude,
-        longitude,
-      );
+      final locais = await placemarkFromCoordinates(latitude, longitude);
 
       // Se nao encontrar nenhum endereco, retorna texto padrao
       if (locais.isEmpty) {
@@ -54,8 +51,8 @@ class EnderecoService {
 
   // Busca possiveis localizacoes a partir de um endereco ou nome digitado
   Future<List<LocalizacaoSelecionada>> buscarLocalizacoesPorEndereco(
-      String enderecoDigitado,
-      ) async {
+    String enderecoDigitado,
+  ) async {
     try {
       // Remove espacos desnecessarios
       final textoBusca = enderecoDigitado.trim();
@@ -83,10 +80,7 @@ class EnderecoService {
 
         resultados.add(
           LocalizacaoSelecionada(
-            ponto: LatLng(
-              localizacao.latitude,
-              localizacao.longitude,
-            ),
+            ponto: LatLng(localizacao.latitude, localizacao.longitude),
             endereco: enderecoCompleto,
           ),
         );

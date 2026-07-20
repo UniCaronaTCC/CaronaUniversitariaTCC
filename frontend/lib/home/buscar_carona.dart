@@ -3,14 +3,16 @@ import '../config/app_colors.dart'; // Importa as cores principais do aplicativo
 import '../widgets/botao_acao_home.dart'; // Importa o botão reutilizável da tela inicial
 import '../services/carona_service.dart'; // Importa o service que conversa com o backend
 
-class BuscarCaronaTela extends StatefulWidget { // Cria a tela usada para buscar caronas disponíveis
+class BuscarCaronaTela extends StatefulWidget {
+  // Cria a tela usada para buscar caronas disponíveis
   const BuscarCaronaTela({super.key});
 
   @override
   State<BuscarCaronaTela> createState() => _BuscarCaronaTelaState();
 }
 
-class _BuscarCaronaTelaState extends State<BuscarCaronaTela> { // Controla os dados e mudanças da tela
+class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
+  // Controla os dados e mudanças da tela
 
   // Controllers responsáveis por controlar os textos digitados nos campos
   final TextEditingController origemController = TextEditingController();
@@ -37,13 +39,11 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> { // Controla os da
 
   // Função executada quando o usuário clicar no botão
   void buscarCarona() {
-
     // Verifica se os campos obrigatórios foram preenchidos
     if (origemController.text.isEmpty ||
         destinoController.text.isEmpty ||
         dataController.text.isEmpty ||
         horarioController.text.isEmpty) {
-
       // Mostra uma mensagem caso algum campo obrigatório esteja vazio
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -55,15 +55,14 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> { // Controla os da
     }
 
     // Mensagem temporária enquanto o filtro real ainda não está conectado
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Busca de caronas realizada'),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Busca de caronas realizada')));
   }
 
   @override
-  void dispose() { // Função chamada quando a tela é fechada
+  void dispose() {
+    // Função chamada quando a tela é fechada
 
     // Libera os controllers da memória
     origemController.dispose();
@@ -85,15 +84,10 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> { // Controla os da
     return TextField(
       controller: controller,
       maxLines: maxLines,
-      style: const TextStyle(
-        color: AppColors.text,
-      ),
+      style: const TextStyle(color: AppColors.text),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(
-          icone,
-          color: AppColors.primary,
-        ),
+        prefixIcon: Icon(icone, color: AppColors.primary),
         filled: true,
         fillColor: Colors.white,
         border: OutlineInputBorder(
@@ -105,7 +99,8 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> { // Controla os da
   }
 
   @override
-  Widget build(BuildContext context) { // Tudo que aparece visualmente fica aqui
+  Widget build(BuildContext context) {
+    // Tudo que aparece visualmente fica aqui
     return Scaffold(
       backgroundColor: AppColors.background,
 
@@ -137,10 +132,7 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> { // Controla os da
 
               const Text(
                 'Informe os dados da viagem desejada',
-                style: TextStyle(
-                  color: AppColors.text,
-                  fontSize: 18,
-                ),
+                style: TextStyle(color: AppColors.text, fontSize: 18),
               ),
 
               const SizedBox(height: 32),

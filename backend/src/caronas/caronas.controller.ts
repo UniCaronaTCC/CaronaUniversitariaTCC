@@ -7,16 +7,10 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-// Importa os decorators usados pelo controller
-
 import { Request } from 'express';
-// Importa o tipo Request para acessar a requisição HTTP
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-// Importa o guard que valida o token JWT
-
 import { CaronasService } from './caronas.service';
-// Importa o service responsável pelas regras das caronas
 
 interface RequisicaoComUsuario extends Request {
   usuario: {
@@ -25,85 +19,111 @@ interface RequisicaoComUsuario extends Request {
     nome: string;
   };
 }
-// Define o formato da requisição depois que o JwtAuthGuard adiciona o usuário
 
 @Controller('caronas')
-// Define que todas as rotas começam com /caronas
 export class CaronasController {
   constructor(
     private readonly caronasService: CaronasService,
   ) {}
 
   @UseGuards(JwtAuthGuard)
-  // Protege esta rota: só cria carona se o usuário estiver logado
-
   @Post()
-  // Cria uma nova oferta usando POST /caronas
   async criarCarona(
     @Body() body: any,
     @Req() request: RequisicaoComUsuario,
   ) {
-
-    // Garante que, se o body vier vazio, ele vire um objeto vazio
     const dados = body ?? {};
 
-    // Valida campos de texto obrigatórios
-    if (!dados.origem || !dados.destino || !dados.dataInicio || !dados.horario) {
+    // Valida os textos obrigatorios.
+    if (
+      !dados.origem ||
+      !dados.destino ||
+      !dados.dataInicio ||
+      !dados.horario
+    ) {
       throw new BadRequestException(
-        'Origem, destino, data e horário são obrigatórios',
+        'Origem, destino, data e horario sao obrigatorios',
       );
     }
 
-    // Converte vagas e valor para número
     const vagas = Number(dados.vagas);
     const valor = Number(dados.valor);
 
-    // Valida se vagas é um número válido e maior que zero
-    if (!Number.isFinite(vagas) || vagas <= 0) {
+    if (!Number.isInteger(vagas) || vagas <= 0) {
       throw new BadRequestException(
-        'Quantidade de vagas inválida',
+        'Quantidade de vagas invalida',
       );
     }
 
-    // Valida se valor é um número válido e não negativo
     if (!Number.isFinite(valor) || valor < 0) {
       throw new BadRequestException(
-        'Valor da carona inválido',
+        'Valor da carona invalido',
       );
     }
 
-    // Garante que recorrente seja booleano
-    const recorrente = dados.recorrente === true;
+    // Valida as coordenadas recebidas do mapa e da busca.
+    const origemLatitude = this.validarCoordenada(
+      dados.origemLatitude,
+      -90,
+      90,
+      'Latitude da origem',
+    );
 
-    // Define os dias da semana, quando existirem
+    const origemLongitude = this.validarCoordenada(
+      dados.origemLongitude,
+      -180,
+      180,
+      'Longitude da origem',
+    );
+
+    const destinoLatitude = this.validarCoordenada(
+      dados.destinoLatitude,
+      -90,
+      90,
+      'Latitude do destino',
+    );
+
+    const destinoLongitude = this.validarCoordenada(
+      dados.destinoLongitude,
+      -180,
+      180,
+      'Longitude do destino',
+    );
+
+    const recorrente = dados.recorrente === true;
     const diasSemana = dados.diasSemana ?? null;
 
-    // Se a carona for recorrente, precisa ter pelo menos um dia selecionado
     if (
       recorrente &&
       (!Array.isArray(diasSemana) || diasSemana.length === 0)
     ) {
       throw new BadRequestException(
-        'Selecione pelo menos um dia da semana para a carona recorrente',
+        'Selecione pelo menos um dia da semana',
       );
     }
 
-    // Pega o id do usuário logado a partir do token JWT
-    const idUsuario = request.usuario.sub;
+    const carona = await this.caronasService.criarCarona({
+      idUsuario: request.usuario.sub,
 
-    const carona = await this.caronasService.criarCarona(
-      idUsuario,
-      dados.origem,
-      dados.destino,
-      dados.dataInicio,
-      dados.dataFim ?? null,
-      dados.horario,
+      origem: dados.origem,
+      origemCidade: dados.origemCidade ?? null,
+      origemLatitude,
+      origemLongitude,
+
+      destino: dados.destino,
+      destinoCidade: dados.destinoCidade ?? null,
+      destinoLatitude,
+      destinoLongitude,
+
+      dataInicio: dados.dataInicio,
+      dataFim: dados.dataFim ?? null,
+      horario: dados.horario,
       vagas,
       valor,
       recorrente,
       diasSemana,
-      dados.observacoes,
-    );
+      observacoes: dados.observacoes,
+    });
 
     return {
       sucesso: true,
@@ -113,15 +133,35 @@ export class CaronasController {
   }
 
   @Get()
-  // Lista as ofertas existentes usando GET /caronas
-  // Esta rota continua pública, porque qualquer usuário pode ver caronas disponíveis
   async listarCaronas() {
-
-    const caronas = await this.caronasService.listarCaronas();
+    const caronas =
+        await this.caronasService.listarCaronas();
 
     return {
       sucesso: true,
       dados: caronas,
     };
   }
-} 
+
+  // Converte e valida latitude ou longitude.
+  private validarCoordenada(
+    valorRecebido: unknown,
+    minimo: number,
+    maximo: number,
+    nome: string,
+  ): number {
+    const valor = Number(valorRecebido);
+
+    if (
+      !Number.isFinite(valor) ||
+      valor < minimo ||
+      valor > maximo
+    ) {
+      throw new BadRequestException(
+        `${nome} invalida`,
+      );
+    }
+
+    return valor;
+  }
+}

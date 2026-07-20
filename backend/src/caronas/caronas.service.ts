@@ -1,79 +1,78 @@
 import { Injectable } from '@nestjs/common';
-// Importa o Injectable para permitir que o service seja usado pelo NestJS
-
 import { InjectRepository } from '@nestjs/typeorm';
-// Permite injetar o repositório da tabela
-
 import { Repository } from 'typeorm';
-// Importa o tipo Repository do TypeORM
 
 import { Carona } from './carona.entity';
-// Importa a entidade que representa a tabela caronas
+
+// Define todos os dados necessários para criar uma carona.
+export interface DadosCriacaoCarona {
+  idUsuario: number;
+
+  origem: string;
+  origemCidade: string | null;
+  origemLatitude: number;
+  origemLongitude: number;
+
+  destino: string;
+  destinoCidade: string | null;
+  destinoLatitude: number;
+  destinoLongitude: number;
+
+  dataInicio: string;
+  dataFim: string | null;
+  horario: string;
+  vagas: number;
+  valor: number;
+  recorrente: boolean;
+  diasSemana: string[] | null;
+  observacoes?: string;
+}
 
 @Injectable()
 export class CaronasService {
   constructor(
     @InjectRepository(Carona)
-    // Injeta o repositório da entidade Carona
-
     private readonly caronasRepository: Repository<Carona>,
-    // Cria o acesso à tabela caronas
   ) {}
 
-  async criarCarona(
-    idUsuario: number,
-    origem: string,
-    destino: string,
-    dataInicio: string,
-    dataFim: string | null,
-    horario: string,
-    vagas: number,
-    valor: number,
-    recorrente: boolean,
-    diasSemana: string[] | null,
-    observacoes?: string,
-  ): Promise<Carona> {
+  async criarCarona(dados: DadosCriacaoCarona): Promise<Carona> {
+    const possuiRecorrencia = dados.recorrente === true;
 
-    // Define se os dados de recorrência realmente devem ser salvos
-    const possuiRecorrencia = recorrente === true;
-
-    // Monta o objeto da nova oferta de carona
     const novaCarona = this.caronasRepository.create({
-      origem,
-      destino,
+      origem: dados.origem,
+      origemCidade: dados.origemCidade,
+      origemLatitude: dados.origemLatitude,
+      origemLongitude: dados.origemLongitude,
 
-      // Data da carona única ou início da recorrência
-      dataInicio,
+      destino: dados.destino,
+      destinoCidade: dados.destinoCidade,
+      destinoLatitude: dados.destinoLatitude,
+      destinoLongitude: dados.destinoLongitude,
 
-      // Só guarda uma data final quando a carona for recorrente
-      dataFim: possuiRecorrencia ? dataFim : null,
-
-      horario,
-      vagas,
-      valor,
+      dataInicio: dados.dataInicio,
+      dataFim: possuiRecorrencia ? dados.dataFim : null,
+      horario: dados.horario,
+      vagas: dados.vagas,
+      valor: dados.valor,
 
       recorrente: possuiRecorrencia,
+      diasSemana: possuiRecorrencia
+          ? dados.diasSemana
+          : null,
 
-      // Só guarda os dias da semana quando houver recorrência
-      diasSemana: possuiRecorrencia ? diasSemana : null,
-
-      // Converte observação vazia para null
-      observacoes: observacoes ?? null,
-
+      observacoes: dados.observacoes?.trim() || null,
       status: 'ATIVA',
 
-      // Associa a carona ao usuário logado
+      // O motorista vem do usuario identificado pelo JWT.
       usuario: {
-        idUsuario,
+        idUsuario: dados.idUsuario,
       },
     });
 
-    // Salva a carona no banco e retorna o registro criado
     return this.caronasRepository.save(novaCarona);
   }
 
   async listarCaronas(): Promise<Carona[]> {
-    // Retorna primeiro as caronas criadas mais recentemente
     return this.caronasRepository.find({
       where: {
         status: 'ATIVA',

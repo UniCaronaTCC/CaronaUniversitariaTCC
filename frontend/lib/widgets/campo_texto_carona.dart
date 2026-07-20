@@ -43,10 +43,7 @@ class CampoTextoCarona extends StatelessWidget {
       style: const TextStyle(color: AppColors.text),
       decoration: InputDecoration(
         labelText: label,
-        prefixIcon: Icon(
-          icone,
-          color: AppColors.primary,
-        ),
+        prefixIcon: Icon(icone, color: AppColors.primary),
         suffixIcon: suffixIcon,
         filled: true,
         fillColor: Colors.white,

@@ -41,10 +41,7 @@ class _TesteMapaState extends State<TesteMapa> {
         return;
       }
 
-      final pontoAtual = LatLng(
-        posicao.latitude,
-        posicao.longitude,
-      );
+      final pontoAtual = LatLng(posicao.latitude, posicao.longitude);
 
       setState(() {
         _localizacaoAtual = pontoAtual;
@@ -69,9 +66,7 @@ class _TesteMapaState extends State<TesteMapa> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Nao foi possivel obter sua localizacao'),
-        ),
+        const SnackBar(content: Text('Nao foi possivel obter sua localizacao')),
       );
     }
   }
@@ -110,9 +105,7 @@ class _TesteMapaState extends State<TesteMapa> {
   void _confirmarPontoEncontro() {
     if (_pontoEncontro == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Aguarde a localizacao ou toque no mapa'),
-        ),
+        const SnackBar(content: Text('Aguarde a localizacao ou toque no mapa')),
       );
 
       return;
@@ -129,19 +122,15 @@ class _TesteMapaState extends State<TesteMapa> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Ponto confirmado'),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Ponto confirmado')));
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Confirmar origem'),
-      ),
+      appBar: AppBar(title: const Text('Confirmar origem')),
 
       body: FlutterMap(
         mapController: _mapController,
@@ -186,11 +175,7 @@ class _TesteMapaState extends State<TesteMapa> {
                   point: _pontoEncontro!,
                   width: 50,
                   height: 50,
-                  child: const Icon(
-                    Icons.place,
-                    color: Colors.blue,
-                    size: 42,
-                  ),
+                  child: const Icon(Icons.place, color: Colors.blue, size: 42),
                 ),
               ],
             ),
@@ -223,8 +208,8 @@ class _TesteMapaState extends State<TesteMapa> {
                 const Text('Buscando endereco...')
               else
                 Text(
-                  _enderecoPontoEncontro
-                      ?? 'Toque no mapa para ajustar a origem',
+                  _enderecoPontoEncontro ??
+                      'Toque no mapa para ajustar a origem',
                 ),
 
               const SizedBox(height: 12),

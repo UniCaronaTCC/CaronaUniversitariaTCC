@@ -1,14 +1,13 @@
 import 'dart:convert'; // Permite converter JSON para objetos Dart e vice-versa
-import 'package:http/http.dart' as http; // Permite fazer requisições HTTP ao backend
+import 'package:http/http.dart'
+    as http; // Permite fazer requisições HTTP ao backend
 import '../config/api_config.dart'; // Importa a URL base da API
 import 'auth_service.dart'; // Importa o token do usuário logado
 
 class CaronaService {
-
   // Busca todas as caronas disponíveis no backend
   static Future<Map<String, dynamic>> listarCaronas() async {
     try {
-
       // Monta a URL da rota GET /caronas
       final url = Uri.parse('${ApiConfig.baseUrl}/caronas');
 
@@ -25,20 +24,16 @@ class CaronaService {
 
       // Verifica se a requisição foi realizada com sucesso
       if (resposta.statusCode == 200) {
-        return {
-          'sucesso': true,
-          'dados': dados,
-        };
+        return {'sucesso': true, 'dados': dados};
       }
 
       // Caso ocorra algum erro retornado pelo backend
       return {
         'sucesso': false,
-        'mensagem': dados['mensagem'] ?? dados['message'] ?? 'Erro ao buscar caronas',
+        'mensagem':
+            dados['mensagem'] ?? dados['message'] ?? 'Erro ao buscar caronas',
       };
-
     } catch (erro) {
-
       // Caso o backend esteja desligado ou haja erro de conexão
       return {
         'sucesso': false,
@@ -61,16 +56,12 @@ class CaronaService {
     String? observacoes,
   }) async {
     try {
-
       // Pega o token JWT salvo após o login
       final token = AuthService.tokenUsuarioLogado;
 
       // Se não existir token, o usuário não está logado
       if (token == null) {
-        return {
-          'sucesso': false,
-          'mensagem': 'Usuário não está logado',
-        };
+        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
       }
 
       // Monta a URL da rota POST /caronas
@@ -104,20 +95,16 @@ class CaronaService {
 
       // Verifica se a carona foi criada com sucesso
       if (resposta.statusCode == 200 || resposta.statusCode == 201) {
-        return {
-          'sucesso': true,
-          'dados': dados,
-        };
+        return {'sucesso': true, 'dados': dados};
       }
 
       // Caso o backend retorne algum erro tratado
       return {
         'sucesso': false,
-        'mensagem': dados['mensagem'] ?? dados['message'] ?? 'Erro ao criar carona',
+        'mensagem':
+            dados['mensagem'] ?? dados['message'] ?? 'Erro ao criar carona',
       };
-
     } catch (erro) {
-
       // Caso o backend esteja desligado ou haja erro inesperado
       return {
         'sucesso': false,

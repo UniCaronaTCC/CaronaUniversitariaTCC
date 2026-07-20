@@ -69,10 +69,7 @@ class FormularioOfertarCarona extends StatelessWidget {
         const SizedBox(height: 8),
         const Text(
           'Informe os dados da viagem',
-          style: TextStyle(
-            color: AppColors.text,
-            fontSize: 18,
-          ),
+          style: TextStyle(color: AppColors.text, fontSize: 18),
         ),
         const SizedBox(height: 32),
 
@@ -83,10 +80,7 @@ class FormularioOfertarCarona extends StatelessWidget {
           controller: origemController,
           somenteLeitura: true,
           onTap: onSelecionarOrigem,
-          suffixIcon: const Icon(
-            Icons.map_outlined,
-            color: AppColors.primary,
-          ),
+          suffixIcon: const Icon(Icons.map_outlined, color: AppColors.primary),
         ),
         const SizedBox(height: 16),
 
@@ -98,18 +92,18 @@ class FormularioOfertarCarona extends StatelessWidget {
           onChanged: onDestinoChanged,
           suffixIcon: buscandoDestino
               ? const Padding(
-            padding: EdgeInsets.all(12),
-            child: SizedBox(
-              width: 18,
-              height: 18,
-              child: CircularProgressIndicator(strokeWidth: 2),
-            ),
-          )
+                  padding: EdgeInsets.all(12),
+                  child: SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                )
               : IconButton(
-            tooltip: 'Buscar destino',
-            onPressed: onBuscarDestino,
-            icon: const Icon(Icons.search),
-          ),
+                  tooltip: 'Buscar destino',
+                  onPressed: onBuscarDestino,
+                  icon: const Icon(Icons.search),
+                ),
         ),
         const SizedBox(height: 16),
 
@@ -138,9 +132,7 @@ class FormularioOfertarCarona extends StatelessWidget {
           icone: Icons.people_outline,
           controller: vagasController,
           keyboardType: TextInputType.number,
-          inputFormatters: [
-            FilteringTextInputFormatter.digitsOnly,
-          ],
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
         ),
         const SizedBox(height: 16),
 
@@ -149,9 +141,7 @@ class FormularioOfertarCarona extends StatelessWidget {
           icone: Icons.payments_outlined,
           controller: valorController,
           keyboardType: TextInputType.number,
-          inputFormatters: [
-            FormatadorMoedaReal(),
-          ],
+          inputFormatters: [FormatadorMoedaReal()],
         ),
         const SizedBox(height: 16),
 

@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart'; // Importa os componentes visuais do Flutter
 import '../config/app_colors.dart'; // Importa as cores principais do app
 
-class CardCaronaDisponivel extends StatelessWidget { // Cria o card reutilizável de carona disponível
+class CardCaronaDisponivel extends StatelessWidget {
+  // Cria o card reutilizável de carona disponível
   final String origem; // Cidade ou local de saída da carona
   final String destino; // Cidade ou local de destino da carona
   final String periodo; // Informação de data, horário ou período da carona
@@ -19,7 +20,8 @@ class CardCaronaDisponivel extends StatelessWidget { // Cria o card reutilizáve
 
   @override
   Widget build(BuildContext context) {
-    return Container( // Card de uma carona disponível
+    return Container(
+      // Card de uma carona disponível
       width: double.infinity, // Ocupa toda a largura disponível
       padding: const EdgeInsets.all(20), // Espaçamento interno do card
       decoration: BoxDecoration(
@@ -33,9 +35,11 @@ class CardCaronaDisponivel extends StatelessWidget { // Cria o card reutilizáve
           ),
         ],
       ),
-      child: Row( // Organiza ícone, informações e seta em linha
+      child: Row(
+        // Organiza ícone, informações e seta em linha
         children: [
-          Container( // Círculo com ícone do carro
+          Container(
+            // Círculo com ícone do carro
             width: 64,
             height: 64,
             decoration: BoxDecoration(
@@ -51,9 +55,12 @@ class CardCaronaDisponivel extends StatelessWidget { // Cria o card reutilizáve
 
           const SizedBox(width: 18), // Espaço entre o ícone e as informações
 
-          Expanded( // Faz as informações ocuparem o espaço disponível
-            child: Column( // Organiza as informações em coluna
-              crossAxisAlignment: CrossAxisAlignment.start, // Alinha os textos à esquerda
+          Expanded(
+            // Faz as informações ocuparem o espaço disponível
+            child: Column(
+              // Organiza as informações em coluna
+              crossAxisAlignment:
+                  CrossAxisAlignment.start, // Alinha os textos à esquerda
               children: [
                 Text(
                   '$origem → $destino', // Mostra origem e destino da carona
@@ -68,20 +75,14 @@ class CardCaronaDisponivel extends StatelessWidget { // Cria o card reutilizáve
 
                 Text(
                   periodo, // Mostra data, horário ou período
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 15,
-                  ),
+                  style: const TextStyle(color: Colors.black54, fontSize: 15),
                 ),
 
                 const SizedBox(height: 8),
 
                 Text(
                   'Motorista: $motorista', // Mostra o nome do motorista
-                  style: const TextStyle(
-                    color: Colors.black54,
-                    fontSize: 15,
-                  ),
+                  style: const TextStyle(color: Colors.black54, fontSize: 15),
                 ),
 
                 const SizedBox(height: 14),
@@ -99,7 +100,8 @@ class CardCaronaDisponivel extends StatelessWidget { // Cria o card reutilizáve
           ),
 
           const Icon(
-            Icons.chevron_right, // Seta para indicar que o card poderá abrir detalhes
+            Icons
+                .chevron_right, // Seta para indicar que o card poderá abrir detalhes
             color: AppColors.primary,
             size: 32,
           ),

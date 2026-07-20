@@ -2,10 +2,8 @@ import 'package:geolocator/geolocator.dart';
 
 /// aqui é onde pega/solicita a localizacao do usuario.
 class LocalizacaoService {
-
   /// Obtém a localização atual do usuário.
   Future<Position> obterLocalizacaoAtual() async {
-
     // Verifica se a localização do aparelho está ligada.
     bool servicoHabilitado = await Geolocator.isLocationServiceEnabled();
 
@@ -28,9 +26,7 @@ class LocalizacaoService {
 
     // Caso o usuário tenha negado permanentemente.
     if (permissao == LocationPermission.deniedForever) {
-      throw Exception(
-        'Permissão de localização negada permanentemente.',
-      );
+      throw Exception('Permissão de localização negada permanentemente.');
     }
 
     // Obtém e retorna a posição atual do usuário.

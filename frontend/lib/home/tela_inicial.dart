@@ -7,7 +7,8 @@ import '../widgets/barra_navegacao_home.dart'; // Importa a barra inferior da te
 import 'buscar_carona.dart'; // Importa a tela responsável pela busca de caronas
 import 'ofertar_carona.dart'; // Importa a tela responsável por ofertar caronas
 
-class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
+class TelaInicial extends StatelessWidget {
+  // Cria a tela inicial do app
   final String nomeUsuario; // Guarda o nome do usuário logado
 
   const TelaInicial({
@@ -16,23 +17,27 @@ class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
   });
 
   @override
-  Widget build(BuildContext context) { // Tudo que aparece visualmente na tela fica aqui
+  Widget build(BuildContext context) {
+    // Tudo que aparece visualmente na tela fica aqui
     return Scaffold(
       backgroundColor: AppColors.background, // Define a cor de fundo da tela
-
       // Adiciona a barra inferior de navegação
       bottomNavigationBar: const BarraNavegacaoHome(),
 
       body: SafeArea(
-        child: SingleChildScrollView( // Permite rolar a tela se o conteúdo passar do tamanho disponível
+        child: SingleChildScrollView(
+          // Permite rolar a tela se o conteúdo passar do tamanho disponível
           child: Padding(
             padding: const EdgeInsets.all(24), // Espaçamento interno da tela
 
-            child: Column( // Organiza os elementos um embaixo do outro
-              crossAxisAlignment: CrossAxisAlignment.start, // Alinha os itens à esquerda
+            child: Column(
+              // Organiza os elementos um embaixo do outro
+              crossAxisAlignment:
+                  CrossAxisAlignment.start, // Alinha os itens à esquerda
 
               children: [
-                Text.rich( // Permite colocar estilos diferentes no mesmo texto
+                Text.rich(
+                  // Permite colocar estilos diferentes no mesmo texto
                   TextSpan(
                     children: [
                       const TextSpan(
@@ -45,9 +50,7 @@ class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
                       ),
 
                       TextSpan(
-                        text: nomeUsuario.isNotEmpty
-                            ? nomeUsuario
-                            : 'usuário',
+                        text: nomeUsuario.isNotEmpty ? nomeUsuario : 'usuário',
                         style: const TextStyle(
                           color: AppColors.primary,
                           fontSize: 32,
@@ -58,17 +61,15 @@ class TelaInicial extends StatelessWidget { // Cria a tela inicial do app
                   ),
 
                   maxLines: 2, // Permite no máximo duas linhas
-                  overflow: TextOverflow.ellipsis, // Corta nomes muito grandes com reticências
+                  overflow: TextOverflow
+                      .ellipsis, // Corta nomes muito grandes com reticências
                 ),
 
                 const SizedBox(height: 8),
 
                 const Text(
                   'Para onde você vai hoje?',
-                  style: TextStyle(
-                    fontSize: 20,
-                    color: AppColors.text,
-                  ),
+                  style: TextStyle(fontSize: 20, color: AppColors.text),
                 ),
 
                 const SizedBox(height: 36),

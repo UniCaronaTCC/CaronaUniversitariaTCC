@@ -56,9 +56,7 @@ class CampoRecorrenciaCarona extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            subtitle: const Text(
-              'Repetir esta carona em dias da semana',
-            ),
+            subtitle: const Text('Repetir esta carona em dias da semana'),
             value: caronaRecorrente,
             activeThumbColor: AppColors.primary,
             onChanged: onRecorrenciaChanged,
@@ -90,9 +88,7 @@ class CampoRecorrenciaCarona extends StatelessWidget {
                   selectedColor: AppColors.primary,
                   showCheckmark: false,
                   labelStyle: TextStyle(
-                    color: selecionado
-                        ? Colors.white
-                        : AppColors.text,
+                    color: selecionado ? Colors.white : AppColors.text,
                     fontWeight: FontWeight.w600,
                   ),
                   onSelected: (_) {

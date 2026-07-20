@@ -5,16 +5,16 @@ import '../widgets/auth_widgets.dart';
 import 'login.dart';
 // importa o service responsavel por conversar com o backend
 
-class CadastroTela extends StatefulWidget { // cria a tela de cadastro
+class CadastroTela extends StatefulWidget {
+  // cria a tela de cadastro
   const CadastroTela({super.key}); // construtor padrao da tela
 
   @override
   State<CadastroTela> createState() => _CadastroTelaState();
-// cria o estado da tela, necessario pq vamos guardar infos digitadas
+  // cria o estado da tela, necessario pq vamos guardar infos digitadas
 }
 
 class _CadastroTelaState extends State<CadastroTela> {
-
   // controllers servem pra controlar e pegar o texto digitado nos campos
   final TextEditingController nomeController = TextEditingController();
 
@@ -27,40 +27,30 @@ class _CadastroTelaState extends State<CadastroTela> {
 
   // funcao que vai rodar quando clicar no botao cadastrar
   Future<void> fazerCadastro() async {
-
     // verifica se o campo nome esta vazio
     if (nomeController.text.isEmpty) {
-
       // mostra uma mensagenzinha na parte de baixo da tela
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Informe seu nome'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Informe seu nome')));
 
       return; // para a funcao aqui
     }
 
     // verifica se o email esta vazio
     if (emailController.text.isEmpty) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Informe seu e-mail'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Informe seu e-mail')));
 
       return;
     }
 
     // verifica se a senha esta vazia
     if (senhaController.text.isEmpty) {
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Informe sua senha'),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Informe sua senha')));
 
       return;
     }
@@ -72,7 +62,6 @@ class _CadastroTelaState extends State<CadastroTela> {
 
     // chama o backend enviando os dados do cadastro
     final resultado = await AuthService.fazerCadastro(
-
       // pega o nome digitado
       nomeController.text,
 
@@ -83,25 +72,23 @@ class _CadastroTelaState extends State<CadastroTela> {
       senhaController.text,
     );
 
-// Verifica se a tela ainda está aberta depois da resposta do backend
+    // Verifica se a tela ainda está aberta depois da resposta do backend
     if (!mounted) {
       return;
     }
 
-// Desativa o loading
+    // Desativa o loading
     setState(() {
       carregando = false;
     });
 
-// Verifica se o cadastro foi realizado com sucesso
+    // Verifica se o cadastro foi realizado com sucesso
     if (resultado['sucesso'] == true) {
-
       // Mostra a mensagem de sucesso
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            resultado['dados']['mensagem']
-                ?? 'Cadastro realizado com sucesso',
+            resultado['dados']['mensagem'] ?? 'Cadastro realizado com sucesso',
           ),
         ),
       );
@@ -109,29 +96,21 @@ class _CadastroTelaState extends State<CadastroTela> {
       // Substitui a tela de cadastro pela tela de login
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (context) => const LoginTela(),
-        ),
+        MaterialPageRoute(builder: (context) => const LoginTela()),
       );
 
       return; // Encerra a função para não mostrar mensagem de erro
     }
 
-// Mostra a mensagem recebida caso o cadastro falhe
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          resultado['mensagem'],
-        ),
-      ),
-    );
+    // Mostra a mensagem recebida caso o cadastro falhe
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(resultado['mensagem'])));
   }
 
   @override
-
   // funcao chamada quando a tela e fechada
   void dispose() {
-
     // libera os controllers da memoria
     nomeController.dispose();
 
@@ -143,28 +122,26 @@ class _CadastroTelaState extends State<CadastroTela> {
   }
 
   @override
-
   // tudo que aparece visualmente fica aqui
   Widget build(BuildContext context) {
+    return Scaffold(
+      // estrutura base da tela
+      backgroundColor: AppColors
+          .background, // define a cor de fundo usando a cor padrao do app
 
-    return Scaffold( // estrutura base da tela
-
-      backgroundColor: AppColors.background, // define a cor de fundo usando a cor padrao do app
-
-      body: SafeArea( // evita que fique embaixo da barra do celular
-
-        child: Align( // controla o alinhamento do conteudo
-
+      body: SafeArea(
+        // evita que fique embaixo da barra do celular
+        child: Align(
+          // controla o alinhamento do conteudo
           alignment: Alignment.center, // centraliza o card na tela
 
-          child: SingleChildScrollView( // permite rolar se a tela for pequena
-
+          child: SingleChildScrollView(
+            // permite rolar se a tela for pequena
             padding: const EdgeInsets.all(24), // espacamento externo
 
-            child: AuthCard( // card visual reutilizavel para login/cadastro
-
+            child: AuthCard(
+              // card visual reutilizavel para login/cadastro
               children: [
-
                 const Text(
                   'CADASTRO',
                   style: TextStyle(
@@ -190,7 +167,6 @@ class _CadastroTelaState extends State<CadastroTela> {
 
                 // campo de nome
                 AuthCampoTexto(
-
                   hint: 'Nome',
 
                   icone: Icons.person,
@@ -204,7 +180,6 @@ class _CadastroTelaState extends State<CadastroTela> {
 
                 // campo de email
                 AuthCampoTexto(
-
                   hint: 'E-mail',
 
                   icone: Icons.email,
@@ -219,7 +194,6 @@ class _CadastroTelaState extends State<CadastroTela> {
 
                 // campo de senha
                 AuthCampoTexto(
-
                   hint: 'Senha',
 
                   icone: Icons.lock,
@@ -234,13 +208,9 @@ class _CadastroTelaState extends State<CadastroTela> {
 
                 // botao de cadastrar
                 AuthBotaoPrincipal(
-                  texto: carregando
-                      ? 'CADASTRANDO...'
-                      : 'CADASTRAR',
+                  texto: carregando ? 'CADASTRANDO...' : 'CADASTRAR',
 
-                  onPressed: carregando
-                      ? null
-                      : fazerCadastro,
+                  onPressed: carregando ? null : fazerCadastro,
                 ),
 
                 //para voltar pro login se ja tiver cadastro
