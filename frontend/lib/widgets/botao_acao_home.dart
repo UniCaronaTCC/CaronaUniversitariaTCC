@@ -1,11 +1,14 @@
-import 'package:flutter/material.dart'; // Importa os componentes visuais do Flutter
-import '../config/app_colors.dart'; // Importa as cores principais do app
+import 'package:flutter/material.dart';
 
+import '../config/app_colors.dart';
+
+// Botao grande reutilizavel nas telas principais.
 class BotaoAcaoHome extends StatelessWidget {
-  // Cria um botão grande reutilizável para a tela inicial
-  final String texto; // Texto que aparece no botão
-  final IconData icone; // Ícone que aparece no botão
-  final VoidCallback onPressed; // Função executada ao clicar no botão
+  final String texto;
+  final IconData icone;
+
+  // Quando for null, o botao fica desativado.
+  final VoidCallback? onPressed;
 
   const BotaoAcaoHome({
     super.key,
@@ -17,26 +20,24 @@ class BotaoAcaoHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      // Controla o tamanho do botão
-      width: double.infinity, // Faz o botão ocupar toda a largura disponível
-      height: 82, // Define a altura do botão
+      width: double.infinity,
+      height: 82,
       child: ElevatedButton.icon(
-        // Cria botão com ícone e texto
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary, // Cor de fundo roxa
-          foregroundColor: Colors.white, // Cor do texto e do ícone
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(
-              20,
-            ), // Arredonda as bordas do botão
-          ),
-          elevation: 6, // Cria sombra no botão
-        ),
-        onPressed: onPressed, // Executa a função recebida ao clicar
+        onPressed: onPressed,
         icon: Icon(icone, size: 32),
         label: Text(
           texto,
           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.55),
+          disabledForegroundColor: Colors.white70,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          elevation: onPressed == null ? 0 : 6,
         ),
       ),
     );

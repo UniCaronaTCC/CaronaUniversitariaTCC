@@ -4,6 +4,8 @@ import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
 import '../mapa/screens/mapa_screen.dart';
 import '../mapa/services/endereco_service.dart';
+import '../services/carona_service.dart';
+import '../utils/formatador_moeda.dart';
 import '../widgets/formulario_ofertar_carona.dart';
 
 class OfertarCaronaTela extends StatefulWidget {
@@ -14,7 +16,6 @@ class OfertarCaronaTela extends StatefulWidget {
 }
 
 class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
-  // Campos preenchidos pelo usuario.
   final origemController = TextEditingController();
   final destinoController = TextEditingController();
   final dataController = TextEditingController();
@@ -32,6 +33,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
   bool buscandoDestino = false;
   bool caronaRecorrente = false;
+  bool enviandoCarona = false;
 
   final List<String> diasSelecionados = [];
 
@@ -52,7 +54,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     });
   }
 
-  // Abre o calendario sem permitir datas anteriores a hoje.
+  // Abre o calendario sem permitir datas anteriores.
   Future<void> escolherData() async {
     final agora = DateTime.now();
     final hoje = DateTime(agora.year, agora.month, agora.day);
@@ -73,11 +75,11 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
     setState(() {
       dataSelecionada = resultado;
-      dataController.text = _formatarData(resultado);
+      dataController.text = formatarDataExibicao(resultado);
     });
   }
 
-  // Abre o seletor de horario seguindo o formato do celular.
+  // Abre o seletor de horario do celular.
   Future<void> escolherHorario() async {
     final resultado = await showTimePicker(
       context: context,
@@ -93,25 +95,33 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
     setState(() {
       horarioSelecionado = resultado;
-      horarioController.text = _formatarHorario(resultado);
+      horarioController.text = formatarHorario(resultado);
     });
   }
 
-  String _formatarData(DateTime data) {
+  String formatarDataExibicao(DateTime data) {
     final dia = data.day.toString().padLeft(2, '0');
     final mes = data.month.toString().padLeft(2, '0');
 
     return '$dia/$mes/${data.year}';
   }
 
-  String _formatarHorario(TimeOfDay horario) {
+  // O MySQL espera a data no formato ano-mes-dia.
+  String formatarDataBackend(DateTime data) {
+    final mes = data.month.toString().padLeft(2, '0');
+    final dia = data.day.toString().padLeft(2, '0');
+
+    return '${data.year}-$mes-$dia';
+  }
+
+  String formatarHorario(TimeOfDay horario) {
     final hora = horario.hour.toString().padLeft(2, '0');
     final minuto = horario.minute.toString().padLeft(2, '0');
 
     return '$hora:$minuto';
   }
 
-  // Invalida a localizacao anterior quando o texto for alterado.
+  // Invalida a localizacao antiga quando o texto muda.
   void alterarTextoDestino(String texto) {
     if (destinoSelecionado == null || texto == destinoSelecionado!.endereco) {
       return;
@@ -122,12 +132,11 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     });
   }
 
-  // Busca enderecos correspondentes ao destino digitado.
   Future<void> buscarDestino() async {
     final textoBusca = destinoController.text.trim();
 
     if (textoBusca.isEmpty) {
-      _mostrarMensagem('Digite o destino');
+      mostrarMensagem('Digite o destino');
       return;
     }
 
@@ -144,7 +153,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       return;
     }
 
-    // Ignora resultados antigos caso o texto tenha mudado durante a busca.
+    // Descarta a resposta se o texto mudou durante a busca.
     if (destinoController.text.trim() != textoBusca) {
       setState(() {
         buscandoDestino = false;
@@ -157,7 +166,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     });
 
     if (opcoes.isEmpty) {
-      _mostrarMensagem('Nenhum destino encontrado');
+      mostrarMensagem('Nenhum destino encontrado');
       return;
     }
 
@@ -175,7 +184,6 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     selecionarDestino(resultado);
   }
 
-  // Mostra os enderecos encontrados para o usuario escolher.
   Future<LocalizacaoSelecionada?> mostrarOpcoesDestino(
     List<LocalizacaoSelecionada> opcoes,
   ) {
@@ -184,42 +192,44 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       showDragHandle: true,
       builder: (context) {
         return SafeArea(
-          child: Column(
-            children: [
-              const Padding(
-                padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Text(
-                  'Selecione o destino',
-                  style: TextStyle(
-                    color: AppColors.text,
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
+          child: SizedBox(
+            height: MediaQuery.sizeOf(context).height * 0.6,
+            child: Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: Text(
+                    'Selecione o destino',
+                    style: TextStyle(
+                      color: AppColors.text,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
-              ),
-              const Divider(height: 1),
-              Expanded(
-                child: ListView.separated(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  itemCount: opcoes.length,
-                  separatorBuilder: (_, _) => const Divider(height: 1),
-                  itemBuilder: (context, index) {
-                    final opcao = opcoes[index];
+                const Divider(height: 1),
+                Expanded(
+                  child: ListView.separated(
+                    itemCount: opcoes.length,
+                    separatorBuilder: (_, _) => const Divider(height: 1),
+                    itemBuilder: (context, index) {
+                      final opcao = opcoes[index];
 
-                    return ListTile(
-                      leading: const Icon(
-                        Icons.location_on_outlined,
-                        color: AppColors.primary,
-                      ),
-                      title: Text(opcao.endereco),
-                      onTap: () {
-                        Navigator.pop(context, opcao);
-                      },
-                    );
-                  },
+                      return ListTile(
+                        leading: const Icon(
+                          Icons.location_on_outlined,
+                          color: AppColors.primary,
+                        ),
+                        title: Text(opcao.endereco),
+                        onTap: () {
+                          Navigator.pop(context, opcao);
+                        },
+                      );
+                    },
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -253,17 +263,67 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     });
   }
 
-  // Confere os dados antes de enviar futuramente ao backend.
-  void ofertarCarona() {
+  // Valida e envia a oferta ao backend.
+  Future<void> ofertarCarona() async {
     final erro = validarFormulario();
 
     if (erro != null) {
-      _mostrarMensagem(erro);
+      mostrarMensagem(erro);
       return;
     }
 
-    // Temporario: a integracao com CaronaService sera o proximo passo.
-    _mostrarMensagem('Oferta de carona criada com sucesso');
+    setState(() {
+      enviandoCarona = true;
+    });
+
+    final origem = origemSelecionada!;
+    final destino = destinoSelecionado!;
+    final observacoes = observacoesController.text.trim();
+
+    final resultado = await CaronaService.criarCarona(
+      origem: origem.endereco,
+      origemLatitude: origem.ponto.latitude,
+      origemLongitude: origem.ponto.longitude,
+
+      destino: destino.endereco,
+      destinoLatitude: destino.ponto.latitude,
+      destinoLongitude: destino.ponto.longitude,
+
+      dataInicio: formatarDataBackend(dataSelecionada!),
+      horario: '${formatarHorario(horarioSelecionado!)}:00',
+      vagas: int.parse(vagasController.text),
+      valor: converterMoedaRealParaDouble(valorController.text),
+      recorrente: caronaRecorrente,
+      diasSemana: caronaRecorrente ? List<String>.from(diasSelecionados) : null,
+      observacoes: observacoes.isEmpty ? null : observacoes,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      enviandoCarona = false;
+    });
+
+    if (resultado['sucesso'] == true) {
+      final dados = resultado['dados'] as Map<String, dynamic>?;
+
+      mostrarMensagem(
+        dados?['mensagem']?.toString() ?? 'Carona criada com sucesso',
+      );
+
+      // Volta para a Home quando a tela foi aberta por navegacao.
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context, true);
+      }
+
+      return;
+    }
+
+    mostrarMensagem(
+      resultado['mensagem']?.toString() ?? 'Erro ao criar carona',
+    );
   }
 
   String? validarFormulario() {
@@ -288,6 +348,10 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       return 'Busque e selecione o destino';
     }
 
+    if (dataSelecionada == null || horarioSelecionado == null) {
+      return 'Selecione a data e o horario';
+    }
+
     final vagas = int.tryParse(vagasController.text);
 
     if (vagas == null || vagas <= 0) {
@@ -301,7 +365,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     return null;
   }
 
-  void _mostrarMensagem(String mensagem) {
+  void mostrarMensagem(String mensagem) {
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(SnackBar(content: Text(mensagem)));
@@ -343,6 +407,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
             observacoesController: observacoesController,
             buscandoDestino: buscandoDestino,
             caronaRecorrente: caronaRecorrente,
+            enviandoCarona: enviandoCarona,
             diasSelecionados: diasSelecionados,
             onSelecionarOrigem: escolherOrigemNoMapa,
             onBuscarDestino: buscarDestino,

@@ -19,6 +19,7 @@ class FormularioOfertarCarona extends StatelessWidget {
 
   final bool buscandoDestino;
   final bool caronaRecorrente;
+  final bool enviandoCarona;
   final List<String> diasSelecionados;
 
   final VoidCallback onSelecionarOrigem;
@@ -51,6 +52,7 @@ class FormularioOfertarCarona extends StatelessWidget {
     required this.onDestinoChanged,
     required this.onRecorrenciaChanged,
     required this.onDiaSelecionado,
+    required this.enviandoCarona,
   });
 
   @override
@@ -162,9 +164,9 @@ class FormularioOfertarCarona extends StatelessWidget {
         const SizedBox(height: 32),
 
         BotaoAcaoHome(
-          texto: 'OFERTAR CARONA',
-          icone: Icons.groups_outlined,
-          onPressed: onOfertarCarona,
+          texto: enviandoCarona ? 'ENVIANDO...' : 'OFERTAR CARONA',
+          icone: enviandoCarona ? Icons.hourglass_top : Icons.groups_outlined,
+          onPressed: enviandoCarona ? null : onOfertarCarona,
         ),
       ],
     );

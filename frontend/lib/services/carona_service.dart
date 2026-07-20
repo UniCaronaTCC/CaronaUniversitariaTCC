@@ -1,40 +1,28 @@
-import 'dart:convert'; // Permite converter JSON para objetos Dart e vice-versa
-import 'package:http/http.dart'
-    as http; // Permite fazer requisições HTTP ao backend
-import '../config/api_config.dart'; // Importa a URL base da API
-import 'auth_service.dart'; // Importa o token do usuário logado
+import 'dart:convert';
+
+import 'package:http/http.dart' as http;
+
+import '../config/api_config.dart';
+import 'auth_service.dart';
 
 class CaronaService {
-  // Busca todas as caronas disponíveis no backend
+  // Busca todas as caronas ativas.
   static Future<Map<String, dynamic>> listarCaronas() async {
     try {
-      // Monta a URL da rota GET /caronas
       final url = Uri.parse('${ApiConfig.baseUrl}/caronas');
-
-      // Faz a requisição ao backend
       final resposta = await http.get(url);
-      print('URL CHAMADA: $url');
-      print('STATUS: ${resposta.statusCode}');
-      print('BODY: ${resposta.body}');
 
-      // Converte a resposta para JSON
-      final Map<String, dynamic> dados = resposta.body.isNotEmpty
-          ? jsonDecode(resposta.body)
-          : {};
+      final dados = _decodificarResposta(resposta);
 
-      // Verifica se a requisição foi realizada com sucesso
       if (resposta.statusCode == 200) {
         return {'sucesso': true, 'dados': dados};
       }
 
-      // Caso ocorra algum erro retornado pelo backend
       return {
         'sucesso': false,
-        'mensagem':
-            dados['mensagem'] ?? dados['message'] ?? 'Erro ao buscar caronas',
+        'mensagem': _obterMensagem(dados, 'Erro ao buscar caronas'),
       };
     } catch (erro) {
-      // Caso o backend esteja desligado ou haja erro de conexão
       return {
         'sucesso': false,
         'mensagem': 'Não foi possível conectar ao servidor',
@@ -42,10 +30,18 @@ class CaronaService {
     }
   }
 
-  // Cria uma nova oferta de carona no backend
+  // Envia uma nova oferta com endereço e coordenadas.
   static Future<Map<String, dynamic>> criarCarona({
     required String origem,
+    String? origemCidade,
+    required double origemLatitude,
+    required double origemLongitude,
+
     required String destino,
+    String? destinoCidade,
+    required double destinoLatitude,
+    required double destinoLongitude,
+
     required String dataInicio,
     String? dataFim,
     required String horario,
@@ -56,18 +52,14 @@ class CaronaService {
     String? observacoes,
   }) async {
     try {
-      // Pega o token JWT salvo após o login
       final token = AuthService.tokenUsuarioLogado;
 
-      // Se não existir token, o usuário não está logado
       if (token == null) {
         return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
       }
 
-      // Monta a URL da rota POST /caronas
       final url = Uri.parse('${ApiConfig.baseUrl}/caronas');
 
-      // Faz a requisição enviando o token no cabeçalho Authorization
       final resposta = await http.post(
         url,
         headers: {
@@ -76,7 +68,15 @@ class CaronaService {
         },
         body: jsonEncode({
           'origem': origem,
+          'origemCidade': origemCidade,
+          'origemLatitude': origemLatitude,
+          'origemLongitude': origemLongitude,
+
           'destino': destino,
+          'destinoCidade': destinoCidade,
+          'destinoLatitude': destinoLatitude,
+          'destinoLongitude': destinoLongitude,
+
           'dataInicio': dataInicio,
           'dataFim': dataFim,
           'horario': horario,
@@ -88,28 +88,58 @@ class CaronaService {
         }),
       );
 
-      // Converte a resposta do backend para Map
-      final Map<String, dynamic> dados = resposta.body.isNotEmpty
-          ? jsonDecode(resposta.body)
-          : {};
+      final dados = _decodificarResposta(resposta);
 
-      // Verifica se a carona foi criada com sucesso
       if (resposta.statusCode == 200 || resposta.statusCode == 201) {
         return {'sucesso': true, 'dados': dados};
       }
 
-      // Caso o backend retorne algum erro tratado
+      // Limpa a sessao quando o token for invalido ou expirado.
+      if (resposta.statusCode == 401) {
+        AuthService.sair();
+
+        return {
+          'sucesso': false,
+          'mensagem': 'Sua sessão expirou. Entre novamente.',
+        };
+      }
+
       return {
         'sucesso': false,
-        'mensagem':
-            dados['mensagem'] ?? dados['message'] ?? 'Erro ao criar carona',
+        'mensagem': _obterMensagem(dados, 'Erro ao criar carona'),
       };
     } catch (erro) {
-      // Caso o backend esteja desligado ou haja erro inesperado
       return {
         'sucesso': false,
         'mensagem': 'Não foi possível conectar ao servidor',
       };
     }
+  }
+
+  // Converte com seguranca a resposta recebida.
+  static Map<String, dynamic> _decodificarResposta(http.Response resposta) {
+    if (resposta.body.isEmpty) {
+      return {};
+    }
+
+    try {
+      final resultado = jsonDecode(resposta.body);
+
+      if (resultado is Map<String, dynamic>) {
+        return resultado;
+      }
+
+      return {};
+    } catch (erro) {
+      return {};
+    }
+  }
+
+  // Aceita tanto "mensagem" quanto "message".
+  static String _obterMensagem(
+    Map<String, dynamic> dados,
+    String mensagemPadrao,
+  ) {
+    return dados['mensagem'] ?? dados['message'] ?? mensagemPadrao;
   }
 }
