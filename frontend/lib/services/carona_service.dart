@@ -3,24 +3,41 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
+import '../models/carona.dart';
 import 'auth_service.dart';
 
 class CaronaService {
-  // Busca todas as caronas ativas.
+  // Busca e converte as caronas ativas.
   static Future<Map<String, dynamic>> listarCaronas() async {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/caronas');
       final resposta = await http.get(url);
-
-      final dados = _decodificarResposta(resposta);
+      final corpo = _decodificarResposta(resposta);
 
       if (resposta.statusCode == 200) {
-        return {'sucesso': true, 'dados': dados};
+        final caronas = <Carona>[];
+        final dadosRecebidos = corpo['dados'];
+
+        if (dadosRecebidos is List) {
+          for (final item in dadosRecebidos) {
+            if (item is! Map) {
+              continue;
+            }
+
+            try {
+              caronas.add(Carona.fromJson(Map<String, dynamic>.from(item)));
+            } catch (erro) {
+              // Ignora somente registros invalidos.
+            }
+          }
+        }
+
+        return {'sucesso': true, 'dados': caronas};
       }
 
       return {
         'sucesso': false,
-        'mensagem': _obterMensagem(dados, 'Erro ao buscar caronas'),
+        'mensagem': _obterMensagem(corpo, 'Erro ao buscar caronas'),
       };
     } catch (erro) {
       return {
@@ -88,13 +105,12 @@ class CaronaService {
         }),
       );
 
-      final dados = _decodificarResposta(resposta);
+      final corpo = _decodificarResposta(resposta);
 
       if (resposta.statusCode == 200 || resposta.statusCode == 201) {
-        return {'sucesso': true, 'dados': dados};
+        return {'sucesso': true, 'dados': corpo};
       }
 
-      // Limpa a sessao quando o token for invalido ou expirado.
       if (resposta.statusCode == 401) {
         AuthService.sair();
 
@@ -106,7 +122,7 @@ class CaronaService {
 
       return {
         'sucesso': false,
-        'mensagem': _obterMensagem(dados, 'Erro ao criar carona'),
+        'mensagem': _obterMensagem(corpo, 'Erro ao criar carona'),
       };
     } catch (erro) {
       return {
@@ -135,11 +151,12 @@ class CaronaService {
     }
   }
 
-  // Aceita tanto "mensagem" quanto "message".
   static String _obterMensagem(
     Map<String, dynamic> dados,
     String mensagemPadrao,
   ) {
-    return dados['mensagem'] ?? dados['message'] ?? mensagemPadrao;
+    final mensagem = dados['mensagem'] ?? dados['message'];
+
+    return mensagem?.toString() ?? mensagemPadrao;
   }
 }

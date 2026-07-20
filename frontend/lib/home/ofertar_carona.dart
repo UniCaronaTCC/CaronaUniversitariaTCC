@@ -123,7 +123,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
   // Invalida a localizacao antiga quando o texto muda.
   void alterarTextoDestino(String texto) {
-    if (destinoSelecionado == null || texto == destinoSelecionado!.endereco) {
+    if (destinoSelecionado == null || texto == destinoSelecionado!.descricaoCompleta) {
       return;
     }
 
@@ -239,7 +239,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   void selecionarDestino(LocalizacaoSelecionada destino) {
     setState(() {
       destinoSelecionado = destino;
-      destinoController.text = destino.endereco;
+      destinoController.text = destino.descricaoCompleta;
     });
   }
 
@@ -285,7 +285,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       origemLatitude: origem.ponto.latitude,
       origemLongitude: origem.ponto.longitude,
 
-      destino: destino.endereco,
+      destino: destino.descricaoCompleta,
       destinoLatitude: destino.ponto.latitude,
       destinoLongitude: destino.ponto.longitude,
 

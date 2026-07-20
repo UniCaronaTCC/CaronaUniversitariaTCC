@@ -80,8 +80,14 @@ class EnderecoService {
 
         resultados.add(
           LocalizacaoSelecionada(
-            ponto: LatLng(localizacao.latitude, localizacao.longitude),
+            ponto: LatLng(
+              localizacao.latitude,
+              localizacao.longitude,
+            ),
             endereco: enderecoCompleto,
+
+            // Preserva o nome usado na pesquisa.
+            nome: textoBusca,
           ),
         );
       }

@@ -4,7 +4,6 @@ import { Repository } from 'typeorm';
 
 import { Carona } from './carona.entity';
 
-// Define todos os dados necessários para criar uma carona.
 export interface DadosCriacaoCarona {
   idUsuario: number;
 
@@ -63,7 +62,6 @@ export class CaronasService {
       observacoes: dados.observacoes?.trim() || null,
       status: 'ATIVA',
 
-      // O motorista vem do usuario identificado pelo JWT.
       usuario: {
         idUsuario: dados.idUsuario,
       },
@@ -72,14 +70,40 @@ export class CaronasService {
     return this.caronasRepository.save(novaCarona);
   }
 
+  // Lista somente ofertas ativas e que ainda podem acontecer.
   async listarCaronas(): Promise<Carona[]> {
-    return this.caronasRepository.find({
-      where: {
-        status: 'ATIVA',
-      },
-      order: {
-        criadoEm: 'DESC',
-      },
-    });
+    return this.caronasRepository
+        .createQueryBuilder('carona')
+
+        // Carrega somente identificacao e nome do motorista.
+        .leftJoinAndSelect('carona.usuario', 'usuario')
+        .select([
+          'carona',
+          'usuario.idUsuario',
+          'usuario.nome',
+        ])
+
+        .where('carona.status = :status', {
+          status: 'ATIVA',
+        })
+
+        // Remove caronas unicas antigas e recorrencias encerradas.
+        .andWhere(`
+          (
+            carona.dataInicio >= CURDATE()
+            OR (
+              carona.recorrente = true
+              AND (
+                carona.dataFim IS NULL
+                OR carona.dataFim >= CURDATE()
+              )
+            )
+          )
+        `)
+
+        // Mostra primeiro as caronas mais proximas.
+        .orderBy('carona.dataInicio', 'ASC')
+        .addOrderBy('carona.horario', 'ASC')
+        .getMany();
   }
 }

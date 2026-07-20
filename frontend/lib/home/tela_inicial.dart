@@ -1,56 +1,120 @@
-import 'package:flutter/material.dart'; // Importa os componentes visuais do Flutter
-import '../config/app_colors.dart'; // Importa as cores principais do app
-import '../widgets/botao_acao_home.dart'; // Importa o botão grande usado na tela inicial
-import '../widgets/card_carona_disponivel.dart'; // Importa o card de carona disponível
-import '../widgets/card_destino_home.dart'; // Importa o card de destino da tela inicial
-import '../widgets/barra_navegacao_home.dart'; // Importa a barra inferior da tela inicial
-import 'buscar_carona.dart'; // Importa a tela responsável pela busca de caronas
-import 'ofertar_carona.dart'; // Importa a tela responsável por ofertar caronas
+import 'package:flutter/material.dart';
 
-class TelaInicial extends StatelessWidget {
-  // Cria a tela inicial do app
-  final String nomeUsuario; // Guarda o nome do usuário logado
+import '../config/app_colors.dart';
+import '../models/carona.dart';
+import '../services/carona_service.dart';
+import '../widgets/barra_navegacao_home.dart';
+import '../widgets/botao_acao_home.dart';
+import '../widgets/card_carona_disponivel.dart';
+import '../widgets/card_destino_home.dart';
+import 'buscar_carona.dart';
+import 'ofertar_carona.dart';
 
-  const TelaInicial({
-    super.key,
-    required this.nomeUsuario, // Obriga receber o nome do usuário ao abrir a tela
-  });
+class TelaInicial extends StatefulWidget {
+  final String nomeUsuario;
+
+  const TelaInicial({super.key, required this.nomeUsuario});
+
+  @override
+  State<TelaInicial> createState() => _TelaInicialState();
+}
+
+class _TelaInicialState extends State<TelaInicial> {
+  List<Carona> caronas = [];
+  bool carregando = true;
+  String? mensagemErro;
+
+  @override
+  void initState() {
+    super.initState();
+    carregarCaronas();
+  }
+
+  Future<void> carregarCaronas() async {
+    setState(() {
+      carregando = true;
+      mensagemErro = null;
+    });
+
+    final resultado = await CaronaService.listarCaronas();
+
+    if (!mounted) {
+      return;
+    }
+
+    if (resultado['sucesso'] == true) {
+      final dados = resultado['dados'];
+
+      setState(() {
+        caronas = dados is List<Carona> ? dados : [];
+        carregando = false;
+      });
+
+      return;
+    }
+
+    setState(() {
+      carregando = false;
+      mensagemErro =
+          resultado['mensagem']?.toString() ?? 'Erro ao carregar caronas';
+    });
+  }
+
+  Future<void> abrirBusca() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const BuscarCaronaTela()),
+    );
+
+    // Atualiza a Home ao voltar da busca.
+    await carregarCaronas();
+  }
+
+  Future<void> abrirOferta() async {
+    final caronaCriada = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (context) => const OfertarCaronaTela()),
+    );
+
+    // Atualiza imediatamente depois de criar uma oferta.
+    if (caronaCriada == true) {
+      await carregarCaronas();
+    }
+  }
+
+  void abrirDetalhes(Carona carona) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Detalhes da carona de ${carona.motorista}')),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Tudo que aparece visualmente na tela fica aqui
+    final caronasHome = caronas.take(3).toList();
+
     return Scaffold(
-      backgroundColor: AppColors.background, // Define a cor de fundo da tela
-      // Adiciona a barra inferior de navegação
+      backgroundColor: AppColors.background,
       bottomNavigationBar: const BarraNavegacaoHome(),
-
       body: SafeArea(
-        child: SingleChildScrollView(
-          // Permite rolar a tela se o conteúdo passar do tamanho disponível
-          child: Padding(
-            padding: const EdgeInsets.all(24), // Espaçamento interno da tela
-
+        child: RefreshIndicator(
+          onRefresh: carregarCaronas,
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(24),
             child: Column(
-              // Organiza os elementos um embaixo do outro
-              crossAxisAlignment:
-                  CrossAxisAlignment.start, // Alinha os itens à esquerda
-
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text.rich(
-                  // Permite colocar estilos diferentes no mesmo texto
                   TextSpan(
                     children: [
                       const TextSpan(
                         text: 'Olá, ',
-                        style: TextStyle(
-                          color: AppColors.text,
-                          fontSize: 32,
-                          fontWeight: FontWeight.w400,
-                        ),
+                        style: TextStyle(color: AppColors.text, fontSize: 32),
                       ),
-
                       TextSpan(
-                        text: nomeUsuario.isNotEmpty ? nomeUsuario : 'usuário',
+                        text: widget.nomeUsuario.isNotEmpty
+                            ? widget.nomeUsuario
+                            : 'usuário',
                         style: const TextStyle(
                           color: AppColors.primary,
                           fontSize: 32,
@@ -59,111 +123,128 @@ class TelaInicial extends StatelessWidget {
                       ),
                     ],
                   ),
-
-                  maxLines: 2, // Permite no máximo duas linhas
-                  overflow: TextOverflow
-                      .ellipsis, // Corta nomes muito grandes com reticências
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                 ),
-
                 const SizedBox(height: 8),
-
                 const Text(
                   'Para onde você vai hoje?',
                   style: TextStyle(fontSize: 20, color: AppColors.text),
                 ),
-
                 const SizedBox(height: 36),
 
-                // Card que mostra o destino principal
                 const CardDestinoHome(
                   destino: 'AVENIDA UNISALESIANO, NÚMERO 2026',
                 ),
-
                 const SizedBox(height: 36),
 
-                // Botão que abre a tela de busca de caronas
                 BotaoAcaoHome(
                   texto: 'BUSCAR',
-                  icone: Icons.directions_car_outlined,
-
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const BuscarCaronaTela(),
-                      ),
-                    );
-                  },
+                  icone: Icons.search,
+                  onPressed: abrirBusca,
                 ),
-
                 const SizedBox(height: 20),
 
-                // Botão que abre a tela de oferta de carona
                 BotaoAcaoHome(
                   texto: 'OFERTAR',
-                  icone: Icons.groups_outlined,
-
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const OfertarCaronaTela(),
-                      ),
-                    );
-                  },
+                  icone: Icons.add_road,
+                  onPressed: abrirOferta,
                 ),
-
                 const SizedBox(height: 36),
 
-                // Linha com o título da seção e o botão para visualizar todas
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-
                   children: [
-                    const Text(
-                      'Caronas disponíveis',
-                      style: TextStyle(
-                        color: AppColors.text,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-
-                    TextButton(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                              'Lista completa de caronas ainda será criada',
-                            ),
-                          ),
-                        );
-                      },
-
-                      child: const Text(
-                        'Ver todas',
+                    const Expanded(
+                      child: Text(
+                        'Caronas disponíveis',
                         style: TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 16,
+                          color: AppColors.text,
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
                     ),
+                    TextButton(
+                      onPressed: abrirBusca,
+                      child: const Text('Ver todas'),
+                    ),
                   ],
                 ),
-
                 const SizedBox(height: 12),
 
-                // Card temporário de exemplo
-                const CardCaronaDisponivel(
-                  origem: 'Araçatuba',
-                  destino: 'UniSalesiano',
-                  periodo: 'Hoje • Noite',
-                  motorista: 'Henrique',
-                  valor: 'R\$ 6,00',
-                ),
+                if (carregando)
+                  const Center(
+                    child: Padding(
+                      padding: EdgeInsets.all(32),
+                      child: CircularProgressIndicator(),
+                    ),
+                  )
+                else if (mensagemErro != null)
+                  _MensagemHome(
+                    icone: Icons.cloud_off_outlined,
+                    mensagem: mensagemErro!,
+                    textoBotao: 'Tentar novamente',
+                    onPressed: carregarCaronas,
+                  )
+                else if (caronasHome.isEmpty)
+                  const _MensagemHome(
+                    icone: Icons.directions_car_outlined,
+                    mensagem: 'Nenhuma carona disponível',
+                  )
+                else
+                  ListView.separated(
+                    itemCount: caronasHome.length,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final carona = caronasHome[index];
+
+                      return CardCaronaDisponivel(
+                        carona: carona,
+                        onTap: () => abrirDetalhes(carona),
+                      );
+                    },
+                  ),
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class _MensagemHome extends StatelessWidget {
+  final IconData icone;
+  final String mensagem;
+  final String? textoBotao;
+  final VoidCallback? onPressed;
+
+  const _MensagemHome({
+    required this.icone,
+    required this.mensagem,
+    this.textoBotao,
+    this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 28),
+        child: Column(
+          children: [
+            Icon(icone, size: 42, color: Colors.black38),
+            const SizedBox(height: 12),
+            Text(
+              mensagem,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.black54),
+            ),
+            if (textoBotao != null && onPressed != null)
+              TextButton(onPressed: onPressed, child: Text(textoBotao!)),
+          ],
         ),
       ),
     );
