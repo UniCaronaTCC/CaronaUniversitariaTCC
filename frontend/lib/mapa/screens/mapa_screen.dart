@@ -1,8 +1,10 @@
-import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:latlong2/latlong.dart';
+import 'package:flutter/material.dart'; // Importa os componentes visuais do Flutter
+import 'package:flutter_map/flutter_map.dart'; // Importa o mapa OpenStreetMap
+import 'package:latlong2/latlong.dart'; // Importa o tipo LatLng para latitude e longitude
 
-import '../services/localizacao_service.dart';
+import '../services/endereco_service.dart'; // Service que converte coordenadas em endereco
+import '../services/localizacao_service.dart'; // Service que pega a localizacao atual
+import '../models/localizacao_selecionada.dart'; // Model com ponto e endereco escolhido
 
 class TesteMapa extends StatefulWidget {
   const TesteMapa({super.key});
@@ -12,81 +14,155 @@ class TesteMapa extends StatefulWidget {
 }
 
 class _TesteMapaState extends State<TesteMapa> {
-  // Serviço responsável por obter a localização do usuário.
   final LocalizacaoService _localizacaoService = LocalizacaoService();
-
-  // Controlador responsável por controlar o mapa.
+  final EnderecoService _enderecoService = EnderecoService();
   final MapController _mapController = MapController();
 
-  // Armazena a localização atual do usuário.
   LatLng? _localizacaoAtual;
-// agr guarda a localizacão do ponto de encontro
   LatLng? _pontoEncontro;
 
-  // o "_" na variavel acima significa q e uma variavel privada a esse arquivo
+  String? _enderecoPontoEncontro;
+
+  bool _buscandoLocalizacao = true;
+  bool _buscandoEndereco = false;
 
   @override
   void initState() {
     super.initState();
-
-    // Obtém a localização assim que a tela é aberta.
     _obterLocalizacao();
   }
 
-  /// Obtém a localização atual do usuário e centraliza o mapa.
+  // Obtem a localizacao atual, centraliza o mapa e busca o endereco estimado
   Future<void> _obterLocalizacao() async {
     try {
       final posicao = await _localizacaoService.obterLocalizacaoAtual();
 
-      debugPrint('==============================');
-      debugPrint('Latitude: ${posicao.latitude}');
-      debugPrint('Longitude: ${posicao.longitude}');
-      debugPrint('==============================');
+      if (!mounted) {
+        return;
+      }
 
-      // Salva a localização atual.
-      // Atualiza a interface com a localização do usuário.
+      final pontoAtual = LatLng(
+        posicao.latitude,
+        posicao.longitude,
+      );
+
       setState(() {
-        _localizacaoAtual = LatLng(
-          posicao.latitude,
-          posicao.longitude,
-        );
+        _localizacaoAtual = pontoAtual;
+        _pontoEncontro = pontoAtual;
+        _buscandoLocalizacao = false;
       });
 
-// Move o mapa para a localização do usuário.
-      _mapController.move(_localizacaoAtual!, 16);
-    } catch (e) {
-      debugPrint('Erro ao obter localização: $e');
+      // Abre o mapa na localizacao atual do usuario
+      _mapController.move(pontoAtual, 16);
+
+      // Busca o endereco aproximado da localizacao atual
+      await _buscarEnderecoDoPonto(pontoAtual);
+    } catch (erro) {
+      debugPrint('Erro ao obter localizacao: $erro');
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _buscandoLocalizacao = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nao foi possivel obter sua localizacao'),
+        ),
+      );
     }
+  }
+
+  // Busca o endereco a partir de um ponto do mapa
+  Future<void> _buscarEnderecoDoPonto(LatLng ponto) async {
+    setState(() {
+      _buscandoEndereco = true;
+      _enderecoPontoEncontro = null;
+    });
+
+    final endereco = await _enderecoService.buscarEnderecoPorCoordenadas(
+      ponto.latitude,
+      ponto.longitude,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _enderecoPontoEncontro = endereco;
+      _buscandoEndereco = false;
+    });
+  }
+
+  // Permite ajustar manualmente o ponto tocando no mapa
+  Future<void> _selecionarPonto(LatLng ponto) async {
+    setState(() {
+      _pontoEncontro = ponto;
+    });
+
+    await _buscarEnderecoDoPonto(ponto);
+  }
+
+  void _confirmarPontoEncontro() {
+    if (_pontoEncontro == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Aguarde a localizacao ou toque no mapa'),
+        ),
+      );
+
+      return;
+    }
+
+    if (Navigator.canPop(context)) {
+      Navigator.pop(
+        context,
+        LocalizacaoSelecionada(
+          ponto: _pontoEncontro!,
+          endereco: _enderecoPontoEncontro ?? 'Endereco nao encontrado',
+        ),
+      );
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Ponto confirmado'),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Teste OpenStreetMap'),
+        title: const Text('Confirmar origem'),
       ),
+
       body: FlutterMap(
-        // Controlador do mapa.
         mapController: _mapController,
+
         options: MapOptions(
-          // Localização fixa apenas para teste.
+          // Ponto inicial temporario enquanto o GPS carrega
           initialCenter: const LatLng(-21.2080, -50.4320),
           initialZoom: 14,
 
-          // Executado quando o usuário toca no mapa.
+          // Se o endereco estimado estiver errado, o usuario pode ajustar no mapa
           onTap: (tapPosition, point) {
-            setState(() {
-              _pontoEncontro = point;
-            });
+            _selecionarPonto(point);
           },
         ),
+
         children: [
           TileLayer(
             urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
             userAgentPackageName: 'com.unicarona.app',
           ),
 
-          // Exibe o marcador da localização do usuário.
           if (_localizacaoAtual != null)
             MarkerLayer(
               markers: [
@@ -95,14 +171,14 @@ class _TesteMapaState extends State<TesteMapa> {
                   width: 50,
                   height: 50,
                   child: const Icon(
-                    Icons.location_on,
+                    Icons.my_location,
                     color: Colors.red,
-                    size: 40,
+                    size: 38,
                   ),
                 ),
               ],
             ),
-          // Exibe o marcador do ponto de encontro escolhido pelo usuário.
+
           if (_pontoEncontro != null)
             MarkerLayer(
               markers: [
@@ -113,40 +189,58 @@ class _TesteMapaState extends State<TesteMapa> {
                   child: const Icon(
                     Icons.place,
                     color: Colors.blue,
-                    size: 40,
+                    size: 42,
                   ),
                 ),
               ],
             ),
         ],
       ),
-      bottomNavigationBar: _pontoEncontro == null
-          ? null
-          : Container(
+
+      bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16),
         color: Colors.white,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Ponto de encontro selecionado',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+
+            children: [
+              Text(
+                _buscandoLocalizacao
+                    ? 'Obtendo sua localizacao...'
+                    : 'Confira sua origem',
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
-            ),
 
-            const SizedBox(height: 8),
+              const SizedBox(height: 8),
 
-            Text(
-              'Latitude: ${_pontoEncontro!.latitude.toStringAsFixed(6)}',
-            ),
+              if (_buscandoEndereco)
+                const Text('Buscando endereco...')
+              else
+                Text(
+                  _enderecoPontoEncontro
+                      ?? 'Toque no mapa para ajustar a origem',
+                ),
 
-            Text(
-              'Longitude: ${_pontoEncontro!.longitude.toStringAsFixed(6)}',
-            ),
-          ],
+              const SizedBox(height: 12),
+
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: _pontoEncontro == null
+                      ? null
+                      : _confirmarPontoEncontro,
+                  icon: const Icon(Icons.check),
+                  label: const Text('CONFIRMAR ORIGEM'),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

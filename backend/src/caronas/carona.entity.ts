@@ -17,8 +17,13 @@ export class Carona {
   @Column({ length: 100 })
   origem!: string;
 
-  @Column({ name: 'origem_cidade', length: 100, nullable: true })
-  origemCidade: string | null = null;
+@Column({
+  name: 'origem_cidade',
+  type: 'varchar',
+  length: 100,
+  nullable: true,
+})
+origemCidade: string | null = null;
 
   @Column({
     name: 'origem_latitude',
@@ -41,8 +46,13 @@ export class Carona {
   @Column({ length: 100 })
   destino!: string;
 
-  @Column({ name: 'destino_cidade', length: 100, nullable: true })
-  destinoCidade: string | null = null;
+@Column({
+  name: 'destino_cidade',
+  type: 'varchar',
+  length: 100,
+  nullable: true,
+})
+destinoCidade: string | null = null;
 
   @Column({
     name: 'destino_latitude',
