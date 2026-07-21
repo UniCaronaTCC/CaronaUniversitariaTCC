@@ -30,8 +30,8 @@ class LocalizacaoService {
     }
 
     // Obtém e retorna a posição atual do usuário.
-    return await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.high,
+    return Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
     );
   }
 }

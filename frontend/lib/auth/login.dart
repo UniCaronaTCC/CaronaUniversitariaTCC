@@ -58,6 +58,11 @@ class _LoginTelaState extends State<LoginTela> {
       senhaController.text, // Pega a senha digitada pelo usuário
     );
 
+    // A tela pode ter sido fechada enquanto aguardava a resposta do backend.
+    if (!mounted) {
+      return;
+    }
+
     setState(() {
       // Atualiza a tela novamente
       carregando = false; // Desativa o carregamento do botão

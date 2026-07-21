@@ -1,7 +1,61 @@
-import { describe, it, expect } from '@jest/globals';
+import { UnauthorizedException } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
+import * as bcrypt from 'bcrypt';
+import { UsersService } from '../users/users.service';
+import { AuthService } from './auth.service';
 
 describe('AuthService', () => {
-  it('teste temporariamente desativado', () => {
-    expect(true).toBe(true);
+  let service: AuthService;
+  let usersService: {
+    buscarPorEmail: jest.Mock;
+    criarUsuario: jest.Mock;
+  };
+  let jwtService: {
+    signAsync: jest.Mock;
+  };
+
+  beforeEach(() => {
+    usersService = {
+      buscarPorEmail: jest.fn(),
+      criarUsuario: jest.fn(),
+    };
+    jwtService = {
+      signAsync: jest.fn(),
+    };
+
+    service = new AuthService(
+      usersService as unknown as UsersService,
+      jwtService as unknown as JwtService,
+    );
+  });
+
+  it('recusa login quando o usuário não existe', async () => {
+    usersService.buscarPorEmail.mockResolvedValue(null);
+
+    await expect(
+      service.login('inexistente@email.com', 'senha'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('gera token sem retornar a senha no login', async () => {
+    const senhaHash = await bcrypt.hash('123456', 4);
+
+    usersService.buscarPorEmail.mockResolvedValue({
+      idUsuario: 1,
+      nome: 'João',
+      email: 'joao@email.com',
+      senha: senhaHash,
+    });
+    jwtService.signAsync.mockResolvedValue('token-teste');
+
+    const resultado = await service.login('joao@email.com', '123456');
+
+    expect(resultado.token).toBe('token-teste');
+    expect(resultado.usuario).toEqual({
+      id: 1,
+      nome: 'João',
+      email: 'joao@email.com',
+    });
+    expect(resultado.usuario).not.toHaveProperty('senha');
   });
 });
