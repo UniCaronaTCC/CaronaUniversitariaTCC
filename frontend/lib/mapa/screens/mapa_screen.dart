@@ -5,7 +5,7 @@ import 'package:latlong2/latlong.dart'; // Importa o tipo LatLng para latitude e
 import '../services/endereco_service.dart'; // Service que converte coordenadas em endereco
 import '../services/localizacao_service.dart'; // Service que pega a localizacao atual
 import '../models/localizacao_selecionada.dart'; // Model com ponto e endereco escolhido
-
+import '../widgets/barra_pesquisa_endereco.dart'; // barra de pesquisa
 class TesteMapa extends StatefulWidget {
   const TesteMapa({super.key});
 
@@ -130,58 +130,72 @@ class _TesteMapaState extends State<TesteMapa> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Confirmar origem')),
-
-      body: FlutterMap(
-        mapController: _mapController,
-
-        options: MapOptions(
-          // Ponto inicial temporario enquanto o GPS carrega
-          initialCenter: const LatLng(-21.2080, -50.4320),
-          initialZoom: 14,
-
-          // Se o endereco estimado estiver errado, o usuario pode ajustar no mapa
-          onTap: (tapPosition, point) {
-            _selecionarPonto(point);
-          },
-        ),
-
-        children: [
-          TileLayer(
-            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-            userAgentPackageName: 'com.unicarona.app',
-          ),
-
-          if (_localizacaoAtual != null)
-            MarkerLayer(
-              markers: [
-                Marker(
-                  point: _localizacaoAtual!,
-                  width: 50,
-                  height: 50,
-                  child: const Icon(
-                    Icons.my_location,
-                    color: Colors.red,
-                    size: 38,
-                  ),
-                ),
-              ],
-            ),
-
-          if (_pontoEncontro != null)
-            MarkerLayer(
-              markers: [
-                Marker(
-                  point: _pontoEncontro!,
-                  width: 50,
-                  height: 50,
-                  child: const Icon(Icons.place, color: Colors.blue, size: 42),
-                ),
-              ],
-            ),
-        ],
+      appBar: AppBar(
+        title: const Text('Confirmar origem'),
       ),
 
+      body: Stack(
+        children: [
+          FlutterMap(
+            mapController: _mapController,
+
+            options: MapOptions(
+              // Ponto inicial temporario enquanto o GPS carrega
+              initialCenter: const LatLng(-21.2080, -50.4320),
+              initialZoom: 14,
+
+              // Se o endereco estimado estiver errado, o usuario pode ajustar no mapa
+              onTap: (tapPosition, point) {
+                _selecionarPonto(point);
+              },
+            ),
+
+            children: [
+              TileLayer(
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.unicarona.app',
+              ),
+
+              if (_localizacaoAtual != null)
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: _localizacaoAtual!,
+                      width: 50,
+                      height: 50,
+                      child: const Icon(
+                        Icons.my_location,
+                        color: Colors.red,
+                        size: 38,
+                      ),
+                    ),
+                  ],
+                ),
+
+              if (_pontoEncontro != null)
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: _pontoEncontro!,
+                      width: 50,
+                      height: 50,
+                      child: const Icon(
+                        Icons.place,
+                        color: Colors.blue,
+                        size: 42,
+                      ),
+                    ),
+                  ],
+                ),
+            ],
+          ),
+
+          // Barra de pesquisa sobre o mapa
+          const SafeArea(
+            child: BarraPesquisaEndereco(),
+          ),
+        ],
+      ),
       bottomNavigationBar: Container(
         padding: const EdgeInsets.all(16),
         color: Colors.white,
