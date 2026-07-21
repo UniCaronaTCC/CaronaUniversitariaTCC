@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../models/carona.dart';
 import '../services/carona_service.dart';
+import '../utils/data_hora_utils.dart';
 import '../utils/filtro_caronas.dart';
 import '../widgets/card_carona_disponivel.dart';
 import '../widgets/filtros_busca_carona.dart';
@@ -92,17 +93,10 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
   }
 
   Future<void> selecionarData() async {
-    final agora = DateTime.now();
-    final hoje = DateTime(agora.year, agora.month, agora.day);
-
-    final resultado = await showDatePicker(
-      context: context,
-      initialDate: dataSelecionada ?? hoje,
-      firstDate: hoje,
-      lastDate: DateTime(hoje.year + 2, hoje.month, hoje.day),
-      helpText: 'Selecione a data desejada',
-      cancelText: 'CANCELAR',
-      confirmText: 'CONFIRMAR',
+    final resultado = await DataHoraUtils.selecionarData(
+      context,
+      dataInicial: dataSelecionada,
+      textoAjuda: 'Selecione a data desejada',
     );
 
     if (!mounted || resultado == null) {
@@ -111,19 +105,17 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
 
     setState(() {
       dataSelecionada = resultado;
-      dataController.text = formatarData(resultado);
+      dataController.text = DataHoraUtils.formatarDataExibicao(resultado);
     });
 
     aplicarFiltros();
   }
 
   Future<void> selecionarHorario() async {
-    final resultado = await showTimePicker(
-      context: context,
-      initialTime: horarioSelecionado ?? TimeOfDay.now(),
-      helpText: 'Mostrar caronas a partir de',
-      cancelText: 'CANCELAR',
-      confirmText: 'CONFIRMAR',
+    final resultado = await DataHoraUtils.selecionarHorario(
+      context,
+      horarioInicial: horarioSelecionado,
+      textoAjuda: 'Mostrar caronas a partir de',
     );
 
     if (!mounted || resultado == null) {
@@ -132,24 +124,10 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
 
     setState(() {
       horarioSelecionado = resultado;
-      horarioController.text = formatarHorario(resultado);
+      horarioController.text = DataHoraUtils.formatarHorario(resultado);
     });
 
     aplicarFiltros();
-  }
-
-  String formatarData(DateTime data) {
-    final dia = data.day.toString().padLeft(2, '0');
-    final mes = data.month.toString().padLeft(2, '0');
-
-    return '$dia/$mes/${data.year}';
-  }
-
-  String formatarHorario(TimeOfDay horario) {
-    final hora = horario.hour.toString().padLeft(2, '0');
-    final minuto = horario.minute.toString().padLeft(2, '0');
-
-    return '$hora:$minuto';
   }
 
   void limparFiltros() {

@@ -5,6 +5,7 @@ import '../mapa/models/localizacao_selecionada.dart';
 import '../mapa/screens/mapa_screen.dart';
 import '../mapa/services/endereco_service.dart';
 import '../services/carona_service.dart';
+import '../utils/data_hora_utils.dart';
 import '../utils/formatador_moeda.dart';
 import '../widgets/formulario_ofertar_carona.dart';
 
@@ -56,17 +57,10 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
   // Abre o calendario sem permitir datas anteriores.
   Future<void> escolherData() async {
-    final agora = DateTime.now();
-    final hoje = DateTime(agora.year, agora.month, agora.day);
-
-    final resultado = await showDatePicker(
-      context: context,
-      initialDate: dataSelecionada ?? hoje,
-      firstDate: hoje,
-      lastDate: DateTime(hoje.year + 2, hoje.month, hoje.day),
-      helpText: 'Selecione a data da carona',
-      cancelText: 'CANCELAR',
-      confirmText: 'CONFIRMAR',
+    final resultado = await DataHoraUtils.selecionarData(
+      context,
+      dataInicial: dataSelecionada,
+      textoAjuda: 'Selecione a data da carona',
     );
 
     if (!mounted || resultado == null) {
@@ -75,18 +69,16 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
     setState(() {
       dataSelecionada = resultado;
-      dataController.text = formatarDataExibicao(resultado);
+      dataController.text = DataHoraUtils.formatarDataExibicao(resultado);
     });
   }
 
   // Abre o seletor de horario do celular.
   Future<void> escolherHorario() async {
-    final resultado = await showTimePicker(
-      context: context,
-      initialTime: horarioSelecionado ?? TimeOfDay.now(),
-      helpText: 'Selecione o horario da carona',
-      cancelText: 'CANCELAR',
-      confirmText: 'CONFIRMAR',
+    final resultado = await DataHoraUtils.selecionarHorario(
+      context,
+      horarioInicial: horarioSelecionado,
+      textoAjuda: 'Selecione o horario da carona',
     );
 
     if (!mounted || resultado == null) {
@@ -95,35 +87,14 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
     setState(() {
       horarioSelecionado = resultado;
-      horarioController.text = formatarHorario(resultado);
+      horarioController.text = DataHoraUtils.formatarHorario(resultado);
     });
-  }
-
-  String formatarDataExibicao(DateTime data) {
-    final dia = data.day.toString().padLeft(2, '0');
-    final mes = data.month.toString().padLeft(2, '0');
-
-    return '$dia/$mes/${data.year}';
-  }
-
-  // O MySQL espera a data no formato ano-mes-dia.
-  String formatarDataBackend(DateTime data) {
-    final mes = data.month.toString().padLeft(2, '0');
-    final dia = data.day.toString().padLeft(2, '0');
-
-    return '${data.year}-$mes-$dia';
-  }
-
-  String formatarHorario(TimeOfDay horario) {
-    final hora = horario.hour.toString().padLeft(2, '0');
-    final minuto = horario.minute.toString().padLeft(2, '0');
-
-    return '$hora:$minuto';
   }
 
   // Invalida a localizacao antiga quando o texto muda.
   void alterarTextoDestino(String texto) {
-    if (destinoSelecionado == null || texto == destinoSelecionado!.descricaoCompleta) {
+    if (destinoSelecionado == null ||
+        texto == destinoSelecionado!.descricaoCompleta) {
       return;
     }
 
@@ -289,8 +260,8 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       destinoLatitude: destino.ponto.latitude,
       destinoLongitude: destino.ponto.longitude,
 
-      dataInicio: formatarDataBackend(dataSelecionada!),
-      horario: '${formatarHorario(horarioSelecionado!)}:00',
+      dataInicio: DataHoraUtils.formatarDataBackend(dataSelecionada!),
+      horario: '${DataHoraUtils.formatarHorario(horarioSelecionado!)}:00',
       vagas: int.parse(vagasController.text),
       valor: converterMoedaRealParaDouble(valorController.text),
       recorrente: caronaRecorrente,
