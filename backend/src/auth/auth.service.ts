@@ -1,4 +1,8 @@
-import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  ConflictException,
+  Injectable,
+  UnauthorizedException,
+} from '@nestjs/common';
 // Importa recursos do NestJS para criar serviços e lançar erros HTTP
 
 import { JwtService } from '@nestjs/jwt';
@@ -12,7 +16,6 @@ import { UsersService } from '../users/users.service';
 
 @Injectable()
 export class AuthService {
-
   constructor(
     private readonly usersService: UsersService,
     // Permite usar funções do UsersService dentro do AuthService
@@ -23,15 +26,12 @@ export class AuthService {
 
   // FUNÇÃO DE LOGIN
   async login(email: string, senha: string) {
-
     // Busca o usuário pelo e-mail informado
-    const usuario = await this.usersService.buscarPorEmail(email);
+    const usuario = await this.usersService.buscarPorEmailComSenha(email);
 
     // Verifica se o usuário existe
     if (!usuario) {
-      throw new UnauthorizedException(
-        'E-mail ou senha inválidos',
-      );
+      throw new UnauthorizedException('E-mail ou senha inválidos');
     }
 
     // Compara a senha digitada com o hash salvo no banco
@@ -39,9 +39,7 @@ export class AuthService {
 
     // Se a senha estiver errada, retorna erro de login
     if (!senhaCorreta) {
-      throw new UnauthorizedException(
-        'E-mail ou senha inválidos',
-      );
+      throw new UnauthorizedException('E-mail ou senha inválidos');
     }
 
     // Define os dados que serão guardados dentro do token
@@ -69,21 +67,13 @@ export class AuthService {
   }
 
   // FUNÇÃO DE CADASTRO
-  async cadastro(
-    nome: string,
-    email: string,
-    senha: string,
-  ) {
-
+  async cadastro(nome: string, email: string, senha: string) {
     // Verifica se já existe usuário com esse e-mail
-    const usuarioExistente =
-      await this.usersService.buscarPorEmail(email);
+    const usuarioExistente = await this.usersService.buscarPorEmail(email);
 
     // Se existir, retorna erro de conflito
     if (usuarioExistente) {
-      throw new ConflictException(
-        'E-mail já cadastrado',
-      );
+      throw new ConflictException('E-mail já cadastrado');
     }
 
     // Gera o hash da senha antes de salvar no banco
@@ -91,12 +81,11 @@ export class AuthService {
     const senhaHash = await bcrypt.hash(senha, 10);
 
     // Cria usuário no banco usando a senha em hash, não a senha original
-    const novoUsuario =
-      await this.usersService.criarUsuario(
-        nome,
-        email,
-        senhaHash,
-      );
+    const novoUsuario = await this.usersService.criarUsuario(
+      nome,
+      email,
+      senhaHash,
+    );
 
     // Retorna sucesso sem enviar a senha para o frontend
     return {

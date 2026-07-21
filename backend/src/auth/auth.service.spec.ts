@@ -8,6 +8,7 @@ describe('AuthService', () => {
   let service: AuthService;
   let usersService: {
     buscarPorEmail: jest.Mock;
+    buscarPorEmailComSenha: jest.Mock;
     criarUsuario: jest.Mock;
   };
   let jwtService: {
@@ -17,6 +18,7 @@ describe('AuthService', () => {
   beforeEach(() => {
     usersService = {
       buscarPorEmail: jest.fn(),
+      buscarPorEmailComSenha: jest.fn(),
       criarUsuario: jest.fn(),
     };
     jwtService = {
@@ -30,7 +32,7 @@ describe('AuthService', () => {
   });
 
   it('recusa login quando o usuário não existe', async () => {
-    usersService.buscarPorEmail.mockResolvedValue(null);
+    usersService.buscarPorEmailComSenha.mockResolvedValue(null);
 
     await expect(
       service.login('inexistente@email.com', 'senha'),
@@ -40,7 +42,7 @@ describe('AuthService', () => {
   it('gera token sem retornar a senha no login', async () => {
     const senhaHash = await bcrypt.hash('123456', 4);
 
-    usersService.buscarPorEmail.mockResolvedValue({
+    usersService.buscarPorEmailComSenha.mockResolvedValue({
       idUsuario: 1,
       nome: 'João',
       email: 'joao@email.com',

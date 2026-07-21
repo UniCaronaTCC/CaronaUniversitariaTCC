@@ -11,17 +11,28 @@ export class UsersService {
     private readonly usersRepository: Repository<User>, // Cria o acesso à tabela usuarios
   ) {}
 
-  async buscarPorEmail(email: string): Promise<User | null> { // Busca um usuário pelo e-mail
+  async buscarPorEmail(email: string): Promise<User | null> {
+    // Busca um usuário pelo e-mail
     return this.usersRepository.findOne({
       where: { email }, // Procura na coluna email
     });
+  }
+
+  // Busca as credenciais apenas durante a autenticação.
+  async buscarPorEmailComSenha(email: string): Promise<User | null> {
+    return this.usersRepository
+      .createQueryBuilder('usuario')
+      .addSelect('usuario.senha')
+      .where('usuario.email = :email', { email })
+      .getOne();
   }
 
   async criarUsuario(
     nome: string,
     email: string,
     senha: string,
-  ): Promise<User> { // cria um novo usuario no banco
+  ): Promise<User> {
+    // cria um novo usuario no banco
 
     const novoUsuario = this.usersRepository.create({
       nome,
