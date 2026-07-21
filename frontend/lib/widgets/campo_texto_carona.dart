@@ -14,6 +14,8 @@ class CampoTextoCarona extends StatelessWidget {
   final Widget? suffixIcon;
   final VoidCallback? onTap;
   final ValueChanged<String>? onChanged;
+  final ValueChanged<String>? onSubmitted;
+  final TextInputAction? textInputAction;
   final List<TextInputFormatter>? inputFormatters;
 
   const CampoTextoCarona({
@@ -27,6 +29,8 @@ class CampoTextoCarona extends StatelessWidget {
     this.suffixIcon,
     this.onTap,
     this.onChanged,
+    this.onSubmitted,
+    this.textInputAction,
     this.inputFormatters,
   });
 
@@ -39,6 +43,8 @@ class CampoTextoCarona extends StatelessWidget {
       readOnly: somenteLeitura,
       onTap: onTap,
       onChanged: onChanged,
+      onSubmitted: onSubmitted,
+      textInputAction: textInputAction,
       inputFormatters: inputFormatters,
       style: const TextStyle(color: AppColors.text),
       decoration: InputDecoration(

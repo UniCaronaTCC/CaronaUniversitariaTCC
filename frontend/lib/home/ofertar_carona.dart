@@ -10,7 +10,9 @@ import '../utils/formatador_moeda.dart';
 import '../widgets/formulario_ofertar_carona.dart';
 
 class OfertarCaronaTela extends StatefulWidget {
-  const OfertarCaronaTela({super.key});
+  final LocalizacaoSelecionada? destinoInicial;
+
+  const OfertarCaronaTela({super.key, this.destinoInicial});
 
   @override
   State<OfertarCaronaTela> createState() => _OfertarCaronaTelaState();
@@ -37,6 +39,13 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   bool enviandoCarona = false;
 
   final List<String> diasSelecionados = [];
+
+  @override
+  void initState() {
+    super.initState();
+    destinoSelecionado = widget.destinoInicial;
+    destinoController.text = widget.destinoInicial?.descricaoCompleta ?? '';
+  }
 
   // Abre o mapa com a localizacao atual estimada.
   Future<void> escolherOrigemNoMapa() async {

@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
+import '../mapa/models/localizacao_selecionada.dart';
 import '../models/carona.dart';
 import '../services/carona_service.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/botao_acao_home.dart';
 import '../widgets/card_carona_disponivel.dart';
 import '../widgets/card_destino_home.dart';
+import '../widgets/componentes_padrao.dart';
 import 'buscar_carona.dart';
 import 'ofertar_carona.dart';
+import 'selecionar_destino.dart';
 
 class TelaInicial extends StatefulWidget {
   final String nomeUsuario;
@@ -23,6 +26,7 @@ class _TelaInicialState extends State<TelaInicial> {
   List<Carona> caronas = [];
   bool carregando = true;
   String? mensagemErro;
+  LocalizacaoSelecionada? destinoSelecionado;
 
   @override
   void initState() {
@@ -63,7 +67,10 @@ class _TelaInicialState extends State<TelaInicial> {
   Future<void> abrirBusca() async {
     await Navigator.push(
       context,
-      MaterialPageRoute(builder: (context) => const BuscarCaronaTela()),
+      MaterialPageRoute(
+        builder: (context) =>
+            BuscarCaronaTela(destinoInicial: destinoSelecionado),
+      ),
     );
 
     // Atualiza a Home ao voltar da busca.
@@ -73,13 +80,34 @@ class _TelaInicialState extends State<TelaInicial> {
   Future<void> abrirOferta() async {
     final caronaCriada = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (context) => const OfertarCaronaTela()),
+      MaterialPageRoute(
+        builder: (context) =>
+            OfertarCaronaTela(destinoInicial: destinoSelecionado),
+      ),
     );
 
     // Atualiza imediatamente depois de criar uma oferta.
     if (caronaCriada == true) {
       await carregarCaronas();
     }
+  }
+
+  Future<void> escolherDestino() async {
+    final resultado = await Navigator.push<LocalizacaoSelecionada>(
+      context,
+      MaterialPageRoute(
+        builder: (context) =>
+            SelecionarDestinoTela(destinoInicial: destinoSelecionado),
+      ),
+    );
+
+    if (!mounted || resultado == null) {
+      return;
+    }
+
+    setState(() {
+      destinoSelecionado = resultado;
+    });
   }
 
   void abrirDetalhes(Carona carona) {
@@ -133,8 +161,11 @@ class _TelaInicialState extends State<TelaInicial> {
                 ),
                 const SizedBox(height: 36),
 
-                const CardDestinoHome(
-                  destino: 'AVENIDA UNISALESIANO, NÚMERO 2026',
+                CardDestinoHome(
+                  destino:
+                      destinoSelecionado?.descricaoCompleta ??
+                      'Escolha seu destino',
+                  onTap: escolherDestino,
                 ),
                 const SizedBox(height: 36),
 
@@ -173,21 +204,19 @@ class _TelaInicialState extends State<TelaInicial> {
                 const SizedBox(height: 12),
 
                 if (carregando)
-                  const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(32),
-                      child: CircularProgressIndicator(),
-                    ),
+                  const EstadoConteudoPadrao(
+                    carregando: true,
+                    espacamentoVertical: 32,
                   )
                 else if (mensagemErro != null)
-                  _MensagemHome(
+                  EstadoConteudoPadrao(
                     icone: Icons.cloud_off_outlined,
                     mensagem: mensagemErro!,
                     textoBotao: 'Tentar novamente',
                     onPressed: carregarCaronas,
                   )
                 else if (caronasHome.isEmpty)
-                  const _MensagemHome(
+                  const EstadoConteudoPadrao(
                     icone: Icons.directions_car_outlined,
                     mensagem: 'Nenhuma carona disponível',
                   )
@@ -209,42 +238,6 @@ class _TelaInicialState extends State<TelaInicial> {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-class _MensagemHome extends StatelessWidget {
-  final IconData icone;
-  final String mensagem;
-  final String? textoBotao;
-  final VoidCallback? onPressed;
-
-  const _MensagemHome({
-    required this.icone,
-    required this.mensagem,
-    this.textoBotao,
-    this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 28),
-        child: Column(
-          children: [
-            Icon(icone, size: 42, color: Colors.black38),
-            const SizedBox(height: 12),
-            Text(
-              mensagem,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.black54),
-            ),
-            if (textoBotao != null && onPressed != null)
-              TextButton(onPressed: onPressed, child: Text(textoBotao!)),
-          ],
         ),
       ),
     );

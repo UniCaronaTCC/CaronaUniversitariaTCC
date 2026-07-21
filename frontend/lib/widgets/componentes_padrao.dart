@@ -74,3 +74,54 @@ class BotaoPadrao extends StatelessWidget {
     );
   }
 }
+
+class EstadoConteudoPadrao extends StatelessWidget {
+  final bool carregando;
+  final String? mensagem;
+  final IconData? icone;
+  final String? textoBotao;
+  final VoidCallback? onPressed;
+  final double espacamentoVertical;
+  final double tamanhoIcone;
+  final double espacamentoMensagem;
+
+  const EstadoConteudoPadrao({
+    super.key,
+    this.carregando = false,
+    this.mensagem,
+    this.icone,
+    this.textoBotao,
+    this.onPressed,
+    this.espacamentoVertical = 28,
+    this.tamanhoIcone = 42,
+    this.espacamentoMensagem = 12,
+  }) : assert(carregando || icone != null);
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: EdgeInsets.symmetric(vertical: espacamentoVertical),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (carregando)
+              const CircularProgressIndicator()
+            else
+              Icon(icone, size: tamanhoIcone, color: Colors.black38),
+            if (mensagem != null) ...[
+              SizedBox(height: espacamentoMensagem),
+              Text(
+                mensagem!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.black54),
+              ),
+            ],
+            if (textoBotao != null && onPressed != null)
+              TextButton(onPressed: onPressed, child: Text(textoBotao!)),
+          ],
+        ),
+      ),
+    );
+  }
+}

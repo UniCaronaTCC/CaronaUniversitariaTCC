@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
+import '../mapa/models/localizacao_selecionada.dart';
 import '../models/carona.dart';
 import '../services/carona_service.dart';
 import '../utils/data_hora_utils.dart';
 import '../utils/filtro_caronas.dart';
 import '../widgets/card_carona_disponivel.dart';
+import '../widgets/componentes_padrao.dart';
 import '../widgets/filtros_busca_carona.dart';
 
 class BuscarCaronaTela extends StatefulWidget {
-  const BuscarCaronaTela({super.key});
+  final LocalizacaoSelecionada? destinoInicial;
+
+  const BuscarCaronaTela({super.key, this.destinoInicial});
 
   @override
   State<BuscarCaronaTela> createState() => _BuscarCaronaTelaState();
@@ -38,6 +42,7 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
   @override
   void initState() {
     super.initState();
+    destinoController.text = widget.destinoInicial?.descricaoCompleta ?? '';
     carregarCaronas();
   }
 
@@ -229,26 +234,33 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
               const SizedBox(height: 14),
 
               if (carregando)
-                const _EstadoBusca(
+                const EstadoConteudoPadrao(
                   carregando: true,
                   mensagem: 'Carregando caronas...',
-                  icone: Icons.directions_car_outlined,
+                  espacamentoVertical: 36,
+                  espacamentoMensagem: 14,
                 )
               else if (mensagemErro != null)
-                _EstadoBusca(
+                EstadoConteudoPadrao(
                   mensagem: mensagemErro!,
                   icone: Icons.cloud_off_outlined,
                   textoBotao: 'Tentar novamente',
                   onPressed: carregarCaronas,
+                  espacamentoVertical: 36,
+                  tamanhoIcone: 44,
+                  espacamentoMensagem: 14,
                 )
               else if (caronasFiltradas.isEmpty)
-                _EstadoBusca(
+                EstadoConteudoPadrao(
                   mensagem: filtrosAtivos
                       ? 'Nenhuma carona corresponde aos filtros'
                       : 'Nenhuma carona disponível',
                   icone: Icons.search_off,
                   textoBotao: filtrosAtivos ? 'Limpar filtros' : null,
                   onPressed: filtrosAtivos ? limparFiltros : null,
+                  espacamentoVertical: 36,
+                  tamanhoIcone: 44,
+                  espacamentoMensagem: 14,
                 )
               else
                 ListView.separated(
@@ -268,45 +280,6 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _EstadoBusca extends StatelessWidget {
-  final bool carregando;
-  final String mensagem;
-  final IconData icone;
-  final String? textoBotao;
-  final VoidCallback? onPressed;
-
-  const _EstadoBusca({
-    this.carregando = false,
-    required this.mensagem,
-    required this.icone,
-    this.textoBotao,
-    this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 36),
-      child: Column(
-        children: [
-          if (carregando)
-            const CircularProgressIndicator()
-          else
-            Icon(icone, size: 44, color: Colors.black38),
-          const SizedBox(height: 14),
-          Text(
-            mensagem,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Colors.black54),
-          ),
-          if (textoBotao != null && onPressed != null)
-            TextButton(onPressed: onPressed, child: Text(textoBotao!)),
-        ],
       ),
     );
   }
