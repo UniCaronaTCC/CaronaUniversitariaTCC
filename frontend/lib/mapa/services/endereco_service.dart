@@ -1,8 +1,12 @@
-import 'package:geocoding/geocoding.dart'; // Permite converter endereco em coordenadas e coordenadas em endereco
-import 'package:latlong2/latlong.dart'; // Permite guardar latitude e longitude
+import 'dart:convert';
 
-import '../models/localizacao_selecionada.dart'; // Model com ponto e endereco escolhido
+import 'package:geocoding/geocoding.dart';
+import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
 
+import '../models/localizacao_selecionada.dart';
+
+import 'package:flutter/foundation.dart';
 class EnderecoService {
   // Converte latitude e longitude em um texto de endereco
   Future<String> buscarEnderecoPorCoordenadas(
@@ -54,44 +58,49 @@ class EnderecoService {
     String enderecoDigitado,
   ) async {
     try {
-      // Remove espacos desnecessarios
       final textoBusca = enderecoDigitado.trim();
 
-      // Se o usuario nao digitou nada, retorna lista vazia
       if (textoBusca.isEmpty) {
         return [];
       }
 
-      // Adiciona Brasil para reduzir chance de cair em outro pais
-      final busca = '$textoBusca, Brasil';
+      final uri = Uri.https(
+        'photon.komoot.io',
+        '/api',
+        {
+          'q': textoBusca,
+          'limit': '5',
+        },
+      );
 
-      // Busca coordenadas possiveis para o endereco digitado
-      final localizacoes = await locationFromAddress(busca);
+      final response = await http.get(
+        uri,
+        headers: {
+          'User-Agent': 'UniCarona/1.0',
+        },
+      );
 
-      // Lista que vai guardar os resultados completos
-      final resultados = <LocalizacaoSelecionada>[];
+      final json = jsonDecode(response.body);
 
-      // Para cada coordenada encontrada, busca o endereco completo
-      for (final localizacao in localizacoes) {
-        final enderecoCompleto = await buscarEnderecoPorCoordenadas(
-          localizacao.latitude,
-          localizacao.longitude,
-        );
+      final features = json['features'] as List;
 
-        resultados.add(
-          LocalizacaoSelecionada(
-            ponto: LatLng(localizacao.latitude, localizacao.longitude),
-            endereco: enderecoCompleto,
+      return features.map((feature) {
+        final properties = feature['properties'];
 
-            // Preserva o nome usado na pesquisa.
-            nome: textoBusca,
+        final coordinates = feature['geometry']['coordinates'];
+
+        return LocalizacaoSelecionada(
+          ponto: LatLng(
+            coordinates[1],
+            coordinates[0],
           ),
+          endereco: properties['name'] ?? '',
         );
-      }
+      }).toList();
 
-      return resultados;
+      return [];
     } catch (erro) {
-      // Caso nao encontre ou aconteca erro, retorna lista vazia
+      debugPrint('Erro Photon: $erro');
       return [];
     }
   }

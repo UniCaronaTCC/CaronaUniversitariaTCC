@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-
+import 'mapa/screens/mapa_screen.dart';
 import 'auth/login.dart';
 import 'config/app_theme.dart';
 import 'home/minhas_caronas.dart';
@@ -10,7 +10,7 @@ void main() {
     MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
-      home: const LoginTela(),
+      home: const TesteMapa(),
       routes: {
         NavegacaoPrincipal.rotaCaronas: (_) => const MinhasCaronasTela(),
       },
