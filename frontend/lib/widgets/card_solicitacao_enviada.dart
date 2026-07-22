@@ -35,8 +35,20 @@ class CardSolicitacaoEnviada extends StatelessWidget {
                     ),
                   ),
                 ),
-                _StatusSolicitacao(status: solicitacao.status),
+                Text(
+                  solicitacao.valorFormatado,
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ],
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: _StatusSolicitacao(status: solicitacao.status),
             ),
             const SizedBox(height: 16),
             _LinhaSolicitacao(

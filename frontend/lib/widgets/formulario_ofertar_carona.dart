@@ -9,6 +9,10 @@ import 'campo_texto_carona.dart';
 
 // Monta somente a parte visual do formulario de oferta.
 class FormularioOfertarCarona extends StatelessWidget {
+  final String titulo;
+  final String descricao;
+  final String textoBotao;
+  final String textoCarregando;
   final TextEditingController origemController;
   final TextEditingController destinoController;
   final TextEditingController dataController;
@@ -34,6 +38,10 @@ class FormularioOfertarCarona extends StatelessWidget {
 
   const FormularioOfertarCarona({
     super.key,
+    this.titulo = 'Ofertar carona',
+    this.descricao = 'Informe os dados da viagem',
+    this.textoBotao = 'OFERTAR CARONA',
+    this.textoCarregando = 'ENVIANDO...',
     required this.origemController,
     required this.destinoController,
     required this.dataController,
@@ -60,18 +68,18 @@ class FormularioOfertarCarona extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Ofertar carona',
-          style: TextStyle(
+        Text(
+          titulo,
+          style: const TextStyle(
             color: AppColors.text,
             fontSize: 30,
             fontWeight: FontWeight.bold,
           ),
         ),
         const SizedBox(height: 8),
-        const Text(
-          'Informe os dados da viagem',
-          style: TextStyle(color: AppColors.text, fontSize: 18),
+        Text(
+          descricao,
+          style: const TextStyle(color: AppColors.text, fontSize: 18),
         ),
         const SizedBox(height: 32),
 
@@ -165,7 +173,7 @@ class FormularioOfertarCarona extends StatelessWidget {
         const SizedBox(height: 32),
 
         BotaoAcaoHome(
-          texto: enviandoCarona ? 'ENVIANDO...' : 'OFERTAR CARONA',
+          texto: enviandoCarona ? textoCarregando : textoBotao,
           icone: enviandoCarona ? Icons.hourglass_top : Icons.groups_outlined,
           onPressed: enviandoCarona ? null : onOfertarCarona,
         ),

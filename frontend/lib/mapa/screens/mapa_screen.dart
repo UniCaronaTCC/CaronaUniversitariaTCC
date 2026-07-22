@@ -6,18 +6,22 @@ import '../services/endereco_service.dart'; // Service que converte coordenadas 
 import '../services/localizacao_service.dart'; // Service que pega a localizacao atual
 import '../models/localizacao_selecionada.dart'; // Model com ponto e endereco escolhido
 import '../widgets/barra_pesquisa_endereco.dart'; // barra de pesquisa
+import '../../navigation/navegacao_principal.dart';
+import '../../widgets/barra_navegacao_home.dart';
 import '../../widgets/componentes_padrao.dart';
 
 class TesteMapa extends StatefulWidget {
   final String titulo;
   final String instrucao;
   final String textoBotao;
+  final int indiceNavegacao;
 
   const TesteMapa({
     super.key,
     this.titulo = 'Confirmar origem',
     this.instrucao = 'Confira sua origem',
     this.textoBotao = 'CONFIRMAR ORIGEM',
+    this.indiceNavegacao = 0,
   });
 
   @override
@@ -218,51 +222,60 @@ class _TesteMapaState extends State<TesteMapa> {
           ),
         ],
       ),
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(16),
-        color: Colors.white,
-
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-
-            children: [
-              Text(
-                _buscandoLocalizacao
-                    ? 'Obtendo sua localização...'
-                    : widget.instrucao,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(16),
+            color: Colors.white,
+            child: SafeArea(
+              top: false,
+              bottom: false,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _buscandoLocalizacao
+                        ? 'Obtendo sua localização...'
+                        : widget.instrucao,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  if (_buscandoEndereco)
+                    const Text('Buscando endereço...')
+                  else
+                    Text(
+                      _enderecoPontoEncontro ??
+                          'Toque no mapa para ajustar a origem',
+                    ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: _pontoEncontro == null
+                          ? null
+                          : _confirmarPontoEncontro,
+                      icon: const Icon(Icons.check),
+                      label: Text(widget.textoBotao),
+                    ),
+                  ),
+                ],
               ),
-
-              const SizedBox(height: 8),
-
-              if (_buscandoEndereco)
-                const Text('Buscando endereço...')
-              else
-                Text(
-                  _enderecoPontoEncontro ??
-                      'Toque no mapa para ajustar a origem',
-                ),
-
-              const SizedBox(height: 12),
-
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _pontoEncontro == null
-                      ? null
-                      : _confirmarPontoEncontro,
-                  icon: const Icon(Icons.check),
-                  label: Text(widget.textoBotao),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+          BarraNavegacaoHome(
+            currentIndex: widget.indiceNavegacao,
+            onTap: (indice) => NavegacaoPrincipal.selecionar(
+              context,
+              indice,
+              indiceAtual: widget.indiceNavegacao,
+            ),
+          ),
+        ],
       ),
     );
   }

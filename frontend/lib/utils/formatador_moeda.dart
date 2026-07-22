@@ -22,15 +22,7 @@ class FormatadorMoedaReal extends TextInputFormatter {
     final valorEmCentavos = int.parse(numeros);
 
     // Separa a parte inteira dos centavos
-    final reais = valorEmCentavos ~/ 100;
-    final centavos = valorEmCentavos % 100;
-
-    // Adiciona pontos para separar os milhares
-    final reaisFormatados = _adicionarSeparadores(reais.toString());
-
-    // Monta o valor no formato brasileiro
-    final textoFormatado =
-        'R\$ $reaisFormatados,${centavos.toString().padLeft(2, '0')}';
+    final textoFormatado = _formatarCentavos(valorEmCentavos);
 
     // Mantem o cursor no final do campo
     return TextEditingValue(
@@ -38,22 +30,10 @@ class FormatadorMoedaReal extends TextInputFormatter {
       selection: TextSelection.collapsed(offset: textoFormatado.length),
     );
   }
+}
 
-  // Adiciona pontos a cada grupo de tres numeros
-  String _adicionarSeparadores(String valor) {
-    final caracteres = valor.split('').reversed.toList();
-    final partes = <String>[];
-
-    for (int indice = 0; indice < caracteres.length; indice++) {
-      if (indice > 0 && indice % 3 == 0) {
-        partes.add('.');
-      }
-
-      partes.add(caracteres[indice]);
-    }
-
-    return partes.reversed.join();
-  }
+String formatarDoubleComoMoedaReal(double valor) {
+  return _formatarCentavos((valor * 100).round());
 }
 
 // Converte "R$ 1.234,56" para 1234.56
@@ -65,4 +45,21 @@ double converterMoedaRealParaDouble(String valorFormatado) {
   }
 
   return int.parse(numeros) / 100;
+}
+
+String _formatarCentavos(int valorEmCentavos) {
+  final reais = valorEmCentavos ~/ 100;
+  final centavos = valorEmCentavos % 100;
+  final caracteres = reais.toString().split('').reversed.toList();
+  final partes = <String>[];
+
+  for (int indice = 0; indice < caracteres.length; indice++) {
+    if (indice > 0 && indice % 3 == 0) {
+      partes.add('.');
+    }
+
+    partes.add(caracteres[indice]);
+  }
+
+  return 'R\$ ${partes.reversed.join()},${centavos.toString().padLeft(2, '0')}';
 }

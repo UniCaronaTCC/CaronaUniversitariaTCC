@@ -28,4 +28,20 @@ void main() {
 
     expect(itemSelecionado, 2);
   });
+
+  testWidgets('permite destacar a área de Caronas', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: BarraNavegacaoHome(currentIndex: 2),
+        ),
+      ),
+    );
+
+    final barra = tester.widget<BottomNavigationBar>(
+      find.byType(BottomNavigationBar),
+    );
+
+    expect(barra.currentIndex, 2);
+  });
 }

@@ -21,7 +21,7 @@ void main() {
   test('mantém a data completa nos demais dias', () {
     expect(
       FormatadorData.relativa(DateTime(2026, 7, 25), referencia: referencia),
-      '25/07/2026',
+      '25/07',
     );
   });
 }

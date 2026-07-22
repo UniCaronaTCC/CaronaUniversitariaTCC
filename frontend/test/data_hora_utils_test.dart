@@ -6,7 +6,7 @@ void main() {
   test('formata data para exibicao e backend', () {
     final data = DateTime(2026, 7, 5);
 
-    expect(DataHoraUtils.formatarDataExibicao(data), '05/07/2026');
+    expect(DataHoraUtils.formatarDataExibicao(data), '05/07');
     expect(DataHoraUtils.formatarDataBackend(data), '2026-07-05');
   });
 

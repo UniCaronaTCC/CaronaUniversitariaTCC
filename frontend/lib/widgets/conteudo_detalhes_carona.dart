@@ -2,11 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 import '../models/carona.dart';
+import '../utils/formatador_data.dart';
 
 class ConteudoDetalhesCarona extends StatelessWidget {
   final Carona carona;
+  final Widget? rodape;
 
-  const ConteudoDetalhesCarona({super.key, required this.carona});
+  const ConteudoDetalhesCarona({super.key, required this.carona, this.rodape});
 
   @override
   Widget build(BuildContext context) {
@@ -130,6 +132,8 @@ class ConteudoDetalhesCarona extends StatelessWidget {
               conteudo: carona.observacoes!.trim(),
             ),
           ],
+
+          if (rodape != null) ...[const SizedBox(height: 30), rodape!],
         ],
       ),
     );
@@ -156,10 +160,7 @@ class ConteudoDetalhesCarona extends StatelessWidget {
   }
 
   String _formatarData(DateTime data) {
-    final dia = data.day.toString().padLeft(2, '0');
-    final mes = data.month.toString().padLeft(2, '0');
-
-    return '$dia/$mes/${data.year}';
+    return FormatadorData.completa(data);
   }
 }
 

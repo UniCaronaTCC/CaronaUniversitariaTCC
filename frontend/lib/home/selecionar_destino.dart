@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
 import '../mapa/services/endereco_service.dart';
+import '../navigation/navegacao_principal.dart';
+import '../widgets/barra_navegacao_home.dart';
 import '../widgets/campo_texto_carona.dart';
 import '../widgets/componentes_padrao.dart';
 
@@ -85,6 +87,10 @@ class _SelecionarDestinoTelaState extends State<SelecionarDestinoTela> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const BarraSuperiorPadrao(titulo: 'Escolher destino'),
+      bottomNavigationBar: BarraNavegacaoHome(
+        onTap: (indice) =>
+            NavegacaoPrincipal.selecionar(context, indice, indiceAtual: 0),
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(24),

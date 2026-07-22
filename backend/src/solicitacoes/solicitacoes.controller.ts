@@ -12,6 +12,7 @@ import {
 import { Request } from 'express';
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { Solicitacao } from './solicitacao.entity';
 import { SolicitacoesService } from './solicitacoes.service';
 
 interface RequisicaoComUsuario extends Request {
@@ -84,24 +85,33 @@ export class SolicitacoesController {
 
     return {
       sucesso: true,
-      dados: solicitacoes.map((solicitacao) => ({
-        id: solicitacao.idSolicitacao,
-        status: solicitacao.status,
-        localEmbarque: solicitacao.localEmbarque,
-        embarqueLatitude: solicitacao.embarqueLatitude,
-        embarqueLongitude: solicitacao.embarqueLongitude,
-        criadoEm: solicitacao.criadoEm,
-        passageiro: {
-          id: solicitacao.passageiro.idUsuario,
-          nome: solicitacao.passageiro.nome,
-        },
-        carona: {
-          id: solicitacao.carona.idCarona,
-          destino: solicitacao.carona.destino,
-          dataInicio: solicitacao.carona.dataInicio,
-          horario: solicitacao.carona.horario,
-        },
-      })),
+      dados: solicitacoes.map((solicitacao) =>
+        this.formatarSolicitacaoRecebida(solicitacao),
+      ),
+    };
+  }
+
+  @Get('caronas/:idCarona/solicitacoes')
+  async listarRecebidasDaCarona(
+    @Param('idCarona') idRecebido: string,
+    @Req() request: RequisicaoComUsuario,
+  ) {
+    const idCarona = Number(idRecebido);
+
+    if (!Number.isInteger(idCarona) || idCarona <= 0) {
+      throw new BadRequestException('Carona inválida');
+    }
+
+    const solicitacoes = await this.solicitacoesService.listarRecebidasDaCarona(
+      request.usuario.sub,
+      idCarona,
+    );
+
+    return {
+      sucesso: true,
+      dados: solicitacoes.map((solicitacao) =>
+        this.formatarSolicitacaoRecebida(solicitacao),
+      ),
     };
   }
 
@@ -129,6 +139,7 @@ export class SolicitacoesController {
           destino: solicitacao.carona.destino,
           dataInicio: solicitacao.carona.dataInicio,
           horario: solicitacao.carona.horario,
+          valor: solicitacao.carona.valor,
         },
       })),
     };
@@ -183,5 +194,26 @@ export class SolicitacoesController {
     }
 
     return valor;
+  }
+
+  private formatarSolicitacaoRecebida(solicitacao: Solicitacao) {
+    return {
+      id: solicitacao.idSolicitacao,
+      status: solicitacao.status,
+      localEmbarque: solicitacao.localEmbarque,
+      embarqueLatitude: solicitacao.embarqueLatitude,
+      embarqueLongitude: solicitacao.embarqueLongitude,
+      criadoEm: solicitacao.criadoEm,
+      passageiro: {
+        id: solicitacao.passageiro.idUsuario,
+        nome: solicitacao.passageiro.nome,
+      },
+      carona: {
+        id: solicitacao.carona.idCarona,
+        destino: solicitacao.carona.destino,
+        dataInicio: solicitacao.carona.dataInicio,
+        horario: solicitacao.carona.horario,
+      },
+    };
   }
 }

@@ -16,6 +16,7 @@ void main() {
       destino: 'UniSalesiano',
       dataInicio: DateTime(2026, 7, 25),
       horario: '19:00:00',
+      valor: 12.5,
     );
 
     await tester.pumpWidget(
@@ -28,5 +29,6 @@ void main() {
     expect(find.text('ACEITA'), findsOneWidget);
     expect(find.text('UniSalesiano'), findsOneWidget);
     expect(find.text('Praça central'), findsOneWidget);
+    expect(find.text('R\$ 12,50'), findsOneWidget);
   });
 }

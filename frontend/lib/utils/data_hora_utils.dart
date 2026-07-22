@@ -35,7 +35,7 @@ class DataHoraUtils {
   );
 
   static String formatarDataExibicao(DateTime data) =>
-      '${_doisDigitos(data.day)}/${_doisDigitos(data.month)}/${data.year}';
+      '${_doisDigitos(data.day)}/${_doisDigitos(data.month)}';
 
   static String formatarDataBackend(DateTime data) =>
       '${data.year}-${_doisDigitos(data.month)}-${_doisDigitos(data.day)}';

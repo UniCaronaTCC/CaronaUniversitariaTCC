@@ -4,13 +4,17 @@ import '../config/app_colors.dart';
 import '../models/carona.dart';
 import '../models/solicitacao_enviada.dart';
 import '../models/solicitacao_recebida.dart';
+import '../navigation/navegacao_principal.dart';
 import '../services/carona_service.dart';
 import '../services/solicitacao_service.dart';
+import '../widgets/barra_navegacao_home.dart';
 import '../widgets/card_carona_disponivel.dart';
 import '../widgets/card_solicitacao_enviada.dart';
 import '../widgets/card_solicitacao_recebida.dart';
 import '../widgets/componentes_padrao.dart';
 import 'detalhes_carona.dart';
+
+enum FiltroOfertadas { solicitacoes, ofertas }
 
 class MinhasCaronasTela extends StatefulWidget {
   const MinhasCaronasTela({super.key});
@@ -26,6 +30,7 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
   bool carregando = true;
   String? mensagemErro;
   int? idProcessando;
+  FiltroOfertadas filtroOfertadas = FiltroOfertadas.solicitacoes;
 
   @override
   void initState() {
@@ -113,13 +118,17 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
     }
   }
 
-  void abrirDetalhes(Carona carona) {
-    Navigator.push(
+  Future<void> abrirDetalhes(Carona carona) async {
+    final alterada = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (context) => DetalhesCaronaTela(carona: carona),
       ),
     );
+
+    if (alterada == true) {
+      await carregarDados();
+    }
   }
 
   @override
@@ -139,6 +148,11 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
               Tab(text: 'Solicitadas'),
             ],
           ),
+        ),
+        bottomNavigationBar: BarraNavegacaoHome(
+          currentIndex: 2,
+          onTap: (indice) =>
+              NavegacaoPrincipal.selecionar(context, indice, indiceAtual: 2),
         ),
         body: SafeArea(
           child: carregando || mensagemErro != null
@@ -180,61 +194,86 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.all(24),
         children: [
-          const Text(
-            'Suas ofertas',
-            style: TextStyle(
-              color: AppColors.text,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
+          SizedBox(
+            width: double.infinity,
+            child: SegmentedButton<FiltroOfertadas>(
+              segments: const [
+                ButtonSegment(
+                  value: FiltroOfertadas.solicitacoes,
+                  label: Text('Solicitações'),
+                  icon: Icon(Icons.inbox_outlined),
+                ),
+                ButtonSegment(
+                  value: FiltroOfertadas.ofertas,
+                  label: Text('Suas ofertas'),
+                  icon: Icon(Icons.directions_car_outlined),
+                ),
+              ],
+              selected: {filtroOfertadas},
+              onSelectionChanged: (selecao) {
+                setState(() {
+                  filtroOfertadas = selecao.first;
+                });
+              },
             ),
           ),
-          const SizedBox(height: 16),
-          if (caronasOfertadas.isEmpty)
-            const EstadoConteudoPadrao(
-              icone: Icons.directions_car_outlined,
-              mensagem: 'Você ainda não publicou caronas',
-            )
+          const SizedBox(height: 24),
+          if (filtroOfertadas == FiltroOfertadas.solicitacoes)
+            ..._conteudoSolicitacoesRecebidas()
           else
-            _listaSeparada(
-              caronasOfertadas,
-              (carona) => CardCaronaDisponivel(
-                carona: carona,
-                onTap: () => abrirDetalhes(carona),
-              ),
-            ),
-          const SizedBox(height: 32),
-          const Text(
-            'Solicitações recebidas',
-            style: TextStyle(
-              color: AppColors.text,
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Confira onde cada passageiro deseja embarcar.',
-            style: TextStyle(color: AppColors.text, fontSize: 15),
-          ),
-          const SizedBox(height: 16),
-          if (solicitacoesRecebidas.isEmpty)
-            const EstadoConteudoPadrao(
-              icone: Icons.inbox_outlined,
-              mensagem: 'Nenhuma solicitação recebida',
-            )
-          else
-            _listaSeparada(
-              solicitacoesRecebidas,
-              (solicitacao) => CardSolicitacaoRecebida(
-                solicitacao: solicitacao,
-                processando: idProcessando == solicitacao.id,
-                onAceitar: () => responder(solicitacao, 'ACEITA'),
-                onRecusar: () => responder(solicitacao, 'RECUSADA'),
-              ),
-            ),
+            ..._conteudoOfertas(),
         ],
       ),
     );
+  }
+
+  List<Widget> _conteudoSolicitacoesRecebidas() {
+    if (solicitacoesRecebidas.isEmpty) {
+      return const [
+        EstadoConteudoPadrao(
+          icone: Icons.inbox_outlined,
+          mensagem: 'Nenhuma solicitação recebida',
+        ),
+      ];
+    }
+
+    return [
+      const Text(
+        'Confira onde cada passageiro deseja embarcar.',
+        style: TextStyle(color: AppColors.text, fontSize: 15),
+      ),
+      const SizedBox(height: 16),
+      _listaSeparada(
+        solicitacoesRecebidas,
+        (solicitacao) => CardSolicitacaoRecebida(
+          solicitacao: solicitacao,
+          processando: idProcessando == solicitacao.id,
+          onAceitar: () => responder(solicitacao, 'ACEITA'),
+          onRecusar: () => responder(solicitacao, 'RECUSADA'),
+        ),
+      ),
+    ];
+  }
+
+  List<Widget> _conteudoOfertas() {
+    if (caronasOfertadas.isEmpty) {
+      return const [
+        EstadoConteudoPadrao(
+          icone: Icons.directions_car_outlined,
+          mensagem: 'Você ainda não publicou caronas',
+        ),
+      ];
+    }
+
+    return [
+      _listaSeparada(
+        caronasOfertadas,
+        (carona) => CardCaronaDisponivel(
+          carona: carona,
+          onTap: () => abrirDetalhes(carona),
+        ),
+      ),
+    ];
   }
 
   Widget _abaSolicitadas() {

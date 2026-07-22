@@ -3,10 +3,12 @@ import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
 import '../models/carona.dart';
+import '../navigation/navegacao_principal.dart';
 import '../services/carona_service.dart';
 import '../utils/data_hora_utils.dart';
 import '../utils/filtro_caronas.dart';
 import '../widgets/card_carona_disponivel.dart';
+import '../widgets/barra_navegacao_home.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/filtros_busca_carona.dart';
 import 'detalhes_carona.dart';
@@ -172,6 +174,10 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const BarraSuperiorPadrao(titulo: 'Buscar carona'),
+      bottomNavigationBar: BarraNavegacaoHome(
+        onTap: (indice) =>
+            NavegacaoPrincipal.selecionar(context, indice, indiceAtual: 0),
+      ),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: carregarCaronas,

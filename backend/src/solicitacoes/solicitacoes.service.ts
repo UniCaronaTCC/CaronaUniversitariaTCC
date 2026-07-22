@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
 
 import { Carona } from '../caronas/carona.entity';
 import { Solicitacao } from './solicitacao.entity';
@@ -84,6 +84,21 @@ export class SolicitacoesService {
   }
 
   async listarRecebidas(idMotorista: number): Promise<Solicitacao[]> {
+    return this.consultaRecebidas(idMotorista).getMany();
+  }
+
+  async listarRecebidasDaCarona(
+    idMotorista: number,
+    idCarona: number,
+  ): Promise<Solicitacao[]> {
+    return this.consultaRecebidas(idMotorista)
+      .andWhere('carona.idCarona = :idCarona', { idCarona })
+      .getMany();
+  }
+
+  private consultaRecebidas(
+    idMotorista: number,
+  ): SelectQueryBuilder<Solicitacao> {
     return this.solicitacoesRepository
       .createQueryBuilder('solicitacao')
       .innerJoinAndSelect('solicitacao.carona', 'carona')
@@ -100,8 +115,7 @@ export class SolicitacoesService {
       ])
       .where('motorista.idUsuario = :idMotorista', { idMotorista })
       .orderBy("CASE WHEN solicitacao.status = 'PENDENTE' THEN 0 ELSE 1 END")
-      .addOrderBy('solicitacao.criadoEm', 'DESC')
-      .getMany();
+      .addOrderBy('solicitacao.criadoEm', 'DESC');
   }
 
   async listarEnviadas(idPassageiro: number): Promise<Solicitacao[]> {
@@ -116,6 +130,7 @@ export class SolicitacoesService {
         'carona.destino',
         'carona.dataInicio',
         'carona.horario',
+        'carona.valor',
         'motorista.idUsuario',
         'motorista.nome',
       ])

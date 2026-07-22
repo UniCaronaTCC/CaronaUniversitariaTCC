@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -35,37 +35,39 @@ export class CaronasService {
   ) {}
 
   async criarCarona(dados: DadosCriacaoCarona): Promise<Carona> {
-    const possuiRecorrencia = dados.recorrente === true;
-
     const novaCarona = this.caronasRepository.create({
-      origem: dados.origem,
-      origemCidade: dados.origemCidade,
-      origemLatitude: dados.origemLatitude,
-      origemLongitude: dados.origemLongitude,
-
-      destino: dados.destino,
-      destinoCidade: dados.destinoCidade,
-      destinoLatitude: dados.destinoLatitude,
-      destinoLongitude: dados.destinoLongitude,
-
-      dataInicio: dados.dataInicio,
-      dataFim: possuiRecorrencia ? dados.dataFim : null,
-      horario: dados.horario,
-      vagas: dados.vagas,
-      valor: dados.valor,
-
-      recorrente: possuiRecorrencia,
-      diasSemana: possuiRecorrencia ? dados.diasSemana : null,
-
-      observacoes: dados.observacoes?.trim() || null,
       status: 'ATIVA',
-
       usuario: {
         idUsuario: dados.idUsuario,
       },
     });
 
+    this.aplicarDados(novaCarona, dados);
+
     return this.caronasRepository.save(novaCarona);
+  }
+
+  async atualizarCarona(
+    idCarona: number,
+    dados: DadosCriacaoCarona,
+  ): Promise<Carona> {
+    const carona = await this.buscarCaronaDoUsuario(idCarona, dados.idUsuario);
+
+    this.aplicarDados(carona, dados);
+
+    if (carona.status === 'LOTADA' && carona.vagas > 0) {
+      carona.status = 'ATIVA';
+    }
+
+    return this.caronasRepository.save(carona);
+  }
+
+  async excluirCarona(idCarona: number, idUsuario: number): Promise<void> {
+    const carona = await this.buscarCaronaDoUsuario(idCarona, idUsuario);
+
+    // Mantém o histórico das solicitações relacionadas à oferta.
+    carona.status = 'CANCELADA';
+    await this.caronasRepository.save(carona);
   }
 
   // Lista somente ofertas ativas e que ainda podem acontecer.
@@ -126,6 +128,9 @@ export class CaronasService {
       .innerJoinAndSelect('carona.usuario', 'usuario')
       .select(['carona', 'usuario.idUsuario', 'usuario.nome'])
       .where('usuario.idUsuario = :idUsuario', { idUsuario })
+      .andWhere('carona.status <> :statusCancelada', {
+        statusCancelada: 'CANCELADA',
+      })
       .andWhere(
         `
         (
@@ -143,5 +148,43 @@ export class CaronasService {
       .orderBy('carona.dataInicio', 'ASC')
       .addOrderBy('carona.horario', 'ASC')
       .getMany();
+  }
+
+  private async buscarCaronaDoUsuario(
+    idCarona: number,
+    idUsuario: number,
+  ): Promise<Carona> {
+    const carona = await this.caronasRepository.findOne({
+      where: { idCarona },
+      relations: { usuario: true },
+    });
+
+    // A mesma resposta evita revelar a existência de caronas de outro usuário.
+    if (!carona || carona.usuario.idUsuario !== idUsuario) {
+      throw new NotFoundException('Carona não encontrada');
+    }
+
+    return carona;
+  }
+
+  private aplicarDados(carona: Carona, dados: DadosCriacaoCarona): void {
+    const possuiRecorrencia = dados.recorrente === true;
+
+    carona.origem = dados.origem;
+    carona.origemCidade = dados.origemCidade;
+    carona.origemLatitude = dados.origemLatitude;
+    carona.origemLongitude = dados.origemLongitude;
+    carona.destino = dados.destino;
+    carona.destinoCidade = dados.destinoCidade;
+    carona.destinoLatitude = dados.destinoLatitude;
+    carona.destinoLongitude = dados.destinoLongitude;
+    carona.dataInicio = dados.dataInicio;
+    carona.dataFim = possuiRecorrencia ? dados.dataFim : null;
+    carona.horario = dados.horario;
+    carona.vagas = dados.vagas;
+    carona.valor = dados.valor;
+    carona.recorrente = possuiRecorrencia;
+    carona.diasSemana = possuiRecorrencia ? dados.diasSemana : null;
+    carona.observacoes = dados.observacoes?.trim() || null;
   }
 }

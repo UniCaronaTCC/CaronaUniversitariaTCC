@@ -57,6 +57,9 @@ void main() {
     );
 
     expect(find.text('SOLICITAR VAGA'), findsNothing);
+    expect(find.text('EDITAR'), findsOneWidget);
+    expect(find.text('EXCLUIR'), findsOneWidget);
+    expect(find.byType(BottomNavigationBar), findsOneWidget);
 
     AuthService.sair();
   });

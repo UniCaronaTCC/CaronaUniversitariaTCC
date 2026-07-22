@@ -74,8 +74,9 @@ class CaronaService {
     }
   }
 
-  // Envia uma nova oferta com endereço e coordenadas.
-  static Future<Map<String, dynamic>> criarCarona({
+  // Cria ou atualiza uma oferta com endereço e coordenadas.
+  static Future<Map<String, dynamic>> salvarCarona({
+    int? idCarona,
     required String origem,
     String? origemCidade,
     required double origemLatitude,
@@ -102,35 +103,37 @@ class CaronaService {
         return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
       }
 
-      final url = Uri.parse('${ApiConfig.baseUrl}/caronas');
-
-      final resposta = await http.post(
-        url,
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'origem': origem,
-          'origemCidade': origemCidade,
-          'origemLatitude': origemLatitude,
-          'origemLongitude': origemLongitude,
-
-          'destino': destino,
-          'destinoCidade': destinoCidade,
-          'destinoLatitude': destinoLatitude,
-          'destinoLongitude': destinoLongitude,
-
-          'dataInicio': dataInicio,
-          'dataFim': dataFim,
-          'horario': horario,
-          'vagas': vagas,
-          'valor': valor,
-          'recorrente': recorrente,
-          'diasSemana': diasSemana,
-          'observacoes': observacoes,
-        }),
+      final url = Uri.parse(
+        '${ApiConfig.baseUrl}/caronas${idCarona == null ? '' : '/$idCarona'}',
       );
+      final headers = {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $token',
+      };
+      final corpoRequisicao = jsonEncode({
+        'origem': origem,
+        'origemCidade': origemCidade,
+        'origemLatitude': origemLatitude,
+        'origemLongitude': origemLongitude,
+
+        'destino': destino,
+        'destinoCidade': destinoCidade,
+        'destinoLatitude': destinoLatitude,
+        'destinoLongitude': destinoLongitude,
+
+        'dataInicio': dataInicio,
+        'dataFim': dataFim,
+        'horario': horario,
+        'vagas': vagas,
+        'valor': valor,
+        'recorrente': recorrente,
+        'diasSemana': diasSemana,
+        'observacoes': observacoes,
+      });
+
+      final resposta = idCarona == null
+          ? await http.post(url, headers: headers, body: corpoRequisicao)
+          : await http.patch(url, headers: headers, body: corpoRequisicao);
 
       final corpo = _decodificarResposta(resposta);
 
@@ -149,7 +152,44 @@ class CaronaService {
 
       return {
         'sucesso': false,
-        'mensagem': _obterMensagem(corpo, 'Erro ao criar carona'),
+        'mensagem': _obterMensagem(corpo, 'Erro ao salvar carona'),
+      };
+    } catch (erro) {
+      return {
+        'sucesso': false,
+        'mensagem': 'Não foi possível conectar ao servidor',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> excluirCarona(int idCarona) async {
+    try {
+      final token = AuthService.tokenUsuarioLogado;
+
+      if (token == null) {
+        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+      }
+
+      final resposta = await http.delete(
+        Uri.parse('${ApiConfig.baseUrl}/caronas/$idCarona'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final corpo = _decodificarResposta(resposta);
+
+      if (resposta.statusCode == 200) {
+        return {
+          'sucesso': true,
+          'mensagem': corpo['mensagem']?.toString() ?? 'Carona excluída',
+        };
+      }
+
+      if (resposta.statusCode == 401) {
+        AuthService.sair();
+      }
+
+      return {
+        'sucesso': false,
+        'mensagem': _obterMensagem(corpo, 'Erro ao excluir carona'),
       };
     } catch (erro) {
       return {

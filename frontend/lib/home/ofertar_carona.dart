@@ -1,19 +1,30 @@
 import 'package:flutter/material.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
 import '../mapa/screens/mapa_screen.dart';
 import '../mapa/services/endereco_service.dart';
+import '../models/carona.dart';
+import '../navigation/navegacao_principal.dart';
 import '../services/carona_service.dart';
 import '../utils/data_hora_utils.dart';
 import '../utils/formatador_moeda.dart';
 import '../widgets/componentes_padrao.dart';
+import '../widgets/barra_navegacao_home.dart';
 import '../widgets/formulario_ofertar_carona.dart';
 
 class OfertarCaronaTela extends StatefulWidget {
   final LocalizacaoSelecionada? destinoInicial;
+  final Carona? caronaParaEditar;
+  final int indiceNavegacao;
 
-  const OfertarCaronaTela({super.key, this.destinoInicial});
+  const OfertarCaronaTela({
+    super.key,
+    this.destinoInicial,
+    this.caronaParaEditar,
+    this.indiceNavegacao = 0,
+  });
 
   @override
   State<OfertarCaronaTela> createState() => _OfertarCaronaTelaState();
@@ -41,18 +52,78 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
   final List<String> diasSelecionados = [];
 
+  bool get editando => widget.caronaParaEditar != null;
+
   @override
   void initState() {
     super.initState();
+
+    final carona = widget.caronaParaEditar;
+
+    if (carona != null) {
+      _preencherEdicao(carona);
+      return;
+    }
+
     destinoSelecionado = widget.destinoInicial;
     destinoController.text = widget.destinoInicial?.descricaoCompleta ?? '';
+  }
+
+  void _preencherEdicao(Carona carona) {
+    origemController.text = carona.origem;
+    destinoController.text = carona.destino;
+    dataSelecionada = carona.dataInicio;
+    dataController.text = DataHoraUtils.formatarDataExibicao(carona.dataInicio);
+    horarioSelecionado = _converterHorario(carona.horario);
+    horarioController.text = horarioSelecionado == null
+        ? carona.horario
+        : DataHoraUtils.formatarHorario(horarioSelecionado!);
+    vagasController.text = carona.vagas.toString();
+    valorController.text = formatarDoubleComoMoedaReal(carona.valor);
+    observacoesController.text = carona.observacoes ?? '';
+    caronaRecorrente = carona.recorrente;
+    diasSelecionados.addAll(carona.diasSemana);
+
+    if (carona.origemLatitude != null && carona.origemLongitude != null) {
+      origemSelecionada = LocalizacaoSelecionada(
+        ponto: LatLng(carona.origemLatitude!, carona.origemLongitude!),
+        endereco: carona.origem,
+      );
+    }
+
+    if (carona.destinoLatitude != null && carona.destinoLongitude != null) {
+      destinoSelecionado = LocalizacaoSelecionada(
+        ponto: LatLng(carona.destinoLatitude!, carona.destinoLongitude!),
+        endereco: carona.destino,
+      );
+    }
+  }
+
+  TimeOfDay? _converterHorario(String horario) {
+    final partes = horario.split(':');
+
+    if (partes.length < 2) {
+      return null;
+    }
+
+    final hora = int.tryParse(partes[0]);
+    final minuto = int.tryParse(partes[1]);
+
+    if (hora == null || minuto == null) {
+      return null;
+    }
+
+    return TimeOfDay(hour: hora, minute: minuto);
   }
 
   // Abre o mapa com a localizacao atual estimada.
   Future<void> escolherOrigemNoMapa() async {
     final resultado = await Navigator.push<LocalizacaoSelecionada>(
       context,
-      MaterialPageRoute(builder: (context) => const TesteMapa()),
+      MaterialPageRoute(
+        builder: (context) =>
+            TesteMapa(indiceNavegacao: widget.indiceNavegacao),
+      ),
     );
 
     if (!mounted || resultado == null) {
@@ -261,16 +332,24 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     final destino = destinoSelecionado!;
     final observacoes = observacoesController.text.trim();
 
-    final resultado = await CaronaService.criarCarona(
+    final resultado = await CaronaService.salvarCarona(
+      idCarona: widget.caronaParaEditar?.id,
       origem: origem.endereco,
+      origemCidade: widget.caronaParaEditar?.origemCidade,
       origemLatitude: origem.ponto.latitude,
       origemLongitude: origem.ponto.longitude,
 
       destino: destino.descricaoCompleta,
+      destinoCidade: widget.caronaParaEditar?.destinoCidade,
       destinoLatitude: destino.ponto.latitude,
       destinoLongitude: destino.ponto.longitude,
 
       dataInicio: DataHoraUtils.formatarDataBackend(dataSelecionada!),
+      dataFim: widget.caronaParaEditar?.dataFim == null
+          ? null
+          : DataHoraUtils.formatarDataBackend(
+              widget.caronaParaEditar!.dataFim!,
+            ),
       horario: '${DataHoraUtils.formatarHorario(horarioSelecionado!)}:00',
       vagas: int.parse(vagasController.text),
       valor: converterMoedaRealParaDouble(valorController.text),
@@ -291,7 +370,10 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       final dados = resultado['dados'] as Map<String, dynamic>?;
 
       mostrarMensagem(
-        dados?['mensagem']?.toString() ?? 'Carona criada com sucesso',
+        dados?['mensagem']?.toString() ??
+            (editando
+                ? 'Carona atualizada com sucesso'
+                : 'Carona criada com sucesso'),
       );
 
       // Volta para a Home quando a tela foi aberta por navegacao.
@@ -369,11 +451,27 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const BarraSuperiorPadrao(titulo: 'Ofertar carona'),
+      appBar: BarraSuperiorPadrao(
+        titulo: editando ? 'Editar carona' : 'Ofertar carona',
+      ),
+      bottomNavigationBar: BarraNavegacaoHome(
+        currentIndex: widget.indiceNavegacao,
+        onTap: (indice) => NavegacaoPrincipal.selecionar(
+          context,
+          indice,
+          indiceAtual: widget.indiceNavegacao,
+        ),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: FormularioOfertarCarona(
+            titulo: editando ? 'Editar carona' : 'Ofertar carona',
+            descricao: editando
+                ? 'Atualize os dados da viagem'
+                : 'Informe os dados da viagem',
+            textoBotao: editando ? 'SALVAR ALTERAÇÕES' : 'OFERTAR CARONA',
+            textoCarregando: editando ? 'SALVANDO...' : 'ENVIANDO...',
             origemController: origemController,
             destinoController: destinoController,
             dataController: dataController,

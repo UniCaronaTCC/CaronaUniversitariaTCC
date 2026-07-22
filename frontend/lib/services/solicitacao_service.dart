@@ -45,7 +45,7 @@ class SolicitacaoService {
     }
   }
 
-  static Future<Map<String, dynamic>> listarRecebidas() async {
+  static Future<Map<String, dynamic>> listarRecebidas({int? idCarona}) async {
     try {
       final token = AuthService.tokenUsuarioLogado;
 
@@ -54,7 +54,11 @@ class SolicitacaoService {
       }
 
       final resposta = await http.get(
-        Uri.parse('${ApiConfig.baseUrl}/solicitacoes/recebidas'),
+        Uri.parse(
+          idCarona == null
+              ? '${ApiConfig.baseUrl}/solicitacoes/recebidas'
+              : '${ApiConfig.baseUrl}/caronas/$idCarona/solicitacoes',
+        ),
         headers: {'Authorization': 'Bearer $token'},
       );
       final corpo = _decodificarResposta(resposta);
