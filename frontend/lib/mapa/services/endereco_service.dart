@@ -15,7 +15,7 @@ class EnderecoService {
 
       // Se nao encontrar nenhum endereco, retorna texto padrao
       if (locais.isEmpty) {
-        return 'Endereco nao encontrado';
+        return 'Endereço não encontrado';
       }
 
       // Pega o primeiro resultado encontrado
@@ -39,13 +39,13 @@ class EnderecoService {
 
       // Se nao tiver partes suficientes, retorna texto padrao
       if (partes.isEmpty) {
-        return 'Endereco nao encontrado';
+        return 'Endereço não encontrado';
       }
 
       return partes;
     } catch (erro) {
       // Caso aconteca erro na conversao
-      return 'Erro ao buscar endereco';
+      return 'Erro ao buscar endereço';
     }
   }
 
@@ -80,10 +80,7 @@ class EnderecoService {
 
         resultados.add(
           LocalizacaoSelecionada(
-            ponto: LatLng(
-              localizacao.latitude,
-              localizacao.longitude,
-            ),
+            ponto: LatLng(localizacao.latitude, localizacao.longitude),
             endereco: enderecoCompleto,
 
             // Preserva o nome usado na pesquisa.

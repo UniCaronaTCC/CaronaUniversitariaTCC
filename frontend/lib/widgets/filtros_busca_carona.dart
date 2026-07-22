@@ -59,6 +59,7 @@ class FiltrosBuscaCarona extends StatelessWidget {
           label: 'Destino',
           icone: Icons.location_on_outlined,
           controller: destinoController,
+          keyboardType: TextInputType.streetAddress,
           onChanged: onDestinoChanged,
         ),
         const SizedBox(height: 12),

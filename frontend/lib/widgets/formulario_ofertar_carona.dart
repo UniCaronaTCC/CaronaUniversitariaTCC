@@ -91,6 +91,7 @@ class FormularioOfertarCarona extends StatelessWidget {
           label: 'Destino',
           icone: Icons.location_on_outlined,
           controller: destinoController,
+          keyboardType: TextInputType.streetAddress,
           onChanged: onDestinoChanged,
           suffixIcon: buscandoDestino
               ? const Padding(
@@ -120,7 +121,7 @@ class FormularioOfertarCarona extends StatelessWidget {
         const SizedBox(height: 16),
 
         CampoTextoCarona(
-          label: 'Horario',
+          label: 'Horário',
           icone: Icons.access_time,
           controller: horarioController,
           somenteLeitura: true,
@@ -156,7 +157,7 @@ class FormularioOfertarCarona extends StatelessWidget {
         const SizedBox(height: 16),
 
         CampoTextoCarona(
-          label: 'Observacoes',
+          label: 'Observações',
           icone: Icons.notes,
           controller: observacoesController,
           maxLines: 3,

@@ -6,6 +6,8 @@ import '../services/endereco_service.dart'; // Service que converte coordenadas 
 import '../services/localizacao_service.dart'; // Service que pega a localizacao atual
 import '../models/localizacao_selecionada.dart'; // Model com ponto e endereco escolhido
 import '../widgets/barra_pesquisa_endereco.dart'; // barra de pesquisa
+import '../../widgets/componentes_padrao.dart';
+
 class TesteMapa extends StatefulWidget {
   const TesteMapa({super.key});
 
@@ -66,7 +68,7 @@ class _TesteMapaState extends State<TesteMapa> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Nao foi possivel obter sua localizacao')),
+        const SnackBar(content: Text('Não foi possível obter sua localização')),
       );
     }
   }
@@ -105,7 +107,7 @@ class _TesteMapaState extends State<TesteMapa> {
   void _confirmarPontoEncontro() {
     if (_pontoEncontro == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Aguarde a localizacao ou toque no mapa')),
+        const SnackBar(content: Text('Aguarde a localização ou toque no mapa')),
       );
 
       return;
@@ -116,7 +118,7 @@ class _TesteMapaState extends State<TesteMapa> {
         context,
         LocalizacaoSelecionada(
           ponto: _pontoEncontro!,
-          endereco: _enderecoPontoEncontro ?? 'Endereco nao encontrado',
+          endereco: _enderecoPontoEncontro ?? 'Endereço não encontrado',
         ),
       );
       return;
@@ -130,9 +132,7 @@ class _TesteMapaState extends State<TesteMapa> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Confirmar origem'),
-      ),
+      appBar: const BarraSuperiorPadrao(titulo: 'Confirmar origem'),
 
       body: Stack(
         children: [
@@ -191,9 +191,7 @@ class _TesteMapaState extends State<TesteMapa> {
           ),
 
           // Barra de pesquisa sobre o mapa
-          const SafeArea(
-            child: BarraPesquisaEndereco(),
-          ),
+          const SafeArea(child: BarraPesquisaEndereco()),
         ],
       ),
       bottomNavigationBar: Container(
@@ -208,7 +206,7 @@ class _TesteMapaState extends State<TesteMapa> {
             children: [
               Text(
                 _buscandoLocalizacao
-                    ? 'Obtendo sua localizacao...'
+                    ? 'Obtendo sua localização...'
                     : 'Confira sua origem',
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
@@ -219,7 +217,7 @@ class _TesteMapaState extends State<TesteMapa> {
               const SizedBox(height: 8),
 
               if (_buscandoEndereco)
-                const Text('Buscando endereco...')
+                const Text('Buscando endereço...')
               else
                 Text(
                   _enderecoPontoEncontro ??

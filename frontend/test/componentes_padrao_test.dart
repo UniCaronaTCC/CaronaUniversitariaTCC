@@ -40,4 +40,41 @@ void main() {
 
     expect(pressionado, isTrue);
   });
+
+  testWidgets('barra superior exibe seta e volta para a tela anterior', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute<void>(
+                    builder: (_) => const Scaffold(
+                      appBar: BarraSuperiorPadrao(titulo: 'Destino'),
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Abrir'),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('Abrir'));
+    await tester.pumpAndSettle();
+
+    expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+    expect(find.text('Destino'), findsOneWidget);
+
+    await tester.tap(find.byIcon(Icons.arrow_back));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Abrir'), findsOneWidget);
+  });
 }

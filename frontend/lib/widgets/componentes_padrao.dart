@@ -125,3 +125,30 @@ class EstadoConteudoPadrao extends StatelessWidget {
     );
   }
 }
+
+class BarraSuperiorPadrao extends StatelessWidget
+    implements PreferredSizeWidget {
+  final String titulo;
+
+  const BarraSuperiorPadrao({super.key, required this.titulo});
+
+  @override
+  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
+
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+      title: Text(titulo),
+      backgroundColor: AppColors.background,
+      foregroundColor: AppColors.text,
+      elevation: 0,
+      leading: IconButton(
+        tooltip: 'Voltar',
+        icon: const Icon(Icons.arrow_back),
+        onPressed: () {
+          Navigator.maybePop(context);
+        },
+      ),
+    );
+  }
+}

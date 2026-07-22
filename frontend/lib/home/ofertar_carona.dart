@@ -7,6 +7,7 @@ import '../mapa/services/endereco_service.dart';
 import '../services/carona_service.dart';
 import '../utils/data_hora_utils.dart';
 import '../utils/formatador_moeda.dart';
+import '../widgets/componentes_padrao.dart';
 import '../widgets/formulario_ofertar_carona.dart';
 
 class OfertarCaronaTela extends StatefulWidget {
@@ -87,7 +88,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     final resultado = await DataHoraUtils.selecionarHorario(
       context,
       horarioInicial: horarioSelecionado,
-      textoAjuda: 'Selecione o horario da carona',
+      textoAjuda: 'Selecione o horário da carona',
     );
 
     if (!mounted || resultado == null) {
@@ -317,7 +318,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     ];
 
     if (camposObrigatorios.any((campo) => campo.trim().isEmpty)) {
-      return 'Preencha todos os campos obrigatorios';
+      return 'Preencha todos os campos obrigatórios';
     }
 
     if (origemSelecionada == null) {
@@ -329,13 +330,13 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     }
 
     if (dataSelecionada == null || horarioSelecionado == null) {
-      return 'Selecione a data e o horario';
+      return 'Selecione a data e o horário';
     }
 
     final vagas = int.tryParse(vagasController.text);
 
     if (vagas == null || vagas <= 0) {
-      return 'Informe uma quantidade de vagas valida';
+      return 'Informe uma quantidade de vagas válida';
     }
 
     if (caronaRecorrente && diasSelecionados.isEmpty) {
@@ -368,12 +369,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Ofertar carona'),
-        backgroundColor: AppColors.background,
-        foregroundColor: AppColors.text,
-        elevation: 0,
-      ),
+      appBar: const BarraSuperiorPadrao(titulo: 'Ofertar carona'),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),

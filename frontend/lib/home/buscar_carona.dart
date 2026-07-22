@@ -167,12 +167,7 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Buscar carona'),
-        backgroundColor: AppColors.background,
-        foregroundColor: AppColors.text,
-        elevation: 0,
-      ),
+      appBar: const BarraSuperiorPadrao(titulo: 'Buscar carona'),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: carregarCaronas,

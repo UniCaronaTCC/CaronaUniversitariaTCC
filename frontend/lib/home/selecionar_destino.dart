@@ -84,18 +84,13 @@ class _SelecionarDestinoTelaState extends State<SelecionarDestinoTela> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Escolher destino'),
-        backgroundColor: AppColors.background,
-        foregroundColor: AppColors.text,
-        elevation: 0,
-      ),
+      appBar: const BarraSuperiorPadrao(titulo: 'Escolher destino'),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.all(24),
           children: [
             const Text(
-              'Para onde voce vai?',
+              'Para onde você vai?',
               style: TextStyle(
                 color: AppColors.text,
                 fontSize: 28,
@@ -104,7 +99,7 @@ class _SelecionarDestinoTelaState extends State<SelecionarDestinoTela> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Busque pelo nome do lugar ou pelo endereco.',
+              'Busque pelo nome do lugar ou pelo endereço.',
               style: TextStyle(color: AppColors.text, fontSize: 17),
             ),
             const SizedBox(height: 24),
@@ -112,6 +107,7 @@ class _SelecionarDestinoTelaState extends State<SelecionarDestinoTela> {
               label: 'Destino',
               icone: Icons.location_on_outlined,
               controller: destinoController,
+              keyboardType: TextInputType.streetAddress,
               textInputAction: TextInputAction.search,
               onSubmitted: (_) => buscarDestino(),
               suffixIcon: buscando
@@ -133,7 +129,7 @@ class _SelecionarDestinoTelaState extends State<SelecionarDestinoTela> {
             if (buscando)
               const EstadoConteudoPadrao(
                 carregando: true,
-                mensagem: 'Buscando enderecos...',
+                mensagem: 'Buscando endereços...',
               )
             else if (buscaRealizada && opcoes.isEmpty)
               const EstadoConteudoPadrao(
@@ -142,7 +138,7 @@ class _SelecionarDestinoTelaState extends State<SelecionarDestinoTela> {
               )
             else if (opcoes.isNotEmpty) ...[
               const Text(
-                'Selecione uma opcao',
+                'Selecione uma opção',
                 style: TextStyle(
                   color: AppColors.text,
                   fontSize: 18,

@@ -6,12 +6,10 @@ class BarraPesquisaEndereco extends StatefulWidget {
   const BarraPesquisaEndereco({super.key});
 
   @override
-  State<BarraPesquisaEndereco> createState() =>
-      _BarraPesquisaEnderecoState();
+  State<BarraPesquisaEndereco> createState() => _BarraPesquisaEnderecoState();
 }
 
 class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
-
   final TextEditingController _controller = TextEditingController();
 
   final EnderecoService _enderecoService = EnderecoService();
@@ -26,8 +24,9 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
   }
 
   Future<void> _pesquisar(String texto) async {
-    final resultados =
-    await _enderecoService.buscarLocalizacoesPorEndereco(texto);
+    final resultados = await _enderecoService.buscarLocalizacoesPorEndereco(
+      texto,
+    );
 
     setState(() {
       _resultados = resultados;
@@ -46,6 +45,7 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
             borderRadius: BorderRadius.circular(12),
             child: TextField(
               controller: _controller,
+              keyboardType: TextInputType.streetAddress,
               onChanged: _pesquisar,
               decoration: InputDecoration(
                 hintText: 'Pesquisar endereço',
@@ -63,17 +63,12 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
           if (_resultados.isNotEmpty)
             Container(
               margin: const EdgeInsets.only(top: 8),
-              constraints: const BoxConstraints(
-                maxHeight: 250,
-              ),
+              constraints: const BoxConstraints(maxHeight: 250),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: const [
-                  BoxShadow(
-                    blurRadius: 6,
-                    color: Colors.black26,
-                  ),
+                  BoxShadow(blurRadius: 6, color: Colors.black26),
                 ],
               ),
               child: ListView.builder(
