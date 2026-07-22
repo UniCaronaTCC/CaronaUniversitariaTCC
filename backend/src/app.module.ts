@@ -7,6 +7,7 @@ import { AppService } from './app.service'; // Importa o service principal criad
 import { AuthModule } from './auth/auth.module'; // Importa o módulo de autenticação
 import { UsersModule } from './users/users.module'; // Importa o módulo de usuários
 import { CaronasModule } from './caronas/caronas.module';
+import { SolicitacoesModule } from './solicitacoes/solicitacoes.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { CaronasModule } from './caronas/caronas.module';
     AuthModule, // Carrega o módulo de autenticação
     UsersModule, // Carrega o módulo de usuários
     CaronasModule,
+    SolicitacoesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

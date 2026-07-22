@@ -9,7 +9,16 @@ import '../widgets/barra_pesquisa_endereco.dart'; // barra de pesquisa
 import '../../widgets/componentes_padrao.dart';
 
 class TesteMapa extends StatefulWidget {
-  const TesteMapa({super.key});
+  final String titulo;
+  final String instrucao;
+  final String textoBotao;
+
+  const TesteMapa({
+    super.key,
+    this.titulo = 'Confirmar origem',
+    this.instrucao = 'Confira sua origem',
+    this.textoBotao = 'CONFIRMAR ORIGEM',
+  });
 
   @override
   State<TesteMapa> createState() => _TesteMapaState();
@@ -104,6 +113,17 @@ class _TesteMapaState extends State<TesteMapa> {
     await _buscarEnderecoDoPonto(ponto);
   }
 
+  // Move o mapa para uma das opções encontradas pela pesquisa.
+  void _selecionarEnderecoPesquisado(LocalizacaoSelecionada local) {
+    setState(() {
+      _pontoEncontro = local.ponto;
+      _enderecoPontoEncontro = local.endereco;
+      _buscandoEndereco = false;
+    });
+
+    _mapController.move(local.ponto, 16);
+  }
+
   void _confirmarPontoEncontro() {
     if (_pontoEncontro == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -132,7 +152,7 @@ class _TesteMapaState extends State<TesteMapa> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const BarraSuperiorPadrao(titulo: 'Confirmar origem'),
+      appBar: BarraSuperiorPadrao(titulo: widget.titulo),
 
       body: Stack(
         children: [
@@ -191,7 +211,11 @@ class _TesteMapaState extends State<TesteMapa> {
           ),
 
           // Barra de pesquisa sobre o mapa
-          const SafeArea(child: BarraPesquisaEndereco()),
+          SafeArea(
+            child: BarraPesquisaEndereco(
+              onSelecionado: _selecionarEnderecoPesquisado,
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: Container(
@@ -207,7 +231,7 @@ class _TesteMapaState extends State<TesteMapa> {
               Text(
                 _buscandoLocalizacao
                     ? 'Obtendo sua localização...'
-                    : 'Confira sua origem',
+                    : widget.instrucao,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
@@ -233,7 +257,7 @@ class _TesteMapaState extends State<TesteMapa> {
                       ? null
                       : _confirmarPontoEncontro,
                   icon: const Icon(Icons.check),
-                  label: const Text('CONFIRMAR ORIGEM'),
+                  label: Text(widget.textoBotao),
                 ),
               ),
             ],

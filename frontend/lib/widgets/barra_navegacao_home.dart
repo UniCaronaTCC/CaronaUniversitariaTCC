@@ -18,7 +18,10 @@ class BarraNavegacaoHome extends StatelessWidget {
           icon: Icon(Icons.home_outlined),
           label: 'Início',
         ),
-        BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
+        BottomNavigationBarItem(
+          icon: Icon(Icons.chat_bubble_outline),
+          label: 'Chat',
+        ),
         BottomNavigationBarItem(
           icon: Icon(Icons.add_circle_outline),
           label: 'Publicar',

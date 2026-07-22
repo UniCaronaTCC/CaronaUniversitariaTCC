@@ -3,7 +3,14 @@ import '../services/endereco_service.dart';
 import '../models/localizacao_selecionada.dart';
 
 class BarraPesquisaEndereco extends StatefulWidget {
-  const BarraPesquisaEndereco({super.key});
+  final ValueChanged<LocalizacaoSelecionada> onSelecionado;
+  final EnderecoService? enderecoService;
+
+  const BarraPesquisaEndereco({
+    super.key,
+    required this.onSelecionado,
+    this.enderecoService,
+  });
 
   @override
   State<BarraPesquisaEndereco> createState() => _BarraPesquisaEnderecoState();
@@ -12,10 +19,16 @@ class BarraPesquisaEndereco extends StatefulWidget {
 class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
   final TextEditingController _controller = TextEditingController();
 
-  final EnderecoService _enderecoService = EnderecoService();
+  late final EnderecoService _enderecoService;
 
   // Guarda os resultados da pesquisa
   List<LocalizacaoSelecionada> _resultados = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _enderecoService = widget.enderecoService ?? EnderecoService();
+  }
 
   @override
   void dispose() {
@@ -24,13 +37,37 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
   }
 
   Future<void> _pesquisar(String texto) async {
+    final textoBusca = texto.trim();
+
+    if (textoBusca.isEmpty) {
+      setState(() {
+        _resultados = [];
+      });
+      return;
+    }
+
     final resultados = await _enderecoService.buscarLocalizacoesPorEndereco(
-      texto,
+      textoBusca,
     );
+
+    if (!mounted || _controller.text.trim() != textoBusca) {
+      return;
+    }
 
     setState(() {
       _resultados = resultados;
     });
+  }
+
+  void _selecionar(LocalizacaoSelecionada local) {
+    _controller.text = local.descricaoCompleta;
+
+    setState(() {
+      _resultados = [];
+    });
+
+    FocusScope.of(context).unfocus();
+    widget.onSelecionado(local);
   }
 
   @override
@@ -81,6 +118,8 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
                     leading: const Icon(Icons.location_on),
                     title: Text(local.nome ?? local.endereco),
                     subtitle: Text(local.endereco),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => _selecionar(local),
                   );
                 },
               ),

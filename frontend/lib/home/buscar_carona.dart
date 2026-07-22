@@ -9,6 +9,7 @@ import '../utils/filtro_caronas.dart';
 import '../widgets/card_carona_disponivel.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/filtros_busca_carona.dart';
+import 'detalhes_carona.dart';
 
 class BuscarCaronaTela extends StatefulWidget {
   final LocalizacaoSelecionada? destinoInicial;
@@ -149,8 +150,11 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
   }
 
   void abrirDetalhes(Carona carona) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Detalhes da carona de ${carona.motorista}')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DetalhesCaronaTela(carona: carona),
+      ),
     );
   }
 

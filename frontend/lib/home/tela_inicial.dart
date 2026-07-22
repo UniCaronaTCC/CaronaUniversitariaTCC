@@ -10,6 +10,7 @@ import '../widgets/card_carona_disponivel.dart';
 import '../widgets/card_destino_home.dart';
 import '../widgets/componentes_padrao.dart';
 import 'buscar_carona.dart';
+import 'detalhes_carona.dart';
 import 'ofertar_carona.dart';
 import 'selecionar_destino.dart';
 
@@ -111,8 +112,11 @@ class _TelaInicialState extends State<TelaInicial> {
   }
 
   void abrirDetalhes(Carona carona) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Detalhes da carona de ${carona.motorista}')),
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => DetalhesCaronaTela(carona: carona),
+      ),
     );
   }
 
