@@ -3,7 +3,9 @@ import '../config/app_colors.dart'; // Importa as cores principais do app
 
 class BarraNavegacaoHome extends StatelessWidget {
   // Cria a barra inferior da tela inicial
-  const BarraNavegacaoHome({super.key});
+  final ValueChanged<int>? onTap;
+
+  const BarraNavegacaoHome({super.key, this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -13,6 +15,7 @@ class BarraNavegacaoHome extends StatelessWidget {
       selectedItemColor: AppColors.primary, // Cor do item selecionado
       unselectedItemColor: Colors.black54, // Cor dos itens não selecionados
       type: BottomNavigationBarType.fixed, // Mantém todos os itens visíveis
+      onTap: onTap,
       items: const [
         BottomNavigationBarItem(
           icon: Icon(Icons.home_outlined),
@@ -23,8 +26,8 @@ class BarraNavegacaoHome extends StatelessWidget {
           label: 'Chat',
         ),
         BottomNavigationBarItem(
-          icon: Icon(Icons.add_circle_outline),
-          label: 'Publicar',
+          icon: Icon(Icons.directions_car_outlined),
+          label: 'Caronas',
         ),
         BottomNavigationBarItem(
           icon: Icon(Icons.person_outline),

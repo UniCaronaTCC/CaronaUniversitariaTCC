@@ -22,16 +22,11 @@ interface RequisicaoComUsuario extends Request {
 
 @Controller('caronas')
 export class CaronasController {
-  constructor(
-    private readonly caronasService: CaronasService,
-  ) {}
+  constructor(private readonly caronasService: CaronasService) {}
 
   @UseGuards(JwtAuthGuard)
   @Post()
-  async criarCarona(
-    @Body() body: any,
-    @Req() request: RequisicaoComUsuario,
-  ) {
+  async criarCarona(@Body() body: any, @Req() request: RequisicaoComUsuario) {
     const dados = body ?? {};
 
     // Valida os textos obrigatorios.
@@ -50,15 +45,11 @@ export class CaronasController {
     const valor = Number(dados.valor);
 
     if (!Number.isInteger(vagas) || vagas <= 0) {
-      throw new BadRequestException(
-        'Quantidade de vagas invalida',
-      );
+      throw new BadRequestException('Quantidade de vagas invalida');
     }
 
     if (!Number.isFinite(valor) || valor < 0) {
-      throw new BadRequestException(
-        'Valor da carona invalido',
-      );
+      throw new BadRequestException('Valor da carona invalido');
     }
 
     // Valida as coordenadas recebidas do mapa e da busca.
@@ -93,13 +84,8 @@ export class CaronasController {
     const recorrente = dados.recorrente === true;
     const diasSemana = dados.diasSemana ?? null;
 
-    if (
-      recorrente &&
-      (!Array.isArray(diasSemana) || diasSemana.length === 0)
-    ) {
-      throw new BadRequestException(
-        'Selecione pelo menos um dia da semana',
-      );
+    if (recorrente && (!Array.isArray(diasSemana) || diasSemana.length === 0)) {
+      throw new BadRequestException('Selecione pelo menos um dia da semana');
     }
 
     const carona = await this.caronasService.criarCarona({
@@ -132,10 +118,25 @@ export class CaronasController {
     };
   }
 
+  @UseGuards(JwtAuthGuard)
   @Get()
-  async listarCaronas() {
-    const caronas =
-        await this.caronasService.listarCaronas();
+  async listarCaronas(@Req() request: RequisicaoComUsuario) {
+    const caronas = await this.caronasService.listarCaronas(
+      request.usuario.sub,
+    );
+
+    return {
+      sucesso: true,
+      dados: caronas,
+    };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('minhas')
+  async listarMinhasCaronas(@Req() request: RequisicaoComUsuario) {
+    const caronas = await this.caronasService.listarMinhasCaronas(
+      request.usuario.sub,
+    );
 
     return {
       sucesso: true,
@@ -152,14 +153,8 @@ export class CaronasController {
   ): number {
     const valor = Number(valorRecebido);
 
-    if (
-      !Number.isFinite(valor) ||
-      valor < minimo ||
-      valor > maximo
-    ) {
-      throw new BadRequestException(
-        `${nome} invalida`,
-      );
+    if (!Number.isFinite(valor) || valor < minimo || valor > maximo) {
+      throw new BadRequestException(`${nome} invalida`);
     }
 
     return valor;

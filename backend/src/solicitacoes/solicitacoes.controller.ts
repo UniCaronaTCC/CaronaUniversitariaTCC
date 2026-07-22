@@ -2,7 +2,9 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   Param,
+  Patch,
   Post,
   Req,
   UseGuards,
@@ -20,12 +22,12 @@ interface RequisicaoComUsuario extends Request {
   };
 }
 
-@Controller('caronas/:idCarona/solicitacoes')
+@UseGuards(JwtAuthGuard)
+@Controller()
 export class SolicitacoesController {
   constructor(private readonly solicitacoesService: SolicitacoesService) {}
 
-  @UseGuards(JwtAuthGuard)
-  @Post()
+  @Post('caronas/:idCarona/solicitacoes')
   async criarSolicitacao(
     @Param('idCarona') idCaronaRecebido: string,
     @Body() body: any,
@@ -67,6 +69,100 @@ export class SolicitacoesController {
     return {
       sucesso: true,
       mensagem: 'Solicitação enviada ao motorista',
+      dados: {
+        id: solicitacao.idSolicitacao,
+        status: solicitacao.status,
+      },
+    };
+  }
+
+  @Get('solicitacoes/recebidas')
+  async listarRecebidas(@Req() request: RequisicaoComUsuario) {
+    const solicitacoes = await this.solicitacoesService.listarRecebidas(
+      request.usuario.sub,
+    );
+
+    return {
+      sucesso: true,
+      dados: solicitacoes.map((solicitacao) => ({
+        id: solicitacao.idSolicitacao,
+        status: solicitacao.status,
+        localEmbarque: solicitacao.localEmbarque,
+        embarqueLatitude: solicitacao.embarqueLatitude,
+        embarqueLongitude: solicitacao.embarqueLongitude,
+        criadoEm: solicitacao.criadoEm,
+        passageiro: {
+          id: solicitacao.passageiro.idUsuario,
+          nome: solicitacao.passageiro.nome,
+        },
+        carona: {
+          id: solicitacao.carona.idCarona,
+          destino: solicitacao.carona.destino,
+          dataInicio: solicitacao.carona.dataInicio,
+          horario: solicitacao.carona.horario,
+        },
+      })),
+    };
+  }
+
+  @Get('solicitacoes/enviadas')
+  async listarEnviadas(@Req() request: RequisicaoComUsuario) {
+    const solicitacoes = await this.solicitacoesService.listarEnviadas(
+      request.usuario.sub,
+    );
+
+    return {
+      sucesso: true,
+      dados: solicitacoes.map((solicitacao) => ({
+        id: solicitacao.idSolicitacao,
+        status: solicitacao.status,
+        localEmbarque: solicitacao.localEmbarque,
+        embarqueLatitude: solicitacao.embarqueLatitude,
+        embarqueLongitude: solicitacao.embarqueLongitude,
+        criadoEm: solicitacao.criadoEm,
+        motorista: {
+          id: solicitacao.carona.usuario.idUsuario,
+          nome: solicitacao.carona.usuario.nome,
+        },
+        carona: {
+          id: solicitacao.carona.idCarona,
+          destino: solicitacao.carona.destino,
+          dataInicio: solicitacao.carona.dataInicio,
+          horario: solicitacao.carona.horario,
+        },
+      })),
+    };
+  }
+
+  @Patch('solicitacoes/:idSolicitacao/status')
+  async responderSolicitacao(
+    @Param('idSolicitacao') idRecebido: string,
+    @Body() body: any,
+    @Req() request: RequisicaoComUsuario,
+  ) {
+    const idSolicitacao = Number(idRecebido);
+    const status = body?.status?.toString().toUpperCase();
+
+    if (!Number.isInteger(idSolicitacao) || idSolicitacao <= 0) {
+      throw new BadRequestException('Solicitação inválida');
+    }
+
+    if (status !== 'ACEITA' && status !== 'RECUSADA') {
+      throw new BadRequestException('Resposta inválida');
+    }
+
+    const solicitacao = await this.solicitacoesService.responderSolicitacao(
+      idSolicitacao,
+      request.usuario.sub,
+      status,
+    );
+
+    return {
+      sucesso: true,
+      mensagem:
+        status === 'ACEITA'
+          ? 'Solicitação aceita com sucesso'
+          : 'Solicitação recusada',
       dados: {
         id: solicitacao.idSolicitacao,
         status: solicitacao.status,

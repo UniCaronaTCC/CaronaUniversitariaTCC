@@ -11,6 +11,7 @@ import '../widgets/card_destino_home.dart';
 import '../widgets/componentes_padrao.dart';
 import 'buscar_carona.dart';
 import 'detalhes_carona.dart';
+import 'minhas_caronas.dart';
 import 'ofertar_carona.dart';
 import 'selecionar_destino.dart';
 
@@ -120,13 +121,27 @@ class _TelaInicialState extends State<TelaInicial> {
     );
   }
 
+  Future<void> navegarBarraInferior(int index) async {
+    if (index != 2) {
+      return;
+    }
+
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const MinhasCaronasTela()),
+    );
+
+    // Atualiza a Home caso uma solicitação tenha sido respondida.
+    await carregarCaronas();
+  }
+
   @override
   Widget build(BuildContext context) {
     final caronasHome = caronas.take(3).toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      bottomNavigationBar: const BarraNavegacaoHome(),
+      bottomNavigationBar: BarraNavegacaoHome(onTap: navegarBarraInferior),
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: carregarCaronas,

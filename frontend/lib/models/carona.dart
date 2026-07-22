@@ -1,3 +1,5 @@
+import '../utils/formatador_data.dart';
+
 class Carona {
   final int id;
   final String origem;
@@ -18,6 +20,7 @@ class Carona {
   final bool recorrente;
   final List<String> diasSemana;
   final String? observacoes;
+  final int idMotorista;
   final String motorista;
 
   const Carona({
@@ -38,6 +41,7 @@ class Carona {
     required this.recorrente,
     required this.diasSemana,
     this.observacoes,
+    this.idMotorista = 0,
     required this.motorista,
   });
 
@@ -65,6 +69,9 @@ class Carona {
       recorrente: _converterBool(json['recorrente']),
       diasSemana: _converterDias(json['diasSemana']),
       observacoes: json['observacoes']?.toString(),
+      idMotorista: usuario is Map
+          ? _converterInt(usuario['idUsuario'] ?? usuario['id'])
+          : 0,
       motorista: usuario is Map
           ? usuario['nome']?.toString() ?? 'Motorista'
           : 'Motorista',
@@ -72,12 +79,7 @@ class Carona {
   }
 
   // Formata a data para o padrao brasileiro.
-  String get dataFormatada {
-    final dia = dataInicio.day.toString().padLeft(2, '0');
-    final mes = dataInicio.month.toString().padLeft(2, '0');
-
-    return '$dia/$mes/${dataInicio.year}';
-  }
+  String get dataFormatada => FormatadorData.relativa(dataInicio);
 
   // Remove os segundos do horario retornado pelo MySQL.
   String get horarioFormatado {

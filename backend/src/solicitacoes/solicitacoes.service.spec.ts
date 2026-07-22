@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 
 import { Carona } from '../caronas/carona.entity';
 import { Solicitacao } from './solicitacao.entity';
@@ -15,6 +15,9 @@ describe('SolicitacoesService', () => {
   let caronasRepository: {
     findOne: jest.Mock;
   };
+  let dataSource: {
+    transaction: jest.Mock;
+  };
 
   beforeEach(() => {
     solicitacoesRepository = {
@@ -25,10 +28,14 @@ describe('SolicitacoesService', () => {
     caronasRepository = {
       findOne: jest.fn(),
     };
+    dataSource = {
+      transaction: jest.fn(),
+    };
 
     service = new SolicitacoesService(
       solicitacoesRepository as unknown as Repository<Solicitacao>,
       caronasRepository as unknown as Repository<Carona>,
+      dataSource as unknown as DataSource,
     );
   });
 
@@ -97,5 +104,46 @@ describe('SolicitacoesService', () => {
         embarqueLongitude: -50.4,
       }),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('aceita uma solicitação e desconta uma vaga', async () => {
+    const carona = {
+      idCarona: 10,
+      status: 'ATIVA',
+      vagas: 2,
+      usuario: { idUsuario: 2 },
+    };
+    const solicitacao = {
+      idSolicitacao: 1,
+      status: 'PENDENTE',
+      carona,
+    };
+    const salvarSolicitacao = jest.fn(async (dados) => dados);
+    const salvarCarona = jest.fn(async (dados) => dados);
+    const queryBuilder = {
+      innerJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      getOne: jest.fn().mockResolvedValue(solicitacao),
+    };
+
+    dataSource.transaction.mockImplementation(async (executar) =>
+      executar({
+        getRepository: (entidade: unknown) =>
+          entidade === Solicitacao
+            ? {
+                createQueryBuilder: () => queryBuilder,
+                save: salvarSolicitacao,
+              }
+            : { save: salvarCarona },
+      }),
+    );
+
+    const resultado = await service.responderSolicitacao(1, 2, 'ACEITA');
+
+    expect(resultado.status).toBe('ACEITA');
+    expect(carona.vagas).toBe(1);
+    expect(salvarCarona).toHaveBeenCalledTimes(1);
+    expect(salvarSolicitacao).toHaveBeenCalledTimes(1);
   });
 });

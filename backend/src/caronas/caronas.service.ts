@@ -55,9 +55,7 @@ export class CaronasService {
       valor: dados.valor,
 
       recorrente: possuiRecorrencia,
-      diasSemana: possuiRecorrencia
-          ? dados.diasSemana
-          : null,
+      diasSemana: possuiRecorrencia ? dados.diasSemana : null,
 
       observacoes: dados.observacoes?.trim() || null,
       status: 'ATIVA',
@@ -71,24 +69,37 @@ export class CaronasService {
   }
 
   // Lista somente ofertas ativas e que ainda podem acontecer.
-  async listarCaronas(): Promise<Carona[]> {
-    return this.caronasRepository
+  async listarCaronas(idUsuario: number): Promise<Carona[]> {
+    return (
+      this.caronasRepository
         .createQueryBuilder('carona')
 
         // Carrega somente identificacao e nome do motorista.
         .leftJoinAndSelect('carona.usuario', 'usuario')
-        .select([
-          'carona',
-          'usuario.idUsuario',
-          'usuario.nome',
-        ])
+        .select(['carona', 'usuario.idUsuario', 'usuario.nome'])
 
         .where('carona.status = :status', {
           status: 'ATIVA',
         })
 
+        // A Home nunca mostra ofertas publicadas pelo proprio usuario.
+        .andWhere('usuario.idUsuario <> :idUsuario', { idUsuario })
+
+        // Depois da resposta do motorista, a carona passa para a area Caronas.
+        .andWhere(
+          `NOT EXISTS (
+            SELECT 1
+            FROM solicitacoes solicitacao_usuario
+            WHERE solicitacao_usuario.id_carona = carona.id_carona
+              AND solicitacao_usuario.id_passageiro = :idUsuario
+              AND solicitacao_usuario.status IN ('ACEITA', 'RECUSADA')
+          )`,
+          { idUsuario },
+        )
+
         // Remove caronas unicas antigas e recorrencias encerradas.
-        .andWhere(`
+        .andWhere(
+          `
           (
             carona.dataInicio >= CURDATE()
             OR (
@@ -99,11 +110,38 @@ export class CaronasService {
               )
             )
           )
-        `)
+        `,
+        )
 
         // Mostra primeiro as caronas mais proximas.
         .orderBy('carona.dataInicio', 'ASC')
         .addOrderBy('carona.horario', 'ASC')
-        .getMany();
+        .getMany()
+    );
+  }
+
+  async listarMinhasCaronas(idUsuario: number): Promise<Carona[]> {
+    return this.caronasRepository
+      .createQueryBuilder('carona')
+      .innerJoinAndSelect('carona.usuario', 'usuario')
+      .select(['carona', 'usuario.idUsuario', 'usuario.nome'])
+      .where('usuario.idUsuario = :idUsuario', { idUsuario })
+      .andWhere(
+        `
+        (
+          carona.dataInicio >= CURDATE()
+          OR (
+            carona.recorrente = true
+            AND (
+              carona.dataFim IS NULL
+              OR carona.dataFim >= CURDATE()
+            )
+          )
+        )
+      `,
+      )
+      .orderBy('carona.dataInicio', 'ASC')
+      .addOrderBy('carona.horario', 'ASC')
+      .getMany();
   }
 }

@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 
 import { Carona } from '../caronas/carona.entity';
 import { Solicitacao } from './solicitacao.entity';
@@ -25,6 +25,7 @@ export class SolicitacoesService {
     private readonly solicitacoesRepository: Repository<Solicitacao>,
     @InjectRepository(Carona)
     private readonly caronasRepository: Repository<Carona>,
+    private readonly dataSource: DataSource,
   ) {}
 
   async criarSolicitacao(dados: DadosNovaSolicitacao): Promise<Solicitacao> {
@@ -80,5 +81,103 @@ export class SolicitacoesService {
     });
 
     return this.solicitacoesRepository.save(novaSolicitacao);
+  }
+
+  async listarRecebidas(idMotorista: number): Promise<Solicitacao[]> {
+    return this.solicitacoesRepository
+      .createQueryBuilder('solicitacao')
+      .innerJoinAndSelect('solicitacao.carona', 'carona')
+      .innerJoin('carona.usuario', 'motorista')
+      .innerJoinAndSelect('solicitacao.passageiro', 'passageiro')
+      .select([
+        'solicitacao',
+        'carona.idCarona',
+        'carona.destino',
+        'carona.dataInicio',
+        'carona.horario',
+        'passageiro.idUsuario',
+        'passageiro.nome',
+      ])
+      .where('motorista.idUsuario = :idMotorista', { idMotorista })
+      .orderBy("CASE WHEN solicitacao.status = 'PENDENTE' THEN 0 ELSE 1 END")
+      .addOrderBy('solicitacao.criadoEm', 'DESC')
+      .getMany();
+  }
+
+  async listarEnviadas(idPassageiro: number): Promise<Solicitacao[]> {
+    return this.solicitacoesRepository
+      .createQueryBuilder('solicitacao')
+      .innerJoinAndSelect('solicitacao.carona', 'carona')
+      .innerJoinAndSelect('carona.usuario', 'motorista')
+      .innerJoin('solicitacao.passageiro', 'passageiro')
+      .select([
+        'solicitacao',
+        'carona.idCarona',
+        'carona.destino',
+        'carona.dataInicio',
+        'carona.horario',
+        'motorista.idUsuario',
+        'motorista.nome',
+      ])
+      .where('passageiro.idUsuario = :idPassageiro', { idPassageiro })
+      .orderBy("CASE WHEN solicitacao.status = 'PENDENTE' THEN 0 ELSE 1 END")
+      .addOrderBy('solicitacao.criadoEm', 'DESC')
+      .getMany();
+  }
+
+  async responderSolicitacao(
+    idSolicitacao: number,
+    idMotorista: number,
+    novoStatus: 'ACEITA' | 'RECUSADA',
+  ): Promise<Solicitacao> {
+    return this.dataSource.transaction(async (manager) => {
+      const solicitacoesRepository = manager.getRepository(Solicitacao);
+      const caronasRepository = manager.getRepository(Carona);
+
+      const solicitacao = await solicitacoesRepository
+        .createQueryBuilder('solicitacao')
+        .innerJoinAndSelect('solicitacao.carona', 'carona')
+        .innerJoinAndSelect('carona.usuario', 'motorista')
+        .where('solicitacao.idSolicitacao = :idSolicitacao', {
+          idSolicitacao,
+        })
+        .setLock('pessimistic_write')
+        .getOne();
+
+      if (!solicitacao) {
+        throw new NotFoundException('Solicitação não encontrada');
+      }
+
+      if (solicitacao.carona.usuario.idUsuario !== idMotorista) {
+        throw new BadRequestException(
+          'Você não pode responder esta solicitação',
+        );
+      }
+
+      if (solicitacao.status !== 'PENDENTE') {
+        throw new ConflictException('Esta solicitação já foi respondida');
+      }
+
+      if (novoStatus === 'ACEITA') {
+        if (
+          solicitacao.carona.status !== 'ATIVA' ||
+          solicitacao.carona.vagas <= 0
+        ) {
+          throw new ConflictException('Não há vagas disponíveis');
+        }
+
+        solicitacao.carona.vagas -= 1;
+
+        if (solicitacao.carona.vagas === 0) {
+          solicitacao.carona.status = 'LOTADA';
+        }
+
+        await caronasRepository.save(solicitacao.carona);
+      }
+
+      solicitacao.status = novoStatus;
+
+      return solicitacoesRepository.save(solicitacao);
+    });
   }
 }

@@ -8,10 +8,28 @@ import 'auth_service.dart';
 
 class CaronaService {
   // Busca e converte as caronas ativas.
-  static Future<Map<String, dynamic>> listarCaronas() async {
+  static Future<Map<String, dynamic>> listarCaronas() {
+    return _listarCaronas('caronas');
+  }
+
+  // Busca as ofertas publicadas pelo usuario logado.
+  static Future<Map<String, dynamic>> listarMinhasCaronas() {
+    return _listarCaronas('caronas/minhas');
+  }
+
+  static Future<Map<String, dynamic>> _listarCaronas(String rota) async {
     try {
-      final url = Uri.parse('${ApiConfig.baseUrl}/caronas');
-      final resposta = await http.get(url);
+      final token = AuthService.tokenUsuarioLogado;
+
+      if (token == null) {
+        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+      }
+
+      final url = Uri.parse('${ApiConfig.baseUrl}/$rota');
+      final resposta = await http.get(
+        url,
+        headers: {'Authorization': 'Bearer $token'},
+      );
       final corpo = _decodificarResposta(resposta);
 
       if (resposta.statusCode == 200) {
@@ -33,6 +51,15 @@ class CaronaService {
         }
 
         return {'sucesso': true, 'dados': caronas};
+      }
+
+      if (resposta.statusCode == 401) {
+        AuthService.sair();
+
+        return {
+          'sucesso': false,
+          'mensagem': 'Sua sessão expirou. Entre novamente.',
+        };
       }
 
       return {
