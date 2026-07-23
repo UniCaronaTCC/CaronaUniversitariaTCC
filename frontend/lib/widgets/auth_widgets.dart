@@ -1,13 +1,13 @@
-import 'package:flutter/material.dart'; // Importa os componentes visuais do Flutter
-import '../config/app_colors.dart'; // Importa as cores principais do app
+import 'package:flutter/material.dart';
+
+import '../config/app_colors.dart';
 
 class AuthCampoTexto extends StatelessWidget {
-  // Campo de texto visual para login/cadastro
-  final String hint; // Texto que aparece dentro do campo
-  final IconData icone; // Ícone do campo
-  final TextEditingController controller; // Controla o texto digitado
-  final bool obscureText; // Define se o texto será escondido
-  final TextInputType? keyboardType; // Define o tipo de teclado
+  final String hint;
+  final IconData icone;
+  final TextEditingController controller;
+  final bool obscureText;
+  final TextInputType? keyboardType;
 
   const AuthCampoTexto({
     super.key,
@@ -45,9 +45,8 @@ class AuthCampoTexto extends StatelessWidget {
 }
 
 class AuthBotaoPrincipal extends StatelessWidget {
-  // Botão principal para login/cadastro
-  final String texto; // Texto do botão
-  final VoidCallback? onPressed; // Função executada ao clicar
+  final String texto;
+  final VoidCallback? onPressed;
 
   const AuthBotaoPrincipal({
     super.key,
@@ -58,14 +57,14 @@ class AuthBotaoPrincipal extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: double.infinity, // Ocupa toda a largura disponível
-      height: 54, // Altura do botão
+      width: double.infinity,
+      height: 54,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.white,
-          foregroundColor: AppColors.primary, // Texto roxo
+          foregroundColor: AppColors.primary,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28), // Botão arredondado
+            borderRadius: BorderRadius.circular(28),
           ),
           elevation: 0,
         ),
@@ -84,73 +83,47 @@ class AuthBotaoPrincipal extends StatelessWidget {
 }
 
 class AuthCard extends StatelessWidget {
-  // Card visual reutilizável para telas de autenticação
-  final List<Widget>
-  children; // Lista de elementos que vão aparecer dentro do card
+  final List<Widget> children;
 
-  const AuthCard({
-    super.key,
-    required this.children, // Obriga informar o conteúdo do card
-  });
+  const AuthCard({super.key, required this.children});
 
   @override
   Widget build(BuildContext context) {
     return ClipRRect(
-      // Recorta tudo dentro das bordas arredondadas
-      borderRadius: BorderRadius.circular(30), // Arredonda o card inteiro
+      borderRadius: BorderRadius.circular(30),
       child: Container(
-        // Container principal do card
-        width: double.infinity, // Ocupa toda a largura disponível
+        width: double.infinity,
         decoration: BoxDecoration(
           gradient: LinearGradient(
-            // Cria um degradê no fundo do card
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              AppColors.primary, // Roxo principal
-              Color.lerp(
-                AppColors.primary,
-                Colors.black,
-                0.16,
-              )!, // Roxo um pouco mais escuro
+              AppColors.primary,
+              Color.lerp(AppColors.primary, Colors.black, 0.16)!,
             ],
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withAlpha(35), // Cor da sombra
-              blurRadius: 18, // Suaviza a sombra
-              offset: const Offset(0, 8), // Move a sombra para baixo
+              color: Colors.black.withAlpha(35),
+              blurRadius: 18,
+              offset: const Offset(0, 8),
             ),
           ],
         ),
         child: Stack(
-          // Permite colocar as ondas atrás do conteúdo
           children: [
             Positioned(
-              // Posiciona a decoração na parte inferior
               left: 0,
               right: 0,
               bottom: 0,
               child: CustomPaint(
-                // Desenha as ondas decorativas
                 size: const Size(double.infinity, 120),
                 painter: _AuthOndasPainter(),
               ),
             ),
-
             Padding(
-              // Espaçamento interno do conteúdo
-              padding: const EdgeInsets.fromLTRB(
-                28,
-                36,
-                28,
-                76,
-              ), // Aumenta o espaço de baixo para o conteúdo não ficar em cima da onda
-              child: Column(
-                // Organiza o conteúdo dentro do card
-                mainAxisSize: MainAxisSize.min, // Usa só o espaço necessário
-                children: children, // Mostra os widgets recebidos
-              ),
+              padding: const EdgeInsets.fromLTRB(28, 36, 28, 76),
+              child: Column(mainAxisSize: MainAxisSize.min, children: children),
             ),
           ],
         ),
@@ -160,20 +133,17 @@ class AuthCard extends StatelessWidget {
 }
 
 class _AuthOndasPainter extends CustomPainter {
-  // Desenha as ondas decorativas do card
   @override
   void paint(Canvas canvas, Size size) {
-    final primeiraOnda =
-        Paint() // Configura a primeira onda
-          ..color = Colors.white.withAlpha(42)
-          ..style = PaintingStyle.fill;
+    final primeiraOnda = Paint()
+      ..color = Colors.white.withAlpha(42)
+      ..style = PaintingStyle.fill;
 
-    final segundaOnda =
-        Paint() // Configura a segunda onda
-          ..color = Colors.white.withAlpha(26)
-          ..style = PaintingStyle.fill;
+    final segundaOnda = Paint()
+      ..color = Colors.white.withAlpha(26)
+      ..style = PaintingStyle.fill;
 
-    final pathPrimeira = Path(); // Caminho da primeira onda
+    final pathPrimeira = Path();
     pathPrimeira.moveTo(0, size.height * 0.45);
     pathPrimeira.cubicTo(
       size.width * 0.25,
@@ -187,7 +157,7 @@ class _AuthOndasPainter extends CustomPainter {
     pathPrimeira.lineTo(0, size.height);
     pathPrimeira.close();
 
-    final pathSegunda = Path(); // Caminho da segunda onda
+    final pathSegunda = Path();
     pathSegunda.moveTo(0, size.height * 0.70);
     pathSegunda.cubicTo(
       size.width * 0.35,
@@ -201,12 +171,12 @@ class _AuthOndasPainter extends CustomPainter {
     pathSegunda.lineTo(0, size.height);
     pathSegunda.close();
 
-    canvas.drawPath(pathSegunda, segundaOnda); // Desenha a onda de trás
-    canvas.drawPath(pathPrimeira, primeiraOnda); // Desenha a onda da frente
+    canvas.drawPath(pathSegunda, segundaOnda);
+    canvas.drawPath(pathPrimeira, primeiraOnda);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) {
-    return false; // Não precisa redesenhar toda hora
+    return false;
   }
 }
