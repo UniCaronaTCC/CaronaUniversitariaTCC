@@ -72,11 +72,26 @@ class EnderecoService {
       return features.map((feature) {
         final properties = feature['properties'];
 
+        final nome = properties['name'] ?? '';
+
+        final cidade = properties['city'] ?? '';
+
+        final estado = properties['state'] ?? '';
+
+        final pais = properties['country'] ?? '';
+
         final coordinates = feature['geometry']['coordinates'];
+
+        final endereco = [
+          cidade,
+          estado,
+          pais,
+        ].where((item) => item.isNotEmpty).join(', ');
 
         return LocalizacaoSelecionada(
           ponto: LatLng(coordinates[1], coordinates[0]),
-          endereco: properties['name'] ?? '',
+          nome: nome,
+          endereco: endereco.isEmpty ? nome : endereco,
         );
       }).toList();
     } catch (erro) {
