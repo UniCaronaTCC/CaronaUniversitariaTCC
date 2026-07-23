@@ -1,14 +1,14 @@
-import 'package:flutter/material.dart'; // Importa os componentes visuais do Flutter
-import '../config/app_colors.dart'; // Importa as cores principais do app
+import 'package:flutter/material.dart';
+
+import '../config/app_colors.dart';
 
 class CardDestinoHome extends StatelessWidget {
-  // Cria o card de destino da tela inicial
-  final String destino; // Texto do destino exibido no card
-  final VoidCallback onTap; // Abre a tela de selecao do destino
+  final String destino;
+  final VoidCallback onTap;
 
   const CardDestinoHome({
     super.key,
-    required this.destino, // Obriga informar o destino
+    required this.destino,
     required this.onTap,
   });
 
@@ -20,50 +20,35 @@ class CardDestinoHome extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(22),
         child: Ink(
-          // Card que mostra o destino principal
-          width: double.infinity, // Ocupa toda a largura disponível
+          width: double.infinity,
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
           decoration: BoxDecoration(
             color: AppColors.primary.withAlpha(26),
             borderRadius: BorderRadius.circular(22),
           ),
           child: Row(
-            // Organiza o ícone e os textos em linha
             children: [
               const Icon(
-                Icons.location_on_outlined, // Ícone de localização
+                Icons.location_on_outlined,
                 color: AppColors.primary,
                 size: 30,
               ),
-
-              const SizedBox(width: 12), // Espaço entre o ícone e o texto
-
+              const SizedBox(width: 12),
               const Text(
-                'IR PARA:', // Texto fixo do card
+                'IR PARA:',
                 style: TextStyle(
                   color: AppColors.primary,
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-
-              const SizedBox(width: 14), // Espaço antes da linha divisória
-
-              Container(
-                // Linha divisória entre "IR PARA" e o endereço
-                width: 1,
-                height: 30,
-                color: Colors.black26,
-              ),
-
-              const SizedBox(width: 14), // Espaço depois da linha divisória
-
+              const SizedBox(width: 14),
+              Container(width: 1, height: 30, color: Colors.black26),
+              const SizedBox(width: 14),
               Expanded(
-                // Faz o destino ocupar o espaço restante sem estourar a tela
                 child: Text(
-                  destino, // Mostra o destino recebido
-                  overflow: TextOverflow
-                      .ellipsis, // Corta o texto com "..." se passar do espaço
+                  destino,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: AppColors.text,
                     fontSize: 15,

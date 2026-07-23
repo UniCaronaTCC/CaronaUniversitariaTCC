@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 
 import '../config/app_colors.dart';
 
-// Campo reutilizavel nos formularios de carona.
 class CampoTextoCarona extends StatelessWidget {
   final String label;
   final IconData icone;

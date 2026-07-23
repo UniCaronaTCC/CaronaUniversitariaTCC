@@ -1,5 +1,4 @@
 import 'package:flutter/services.dart';
-// Importa os recursos usados para formatar o texto digitado
 
 class FormatadorMoedaReal extends TextInputFormatter {
   @override
@@ -7,10 +6,8 @@ class FormatadorMoedaReal extends TextInputFormatter {
     TextEditingValue valorAntigo,
     TextEditingValue valorNovo,
   ) {
-    // Mantem somente os numeros digitados
     final numeros = valorNovo.text.replaceAll(RegExp(r'[^0-9]'), '');
 
-    // Permite apagar completamente o campo
     if (numeros.isEmpty) {
       return const TextEditingValue(
         text: '',
@@ -18,13 +15,8 @@ class FormatadorMoedaReal extends TextInputFormatter {
       );
     }
 
-    // Converte os numeros para centavos
-    final valorEmCentavos = int.parse(numeros);
+    final textoFormatado = _formatarCentavos(int.parse(numeros));
 
-    // Separa a parte inteira dos centavos
-    final textoFormatado = _formatarCentavos(valorEmCentavos);
-
-    // Mantem o cursor no final do campo
     return TextEditingValue(
       text: textoFormatado,
       selection: TextSelection.collapsed(offset: textoFormatado.length),
@@ -36,7 +28,7 @@ String formatarDoubleComoMoedaReal(double valor) {
   return _formatarCentavos((valor * 100).round());
 }
 
-// Converte "R$ 1.234,56" para 1234.56
+// Converte "R$ 1.234,56" para 1234.56.
 double converterMoedaRealParaDouble(String valorFormatado) {
   final numeros = valorFormatado.replaceAll(RegExp(r'[^0-9]'), '');
 

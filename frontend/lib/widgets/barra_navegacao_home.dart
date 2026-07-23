@@ -1,8 +1,8 @@
-import 'package:flutter/material.dart'; // Importa os componentes visuais do Flutter
-import '../config/app_colors.dart'; // Importa as cores principais do app
+import 'package:flutter/material.dart';
+
+import '../config/app_colors.dart';
 
 class BarraNavegacaoHome extends StatelessWidget {
-  // Cria a barra inferior da tela inicial
   final ValueChanged<int>? onTap;
   final int currentIndex;
 
@@ -11,11 +11,10 @@ class BarraNavegacaoHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BottomNavigationBar(
-      // Cria a barra inferior de navegação
       currentIndex: currentIndex,
-      selectedItemColor: AppColors.primary, // Cor do item selecionado
-      unselectedItemColor: Colors.black54, // Cor dos itens não selecionados
-      type: BottomNavigationBarType.fixed, // Mantém todos os itens visíveis
+      selectedItemColor: AppColors.primary,
+      unselectedItemColor: Colors.black54,
+      type: BottomNavigationBarType.fixed,
       onTap: onTap,
       items: const [
         BottomNavigationBarItem(

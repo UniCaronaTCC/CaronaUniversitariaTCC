@@ -7,7 +7,6 @@ import 'botao_acao_home.dart';
 import 'campo_recorrencia_carona.dart';
 import 'campo_texto_carona.dart';
 
-// Monta somente a parte visual do formulario de oferta.
 class FormularioOfertarCarona extends StatelessWidget {
   final String titulo;
   final String descricao;
