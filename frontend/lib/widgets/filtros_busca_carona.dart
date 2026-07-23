@@ -82,7 +82,7 @@ class FiltrosBuscaCarona extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: CampoTextoCarona(
-                label: 'A partir de',
+                label: 'Horário preferido',
                 icone: Icons.access_time,
                 controller: horarioController,
                 somenteLeitura: true,

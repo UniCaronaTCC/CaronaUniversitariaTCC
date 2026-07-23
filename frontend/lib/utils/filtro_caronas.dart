@@ -1,28 +1,96 @@
+import 'package:latlong2/latlong.dart';
+
 import '../models/carona.dart';
 
 class FiltroCaronas {
-  // Aplica os filtros sobre as caronas ja carregadas.
   static List<Carona> aplicar({
     required List<Carona> caronas,
     String destino = '',
     DateTime? data,
-    int? horarioMinimoEmMinutos,
+    int? horarioPreferidoEmMinutos,
+    double? destinoLatitude,
+    double? destinoLongitude,
   }) {
     final destinoNormalizado = _normalizarTexto(destino);
+    final possuiCoordenadas =
+        destinoLatitude != null && destinoLongitude != null;
 
-    return caronas.where((carona) {
+    final resultado = caronas.where((carona) {
       final destinoCorresponde =
           destinoNormalizado.isEmpty ||
+          possuiCoordenadas ||
           _normalizarTexto(carona.destino).contains(destinoNormalizado);
 
       final dataCorresponde = data == null || _ocorreNaData(carona, data);
 
-      final horarioCorresponde =
-          horarioMinimoEmMinutos == null ||
-          _converterHorarioEmMinutos(carona.horario) >= horarioMinimoEmMinutos;
-
-      return destinoCorresponde && dataCorresponde && horarioCorresponde;
+      return destinoCorresponde && dataCorresponde;
     }).toList();
+
+    resultado.sort((primeira, segunda) {
+      if (possuiCoordenadas) {
+        final distanciaPrimeira = _calcularDistancia(
+          primeira,
+          destinoLatitude,
+          destinoLongitude,
+        );
+        final distanciaSegunda = _calcularDistancia(
+          segunda,
+          destinoLatitude,
+          destinoLongitude,
+        );
+        final comparacaoDistancia = distanciaPrimeira.compareTo(
+          distanciaSegunda,
+        );
+
+        if (comparacaoDistancia != 0) {
+          return comparacaoDistancia;
+        }
+      }
+
+      if (horarioPreferidoEmMinutos != null) {
+        final diferencaPrimeira =
+            (_converterHorarioEmMinutos(primeira.horario) -
+                    horarioPreferidoEmMinutos)
+                .abs();
+        final diferencaSegunda =
+            (_converterHorarioEmMinutos(segunda.horario) -
+                    horarioPreferidoEmMinutos)
+                .abs();
+        final comparacaoHorario = diferencaPrimeira.compareTo(diferencaSegunda);
+
+        if (comparacaoHorario != 0) {
+          return comparacaoHorario;
+        }
+      }
+
+      final comparacaoData = primeira.dataInicio.compareTo(segunda.dataInicio);
+
+      if (comparacaoData != 0) {
+        return comparacaoData;
+      }
+
+      return _converterHorarioEmMinutos(
+        primeira.horario,
+      ).compareTo(_converterHorarioEmMinutos(segunda.horario));
+    });
+
+    return resultado;
+  }
+
+  static double _calcularDistancia(
+    Carona carona,
+    double latitude,
+    double longitude,
+  ) {
+    if (carona.destinoLatitude == null || carona.destinoLongitude == null) {
+      return double.infinity;
+    }
+
+    return const Distance().as(
+      LengthUnit.Kilometer,
+      LatLng(latitude, longitude),
+      LatLng(carona.destinoLatitude!, carona.destinoLongitude!),
+    );
   }
 
   static bool _ocorreNaData(Carona carona, DateTime dataEscolhida) {

@@ -4,6 +4,7 @@ import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
 import '../models/carona.dart';
 import '../services/carona_service.dart';
+import '../utils/filtro_caronas.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/botao_acao_home.dart';
 import '../widgets/card_carona_disponivel.dart';
@@ -137,7 +138,13 @@ class _TelaInicialState extends State<TelaInicial> {
 
   @override
   Widget build(BuildContext context) {
-    final caronasHome = caronas.take(3).toList();
+    final caronasOrdenadas = FiltroCaronas.aplicar(
+      caronas: caronas,
+      destino: destinoSelecionado?.descricaoCompleta ?? '',
+      destinoLatitude: destinoSelecionado?.ponto.latitude,
+      destinoLongitude: destinoSelecionado?.ponto.longitude,
+    );
+    final caronasHome = caronasOrdenadas.take(3).toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,

@@ -32,6 +32,7 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
 
   DateTime? dataSelecionada;
   TimeOfDay? horarioSelecionado;
+  LocalizacaoSelecionada? destinoSelecionado;
 
   bool carregando = true;
   String? mensagemErro;
@@ -45,7 +46,8 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
   @override
   void initState() {
     super.initState();
-    destinoController.text = widget.destinoInicial?.descricaoCompleta ?? '';
+    destinoSelecionado = widget.destinoInicial;
+    destinoController.text = destinoSelecionado?.descricaoCompleta ?? '';
     carregarCaronas();
   }
 
@@ -84,7 +86,7 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
 
   // Filtra localmente sem fazer uma nova chamada ao backend.
   void aplicarFiltros() {
-    final horarioMinimo = horarioSelecionado == null
+    final horarioPreferido = horarioSelecionado == null
         ? null
         : (horarioSelecionado!.hour * 60) + horarioSelecionado!.minute;
 
@@ -92,7 +94,9 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
       caronas: todasCaronas,
       destino: destinoController.text,
       data: dataSelecionada,
-      horarioMinimoEmMinutos: horarioMinimo,
+      horarioPreferidoEmMinutos: horarioPreferido,
+      destinoLatitude: destinoSelecionado?.ponto.latitude,
+      destinoLongitude: destinoSelecionado?.ponto.longitude,
     );
 
     setState(() {
@@ -123,7 +127,7 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
     final resultado = await DataHoraUtils.selecionarHorario(
       context,
       horarioInicial: horarioSelecionado,
-      textoAjuda: 'Mostrar caronas a partir de',
+      textoAjuda: 'Selecione o horário preferido',
     );
 
     if (!mounted || resultado == null) {
@@ -138,6 +142,14 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
     aplicarFiltros();
   }
 
+  void atualizarDestino(String texto) {
+    if (destinoSelecionado?.descricaoCompleta.trim() != texto.trim()) {
+      destinoSelecionado = null;
+    }
+
+    aplicarFiltros();
+  }
+
   void limparFiltros() {
     destinoController.clear();
     dataController.clear();
@@ -146,6 +158,7 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
     setState(() {
       dataSelecionada = null;
       horarioSelecionado = null;
+      destinoSelecionado = null;
     });
 
     aplicarFiltros();
@@ -205,7 +218,7 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
                 dataController: dataController,
                 horarioController: horarioController,
                 filtrosAtivos: filtrosAtivos,
-                onDestinoChanged: (_) => aplicarFiltros(),
+                onDestinoChanged: atualizarDestino,
                 onSelecionarData: selecionarData,
                 onSelecionarHorario: selecionarHorario,
                 onLimparFiltros: limparFiltros,
