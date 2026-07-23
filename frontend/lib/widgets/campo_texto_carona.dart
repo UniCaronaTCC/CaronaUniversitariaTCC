@@ -16,6 +16,7 @@ class CampoTextoCarona extends StatelessWidget {
   final ValueChanged<String>? onSubmitted;
   final TextInputAction? textInputAction;
   final List<TextInputFormatter>? inputFormatters;
+  final bool usarLabelComoHint;
 
   const CampoTextoCarona({
     super.key,
@@ -31,6 +32,7 @@ class CampoTextoCarona extends StatelessWidget {
     this.onSubmitted,
     this.textInputAction,
     this.inputFormatters,
+    this.usarLabelComoHint = false,
   });
 
   @override
@@ -47,7 +49,8 @@ class CampoTextoCarona extends StatelessWidget {
       inputFormatters: inputFormatters,
       style: const TextStyle(color: AppColors.text),
       decoration: InputDecoration(
-        labelText: label,
+        labelText: usarLabelComoHint ? null : label,
+        hintText: usarLabelComoHint ? label : null,
         prefixIcon: Icon(icone, color: AppColors.primary),
         suffixIcon: suffixIcon,
         filled: true,

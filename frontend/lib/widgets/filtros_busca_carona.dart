@@ -69,6 +69,7 @@ class FiltrosBuscaCarona extends StatelessWidget {
             Expanded(
               child: CampoTextoCarona(
                 label: 'Data',
+                usarLabelComoHint: true,
                 icone: Icons.calendar_today_outlined,
                 controller: dataController,
                 somenteLeitura: true,
@@ -82,7 +83,8 @@ class FiltrosBuscaCarona extends StatelessWidget {
             const SizedBox(width: 12),
             Expanded(
               child: CampoTextoCarona(
-                label: 'Horário preferido',
+                label: 'Horário',
+                usarLabelComoHint: true,
                 icone: Icons.access_time,
                 controller: horarioController,
                 somenteLeitura: true,
