@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from '../users/users.service';
@@ -59,5 +59,14 @@ describe('AuthService', () => {
       email: 'joao@email.com',
     });
     expect(resultado.usuario).not.toHaveProperty('senha');
+  });
+
+  it('recusa cadastro com senha fraca', async () => {
+    await expect(
+      service.cadastro('João', 'joao@email.com', '12345678'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(usersService.buscarPorEmail).not.toHaveBeenCalled();
+    expect(usersService.criarUsuario).not.toHaveBeenCalled();
   });
 });

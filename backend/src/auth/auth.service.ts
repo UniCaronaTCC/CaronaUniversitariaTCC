@@ -1,4 +1,5 @@
 import {
+  BadRequestException,
   ConflictException,
   Injectable,
   UnauthorizedException,
@@ -47,6 +48,15 @@ export class AuthService {
   }
 
   async cadastro(nome: string, email: string, senha: string) {
+    const temLetra = /[A-Za-zÀ-ÖØ-öø-ÿ]/.test(senha);
+    const temNumero = /[0-9]/.test(senha);
+
+    if (senha.length < 8 || !temLetra || !temNumero) {
+      throw new BadRequestException(
+        'A senha deve ter pelo menos 8 caracteres, com letras e números',
+      );
+    }
+
     const usuarioExistente = await this.usersService.buscarPorEmail(email);
 
     if (usuarioExistente) {

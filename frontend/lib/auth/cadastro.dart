@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 import '../services/auth_service.dart';
+import '../utils/validacao_senha.dart';
 import '../widgets/auth_widgets.dart';
 import 'login.dart';
 
@@ -37,6 +38,13 @@ class _CadastroTelaState extends State<CadastroTela> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Informe sua senha')));
+      return;
+    }
+
+    if (!ValidacaoSenha.ehValida(senhaController.text)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text(ValidacaoSenha.mensagem)));
       return;
     }
 
@@ -135,6 +143,14 @@ class _CadastroTelaState extends State<CadastroTela> {
                   icone: Icons.lock,
                   controller: senhaController,
                   obscureText: true,
+                ),
+                const SizedBox(height: 8),
+                const Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'Use no mínimo 8 caracteres, com letras e números.',
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
                 ),
                 const SizedBox(height: 24),
                 AuthBotaoPrincipal(
