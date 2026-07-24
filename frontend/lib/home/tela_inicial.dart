@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
 import '../models/carona.dart';
+import '../navigation/navegacao_principal.dart';
 import '../services/carona_service.dart';
 import '../utils/filtro_caronas.dart';
 import '../widgets/barra_navegacao_home.dart';
@@ -124,6 +125,7 @@ class _TelaInicialState extends State<TelaInicial> {
 
   Future<void> navegarBarraInferior(int index) async {
     if (index != 2) {
+      await NavegacaoPrincipal.selecionar(context, index, indiceAtual: 0);
       return;
     }
 

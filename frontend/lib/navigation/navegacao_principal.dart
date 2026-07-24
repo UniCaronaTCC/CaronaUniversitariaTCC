@@ -4,6 +4,7 @@ class NavegacaoPrincipal {
   const NavegacaoPrincipal._();
 
   static const rotaCaronas = '/caronas';
+  static const rotaPerfil = '/perfil';
 
   static Future<void> selecionar(
     BuildContext context,
@@ -24,6 +25,14 @@ class NavegacaoPrincipal {
     if (indice == 2) {
       await navigator.pushNamedAndRemoveUntil(
         rotaCaronas,
+        (rota) => rota.isFirst,
+      );
+      return;
+    }
+
+    if (indice == 3) {
+      await navigator.pushNamedAndRemoveUntil(
+        rotaPerfil,
         (rota) => rota.isFirst,
       );
     }
