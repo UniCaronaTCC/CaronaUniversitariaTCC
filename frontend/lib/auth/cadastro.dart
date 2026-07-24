@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 import '../services/auth_service.dart';
+import '../utils/validacao_email.dart';
 import '../utils/validacao_senha.dart';
 import '../widgets/auth_widgets.dart';
 import 'login.dart';
@@ -34,6 +35,13 @@ class _CadastroTelaState extends State<CadastroTela> {
       return;
     }
 
+    if (!ValidacaoEmail.ehValido(emailController.text)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text(ValidacaoEmail.mensagem)));
+      return;
+    }
+
     if (senhaController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -54,7 +62,7 @@ class _CadastroTelaState extends State<CadastroTela> {
 
     final resultado = await AuthService.fazerCadastro(
       nomeController.text,
-      emailController.text,
+      emailController.text.trim().toLowerCase(),
       senhaController.text,
     );
 
@@ -143,14 +151,6 @@ class _CadastroTelaState extends State<CadastroTela> {
                   icone: Icons.lock,
                   controller: senhaController,
                   obscureText: true,
-                ),
-                const SizedBox(height: 8),
-                const Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    'Use no mínimo 8 caracteres, com letras e números.',
-                    style: TextStyle(color: Colors.white70, fontSize: 12),
-                  ),
                 ),
                 const SizedBox(height: 24),
                 AuthBotaoPrincipal(

@@ -69,4 +69,13 @@ describe('AuthService', () => {
     expect(usersService.buscarPorEmail).not.toHaveBeenCalled();
     expect(usersService.criarUsuario).not.toHaveBeenCalled();
   });
+
+  it('recusa cadastro com e-mail inválido', async () => {
+    await expect(
+      service.cadastro('João', 'email-invalido', 'carona123'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(usersService.buscarPorEmail).not.toHaveBeenCalled();
+    expect(usersService.criarUsuario).not.toHaveBeenCalled();
+  });
 });

@@ -48,6 +48,13 @@ export class AuthService {
   }
 
   async cadastro(nome: string, email: string, senha: string) {
+    const emailNormalizado = email?.trim().toLowerCase() ?? '';
+    const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNormalizado);
+
+    if (!emailValido) {
+      throw new BadRequestException('Informe um e-mail válido');
+    }
+
     const temLetra = /[A-Za-zÀ-ÖØ-öø-ÿ]/.test(senha);
     const temNumero = /[0-9]/.test(senha);
 
@@ -57,7 +64,8 @@ export class AuthService {
       );
     }
 
-    const usuarioExistente = await this.usersService.buscarPorEmail(email);
+    const usuarioExistente =
+      await this.usersService.buscarPorEmail(emailNormalizado);
 
     if (usuarioExistente) {
       throw new ConflictException('E-mail já cadastrado');
@@ -66,7 +74,7 @@ export class AuthService {
     const senhaHash = await bcrypt.hash(senha, 10);
     const novoUsuario = await this.usersService.criarUsuario(
       nome,
-      email,
+      emailNormalizado,
       senhaHash,
     );
 
