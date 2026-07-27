@@ -29,6 +29,8 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
   // Guarda os resultados da pesquisa
   List<LocalizacaoSelecionada> _resultados = [];
   bool _pesquisando = false;
+  bool _pesquisaRealizada = false;
+  bool _ignorarProximaPesquisa = false;
 
   @override
   void initState() {
@@ -46,37 +48,50 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
   Future<void> _pesquisar(String texto) async {
     final textoBusca = texto.trim();
 
-    setState(() {
-      _pesquisando = true;
-    });
-
     if (textoBusca.isEmpty) {
       setState(() {
         _resultados = [];
         _pesquisando = false;
+        _pesquisaRealizada = false;
       });
       return;
     }
 
-    final resultados = await _enderecoService.buscarLocalizacoesPorEndereco(
-      textoBusca,
-    );
-
-    if (!mounted || _controller.text.trim() != textoBusca) {
-      return;
-    }
-
     setState(() {
-      _resultados = resultados;
-      _pesquisando = false;
+      _pesquisando = true;
     });
+
+    try {
+      final resultados =
+      await _enderecoService.buscarLocalizacoesPorEndereco(textoBusca);
+
+      if (!mounted || _controller.text.trim() != textoBusca) {
+        return;
+      }
+
+      setState(() {
+        _resultados = resultados;
+        _pesquisaRealizada = true;
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _pesquisando = false;
+        });
+      }
+    }
   }
 
   void _selecionar(LocalizacaoSelecionada local) {
+    _ignorarProximaPesquisa = true;
+
+    _debounce?.cancel();
+
     _controller.text = local.descricaoCompleta;
 
     setState(() {
       _resultados = [];
+      _pesquisaRealizada = false;
     });
 
     FocusScope.of(context).unfocus();
@@ -97,6 +112,11 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
               controller: _controller,
               keyboardType: TextInputType.streetAddress,
               onChanged: (texto) {
+                if (_ignorarProximaPesquisa) {
+                  _ignorarProximaPesquisa = false;
+                  return;
+                }
+
                 _debounce?.cancel();
 
                 _debounce = Timer(
@@ -107,7 +127,6 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
               decoration: InputDecoration(
                 hintText: 'Pesquisar endereço',
                 prefixIcon: const Icon(Icons.search),
-
                 suffixIcon: _pesquisando
                     ? const Padding(
                   padding: EdgeInsets.all(12),
@@ -120,7 +139,6 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
                   ),
                 )
                     : null,
-
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
@@ -159,6 +177,35 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
                     onTap: () => _selecionar(local),
                   );
                 },
+              ),
+            ),
+
+          if (_pesquisaRealizada &&
+              !_pesquisando &&
+              _resultados.isEmpty)
+            Container(
+              margin: const EdgeInsets.only(top: 8),
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: const [
+                  BoxShadow(
+                    blurRadius: 6,
+                    color: Colors.black26,
+                  ),
+                ],
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.search_off, color: Colors.grey),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Nenhum endereço encontrado.\nTente pesquisar por rua, bairro ou cidade.',
+                    ),
+                  ),
+                ],
               ),
             ),
         ],
