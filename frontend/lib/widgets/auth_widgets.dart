@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 
-class AuthCampoTexto extends StatelessWidget {
+class AuthCampoTexto extends StatefulWidget {
   final String hint;
   final IconData icone;
   final TextEditingController controller;
@@ -19,18 +19,45 @@ class AuthCampoTexto extends StatelessWidget {
   });
 
   @override
+  State<AuthCampoTexto> createState() => _AuthCampoTextoState();
+}
+
+class _AuthCampoTextoState extends State<AuthCampoTexto> {
+  late bool _textoOculto;
+
+  @override
+  void initState() {
+    super.initState();
+    _textoOculto = widget.obscureText;
+  }
+
+  @override
   Widget build(BuildContext context) {
     return TextField(
-      controller: controller,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
+      controller: widget.controller,
+      obscureText: _textoOculto,
+      keyboardType: widget.keyboardType,
       style: const TextStyle(color: AppColors.text, fontSize: 15),
       decoration: InputDecoration(
         filled: true,
         fillColor: Colors.white,
-        hintText: hint,
+        hintText: widget.hint,
         hintStyle: const TextStyle(color: Colors.black45),
-        prefixIcon: Icon(icone, color: AppColors.primary),
+        prefixIcon: Icon(widget.icone, color: AppColors.primary),
+        suffixIcon: widget.obscureText
+            ? IconButton(
+                tooltip: _textoOculto ? 'Mostrar senha' : 'Ocultar senha',
+                onPressed: () {
+                  setState(() {
+                    _textoOculto = !_textoOculto;
+                  });
+                },
+                icon: Icon(
+                  _textoOculto ? Icons.visibility_off : Icons.visibility,
+                  color: AppColors.primary,
+                ),
+              )
+            : null,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(28),
           borderSide: BorderSide.none,
