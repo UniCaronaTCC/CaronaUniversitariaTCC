@@ -15,8 +15,7 @@ class BarraPesquisaEndereco extends StatefulWidget {
   });
 
   @override
-  State<BarraPesquisaEndereco> createState() =>
-      _BarraPesquisaEnderecoState();
+  State<BarraPesquisaEndereco> createState() => _BarraPesquisaEnderecoState();
 }
 
 class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
@@ -73,10 +72,12 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
   }
 
   void _selecionar(LocalizacaoSelecionada local) {
+    _debounce?.cancel();
     _controller.text = local.descricaoCompleta;
 
     setState(() {
       _resultados = [];
+      _pesquisando = false;
     });
 
     FocusScope.of(context).unfocus();
@@ -101,7 +102,7 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
 
                 _debounce = Timer(
                   const Duration(milliseconds: 500),
-                      () => _pesquisar(texto),
+                  () => _pesquisar(texto),
                 );
               },
               decoration: InputDecoration(
@@ -110,15 +111,13 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
 
                 suffixIcon: _pesquisando
                     ? const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                    ),
-                  ),
-                )
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
                     : null,
 
                 filled: true,
@@ -139,10 +138,7 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: const [
-                  BoxShadow(
-                    blurRadius: 6,
-                    color: Colors.black26,
-                  ),
+                  BoxShadow(blurRadius: 6, color: Colors.black26),
                 ],
               ),
               child: ListView.builder(

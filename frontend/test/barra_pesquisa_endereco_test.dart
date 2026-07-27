@@ -41,6 +41,7 @@ void main() {
     );
 
     await tester.enterText(find.byType(TextField), 'shopping praça nova');
+    await tester.pump(const Duration(milliseconds: 500));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('Shopping Praça Nova Araçatuba'));
