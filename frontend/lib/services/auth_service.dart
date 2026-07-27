@@ -3,17 +3,37 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
+import 'sessao_service.dart';
 
 class AuthService {
-  // Por enquanto, a sessão dura somente enquanto o app estiver aberto.
   static String? tokenUsuarioLogado;
   static Map<String, dynamic>? usuarioLogado;
 
   static bool get estaLogado => tokenUsuarioLogado != null;
 
-  static void sair() {
+  static Future<void> carregarSessao() async {
+    try {
+      final sessao = await SessaoService.carregar();
+
+      if (sessao == null) {
+        tokenUsuarioLogado = null;
+        usuarioLogado = null;
+        return;
+      }
+
+      tokenUsuarioLogado = sessao['token']?.toString();
+      usuarioLogado = sessao['usuario'] as Map<String, dynamic>?;
+    } catch (erro) {
+      tokenUsuarioLogado = null;
+      usuarioLogado = null;
+      await SessaoService.limpar();
+    }
+  }
+
+  static Future<void> sair() async {
     tokenUsuarioLogado = null;
     usuarioLogado = null;
+    await SessaoService.limpar();
   }
 
   static Future<Map<String, dynamic>> fazerLogin(
@@ -33,16 +53,24 @@ class AuthService {
           : {};
 
       if (resposta.statusCode == 200 || resposta.statusCode == 201) {
-        tokenUsuarioLogado = dados['token'];
+        tokenUsuarioLogado = dados['token']?.toString();
 
         if (dados['usuario'] is Map<String, dynamic>) {
           usuarioLogado = dados['usuario'];
         }
 
+        if (tokenUsuarioLogado == null || usuarioLogado == null) {
+          await sair();
+
+          return {'sucesso': false, 'mensagem': 'Resposta de login inválida'};
+        }
+
+        await SessaoService.salvar(tokenUsuarioLogado!, usuarioLogado!);
+
         return {'sucesso': true, 'dados': dados};
       }
 
-      sair();
+      await sair();
 
       return {
         'sucesso': false,
@@ -50,7 +78,7 @@ class AuthService {
             dados['mensagem'] ?? dados['message'] ?? 'Erro ao fazer login',
       };
     } catch (erro) {
-      sair();
+      await sair();
 
       return {
         'sucesso': false,

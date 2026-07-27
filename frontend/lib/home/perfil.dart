@@ -10,8 +10,12 @@ import '../widgets/componentes_padrao.dart';
 class PerfilTela extends StatelessWidget {
   const PerfilTela({super.key});
 
-  void sair(BuildContext context) {
-    AuthService.sair();
+  Future<void> sair(BuildContext context) async {
+    await AuthService.sair();
+
+    if (!context.mounted) {
+      return;
+    }
 
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginTela()),

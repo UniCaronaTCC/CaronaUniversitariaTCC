@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uni_carona/auth/login.dart';
 import 'package:uni_carona/home/perfil.dart';
 import 'package:uni_carona/services/auth_service.dart';
 
 void main() {
+  setUp(() {
+    FlutterSecureStorage.setMockInitialValues({});
+  });
+
   tearDown(AuthService.sair);
 
   testWidgets('exibe os dados do usuário e permite sair', (tester) async {

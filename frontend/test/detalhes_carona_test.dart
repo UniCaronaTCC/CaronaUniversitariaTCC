@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uni_carona/home/detalhes_carona.dart';
 import 'package:uni_carona/models/carona.dart';
 import 'package:uni_carona/services/auth_service.dart';
 
 void main() {
+  setUp(() {
+    FlutterSecureStorage.setMockInitialValues({});
+  });
+
   testWidgets('exibe os dados principais da carona', (tester) async {
     final carona = Carona(
       id: 1,
@@ -61,6 +66,6 @@ void main() {
     expect(find.text('EXCLUIR'), findsOneWidget);
     expect(find.byType(BottomNavigationBar), findsOneWidget);
 
-    AuthService.sair();
+    await AuthService.sair();
   });
 }
