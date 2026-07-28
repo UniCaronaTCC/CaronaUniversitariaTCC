@@ -67,12 +67,20 @@ class EnderecoService {
 
       final json = jsonDecode(response.body);
 
-      final features = json['features'] as List;
+      final features = (json['features'] as List).where((feature) {
+        final properties = feature['properties'];
+        return (properties['countrycode'] ?? '').toString().toUpperCase() ==
+            'BR';
+      }).toList();
 
       return features.map((feature) {
         final properties = feature['properties'];
 
         final nome = properties['name'] ?? '';
+
+        final rua = properties['street'] ?? '';
+
+        final bairro = properties['district'] ?? '';
 
         final cidade = properties['city'] ?? '';
 
@@ -83,6 +91,8 @@ class EnderecoService {
         final coordinates = feature['geometry']['coordinates'];
 
         final endereco = [
+          rua,
+          bairro,
           cidade,
           estado,
           pais,
