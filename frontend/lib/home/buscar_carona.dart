@@ -150,6 +150,14 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
     aplicarFiltros();
   }
 
+  void selecionarDestino(LocalizacaoSelecionada destino) {
+    setState(() {
+      destinoSelecionado = destino;
+    });
+
+    aplicarFiltros();
+  }
+
   void limparFiltros() {
     destinoController.clear();
     dataController.clear();
@@ -219,6 +227,7 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
                 horarioController: horarioController,
                 filtrosAtivos: filtrosAtivos,
                 onDestinoChanged: atualizarDestino,
+                onDestinoSelecionado: selecionarDestino,
                 onSelecionarData: selecionarData,
                 onSelecionarHorario: selecionarHorario,
                 onLimparFiltros: limparFiltros,

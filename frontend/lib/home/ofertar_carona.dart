@@ -4,7 +4,6 @@ import 'package:latlong2/latlong.dart';
 import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
 import '../mapa/screens/mapa_screen.dart';
-import '../mapa/services/endereco_service.dart';
 import '../models/carona.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/carona_service.dart';
@@ -39,14 +38,11 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   final valorController = TextEditingController();
   final observacoesController = TextEditingController();
 
-  final EnderecoService enderecoService = EnderecoService();
-
   LocalizacaoSelecionada? origemSelecionada;
   LocalizacaoSelecionada? destinoSelecionado;
   DateTime? dataSelecionada;
   TimeOfDay? horarioSelecionado;
 
-  bool buscandoDestino = false;
   bool caronaRecorrente = false;
   bool enviandoCarona = false;
 
@@ -182,110 +178,6 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     setState(() {
       destinoSelecionado = null;
     });
-  }
-
-  Future<void> buscarDestino() async {
-    final textoBusca = destinoController.text.trim();
-
-    if (textoBusca.isEmpty) {
-      mostrarMensagem('Digite o destino');
-      return;
-    }
-
-    setState(() {
-      buscandoDestino = true;
-      destinoSelecionado = null;
-    });
-
-    final opcoes = await enderecoService.buscarLocalizacoesPorEndereco(
-      textoBusca,
-    );
-
-    if (!mounted) {
-      return;
-    }
-
-    // Descarta a resposta se o texto mudou durante a busca.
-    if (destinoController.text.trim() != textoBusca) {
-      setState(() {
-        buscandoDestino = false;
-      });
-      return;
-    }
-
-    setState(() {
-      buscandoDestino = false;
-    });
-
-    if (opcoes.isEmpty) {
-      mostrarMensagem('Nenhum destino encontrado');
-      return;
-    }
-
-    if (opcoes.length == 1) {
-      selecionarDestino(opcoes.first);
-      return;
-    }
-
-    final resultado = await mostrarOpcoesDestino(opcoes);
-
-    if (!mounted || resultado == null) {
-      return;
-    }
-
-    selecionarDestino(resultado);
-  }
-
-  Future<LocalizacaoSelecionada?> mostrarOpcoesDestino(
-    List<LocalizacaoSelecionada> opcoes,
-  ) {
-    return showModalBottomSheet<LocalizacaoSelecionada>(
-      context: context,
-      showDragHandle: true,
-      builder: (context) {
-        return SafeArea(
-          child: SizedBox(
-            height: MediaQuery.sizeOf(context).height * 0.6,
-            child: Column(
-              children: [
-                const Padding(
-                  padding: EdgeInsets.fromLTRB(16, 0, 16, 12),
-                  child: Text(
-                    'Selecione o destino',
-                    style: TextStyle(
-                      color: AppColors.text,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                const Divider(height: 1),
-                Expanded(
-                  child: ListView.separated(
-                    itemCount: opcoes.length,
-                    separatorBuilder: (_, _) => const Divider(height: 1),
-                    itemBuilder: (context, index) {
-                      final opcao = opcoes[index];
-
-                      return ListTile(
-                        leading: const Icon(
-                          Icons.location_on_outlined,
-                          color: AppColors.primary,
-                        ),
-                        title: Text(opcao.endereco),
-                        onTap: () {
-                          Navigator.pop(context, opcao);
-                        },
-                      );
-                    },
-                  ),
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
   }
 
   void selecionarDestino(LocalizacaoSelecionada destino) {
@@ -479,15 +371,14 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
             vagasController: vagasController,
             valorController: valorController,
             observacoesController: observacoesController,
-            buscandoDestino: buscandoDestino,
             caronaRecorrente: caronaRecorrente,
             enviandoCarona: enviandoCarona,
             diasSelecionados: diasSelecionados,
             onSelecionarOrigem: escolherOrigemNoMapa,
-            onBuscarDestino: buscarDestino,
             onSelecionarData: escolherData,
             onSelecionarHorario: escolherHorario,
             onDestinoChanged: alterarTextoDestino,
+            onDestinoSelecionado: selecionarDestino,
             onRecorrenciaChanged: alterarRecorrencia,
             onDiaSelecionado: alternarDiaSemana,
             onOfertarCarona: ofertarCarona,

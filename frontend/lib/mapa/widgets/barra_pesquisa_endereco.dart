@@ -1,17 +1,35 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import '../services/endereco_service.dart';
+
+import '../../config/app_colors.dart';
 import '../models/localizacao_selecionada.dart';
+import '../services/endereco_service.dart';
 
 class BarraPesquisaEndereco extends StatefulWidget {
   final ValueChanged<LocalizacaoSelecionada> onSelecionado;
   final EnderecoService? enderecoService;
+  final TextEditingController? controller;
+  final ValueChanged<String>? onChanged;
+  final String label;
+  final IconData icone;
+  final EdgeInsetsGeometry padding;
+  final double elevacao;
+  final double borderRadius;
+  final bool usarLabelComoHint;
 
   const BarraPesquisaEndereco({
     super.key,
     required this.onSelecionado,
     this.enderecoService,
+    this.controller,
+    this.onChanged,
+    this.label = 'Pesquisar endereço',
+    this.icone = Icons.search,
+    this.padding = const EdgeInsets.all(12),
+    this.elevacao = 3,
+    this.borderRadius = 12,
+    this.usarLabelComoHint = true,
   });
 
   @override
@@ -19,13 +37,13 @@ class BarraPesquisaEndereco extends StatefulWidget {
 }
 
 class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
-  final TextEditingController _controller = TextEditingController();
-
-  Timer? _debounce;
-
+  late final TextEditingController _controller;
+  late final bool _controllerInterno;
   late final EnderecoService _enderecoService;
 
-  // Guarda os resultados da pesquisa
+  Timer? _debounce;
+  int _numeroBusca = 0;
+
   List<LocalizacaoSelecionada> _resultados = [];
   bool _pesquisando = false;
   bool _pesquisaRealizada = false;
@@ -33,20 +51,28 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
   @override
   void initState() {
     super.initState();
+    _controllerInterno = widget.controller == null;
+    _controller = widget.controller ?? TextEditingController();
     _enderecoService = widget.enderecoService ?? EnderecoService();
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
-    _controller.dispose();
+
+    if (_controllerInterno) {
+      _controller.dispose();
+    }
+
     super.dispose();
   }
 
-  Future<void> _pesquisar(String texto) async {
-    final textoBusca = texto.trim();
+  void _aoDigitar(String texto) {
+    widget.onChanged?.call(texto);
+    _debounce?.cancel();
 
-    if (textoBusca.isEmpty) {
+    if (texto.trim().isEmpty) {
+      _numeroBusca++;
       setState(() {
         _resultados = [];
         _pesquisando = false;
@@ -55,34 +81,46 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
       return;
     }
 
+    _debounce = Timer(
+      const Duration(milliseconds: 500),
+      () => _pesquisar(texto),
+    );
+  }
+
+  Future<void> _pesquisar(String texto) async {
+    final textoBusca = texto.trim();
+
+    if (textoBusca.isEmpty) {
+      return;
+    }
+
+    final numeroBusca = ++_numeroBusca;
+
     setState(() {
       _pesquisando = true;
+      _pesquisaRealizada = false;
     });
 
-    try {
-      final resultados = await _enderecoService.buscarLocalizacoesPorEndereco(
-        textoBusca,
-      );
+    final resultados = await _enderecoService.buscarLocalizacoesPorEndereco(
+      textoBusca,
+    );
 
-      if (!mounted || _controller.text.trim() != textoBusca) {
-        return;
-      }
-
-      setState(() {
-        _resultados = resultados;
-        _pesquisaRealizada = true;
-      });
-    } finally {
-      if (mounted) {
-        setState(() {
-          _pesquisando = false;
-        });
-      }
+    if (!mounted ||
+        numeroBusca != _numeroBusca ||
+        _controller.text.trim() != textoBusca) {
+      return;
     }
+
+    setState(() {
+      _resultados = resultados;
+      _pesquisando = false;
+      _pesquisaRealizada = true;
+    });
   }
 
   void _selecionar(LocalizacaoSelecionada local) {
     _debounce?.cancel();
+    _numeroBusca++;
     _controller.text = local.descricaoCompleta;
 
     setState(() {
@@ -98,27 +136,27 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.all(12),
+      padding: widget.padding,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Material(
-            elevation: 3,
-            borderRadius: BorderRadius.circular(12),
+            elevation: widget.elevacao,
+            borderRadius: BorderRadius.circular(widget.borderRadius),
             child: TextField(
               controller: _controller,
               keyboardType: TextInputType.streetAddress,
-              onChanged: (texto) {
+              textInputAction: TextInputAction.search,
+              onChanged: _aoDigitar,
+              onSubmitted: (texto) {
                 _debounce?.cancel();
-
-                _debounce = Timer(
-                  const Duration(milliseconds: 500),
-                  () => _pesquisar(texto),
-                );
+                _pesquisar(texto);
               },
+              style: const TextStyle(color: AppColors.text),
               decoration: InputDecoration(
-                hintText: 'Pesquisar endereço',
-                prefixIcon: const Icon(Icons.search),
+                labelText: widget.usarLabelComoHint ? null : widget.label,
+                hintText: widget.usarLabelComoHint ? widget.label : null,
+                prefixIcon: Icon(widget.icone, color: AppColors.primary),
                 suffixIcon: _pesquisando
                     ? const Padding(
                         padding: EdgeInsets.all(12),
@@ -132,13 +170,12 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(widget.borderRadius),
                   borderSide: BorderSide.none,
                 ),
               ),
             ),
           ),
-
           if (_resultados.isNotEmpty)
             Container(
               margin: const EdgeInsets.only(top: 8),
@@ -151,6 +188,7 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
                 ],
               ),
               child: ListView.builder(
+                primary: false,
                 shrinkWrap: true,
                 itemCount: _resultados.length,
                 itemBuilder: (context, index) {
@@ -166,7 +204,6 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
                 },
               ),
             ),
-
           if (_pesquisaRealizada && !_pesquisando && _resultados.isEmpty)
             Container(
               margin: const EdgeInsets.only(top: 8),

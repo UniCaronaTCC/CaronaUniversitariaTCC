@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../config/app_colors.dart';
+import '../mapa/models/localizacao_selecionada.dart';
+import '../mapa/widgets/barra_pesquisa_endereco.dart';
 import '../utils/formatador_moeda.dart';
 import 'botao_acao_home.dart';
 import 'campo_recorrencia_carona.dart';
@@ -20,18 +22,17 @@ class FormularioOfertarCarona extends StatelessWidget {
   final TextEditingController valorController;
   final TextEditingController observacoesController;
 
-  final bool buscandoDestino;
   final bool caronaRecorrente;
   final bool enviandoCarona;
   final List<String> diasSelecionados;
 
   final VoidCallback onSelecionarOrigem;
-  final VoidCallback onBuscarDestino;
   final VoidCallback onSelecionarData;
   final VoidCallback onSelecionarHorario;
   final VoidCallback onOfertarCarona;
 
   final ValueChanged<String> onDestinoChanged;
+  final ValueChanged<LocalizacaoSelecionada> onDestinoSelecionado;
   final ValueChanged<bool> onRecorrenciaChanged;
   final ValueChanged<String> onDiaSelecionado;
 
@@ -48,15 +49,14 @@ class FormularioOfertarCarona extends StatelessWidget {
     required this.vagasController,
     required this.valorController,
     required this.observacoesController,
-    required this.buscandoDestino,
     required this.caronaRecorrente,
     required this.diasSelecionados,
     required this.onSelecionarOrigem,
-    required this.onBuscarDestino,
     required this.onSelecionarData,
     required this.onSelecionarHorario,
     required this.onOfertarCarona,
     required this.onDestinoChanged,
+    required this.onDestinoSelecionado,
     required this.onRecorrenciaChanged,
     required this.onDiaSelecionado,
     required this.enviandoCarona,
@@ -94,26 +94,16 @@ class FormularioOfertarCarona extends StatelessWidget {
         const SizedBox(height: 16),
 
         // O destino precisa ser digitado e confirmado pela busca.
-        CampoTextoCarona(
+        BarraPesquisaEndereco(
           label: 'Destino',
           icone: Icons.location_on_outlined,
           controller: destinoController,
-          keyboardType: TextInputType.streetAddress,
           onChanged: onDestinoChanged,
-          suffixIcon: buscandoDestino
-              ? const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                )
-              : IconButton(
-                  tooltip: 'Buscar destino',
-                  onPressed: onBuscarDestino,
-                  icon: const Icon(Icons.search),
-                ),
+          onSelecionado: onDestinoSelecionado,
+          padding: EdgeInsets.zero,
+          elevacao: 0,
+          borderRadius: 16,
+          usarLabelComoHint: false,
         ),
         const SizedBox(height: 16),
 
