@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
+import '../mapa/services/endereco_service.dart';
+import '../mapa/services/localizacao_service.dart';
 import '../models/carona.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/carona_service.dart';
@@ -27,15 +29,40 @@ class TelaInicial extends StatefulWidget {
 }
 
 class _TelaInicialState extends State<TelaInicial> {
+  final LocalizacaoService localizacaoService = LocalizacaoService();
+  final EnderecoService enderecoService = EnderecoService();
+
   List<Carona> caronas = [];
   bool carregando = true;
   String? mensagemErro;
   LocalizacaoSelecionada? destinoSelecionado;
+  String? cidadeAtual;
 
   @override
   void initState() {
     super.initState();
     carregarCaronas();
+    carregarCidadeAtual();
+  }
+
+  Future<void> carregarCidadeAtual() async {
+    try {
+      final posicao = await localizacaoService.obterLocalizacaoAtual();
+      final localizacao = await enderecoService.buscarLocalizacaoPorCoordenadas(
+        posicao.latitude,
+        posicao.longitude,
+      );
+
+      if (!mounted || localizacao?.cidade == null) {
+        return;
+      }
+
+      setState(() {
+        cidadeAtual = localizacao!.cidade;
+      });
+    } catch (erro) {
+      debugPrint('Não foi possível identificar a cidade atual: $erro');
+    }
   }
 
   Future<void> carregarCaronas() async {
@@ -72,8 +99,10 @@ class _TelaInicialState extends State<TelaInicial> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            BuscarCaronaTela(destinoInicial: destinoSelecionado),
+        builder: (context) => BuscarCaronaTela(
+          destinoInicial: destinoSelecionado,
+          cidadeInicial: cidadeAtual,
+        ),
       ),
     );
 
@@ -145,6 +174,7 @@ class _TelaInicialState extends State<TelaInicial> {
       destino: destinoSelecionado?.descricaoCompleta ?? '',
       destinoLatitude: destinoSelecionado?.ponto.latitude,
       destinoLongitude: destinoSelecionado?.ponto.longitude,
+      cidadePreferida: cidadeAtual,
     );
     final caronasHome = caronasOrdenadas.take(3).toList();
 

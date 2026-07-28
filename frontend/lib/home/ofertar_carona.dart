@@ -84,6 +84,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       origemSelecionada = LocalizacaoSelecionada(
         ponto: LatLng(carona.origemLatitude!, carona.origemLongitude!),
         endereco: carona.origem,
+        cidade: carona.origemCidade,
       );
     }
 
@@ -91,6 +92,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       destinoSelecionado = LocalizacaoSelecionada(
         ponto: LatLng(carona.destinoLatitude!, carona.destinoLongitude!),
         endereco: carona.destino,
+        cidade: carona.destinoCidade,
       );
     }
   }
@@ -227,12 +229,12 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     final resultado = await CaronaService.salvarCarona(
       idCarona: widget.caronaParaEditar?.id,
       origem: origem.endereco,
-      origemCidade: widget.caronaParaEditar?.origemCidade,
+      origemCidade: origem.cidade ?? widget.caronaParaEditar?.origemCidade,
       origemLatitude: origem.ponto.latitude,
       origemLongitude: origem.ponto.longitude,
 
       destino: destino.descricaoCompleta,
-      destinoCidade: widget.caronaParaEditar?.destinoCidade,
+      destinoCidade: destino.cidade ?? widget.caronaParaEditar?.destinoCidade,
       destinoLatitude: destino.ponto.latitude,
       destinoLongitude: destino.ponto.longitude,
 

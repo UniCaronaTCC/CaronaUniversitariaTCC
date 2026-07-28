@@ -49,6 +49,21 @@ void main() {
     expect(resultado, hasLength(1));
     expect(resultado.first.id, 2);
   });
+
+  test('caronas da cidade aparecem primeiro sem esconder as demais', () {
+    final caronas = [
+      criarCarona(id: 1, origemCidade: 'Birigui'),
+      criarCarona(id: 2, origemCidade: 'Araçatuba'),
+    ];
+
+    final resultado = FiltroCaronas.aplicar(
+      caronas: caronas,
+      cidadePreferida: 'Aracatuba',
+    );
+
+    expect(resultado, hasLength(2));
+    expect(resultado.first.id, 2);
+  });
 }
 
 Carona criarCarona({
@@ -57,10 +72,12 @@ Carona criarCarona({
   DateTime? dataInicio,
   double? destinoLatitude,
   double? destinoLongitude,
+  String? origemCidade,
 }) {
   return Carona(
     id: id,
     origem: 'Centro',
+    origemCidade: origemCidade,
     destino: 'UniSalesiano',
     destinoLatitude: destinoLatitude,
     destinoLongitude: destinoLongitude,

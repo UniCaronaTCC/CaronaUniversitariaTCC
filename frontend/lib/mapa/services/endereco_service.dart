@@ -8,7 +8,7 @@ import 'package:latlong2/latlong.dart';
 import '../models/localizacao_selecionada.dart';
 
 class EnderecoService {
-  Future<String> buscarEnderecoPorCoordenadas(
+  Future<LocalizacaoSelecionada?> buscarLocalizacaoPorCoordenadas(
     double latitude,
     double longitude,
   ) async {
@@ -16,14 +16,16 @@ class EnderecoService {
       final locais = await placemarkFromCoordinates(latitude, longitude);
 
       if (locais.isEmpty) {
-        return 'Endereço não encontrado';
+        return null;
       }
 
       final local = locais.first;
 
       final rua = local.street;
       final bairro = local.subLocality;
-      final cidade = local.locality;
+      final cidade = local.locality?.isNotEmpty == true
+          ? local.locality
+          : local.subAdministrativeArea;
       final estado = local.administrativeArea;
       final pais = local.country;
 
@@ -36,12 +38,17 @@ class EnderecoService {
       ].where((parte) => parte != null && parte.isNotEmpty).join(', ');
 
       if (partes.isEmpty) {
-        return 'Endereço não encontrado';
+        return null;
       }
 
-      return partes;
+      return LocalizacaoSelecionada(
+        ponto: LatLng(latitude, longitude),
+        endereco: partes,
+        cidade: cidade,
+      );
     } catch (erro) {
-      return 'Erro ao buscar endereço';
+      debugPrint('Erro ao identificar localização: $erro');
+      return null;
     }
   }
 
@@ -82,7 +89,11 @@ class EnderecoService {
 
         final bairro = properties['district'] ?? '';
 
-        final cidade = properties['city'] ?? '';
+        final cidade =
+            properties['city'] ??
+            properties['locality'] ??
+            properties['county'] ??
+            '';
 
         final estado = properties['state'] ?? '';
 
@@ -102,6 +113,7 @@ class EnderecoService {
           ponto: LatLng(coordinates[1], coordinates[0]),
           nome: nome,
           endereco: endereco.isEmpty ? nome : endereco,
+          cidade: cidade.toString(),
         );
       }).toList();
     } catch (erro) {

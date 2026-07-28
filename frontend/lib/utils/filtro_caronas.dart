@@ -10,10 +10,16 @@ class FiltroCaronas {
     int? horarioPreferidoEmMinutos,
     double? destinoLatitude,
     double? destinoLongitude,
+    String? cidadePreferida,
   }) {
     final destinoNormalizado = _normalizarTexto(destino);
+    final cidadeNormalizada = _normalizarTexto(cidadePreferida ?? '');
     final possuiCoordenadas =
         destinoLatitude != null && destinoLongitude != null;
+    final priorizarCidade =
+        destinoNormalizado.isEmpty &&
+        !possuiCoordenadas &&
+        cidadeNormalizada.isNotEmpty;
 
     final resultado = caronas.where((carona) {
       final destinoCorresponde =
@@ -27,6 +33,18 @@ class FiltroCaronas {
     }).toList();
 
     resultado.sort((primeira, segunda) {
+      if (priorizarCidade) {
+        final primeiraEhDaCidade = _caronaEhDaCidade(
+          primeira,
+          cidadeNormalizada,
+        );
+        final segundaEhDaCidade = _caronaEhDaCidade(segunda, cidadeNormalizada);
+
+        if (primeiraEhDaCidade != segundaEhDaCidade) {
+          return primeiraEhDaCidade ? -1 : 1;
+        }
+      }
+
       if (possuiCoordenadas) {
         final distanciaPrimeira = _calcularDistancia(
           primeira,
@@ -75,6 +93,19 @@ class FiltroCaronas {
     });
 
     return resultado;
+  }
+
+  static bool _caronaEhDaCidade(Carona carona, String cidadeNormalizada) {
+    final locais = [
+      carona.origemCidade,
+      carona.destinoCidade,
+      carona.origem,
+      carona.destino,
+    ];
+
+    return locais.any(
+      (local) => _normalizarTexto(local ?? '').contains(cidadeNormalizada),
+    );
   }
 
   static double _calcularDistancia(

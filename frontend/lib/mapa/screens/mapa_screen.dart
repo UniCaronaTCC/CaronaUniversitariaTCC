@@ -37,6 +37,7 @@ class _TesteMapaState extends State<TesteMapa> {
   LatLng? _pontoEncontro;
 
   String? _enderecoPontoEncontro;
+  String? _cidadePontoEncontro;
 
   bool _buscandoLocalizacao = true;
   bool _buscandoEndereco = false;
@@ -91,9 +92,10 @@ class _TesteMapaState extends State<TesteMapa> {
     setState(() {
       _buscandoEndereco = true;
       _enderecoPontoEncontro = null;
+      _cidadePontoEncontro = null;
     });
 
-    final endereco = await _enderecoService.buscarEnderecoPorCoordenadas(
+    final localizacao = await _enderecoService.buscarLocalizacaoPorCoordenadas(
       ponto.latitude,
       ponto.longitude,
     );
@@ -103,7 +105,9 @@ class _TesteMapaState extends State<TesteMapa> {
     }
 
     setState(() {
-      _enderecoPontoEncontro = endereco;
+      _enderecoPontoEncontro =
+          localizacao?.endereco ?? 'Endereço não encontrado';
+      _cidadePontoEncontro = localizacao?.cidade;
       _buscandoEndereco = false;
     });
   }
@@ -122,6 +126,7 @@ class _TesteMapaState extends State<TesteMapa> {
     setState(() {
       _pontoEncontro = local.ponto;
       _enderecoPontoEncontro = local.endereco;
+      _cidadePontoEncontro = local.cidade;
       _buscandoEndereco = false;
     });
 
@@ -143,6 +148,7 @@ class _TesteMapaState extends State<TesteMapa> {
         LocalizacaoSelecionada(
           ponto: _pontoEncontro!,
           endereco: _enderecoPontoEncontro ?? 'Endereço não encontrado',
+          cidade: _cidadePontoEncontro,
         ),
       );
       return;

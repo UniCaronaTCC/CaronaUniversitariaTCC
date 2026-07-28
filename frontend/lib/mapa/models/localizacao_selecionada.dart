@@ -3,6 +3,7 @@ import 'package:latlong2/latlong.dart';
 class LocalizacaoSelecionada {
   final LatLng ponto;
   final String endereco;
+  final String? cidade;
 
   // Nome digitado pelo usuario, como "UniSalesiano".
   final String? nome;
@@ -11,6 +12,7 @@ class LocalizacaoSelecionada {
     required this.ponto,
     required this.endereco,
     this.nome,
+    this.cidade,
   });
 
   // Une o nome conhecido ao endereco completo.

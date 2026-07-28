@@ -15,8 +15,9 @@ import 'detalhes_carona.dart';
 
 class BuscarCaronaTela extends StatefulWidget {
   final LocalizacaoSelecionada? destinoInicial;
+  final String? cidadeInicial;
 
-  const BuscarCaronaTela({super.key, this.destinoInicial});
+  const BuscarCaronaTela({super.key, this.destinoInicial, this.cidadeInicial});
 
   @override
   State<BuscarCaronaTela> createState() => _BuscarCaronaTelaState();
@@ -97,6 +98,7 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
       horarioPreferidoEmMinutos: horarioPreferido,
       destinoLatitude: destinoSelecionado?.ponto.latitude,
       destinoLongitude: destinoSelecionado?.ponto.longitude,
+      cidadePreferida: widget.cidadeInicial,
     );
 
     setState(() {
