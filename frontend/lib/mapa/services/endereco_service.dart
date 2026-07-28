@@ -4,14 +4,18 @@ import 'package:flutter/foundation.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
-
+import 'package:diacritic/diacritic.dart'; //acentos
 import '../models/localizacao_selecionada.dart';
 
 class EnderecoService {
+  String _normalizarTexto(String texto) {
+    return removeDiacritics(texto).toLowerCase().trim();
+  }
+
   Future<LocalizacaoSelecionada?> buscarLocalizacaoPorCoordenadas(
-    double latitude,
-    double longitude,
-  ) async {
+      double latitude,
+      double longitude,
+      ) async {
     try {
       final locais = await placemarkFromCoordinates(latitude, longitude);
 
@@ -53,8 +57,8 @@ class EnderecoService {
   }
 
   Future<List<LocalizacaoSelecionada>> buscarLocalizacoesPorEndereco(
-    String enderecoDigitado,
-  ) async {
+      String enderecoDigitado,
+      ) async {
     try {
       final textoBusca = enderecoDigitado.trim();
 
@@ -71,6 +75,11 @@ class EnderecoService {
         uri,
         headers: {'User-Agent': 'UniCarona/1.0'},
       );
+
+      if (response.statusCode != 200) {
+        debugPrint('Erro Photon: ${response.statusCode}');
+        return [];
+      }
 
       final json = jsonDecode(response.body);
 
@@ -91,9 +100,9 @@ class EnderecoService {
 
         final cidade =
             properties['city'] ??
-            properties['locality'] ??
-            properties['county'] ??
-            '';
+                properties['locality'] ??
+                properties['county'] ??
+                '';
 
         final estado = properties['state'] ?? '';
 
