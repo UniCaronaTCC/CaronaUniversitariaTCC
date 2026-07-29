@@ -9,9 +9,9 @@ import '../models/localizacao_selecionada.dart';
 
 class EnderecoService {
   Future<LocalizacaoSelecionada?> buscarLocalizacaoPorCoordenadas(
-    double latitude,
-    double longitude,
-  ) async {
+      double latitude,
+      double longitude,
+      ) async {
     try {
       final locais = await placemarkFromCoordinates(latitude, longitude);
 
@@ -53,8 +53,8 @@ class EnderecoService {
   }
 
   Future<List<LocalizacaoSelecionada>> buscarLocalizacoesPorEndereco(
-    String enderecoDigitado,
-  ) async {
+      String enderecoDigitado,
+      ) async {
     try {
       final textoBusca = enderecoDigitado.trim();
 
@@ -96,9 +96,9 @@ class EnderecoService {
 
         final cidade =
             properties['city'] ??
-            properties['locality'] ??
-            properties['county'] ??
-            '';
+                properties['locality'] ??
+                properties['county'] ??
+                '';
 
         final estado = properties['state'] ?? '';
 
