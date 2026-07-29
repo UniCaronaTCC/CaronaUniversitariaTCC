@@ -7,6 +7,8 @@ class CampoTextoPadrao extends StatelessWidget {
   final TextEditingController? controller;
   final bool obscureText;
   final TextInputType? keyboardType;
+  final String? valorInicial;
+  final ValueChanged<String>? onChanged;
 
   const CampoTextoPadrao({
     super.key,
@@ -14,14 +16,18 @@ class CampoTextoPadrao extends StatelessWidget {
     this.controller,
     this.obscureText = false,
     this.keyboardType,
+    this.valorInicial,
+    this.onChanged,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
       controller: controller,
+      initialValue: controller == null ? valorInicial : null,
       obscureText: obscureText,
       keyboardType: keyboardType,
+      onChanged: onChanged,
       decoration: InputDecoration(
         labelText: label,
         enabledBorder: const OutlineInputBorder(

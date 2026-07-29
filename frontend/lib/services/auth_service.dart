@@ -165,4 +165,56 @@ class AuthService {
       };
     }
   }
+
+  static Future<Map<String, dynamic>> atualizarPerfil(
+    String instituicao,
+    String campus,
+  ) async {
+    final token = tokenUsuarioLogado;
+
+    if (token == null) {
+      return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+    }
+
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/usuarios/perfil');
+      final resposta = await http.patch(
+        url,
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'instituicao': instituicao, 'campus': campus}),
+      );
+
+      final Map<String, dynamic> respostaJson = resposta.body.isNotEmpty
+          ? jsonDecode(resposta.body)
+          : {};
+
+      if (resposta.statusCode == 200 &&
+          respostaJson['dados'] is Map<String, dynamic>) {
+        usuarioLogado = Map<String, dynamic>.from(respostaJson['dados']);
+        await SessaoService.salvar(token, usuarioLogado!);
+
+        return {
+          'sucesso': true,
+          'mensagem': respostaJson['mensagem'],
+          'dados': usuarioLogado,
+        };
+      }
+
+      return {
+        'sucesso': false,
+        'mensagem':
+            respostaJson['mensagem'] ??
+            respostaJson['message'] ??
+            'Erro ao atualizar perfil',
+      };
+    } catch (erro) {
+      return {
+        'sucesso': false,
+        'mensagem': 'Não foi possível conectar ao servidor',
+      };
+    }
+  }
 }

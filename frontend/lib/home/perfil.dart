@@ -8,11 +8,14 @@ import '../widgets/barra_navegacao_home.dart';
 import '../widgets/componentes_padrao.dart';
 
 typedef CarregarPerfil = Future<Map<String, dynamic>> Function();
+typedef AtualizarPerfil =
+    Future<Map<String, dynamic>> Function(String instituicao, String campus);
 
 class PerfilTela extends StatefulWidget {
   final CarregarPerfil? carregarPerfil;
+  final AtualizarPerfil? atualizarPerfil;
 
-  const PerfilTela({super.key, this.carregarPerfil});
+  const PerfilTela({super.key, this.carregarPerfil, this.atualizarPerfil});
 
   @override
   State<PerfilTela> createState() => _PerfilTelaState();
@@ -51,6 +54,79 @@ class _PerfilTelaState extends State<PerfilTela> {
         mensagemErro = resultado['mensagem']?.toString();
       }
     });
+  }
+
+  Future<void> editarPerfil() async {
+    var novaInstituicao = usuario['instituicao']?.toString() ?? '';
+    var novoCampus = usuario['campus']?.toString() ?? '';
+
+    final dados = await showDialog<List<String>>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Editar perfil'),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CampoTextoPadrao(
+                label: 'Instituição',
+                valorInicial: novaInstituicao,
+                onChanged: (valor) => novaInstituicao = valor,
+              ),
+              const SizedBox(height: 16),
+              CampoTextoPadrao(
+                label: 'Campus',
+                valorInicial: novoCampus,
+                onChanged: (valor) => novoCampus = valor,
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancelar'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, [
+              novaInstituicao.trim(),
+              novoCampus.trim(),
+            ]),
+            child: const Text('Salvar'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || dados == null) {
+      return;
+    }
+
+    setState(() => carregando = true);
+
+    final resultado =
+        await (widget.atualizarPerfil?.call(dados[0], dados[1]) ??
+            AuthService.atualizarPerfil(dados[0], dados[1]));
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      carregando = false;
+
+      if (resultado['sucesso'] == true && resultado['dados'] is Map) {
+        usuario = Map<String, dynamic>.from(resultado['dados']);
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          resultado['mensagem']?.toString() ?? 'Erro ao atualizar perfil',
+        ),
+      ),
+    );
   }
 
   Future<void> sair() async {
@@ -216,7 +292,22 @@ class _PerfilTelaState extends State<PerfilTela> {
               titulo: 'E-mail',
               valor: email.isNotEmpty ? email : 'Não informado',
             ),
-            const SizedBox(height: 32),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: editarPerfil,
+                icon: const Icon(Icons.edit_outlined),
+                label: const Text('Editar perfil'),
+                style: OutlinedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(

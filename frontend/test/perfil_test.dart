@@ -31,6 +31,15 @@ void main() {
             'sucesso': true,
             'dados': AuthService.usuarioLogado,
           },
+          atualizarPerfil: (instituicao, campus) async => {
+            'sucesso': true,
+            'mensagem': 'Perfil atualizado com sucesso',
+            'dados': {
+              ...AuthService.usuarioLogado!,
+              'instituicao': instituicao,
+              'campus': campus,
+            },
+          },
         ),
       ),
     );
@@ -44,6 +53,20 @@ void main() {
 
     expect(find.text('4,7 / 5'), findsOneWidget);
     expect(find.text('12 avaliações'), findsOneWidget);
+
+    await tester.scrollUntilVisible(find.text('Editar perfil'), 200);
+    await tester.tap(find.text('Editar perfil'));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField).at(0), 'Fatec');
+    await tester.enterText(find.byType(TextField).at(1), 'Araçatuba');
+    await tester.tap(find.text('Salvar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Fatec - Campus Araçatuba'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(find.text('Sair'), 200);
 
