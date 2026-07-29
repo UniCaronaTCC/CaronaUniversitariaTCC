@@ -6,11 +6,12 @@ import { UsersService } from './users.service';
 
 describe('UsersController', () => {
   let controller: UsersController;
-  let usersService: { buscarPorId: jest.Mock };
+  let usersService: { buscarPorId: jest.Mock; atualizarPerfil: jest.Mock };
 
   beforeEach(() => {
     usersService = {
       buscarPorId: jest.fn(),
+      atualizarPerfil: jest.fn(),
     };
 
     controller = new UsersController(usersService as unknown as UsersService);
@@ -56,5 +57,29 @@ describe('UsersController', () => {
     await expect(controller.buscarPerfil(request)).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+
+  it('atualiza os dados acadêmicos do perfil', async () => {
+    usersService.atualizarPerfil.mockResolvedValue({
+      idUsuario: 1,
+      nome: 'João',
+      email: 'joao@email.com',
+      instituicao: 'UniSalesiano',
+      campus: 'Araçatuba',
+    });
+
+    const request = {
+      usuario: { sub: 1, nome: 'João', email: 'joao@email.com' },
+    } as unknown as Request & {
+      usuario: { sub: number; nome: string; email: string };
+    };
+
+    const resultado = await controller.atualizarPerfil(
+      { instituicao: 'UniSalesiano', campus: 'Araçatuba' },
+      request,
+    );
+
+    expect(resultado.mensagem).toBe('Perfil atualizado com sucesso');
+    expect(resultado.dados.instituicao).toBe('UniSalesiano');
   });
 });

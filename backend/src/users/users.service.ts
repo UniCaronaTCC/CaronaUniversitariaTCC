@@ -24,6 +24,23 @@ export class UsersService {
     });
   }
 
+  async atualizarPerfil(
+    idUsuario: number,
+    instituicao: string,
+    campus: string | null,
+  ): Promise<User | null> {
+    const usuario = await this.buscarPorId(idUsuario);
+
+    if (!usuario) {
+      return null;
+    }
+
+    usuario.instituicao = instituicao;
+    usuario.campus = campus;
+
+    return this.usersRepository.save(usuario);
+  }
+
   // Busca as credenciais apenas durante a autenticação.
   async buscarPorEmailComSenha(email: string): Promise<User | null> {
     return this.usersRepository

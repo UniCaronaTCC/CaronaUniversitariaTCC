@@ -58,4 +58,20 @@ describe('UsersService', () => {
       where: { idUsuario: 1 },
     });
   });
+
+  it('atualiza instituição e campus do usuário', async () => {
+    const usuario = { idUsuario: 1, instituicao: null, campus: null };
+    repository.findOne.mockResolvedValue(usuario);
+    repository.save.mockImplementation((dados) => dados);
+
+    const resultado = await service.atualizarPerfil(
+      1,
+      'UniSalesiano',
+      'Araçatuba',
+    );
+
+    expect(resultado?.instituicao).toBe('UniSalesiano');
+    expect(resultado?.campus).toBe('Araçatuba');
+    expect(repository.save).toHaveBeenCalledWith(usuario);
+  });
 });
