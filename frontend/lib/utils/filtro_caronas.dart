@@ -1,3 +1,4 @@
+import 'package:diacritic/diacritic.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../models/carona.dart';
@@ -174,14 +175,6 @@ class FiltroCaronas {
 
   // Permite buscar mesmo sem digitar os acentos.
   static String _normalizarTexto(String texto) {
-    return texto
-        .toLowerCase()
-        .replaceAll(RegExp(r'[áàãâä]'), 'a')
-        .replaceAll(RegExp(r'[éèêë]'), 'e')
-        .replaceAll(RegExp(r'[íìîï]'), 'i')
-        .replaceAll(RegExp(r'[óòõôö]'), 'o')
-        .replaceAll(RegExp(r'[úùûü]'), 'u')
-        .replaceAll('ç', 'c')
-        .trim();
+    return removeDiacritics(texto).toLowerCase().trim();
   }
 }

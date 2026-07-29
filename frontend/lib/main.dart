@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:uni_carona/mapa/screens/mapa_screen.dart';
 
 import 'auth/login.dart';
 import 'config/app_theme.dart';
@@ -21,7 +20,7 @@ Future<void> main() async {
       theme: AppTheme.lightTheme,
       home: AuthService.estaLogado
           ? TelaInicial(nomeUsuario: nomeUsuario)
-          : const TesteMapa(),
+          : const LoginTela(),
       routes: {
         NavegacaoPrincipal.rotaCaronas: (_) => const MinhasCaronasTela(),
         NavegacaoPrincipal.rotaPerfil: (_) => const PerfilTela(),

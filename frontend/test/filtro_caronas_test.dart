@@ -64,10 +64,26 @@ void main() {
     expect(resultado, hasLength(2));
     expect(resultado.first.id, 2);
   });
+
+  test('destino sem acento encontra carona com acento', () {
+    final caronas = [
+      criarCarona(id: 1, destino: 'Praça João Pessoa'),
+      criarCarona(id: 2, destino: 'UniSalesiano'),
+    ];
+
+    final resultado = FiltroCaronas.aplicar(
+      caronas: caronas,
+      destino: 'Praca Joao Pessoa',
+    );
+
+    expect(resultado, hasLength(1));
+    expect(resultado.first.id, 1);
+  });
 }
 
 Carona criarCarona({
   required int id,
+  String destino = 'UniSalesiano',
   String horario = '19:00:00',
   DateTime? dataInicio,
   double? destinoLatitude,
@@ -78,7 +94,7 @@ Carona criarCarona({
     id: id,
     origem: 'Centro',
     origemCidade: origemCidade,
-    destino: 'UniSalesiano',
+    destino: destino,
     destinoLatitude: destinoLatitude,
     destinoLongitude: destinoLongitude,
     dataInicio: dataInicio ?? DateTime(2026, 7, 23),
