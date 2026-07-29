@@ -48,4 +48,14 @@ describe('UsersService', () => {
 
     expect(repository.createQueryBuilder).toHaveBeenCalledWith('usuario');
   });
+
+  it('busca o perfil pelo id sem selecionar a senha', async () => {
+    repository.findOne.mockResolvedValue({ idUsuario: 1 });
+
+    await service.buscarPorId(1);
+
+    expect(repository.findOne).toHaveBeenCalledWith({
+      where: { idUsuario: 1 },
+    });
+  });
 });

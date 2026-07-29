@@ -43,6 +43,8 @@ export class AuthService {
         id: usuario.idUsuario,
         nome: usuario.nome,
         email: usuario.email,
+        instituicao: usuario.instituicao,
+        campus: usuario.campus,
       },
     };
   }

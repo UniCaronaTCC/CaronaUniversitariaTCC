@@ -18,12 +18,35 @@ void main() {
       'id': 1,
       'nome': 'João',
       'email': 'joao@email.com',
+      'instituicao': 'UniSalesiano',
+      'campus': 'Araçatuba',
+      'avaliacaoMedia': 4.7,
+      'totalAvaliacoes': 12,
     };
 
-    await tester.pumpWidget(const MaterialApp(home: PerfilTela()));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PerfilTela(
+          carregarPerfil: () async => {
+            'sucesso': true,
+            'dados': AuthService.usuarioLogado,
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
 
     expect(find.text('João'), findsNWidgets(2));
-    expect(find.text('joao@email.com'), findsNWidgets(2));
+    expect(find.text('joao@email.com'), findsOneWidget);
+    expect(find.text('UniSalesiano - Campus Araçatuba'), findsOneWidget);
+
+    await tester.scrollUntilVisible(find.text('4,7 / 5'), 200);
+
+    expect(find.text('4,7 / 5'), findsOneWidget);
+    expect(find.text('12 avaliações'), findsOneWidget);
+
+    await tester.scrollUntilVisible(find.text('Sair'), 200);
+
     expect(find.text('Sair'), findsOneWidget);
 
     await tester.tap(find.text('Sair'));

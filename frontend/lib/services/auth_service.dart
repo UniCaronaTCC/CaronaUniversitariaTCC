@@ -120,4 +120,49 @@ class AuthService {
       };
     }
   }
+
+  static Future<Map<String, dynamic>> buscarPerfil() async {
+    final token = tokenUsuarioLogado;
+
+    if (token == null) {
+      return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+    }
+
+    try {
+      final url = Uri.parse('${ApiConfig.baseUrl}/usuarios/perfil');
+      final resposta = await http.get(
+        url,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+
+      final Map<String, dynamic> respostaJson = resposta.body.isNotEmpty
+          ? jsonDecode(resposta.body)
+          : {};
+
+      if (resposta.statusCode == 200 &&
+          respostaJson['dados'] is Map<String, dynamic>) {
+        usuarioLogado = Map<String, dynamic>.from(respostaJson['dados']);
+        await SessaoService.salvar(token, usuarioLogado!);
+
+        return {'sucesso': true, 'dados': usuarioLogado};
+      }
+
+      if (resposta.statusCode == 401) {
+        await sair();
+      }
+
+      return {
+        'sucesso': false,
+        'mensagem':
+            respostaJson['mensagem'] ??
+            respostaJson['message'] ??
+            'Erro ao buscar perfil',
+      };
+    } catch (erro) {
+      return {
+        'sucesso': false,
+        'mensagem': 'Não foi possível conectar ao servidor',
+      };
+    }
+  }
 }

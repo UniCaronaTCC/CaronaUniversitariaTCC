@@ -17,6 +17,12 @@ export class User {
   @Column({ length: 100, unique: true }) // Define a coluna email com limite de 100 caracteres e valor único
   email: string;
 
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  instituicao: string | null = null;
+
+  @Column({ type: 'varchar', length: 150, nullable: true })
+  campus: string | null = null;
+
   @Column({ length: 255, select: false }) // Evita carregar o hash da senha em consultas comuns
   senha: string;
 

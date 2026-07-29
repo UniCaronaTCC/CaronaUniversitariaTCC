@@ -18,6 +18,12 @@ export class UsersService {
     });
   }
 
+  async buscarPorId(idUsuario: number): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { idUsuario },
+    });
+  }
+
   // Busca as credenciais apenas durante a autenticação.
   async buscarPorEmailComSenha(email: string): Promise<User | null> {
     return this.usersRepository

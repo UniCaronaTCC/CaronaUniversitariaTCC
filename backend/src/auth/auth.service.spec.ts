@@ -47,6 +47,8 @@ describe('AuthService', () => {
       nome: 'João',
       email: 'joao@email.com',
       senha: senhaHash,
+      instituicao: 'UniSalesiano',
+      campus: 'Araçatuba',
     });
     jwtService.signAsync.mockResolvedValue('token-teste');
 
@@ -57,6 +59,8 @@ describe('AuthService', () => {
       id: 1,
       nome: 'João',
       email: 'joao@email.com',
+      instituicao: 'UniSalesiano',
+      campus: 'Araçatuba',
     });
     expect(resultado.usuario).not.toHaveProperty('senha');
   });
