@@ -68,7 +68,7 @@ class _TesteMapaState extends State<TesteMapa> {
       // Abre o mapa na localizacao atual do usuario
       _mapController.move(pontoAtual, 16);
 
-      // Busca o endereco aproximado da localizacao atual
+// Busca o endereco aproximado da localizacao atual
       await _buscarEnderecoDoPonto(pontoAtual);
     } catch (erro) {
       debugPrint('Erro ao obter localizacao: $erro');
@@ -161,6 +161,11 @@ class _TesteMapaState extends State<TesteMapa> {
 
   @override
   Widget build(BuildContext context) {
+    final bool mesmoPonto =
+        _localizacaoAtual != null &&
+            _pontoEncontro != null &&
+            _localizacaoAtual == _pontoEncontro;
+
     return Scaffold(
       appBar: BarraSuperiorPadrao(titulo: widget.titulo),
 
@@ -186,21 +191,21 @@ class _TesteMapaState extends State<TesteMapa> {
                 userAgentPackageName: 'com.unicarona.app',
               ),
 
-              if (_localizacaoAtual != null)
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: _localizacaoAtual!,
-                      width: 50,
-                      height: 50,
-                      child: const Icon(
-                        Icons.my_location,
-                        color: Colors.red,
-                        size: 38,
-                      ),
-                    ),
-                  ],
-                ),
+              // if (_localizacaoAtual != null)
+              //   MarkerLayer(
+              //     markers: [
+              //       Marker(
+              //         point: _localizacaoAtual!,
+              //         width: 50,
+              //         height: 50,
+              //         child: const Icon(
+              //           Icons.my_location,
+              //           color: Colors.red,
+              //           size: 38,
+              //         ),
+              //       ),
+              //     ],
+              //   ),
 
               if (_pontoEncontro != null)
                 MarkerLayer(
