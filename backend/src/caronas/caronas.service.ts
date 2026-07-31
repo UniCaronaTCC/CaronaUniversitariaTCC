@@ -70,8 +70,33 @@ export class CaronasService {
     await this.caronasRepository.save(carona);
   }
 
+  async finalizarCaronasVencidas(): Promise<void> {
+    await this.caronasRepository
+      .createQueryBuilder()
+      .update(Carona)
+      .set({ status: 'FINALIZADA' })
+      .where('status IN (:...status)', { status: ['ATIVA', 'LOTADA'] })
+      .andWhere(
+        `
+        (
+          recorrente = false
+          AND TIMESTAMP(data_inicio, horario) <= NOW()
+        )
+        OR
+        (
+          recorrente = true
+          AND data_fim IS NOT NULL
+          AND TIMESTAMP(data_fim, horario) <= NOW()
+        )
+        `,
+      )
+      .execute();
+  }
+
   // Lista somente ofertas ativas e que ainda podem acontecer.
   async listarCaronas(idUsuario: number): Promise<Carona[]> {
+    await this.finalizarCaronasVencidas();
+
     return (
       this.caronasRepository
         .createQueryBuilder('carona')
@@ -123,6 +148,8 @@ export class CaronasService {
   }
 
   async listarMinhasCaronas(idUsuario: number): Promise<Carona[]> {
+    await this.finalizarCaronasVencidas();
+
     return this.caronasRepository
       .createQueryBuilder('carona')
       .innerJoinAndSelect('carona.usuario', 'usuario')
@@ -131,22 +158,8 @@ export class CaronasService {
       .andWhere('carona.status <> :statusCancelada', {
         statusCancelada: 'CANCELADA',
       })
-      .andWhere(
-        `
-        (
-          carona.dataInicio >= CURDATE()
-          OR (
-            carona.recorrente = true
-            AND (
-              carona.dataFim IS NULL
-              OR carona.dataFim >= CURDATE()
-            )
-          )
-        )
-      `,
-      )
-      .orderBy('carona.dataInicio', 'ASC')
-      .addOrderBy('carona.horario', 'ASC')
+      .orderBy('carona.dataInicio', 'DESC')
+      .addOrderBy('carona.horario', 'DESC')
       .getMany();
   }
 

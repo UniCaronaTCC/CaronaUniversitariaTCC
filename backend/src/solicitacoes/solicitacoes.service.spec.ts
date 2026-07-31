@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 
 import { Carona } from '../caronas/carona.entity';
+import { CaronasService } from '../caronas/caronas.service';
 import { Solicitacao } from './solicitacao.entity';
 import { SolicitacoesService } from './solicitacoes.service';
 
@@ -18,6 +19,9 @@ describe('SolicitacoesService', () => {
   let dataSource: {
     transaction: jest.Mock;
   };
+  let caronasService: {
+    finalizarCaronasVencidas: jest.Mock;
+  };
 
   beforeEach(() => {
     solicitacoesRepository = {
@@ -31,11 +35,15 @@ describe('SolicitacoesService', () => {
     dataSource = {
       transaction: jest.fn(),
     };
+    caronasService = {
+      finalizarCaronasVencidas: jest.fn().mockResolvedValue(undefined),
+    };
 
     service = new SolicitacoesService(
       solicitacoesRepository as unknown as Repository<Solicitacao>,
       caronasRepository as unknown as Repository<Carona>,
       dataSource as unknown as DataSource,
+      caronasService as unknown as CaronasService,
     );
   });
 
@@ -61,6 +69,7 @@ describe('SolicitacoesService', () => {
     });
 
     expect(resultado.status).toBe('PENDENTE');
+    expect(caronasService.finalizarCaronasVencidas).toHaveBeenCalledTimes(1);
     expect(solicitacoesRepository.save).toHaveBeenCalledTimes(1);
   });
 
@@ -142,6 +151,7 @@ describe('SolicitacoesService', () => {
     const resultado = await service.responderSolicitacao(1, 2, 'ACEITA');
 
     expect(resultado.status).toBe('ACEITA');
+    expect(caronasService.finalizarCaronasVencidas).toHaveBeenCalledTimes(1);
     expect(carona.vagas).toBe(1);
     expect(salvarCarona).toHaveBeenCalledTimes(1);
     expect(salvarSolicitacao).toHaveBeenCalledTimes(1);

@@ -8,8 +8,16 @@ describe('CaronasService', () => {
   let service: CaronasService;
   let repository: {
     create: jest.Mock;
+    createQueryBuilder: jest.Mock;
     findOne: jest.Mock;
     save: jest.Mock;
+  };
+  let queryBuilder: {
+    update: jest.Mock;
+    set: jest.Mock;
+    where: jest.Mock;
+    andWhere: jest.Mock;
+    execute: jest.Mock;
   };
 
   const dados: DadosCriacaoCarona = {
@@ -32,8 +40,16 @@ describe('CaronasService', () => {
   };
 
   beforeEach(() => {
+    queryBuilder = {
+      update: jest.fn().mockReturnThis(),
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      execute: jest.fn().mockResolvedValue(undefined),
+    };
     repository = {
       create: jest.fn((carona) => carona),
+      createQueryBuilder: jest.fn(() => queryBuilder),
       findOne: jest.fn(),
       save: jest.fn(async (carona) => carona),
     };
@@ -79,5 +95,13 @@ describe('CaronasService', () => {
 
     expect(carona.status).toBe('CANCELADA');
     expect(repository.save).toHaveBeenCalledWith(carona);
+  });
+
+  it('finaliza automaticamente caronas vencidas', async () => {
+    await service.finalizarCaronasVencidas();
+
+    expect(queryBuilder.update).toHaveBeenCalledWith(Carona);
+    expect(queryBuilder.set).toHaveBeenCalledWith({ status: 'FINALIZADA' });
+    expect(queryBuilder.execute).toHaveBeenCalledTimes(1);
   });
 });

@@ -8,6 +8,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
 
 import { Carona } from '../caronas/carona.entity';
+import { CaronasService } from '../caronas/caronas.service';
 import { Solicitacao } from './solicitacao.entity';
 
 export interface DadosNovaSolicitacao {
@@ -26,9 +27,12 @@ export class SolicitacoesService {
     @InjectRepository(Carona)
     private readonly caronasRepository: Repository<Carona>,
     private readonly dataSource: DataSource,
+    private readonly caronasService: CaronasService,
   ) {}
 
   async criarSolicitacao(dados: DadosNovaSolicitacao): Promise<Solicitacao> {
+    await this.caronasService.finalizarCaronasVencidas();
+
     const carona = await this.caronasRepository.findOne({
       where: { idCarona: dados.idCarona },
       relations: { usuario: true },
@@ -145,6 +149,8 @@ export class SolicitacoesService {
     idMotorista: number,
     novoStatus: 'ACEITA' | 'RECUSADA',
   ): Promise<Solicitacao> {
+    await this.caronasService.finalizarCaronasVencidas();
+
     return this.dataSource.transaction(async (manager) => {
       const solicitacoesRepository = manager.getRepository(Solicitacao);
       const caronasRepository = manager.getRepository(Carona);
