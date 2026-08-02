@@ -134,6 +134,28 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     });
   }
 
+  Future<void> escolherDestinoNoMapa() async {
+    final resultado = await Navigator.push<LocalizacaoSelecionada>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const TesteMapa(
+          titulo: 'Confirmar destino',
+          instrucao: 'Confira o destino',
+          textoBotao: 'CONFIRMAR DESTINO',
+        ),
+      ),
+    );
+
+    if (!mounted || resultado == null) {
+      return;
+    }
+
+    setState(() {
+      destinoSelecionado = resultado;
+      destinoController.text = resultado.descricaoCompleta;
+    });
+  }
+
   // Abre o calendario sem permitir datas anteriores.
   Future<void> escolherData() async {
     final resultado = await DataHoraUtils.selecionarData(
@@ -377,6 +399,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
             enviandoCarona: enviandoCarona,
             diasSelecionados: diasSelecionados,
             onSelecionarOrigem: escolherOrigemNoMapa,
+            onSelecionarDestino: escolherDestinoNoMapa,
             onSelecionarData: escolherData,
             onSelecionarHorario: escolherHorario,
             onDestinoChanged: alterarTextoDestino,

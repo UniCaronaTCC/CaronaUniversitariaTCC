@@ -27,6 +27,7 @@ class FormularioOfertarCarona extends StatelessWidget {
   final List<String> diasSelecionados;
 
   final VoidCallback onSelecionarOrigem;
+  final VoidCallback onSelecionarDestino;
   final VoidCallback onSelecionarData;
   final VoidCallback onSelecionarHorario;
   final VoidCallback onOfertarCarona;
@@ -52,6 +53,7 @@ class FormularioOfertarCarona extends StatelessWidget {
     required this.caronaRecorrente,
     required this.diasSelecionados,
     required this.onSelecionarOrigem,
+    required this.onSelecionarDestino,
     required this.onSelecionarData,
     required this.onSelecionarHorario,
     required this.onOfertarCarona,
@@ -93,18 +95,36 @@ class FormularioOfertarCarona extends StatelessWidget {
         ),
         const SizedBox(height: 16),
 
-        // O destino precisa ser digitado e confirmado pela busca.
-        BarraPesquisaEndereco(
-          label: 'Destino',
-          icone: Icons.location_on_outlined,
-          controller: destinoController,
-          onChanged: onDestinoChanged,
-          onSelecionado: onDestinoSelecionado,
-          padding: EdgeInsets.zero,
-          elevacao: 0,
-          borderRadius: 16,
-          usarLabelComoHint: false,
+        // O destino pode ser pesquisado ou selecionado diretamente no mapa.
+
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: BarraPesquisaEndereco(
+                label: 'Destino',
+                icone: Icons.location_on_outlined,
+                controller: destinoController,
+                onChanged: onDestinoChanged,
+                onSelecionado: onDestinoSelecionado,
+                padding: EdgeInsets.zero,
+                elevacao: 0,
+                borderRadius: 16,
+                usarLabelComoHint: false,
+              ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              onPressed: onSelecionarDestino,
+              icon: const Icon(
+                Icons.map_outlined,
+                color: AppColors.primary,
+              ),
+            ),
+          ],
         ),
+
+
         const SizedBox(height: 16),
 
         CampoTextoCarona(
