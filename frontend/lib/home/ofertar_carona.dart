@@ -138,7 +138,8 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     final resultado = await Navigator.push<LocalizacaoSelecionada>(
       context,
       MaterialPageRoute(
-        builder: (context) => const TesteMapa(
+        builder: (context) => TesteMapa(
+          indiceNavegacao: widget.indiceNavegacao,
           titulo: 'Confirmar destino',
           instrucao: 'Confira o destino',
           textoBotao: 'CONFIRMAR DESTINO',

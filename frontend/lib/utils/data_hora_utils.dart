@@ -43,5 +43,11 @@ class DataHoraUtils {
   static String formatarHorario(TimeOfDay horario) =>
       '${_doisDigitos(horario.hour)}:${_doisDigitos(horario.minute)}';
 
+  static String formatarHorarioTexto(String horario) {
+    final partes = horario.split(':');
+
+    return partes.length >= 2 ? '${partes[0]}:${partes[1]}' : horario;
+  }
+
   static String _doisDigitos(int valor) => valor.toString().padLeft(2, '0');
 }

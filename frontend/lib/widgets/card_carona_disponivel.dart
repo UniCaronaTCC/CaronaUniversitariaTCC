@@ -160,6 +160,17 @@ class CardCaronaDisponivel extends StatelessWidget {
                     style: const TextStyle(color: Colors.black54, fontSize: 14),
                   ),
                   const Spacer(),
+                  if (carona.status != 'ATIVA') ...[
+                    Text(
+                      carona.status,
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
                   if (onTap != null)
                     const Icon(Icons.chevron_right, color: AppColors.primary),
                 ],

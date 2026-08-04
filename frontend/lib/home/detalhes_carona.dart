@@ -168,7 +168,10 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (usuarioEhMotorista) _acoesGerenciamento() else _botaoSolicitar(),
+          if (usuarioEhMotorista && !widget.carona.finalizada)
+            _acoesGerenciamento()
+          else if (!usuarioEhMotorista && !widget.carona.finalizada)
+            _botaoSolicitar(),
           BarraNavegacaoHome(
             currentIndex: indiceNavegacao,
             onTap: (indice) => NavegacaoPrincipal.selecionar(

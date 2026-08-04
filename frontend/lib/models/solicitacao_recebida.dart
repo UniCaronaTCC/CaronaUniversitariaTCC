@@ -1,3 +1,5 @@
+import '../utils/conversores_json.dart';
+import '../utils/data_hora_utils.dart';
 import '../utils/formatador_data.dart';
 
 class SolicitacaoRecebida {
@@ -34,13 +36,13 @@ class SolicitacaoRecebida {
     }
 
     return SolicitacaoRecebida(
-      id: _converterInt(json['id']),
+      id: converterJsonParaInt(json['id']),
       status: json['status']?.toString() ?? 'PENDENTE',
       localEmbarque: json['localEmbarque']?.toString() ?? '',
-      embarqueLatitude: _converterDouble(json['embarqueLatitude']),
-      embarqueLongitude: _converterDouble(json['embarqueLongitude']),
+      embarqueLatitude: converterJsonParaDouble(json['embarqueLatitude']),
+      embarqueLongitude: converterJsonParaDouble(json['embarqueLongitude']),
       passageiro: passageiro['nome']?.toString() ?? 'Passageiro',
-      idCarona: _converterInt(carona['id']),
+      idCarona: converterJsonParaInt(carona['id']),
       destino: carona['destino']?.toString() ?? '',
       dataInicio: DateTime.parse(carona['dataInicio'].toString()),
       horario: carona['horario']?.toString() ?? '',
@@ -49,19 +51,5 @@ class SolicitacaoRecebida {
 
   String get dataFormatada => FormatadorData.relativa(dataInicio);
 
-  String get horarioFormatado {
-    final partes = horario.split(':');
-
-    return partes.length >= 2 ? '${partes[0]}:${partes[1]}' : horario;
-  }
-
-  static int _converterInt(dynamic valor) {
-    return valor is int ? valor : int.tryParse(valor?.toString() ?? '') ?? 0;
-  }
-
-  static double _converterDouble(dynamic valor) {
-    return valor is num
-        ? valor.toDouble()
-        : double.tryParse(valor?.toString() ?? '') ?? 0;
-  }
+  String get horarioFormatado => DataHoraUtils.formatarHorarioTexto(horario);
 }

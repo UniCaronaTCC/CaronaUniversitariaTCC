@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 import '../models/solicitacao_enviada.dart';
+import 'status_solicitacao.dart';
 
 class CardSolicitacaoEnviada extends StatelessWidget {
   final SolicitacaoEnviada solicitacao;
@@ -48,7 +49,7 @@ class CardSolicitacaoEnviada extends StatelessWidget {
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,
-              child: _StatusSolicitacao(status: solicitacao.status),
+              child: StatusSolicitacao(status: solicitacao.status),
             ),
             const SizedBox(height: 16),
             _LinhaSolicitacao(
@@ -103,26 +104,6 @@ class _LinhaSolicitacao extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class _StatusSolicitacao extends StatelessWidget {
-  final String status;
-
-  const _StatusSolicitacao({required this.status});
-
-  @override
-  Widget build(BuildContext context) {
-    final cor = switch (status) {
-      'ACEITA' => Colors.green,
-      'RECUSADA' => Colors.red,
-      _ => AppColors.primary,
-    };
-
-    return Text(
-      status,
-      style: TextStyle(color: cor, fontSize: 12, fontWeight: FontWeight.bold),
     );
   }
 }

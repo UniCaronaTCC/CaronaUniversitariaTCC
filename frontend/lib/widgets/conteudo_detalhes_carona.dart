@@ -46,6 +46,17 @@ class ConteudoDetalhesCarona extends StatelessWidget {
               ),
             ],
           ),
+          if (carona.status != 'ATIVA') ...[
+            const SizedBox(height: 12),
+            Text(
+              carona.status,
+              style: const TextStyle(
+                color: Colors.black54,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
           const SizedBox(height: 32),
 
           Container(

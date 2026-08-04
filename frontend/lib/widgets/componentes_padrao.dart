@@ -41,28 +41,6 @@ class CampoTextoPadrao extends StatelessWidget {
   }
 }
 
-class BotaoPadrao extends StatelessWidget {
-  final String texto;
-  final VoidCallback? onPressed;
-
-  const BotaoPadrao({super.key, required this.texto, required this.onPressed});
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
-          foregroundColor: Theme.of(context).colorScheme.primary,
-        ),
-        onPressed: onPressed,
-        child: Text(texto),
-      ),
-    );
-  }
-}
-
 class EstadoConteudoPadrao extends StatelessWidget {
   final bool carregando;
   final String? mensagem;

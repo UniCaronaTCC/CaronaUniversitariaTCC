@@ -1,4 +1,7 @@
+import '../utils/conversores_json.dart';
+import '../utils/data_hora_utils.dart';
 import '../utils/formatador_data.dart';
+import '../utils/formatador_moeda.dart';
 
 class SolicitacaoEnviada {
   final int id;
@@ -32,39 +35,21 @@ class SolicitacaoEnviada {
     }
 
     return SolicitacaoEnviada(
-      id: _converterInt(json['id']),
+      id: converterJsonParaInt(json['id']),
       status: json['status']?.toString() ?? 'PENDENTE',
       localEmbarque: json['localEmbarque']?.toString() ?? '',
       motorista: motorista['nome']?.toString() ?? 'Motorista',
-      idCarona: _converterInt(carona['id']),
+      idCarona: converterJsonParaInt(carona['id']),
       destino: carona['destino']?.toString() ?? '',
       dataInicio: DateTime.parse(carona['dataInicio'].toString()),
       horario: carona['horario']?.toString() ?? '',
-      valor: _converterDouble(carona['valor']),
+      valor: converterJsonParaDouble(carona['valor']),
     );
   }
 
   String get dataFormatada => FormatadorData.relativa(dataInicio);
 
-  String get horarioFormatado {
-    final partes = horario.split(':');
+  String get horarioFormatado => DataHoraUtils.formatarHorarioTexto(horario);
 
-    return partes.length >= 2 ? '${partes[0]}:${partes[1]}' : horario;
-  }
-
-  String get valorFormatado {
-    final texto = valor.toStringAsFixed(2).replaceAll('.', ',');
-
-    return 'R\$ $texto';
-  }
-
-  static int _converterInt(dynamic valor) {
-    return valor is int ? valor : int.tryParse(valor?.toString() ?? '') ?? 0;
-  }
-
-  static double _converterDouble(dynamic valor) {
-    return valor is num
-        ? valor.toDouble()
-        : double.tryParse(valor?.toString() ?? '') ?? 0;
-  }
+  String get valorFormatado => formatarDoubleComoMoedaReal(valor);
 }

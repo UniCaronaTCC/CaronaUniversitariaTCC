@@ -1,4 +1,7 @@
+import '../utils/conversores_json.dart';
+import '../utils/data_hora_utils.dart';
 import '../utils/formatador_data.dart';
+import '../utils/formatador_moeda.dart';
 
 class Carona {
   final int id;
@@ -20,6 +23,7 @@ class Carona {
   final bool recorrente;
   final List<String> diasSemana;
   final String? observacoes;
+  final String status;
   final int idMotorista;
   final String motorista;
 
@@ -41,6 +45,7 @@ class Carona {
     required this.recorrente,
     required this.diasSemana,
     this.observacoes,
+    this.status = 'ATIVA',
     this.idMotorista = 0,
     required this.motorista,
   });
@@ -50,27 +55,30 @@ class Carona {
     final usuario = json['usuario'];
 
     return Carona(
-      id: _converterInt(json['idCarona']),
+      id: converterJsonParaInt(json['idCarona']),
       origem: json['origem']?.toString() ?? '',
       origemCidade: json['origemCidade']?.toString(),
-      origemLatitude: _converterDoubleOpcional(json['origemLatitude']),
-      origemLongitude: _converterDoubleOpcional(json['origemLongitude']),
+      origemLatitude: converterJsonParaDoubleOpcional(json['origemLatitude']),
+      origemLongitude: converterJsonParaDoubleOpcional(json['origemLongitude']),
       destino: json['destino']?.toString() ?? '',
       destinoCidade: json['destinoCidade']?.toString(),
-      destinoLatitude: _converterDoubleOpcional(json['destinoLatitude']),
-      destinoLongitude: _converterDoubleOpcional(json['destinoLongitude']),
+      destinoLatitude: converterJsonParaDoubleOpcional(json['destinoLatitude']),
+      destinoLongitude: converterJsonParaDoubleOpcional(
+        json['destinoLongitude'],
+      ),
       dataInicio: DateTime.parse(json['dataInicio'].toString()),
       dataFim: json['dataFim'] == null
           ? null
           : DateTime.tryParse(json['dataFim'].toString()),
       horario: json['horario']?.toString() ?? '',
-      vagas: _converterInt(json['vagas']),
-      valor: _converterDouble(json['valor']),
-      recorrente: _converterBool(json['recorrente']),
-      diasSemana: _converterDias(json['diasSemana']),
+      vagas: converterJsonParaInt(json['vagas']),
+      valor: converterJsonParaDouble(json['valor']),
+      recorrente: converterJsonParaBool(json['recorrente']),
+      diasSemana: converterJsonParaListaString(json['diasSemana']),
       observacoes: json['observacoes']?.toString(),
+      status: json['status']?.toString() ?? 'ATIVA',
       idMotorista: usuario is Map
-          ? _converterInt(usuario['idUsuario'] ?? usuario['id'])
+          ? converterJsonParaInt(usuario['idUsuario'] ?? usuario['id'])
           : 0,
       motorista: usuario is Map
           ? usuario['nome']?.toString() ?? 'Motorista'
@@ -82,22 +90,12 @@ class Carona {
   String get dataFormatada => FormatadorData.relativa(dataInicio);
 
   // Remove os segundos do horario retornado pelo MySQL.
-  String get horarioFormatado {
-    final partes = horario.split(':');
-
-    if (partes.length < 2) {
-      return horario;
-    }
-
-    return '${partes[0]}:${partes[1]}';
-  }
+  String get horarioFormatado => DataHoraUtils.formatarHorarioTexto(horario);
 
   // Formata o valor no padrao brasileiro.
-  String get valorFormatado {
-    final texto = valor.toStringAsFixed(2).replaceAll('.', ',');
+  String get valorFormatado => formatarDoubleComoMoedaReal(valor);
 
-    return 'R\$ $texto';
-  }
+  bool get finalizada => status == 'FINALIZADA';
 
   // Monta o periodo exibido no card.
   String get periodoFormatado {
@@ -106,41 +104,5 @@ class Carona {
     }
 
     return '$dataFormatada - $horarioFormatado';
-  }
-
-  static int _converterInt(dynamic valor) {
-    if (valor is int) {
-      return valor;
-    }
-
-    return int.tryParse(valor?.toString() ?? '') ?? 0;
-  }
-
-  static double _converterDouble(dynamic valor) {
-    if (valor is num) {
-      return valor.toDouble();
-    }
-
-    return double.tryParse(valor?.toString() ?? '') ?? 0;
-  }
-
-  static double? _converterDoubleOpcional(dynamic valor) {
-    if (valor == null) {
-      return null;
-    }
-
-    return _converterDouble(valor);
-  }
-
-  static bool _converterBool(dynamic valor) {
-    return valor == true || valor == 1 || valor?.toString() == '1';
-  }
-
-  static List<String> _converterDias(dynamic valor) {
-    if (valor is! List) {
-      return [];
-    }
-
-    return valor.map((dia) => dia.toString()).toList();
   }
 }
