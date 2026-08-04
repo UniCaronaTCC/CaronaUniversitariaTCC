@@ -5,15 +5,10 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import { Request } from 'express';
-
-interface RequisicaoComUsuario extends Request {
-  usuario?: {
-    sub: number;
-    email: string;
-    nome: string;
-  };
-}
+import type {
+  RequisicaoComUsuario,
+  UsuarioToken,
+} from './requisicao-com-usuario';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -34,7 +29,15 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      const payload = await this.jwtService.verifyAsync(token);
+      const payload = await this.jwtService.verifyAsync<UsuarioToken>(token);
+
+      if (
+        !Number.isInteger(payload.sub) ||
+        typeof payload.email !== 'string' ||
+        typeof payload.nome !== 'string'
+      ) {
+        throw new UnauthorizedException('Token inválido');
+      }
 
       request.usuario = {
         sub: payload.sub,

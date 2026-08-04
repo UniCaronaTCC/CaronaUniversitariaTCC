@@ -62,7 +62,7 @@ describe('UsersService', () => {
   it('atualiza instituição e campus do usuário', async () => {
     const usuario = { idUsuario: 1, instituicao: null, campus: null };
     repository.findOne.mockResolvedValue(usuario);
-    repository.save.mockImplementation((dados) => dados);
+    repository.save.mockImplementation((dados: User) => Promise.resolve(dados));
 
     const resultado = await service.atualizarPerfil(
       1,

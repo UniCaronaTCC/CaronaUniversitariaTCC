@@ -31,7 +31,7 @@ export class SolicitacoesService {
   ) {}
 
   async criarSolicitacao(dados: DadosNovaSolicitacao): Promise<Solicitacao> {
-    await this.caronasService.finalizarCaronasVencidas();
+    await this.atualizarCaronasVencidas();
 
     const carona = await this.caronasRepository.findOne({
       where: { idCarona: dados.idCarona },
@@ -88,6 +88,7 @@ export class SolicitacoesService {
   }
 
   async listarRecebidas(idMotorista: number): Promise<Solicitacao[]> {
+    await this.atualizarCaronasVencidas();
     return this.consultaRecebidas(idMotorista).getMany();
   }
 
@@ -95,6 +96,7 @@ export class SolicitacoesService {
     idMotorista: number,
     idCarona: number,
   ): Promise<Solicitacao[]> {
+    await this.atualizarCaronasVencidas();
     return this.consultaRecebidas(idMotorista)
       .andWhere('carona.idCarona = :idCarona', { idCarona })
       .getMany();
@@ -123,6 +125,7 @@ export class SolicitacoesService {
   }
 
   async listarEnviadas(idPassageiro: number): Promise<Solicitacao[]> {
+    await this.atualizarCaronasVencidas();
     return this.solicitacoesRepository
       .createQueryBuilder('solicitacao')
       .innerJoinAndSelect('solicitacao.carona', 'carona')
@@ -149,7 +152,7 @@ export class SolicitacoesService {
     idMotorista: number,
     novoStatus: 'ACEITA' | 'RECUSADA',
   ): Promise<Solicitacao> {
-    await this.caronasService.finalizarCaronasVencidas();
+    await this.atualizarCaronasVencidas();
 
     return this.dataSource.transaction(async (manager) => {
       const solicitacoesRepository = manager.getRepository(Solicitacao);
@@ -200,5 +203,23 @@ export class SolicitacoesService {
 
       return solicitacoesRepository.save(solicitacao);
     });
+  }
+
+  private async atualizarCaronasVencidas(): Promise<void> {
+    await this.caronasService.finalizarCaronasVencidas();
+
+    // Pedidos sem resposta deixam de ficar pendentes quando a carona termina.
+    await this.solicitacoesRepository
+      .createQueryBuilder()
+      .update(Solicitacao)
+      .set({ status: 'EXPIRADA' })
+      .where('status = :statusPendente', { statusPendente: 'PENDENTE' })
+      .andWhere(
+        `id_carona IN (
+          SELECT id_carona FROM caronas WHERE status = :statusCarona
+        )`,
+        { statusCarona: 'FINALIZADA' },
+      )
+      .execute();
   }
 }

@@ -17,7 +17,9 @@ export class AuthService {
   ) {}
 
   async login(email: string, senha: string) {
-    const usuario = await this.usersService.buscarPorEmailComSenha(email);
+    const emailNormalizado = email.trim().toLowerCase();
+    const usuario =
+      await this.usersService.buscarPorEmailComSenha(emailNormalizado);
 
     if (!usuario) {
       throw new UnauthorizedException('E-mail ou senha inválidos');
@@ -50,8 +52,13 @@ export class AuthService {
   }
 
   async cadastro(nome: string, email: string, senha: string) {
+    const nomeNormalizado = nome?.trim() ?? '';
     const emailNormalizado = email?.trim().toLowerCase() ?? '';
     const emailValido = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailNormalizado);
+
+    if (nomeNormalizado.length < 2 || nomeNormalizado.length > 100) {
+      throw new BadRequestException('Informe um nome válido');
+    }
 
     if (!emailValido) {
       throw new BadRequestException('Informe um e-mail válido');
@@ -75,7 +82,7 @@ export class AuthService {
 
     const senhaHash = await bcrypt.hash(senha, 10);
     const novoUsuario = await this.usersService.criarUsuario(
-      nome,
+      nomeNormalizado,
       emailNormalizado,
       senhaHash,
     );

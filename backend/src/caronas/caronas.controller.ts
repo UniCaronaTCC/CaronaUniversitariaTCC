@@ -10,19 +10,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
-
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import type { RequisicaoComUsuario } from '../auth/requisicao-com-usuario';
 import { Carona } from './carona.entity';
 import { CaronasService, DadosCriacaoCarona } from './caronas.service';
 
-interface RequisicaoComUsuario extends Request {
-  usuario: {
-    sub: number;
-    email: string;
-    nome: string;
-  };
-}
+type DadosCaronaRecebidos = Record<string, unknown> | undefined;
 
 @UseGuards(JwtAuthGuard)
 @Controller('caronas')
@@ -30,7 +23,10 @@ export class CaronasController {
   constructor(private readonly caronasService: CaronasService) {}
 
   @Post()
-  async criarCarona(@Body() body: any, @Req() request: RequisicaoComUsuario) {
+  async criarCarona(
+    @Body() body: DadosCaronaRecebidos,
+    @Req() request: RequisicaoComUsuario,
+  ) {
     const carona = await this.caronasService.criarCarona(
       this.validarDadosCarona(body, request.usuario.sub),
     );
@@ -45,7 +41,7 @@ export class CaronasController {
   @Patch(':idCarona')
   async atualizarCarona(
     @Param('idCarona') idRecebido: string,
-    @Body() body: any,
+    @Body() body: DadosCaronaRecebidos,
     @Req() request: RequisicaoComUsuario,
   ) {
     const carona = await this.caronasService.atualizarCarona(
@@ -100,18 +96,24 @@ export class CaronasController {
     };
   }
 
-  private validarDadosCarona(body: any, idUsuario: number): DadosCriacaoCarona {
+  private validarDadosCarona(
+    body: DadosCaronaRecebidos,
+    idUsuario: number,
+  ): DadosCriacaoCarona {
     const dados = body ?? {};
+    const origem = dados.origem?.toString().trim() ?? '';
+    const destino = dados.destino?.toString().trim() ?? '';
+    const dataInicio = dados.dataInicio?.toString().trim() ?? '';
+    const horario = dados.horario?.toString().trim() ?? '';
 
-    if (
-      !dados.origem ||
-      !dados.destino ||
-      !dados.dataInicio ||
-      !dados.horario
-    ) {
+    if (!origem || !destino || !dataInicio || !horario) {
       throw new BadRequestException(
         'Origem, destino, data e horário são obrigatórios',
       );
+    }
+
+    if (origem.length > 100 || destino.length > 100) {
+      throw new BadRequestException('Origem ou destino muito longo');
     }
 
     const vagas = Number(dados.vagas);
@@ -126,7 +128,9 @@ export class CaronasController {
     }
 
     const recorrente = dados.recorrente === true;
-    const diasSemana = dados.diasSemana ?? null;
+    const diasSemana = Array.isArray(dados.diasSemana)
+      ? dados.diasSemana.map((dia: unknown) => dia?.toString() ?? '')
+      : null;
 
     if (recorrente && (!Array.isArray(diasSemana) || diasSemana.length === 0)) {
       throw new BadRequestException('Selecione pelo menos um dia da semana');
@@ -134,8 +138,8 @@ export class CaronasController {
 
     return {
       idUsuario,
-      origem: dados.origem,
-      origemCidade: dados.origemCidade ?? null,
+      origem,
+      origemCidade: this.textoOpcional(dados.origemCidade, 100),
       origemLatitude: this.validarCoordenada(
         dados.origemLatitude,
         -90,
@@ -148,8 +152,8 @@ export class CaronasController {
         180,
         'Longitude da origem',
       ),
-      destino: dados.destino,
-      destinoCidade: dados.destinoCidade ?? null,
+      destino,
+      destinoCidade: this.textoOpcional(dados.destinoCidade, 100),
       destinoLatitude: this.validarCoordenada(
         dados.destinoLatitude,
         -90,
@@ -162,14 +166,14 @@ export class CaronasController {
         180,
         'Longitude do destino',
       ),
-      dataInicio: dados.dataInicio,
-      dataFim: dados.dataFim ?? null,
-      horario: dados.horario,
+      dataInicio,
+      dataFim: this.textoOpcional(dados.dataFim),
+      horario,
       vagas,
       valor,
       recorrente,
       diasSemana,
-      observacoes: dados.observacoes,
+      observacoes: this.textoOpcional(dados.observacoes) ?? undefined,
     };
   }
 
@@ -181,6 +185,16 @@ export class CaronasController {
     }
 
     return idCarona;
+  }
+
+  private textoOpcional(valor: unknown, limite?: number): string | null {
+    const texto = valor?.toString().trim() ?? '';
+
+    if (limite != null && texto.length > limite) {
+      throw new BadRequestException('Texto muito longo');
+    }
+
+    return texto || null;
   }
 
   private validarCoordenada(

@@ -8,19 +8,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
-
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import type { RequisicaoComUsuario } from '../auth/requisicao-com-usuario';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
 
-interface RequisicaoComUsuario extends Request {
-  usuario: {
-    sub: number;
-    email: string;
-    nome: string;
-  };
-}
+type DadosPerfilRecebidos = Record<string, unknown> | undefined;
 
 @Controller('usuarios')
 export class UsersController {
@@ -44,7 +37,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @Patch('perfil')
   async atualizarPerfil(
-    @Body() body: any,
+    @Body() body: DadosPerfilRecebidos,
     @Req() request: RequisicaoComUsuario,
   ) {
     const instituicao = body?.instituicao?.toString().trim() ?? '';

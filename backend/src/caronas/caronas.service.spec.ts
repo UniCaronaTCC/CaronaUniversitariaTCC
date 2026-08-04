@@ -48,10 +48,10 @@ describe('CaronasService', () => {
       execute: jest.fn().mockResolvedValue(undefined),
     };
     repository = {
-      create: jest.fn((carona) => carona),
-      createQueryBuilder: jest.fn(() => queryBuilder),
+      create: jest.fn((carona: Partial<Carona>) => carona as Carona),
+      createQueryBuilder: jest.fn((): typeof queryBuilder => queryBuilder),
       findOne: jest.fn(),
-      save: jest.fn(async (carona) => carona),
+      save: jest.fn((carona: Carona) => Promise.resolve(carona)),
     };
 
     service = new CaronasService(repository as unknown as Repository<Carona>);

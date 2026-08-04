@@ -12,6 +12,7 @@ describe('SolicitacoesService', () => {
     findOne: jest.Mock;
     create: jest.Mock;
     save: jest.Mock;
+    createQueryBuilder: jest.Mock;
   };
   let caronasRepository: {
     findOne: jest.Mock;
@@ -22,12 +23,42 @@ describe('SolicitacoesService', () => {
   let caronasService: {
     finalizarCaronasVencidas: jest.Mock;
   };
+  let atualizarQueryBuilder: {
+    update: jest.Mock;
+    set: jest.Mock;
+    where: jest.Mock;
+    andWhere: jest.Mock;
+    execute: jest.Mock;
+    innerJoinAndSelect: jest.Mock;
+    innerJoin: jest.Mock;
+    select: jest.Mock;
+    orderBy: jest.Mock;
+    addOrderBy: jest.Mock;
+    getMany: jest.Mock;
+  };
 
   beforeEach(() => {
+    atualizarQueryBuilder = {
+      update: jest.fn().mockReturnThis(),
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      execute: jest.fn().mockResolvedValue(undefined),
+      innerJoinAndSelect: jest.fn().mockReturnThis(),
+      innerJoin: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue([]),
+    };
+
     solicitacoesRepository = {
       findOne: jest.fn(),
-      create: jest.fn((dados) => dados),
+      create: jest.fn((dados: Partial<Solicitacao>) => dados as Solicitacao),
       save: jest.fn(),
+      createQueryBuilder: jest.fn(
+        (): typeof atualizarQueryBuilder => atualizarQueryBuilder,
+      ),
     };
     caronasRepository = {
       findOne: jest.fn(),
@@ -55,10 +86,9 @@ describe('SolicitacoesService', () => {
       usuario: { idUsuario: 2 },
     });
     solicitacoesRepository.findOne.mockResolvedValue(null);
-    solicitacoesRepository.save.mockImplementation(async (dados) => ({
-      ...dados,
-      idSolicitacao: 1,
-    }));
+    solicitacoesRepository.save.mockImplementation((dados: Solicitacao) =>
+      Promise.resolve({ ...dados, idSolicitacao: 1 }),
+    );
 
     const resultado = await service.criarSolicitacao({
       idCarona: 10,
@@ -71,6 +101,16 @@ describe('SolicitacoesService', () => {
     expect(resultado.status).toBe('PENDENTE');
     expect(caronasService.finalizarCaronasVencidas).toHaveBeenCalledTimes(1);
     expect(solicitacoesRepository.save).toHaveBeenCalledTimes(1);
+  });
+
+  it('expira pedidos pendentes de caronas finalizadas', async () => {
+    await service.listarRecebidas(2);
+
+    expect(caronasService.finalizarCaronasVencidas).toHaveBeenCalledTimes(1);
+    expect(atualizarQueryBuilder.set).toHaveBeenCalledWith({
+      status: 'EXPIRADA',
+    });
+    expect(atualizarQueryBuilder.execute).toHaveBeenCalledTimes(1);
   });
 
   it('impede solicitar vaga na própria carona', async () => {
@@ -127,8 +167,10 @@ describe('SolicitacoesService', () => {
       status: 'PENDENTE',
       carona,
     };
-    const salvarSolicitacao = jest.fn(async (dados) => dados);
-    const salvarCarona = jest.fn(async (dados) => dados);
+    const salvarSolicitacao = jest.fn((dados: Solicitacao) =>
+      Promise.resolve(dados),
+    );
+    const salvarCarona = jest.fn((dados: Carona) => Promise.resolve(dados));
     const queryBuilder = {
       innerJoinAndSelect: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
@@ -136,16 +178,17 @@ describe('SolicitacoesService', () => {
       getOne: jest.fn().mockResolvedValue(solicitacao),
     };
 
-    dataSource.transaction.mockImplementation(async (executar) =>
-      executar({
-        getRepository: (entidade: unknown) =>
-          entidade === Solicitacao
-            ? {
-                createQueryBuilder: () => queryBuilder,
-                save: salvarSolicitacao,
-              }
-            : { save: salvarCarona },
-      }),
+    dataSource.transaction.mockImplementation(
+      (executar: (manager: unknown) => Promise<Solicitacao>) =>
+        executar({
+          getRepository: (entidade: unknown) =>
+            entidade === Solicitacao
+              ? {
+                  createQueryBuilder: () => queryBuilder,
+                  save: salvarSolicitacao,
+                }
+              : { save: salvarCarona },
+        }),
     );
 
     const resultado = await service.responderSolicitacao(1, 2, 'ACEITA');

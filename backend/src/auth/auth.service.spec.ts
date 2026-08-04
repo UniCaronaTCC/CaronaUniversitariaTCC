@@ -52,8 +52,11 @@ describe('AuthService', () => {
     });
     jwtService.signAsync.mockResolvedValue('token-teste');
 
-    const resultado = await service.login('joao@email.com', '123456');
+    const resultado = await service.login(' JOAO@EMAIL.COM ', '123456');
 
+    expect(usersService.buscarPorEmailComSenha).toHaveBeenCalledWith(
+      'joao@email.com',
+    );
     expect(resultado.token).toBe('token-teste');
     expect(resultado.usuario).toEqual({
       id: 1,

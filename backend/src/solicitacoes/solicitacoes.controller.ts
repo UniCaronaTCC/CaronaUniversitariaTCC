@@ -9,19 +9,12 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { Request } from 'express';
-
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import type { RequisicaoComUsuario } from '../auth/requisicao-com-usuario';
 import { Solicitacao } from './solicitacao.entity';
 import { SolicitacoesService } from './solicitacoes.service';
 
-interface RequisicaoComUsuario extends Request {
-  usuario: {
-    sub: number;
-    email: string;
-    nome: string;
-  };
-}
+type DadosSolicitacaoRecebidos = Record<string, unknown> | undefined;
 
 @UseGuards(JwtAuthGuard)
 @Controller()
@@ -31,7 +24,7 @@ export class SolicitacoesController {
   @Post('caronas/:idCarona/solicitacoes')
   async criarSolicitacao(
     @Param('idCarona') idCaronaRecebido: string,
-    @Body() body: any,
+    @Body() body: DadosSolicitacaoRecebidos,
     @Req() request: RequisicaoComUsuario,
   ) {
     const idCarona = Number(idCaronaRecebido);
@@ -42,7 +35,7 @@ export class SolicitacoesController {
       throw new BadRequestException('Carona inválida');
     }
 
-    if (localEmbarque.isEmpty || localEmbarque.length > 255) {
+    if (!localEmbarque || localEmbarque.length > 255) {
       throw new BadRequestException('Local de embarque inválido');
     }
 
@@ -148,7 +141,7 @@ export class SolicitacoesController {
   @Patch('solicitacoes/:idSolicitacao/status')
   async responderSolicitacao(
     @Param('idSolicitacao') idRecebido: string,
-    @Body() body: any,
+    @Body() body: DadosSolicitacaoRecebidos,
     @Req() request: RequisicaoComUsuario,
   ) {
     const idSolicitacao = Number(idRecebido);
