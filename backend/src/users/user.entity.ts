@@ -23,6 +23,22 @@ export class User {
   @Column({ type: 'varchar', length: 150, nullable: true })
   campus: string | null = null;
 
+  @Column({
+    name: 'tipo_perfil',
+    type: 'varchar',
+    length: 20,
+    default: 'PASSAGEIRO',
+  })
+  tipoPerfil: string = 'PASSAGEIRO';
+
+  @Column({
+    name: 'status_verificacao',
+    type: 'varchar',
+    length: 20,
+    default: 'NAO_ENVIADO',
+  })
+  statusVerificacao: string = 'NAO_ENVIADO';
+
   @Column({ length: 255, select: false }) // Evita carregar o hash da senha em consultas comuns
   senha: string;
 

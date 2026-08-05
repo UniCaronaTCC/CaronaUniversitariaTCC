@@ -155,12 +155,75 @@ class _PerfilTelaState extends State<PerfilTela> {
     );
   }
 
+  String textoTipoPerfil(String tipoPerfil) {
+    if (tipoPerfil == 'MOTORISTA') {
+      return 'Motorista';
+    }
+
+    if (tipoPerfil == 'AMBOS') {
+      return 'Motorista e passageiro';
+    }
+
+    return 'Passageiro';
+  }
+
+  String textoVerificacao(String status) {
+    if (status == 'APROVADO') {
+      return 'Perfil verificado';
+    }
+
+    if (status == 'PENDENTE') {
+      return 'Verificação pendente';
+    }
+
+    if (status == 'RECUSADO') {
+      return 'Verificação recusada';
+    }
+
+    return 'Perfil não verificado';
+  }
+
+  IconData iconeVerificacao(String status) {
+    if (status == 'APROVADO') {
+      return Icons.verified;
+    }
+
+    if (status == 'PENDENTE') {
+      return Icons.schedule;
+    }
+
+    if (status == 'RECUSADO') {
+      return Icons.error_outline;
+    }
+
+    return Icons.verified_outlined;
+  }
+
+  Color corVerificacao(String status) {
+    if (status == 'APROVADO') {
+      return Colors.green;
+    }
+
+    if (status == 'PENDENTE') {
+      return Colors.orange;
+    }
+
+    if (status == 'RECUSADO') {
+      return Colors.red;
+    }
+
+    return Colors.black54;
+  }
+
   @override
   Widget build(BuildContext context) {
     final nome = usuario['nome']?.toString().trim() ?? '';
     final email = usuario['email']?.toString().trim() ?? '';
     final instituicao = usuario['instituicao']?.toString().trim() ?? '';
     final campus = usuario['campus']?.toString().trim() ?? '';
+    final tipoPerfil = usuario['tipoPerfil']?.toString().trim() ?? 'PASSAGEIRO';
+    final statusVerificacao =
+        usuario['statusVerificacao']?.toString().trim() ?? 'NAO_ENVIADO';
     final inicial = nome.isNotEmpty ? nome[0].toUpperCase() : 'U';
     final mediaRecebida =
         double.tryParse(usuario['avaliacaoMedia']?.toString() ?? '') ?? 0;
@@ -234,6 +297,34 @@ class _PerfilTelaState extends State<PerfilTela> {
                       fontSize: 13,
                       height: 1.3,
                     ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    textoTipoPerfil(tipoPerfil),
+                    style: const TextStyle(
+                      color: AppColors.text,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        iconeVerificacao(statusVerificacao),
+                        color: corVerificacao(statusVerificacao),
+                        size: 18,
+                      ),
+                      const SizedBox(width: 5),
+                      Text(
+                        textoVerificacao(statusVerificacao),
+                        style: TextStyle(
+                          color: corVerificacao(statusVerificacao),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   Row(

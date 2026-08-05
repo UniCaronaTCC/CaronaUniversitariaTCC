@@ -75,6 +75,8 @@ export class UsersController {
       email: usuario.email,
       instituicao: usuario.instituicao,
       campus: usuario.campus,
+      tipoPerfil: usuario.tipoPerfil,
+      statusVerificacao: usuario.statusVerificacao,
     };
   }
 }

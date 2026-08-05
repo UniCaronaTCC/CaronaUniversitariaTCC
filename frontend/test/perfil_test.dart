@@ -12,7 +12,9 @@ void main() {
 
   tearDown(AuthService.sair);
 
-  testWidgets('exibe os dados do usuário e permite sair', (tester) async {
+  testWidgets('exibe os dados do usuário e permite editar e sair', (
+    tester,
+  ) async {
     AuthService.tokenUsuarioLogado = 'token-teste';
     AuthService.usuarioLogado = {
       'id': 1,
@@ -20,6 +22,8 @@ void main() {
       'email': 'joao@email.com',
       'instituicao': 'UniSalesiano',
       'campus': 'Araçatuba',
+      'tipoPerfil': 'AMBOS',
+      'statusVerificacao': 'APROVADO',
       'avaliacaoMedia': 4.7,
       'totalAvaliacoes': 12,
     };
@@ -48,6 +52,8 @@ void main() {
     expect(find.text('João'), findsNWidgets(2));
     expect(find.text('joao@email.com'), findsOneWidget);
     expect(find.text('UniSalesiano - Campus Araçatuba'), findsOneWidget);
+    expect(find.text('Motorista e passageiro'), findsOneWidget);
+    expect(find.text('Perfil verificado'), findsOneWidget);
 
     await tester.scrollUntilVisible(find.text('4,7 / 5'), 200);
 
@@ -64,14 +70,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Fatec - Campus Araçatuba'), findsOneWidget);
+    expect(find.text('Motorista e passageiro'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(find.text('Sair'), 200);
-
-    expect(find.text('Sair'), findsOneWidget);
-
     await tester.tap(find.text('Sair'));
     await tester.pumpAndSettle();
 
