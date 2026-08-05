@@ -48,6 +48,7 @@ export class AuthService {
         instituicao: usuario.instituicao,
         campus: usuario.campus,
         tipoPerfil: usuario.tipoPerfil,
+        tipoPerfilSolicitado: usuario.tipoPerfilSolicitado,
         statusVerificacao: usuario.statusVerificacao,
       },
     };

@@ -25,6 +25,7 @@ describe('UsersController', () => {
       instituicao: 'UniSalesiano',
       campus: 'Araçatuba',
       tipoPerfil: 'AMBOS',
+      tipoPerfilSolicitado: null,
       statusVerificacao: 'APROVADO',
       senha: 'hash-que-nao-deve-sair',
     });
@@ -44,6 +45,7 @@ describe('UsersController', () => {
       instituicao: 'UniSalesiano',
       campus: 'Araçatuba',
       tipoPerfil: 'AMBOS',
+      tipoPerfilSolicitado: null,
       statusVerificacao: 'APROVADO',
     });
     expect(resultado.dados).not.toHaveProperty('senha');
@@ -71,6 +73,7 @@ describe('UsersController', () => {
       instituicao: 'UniSalesiano',
       campus: 'Araçatuba',
       tipoPerfil: 'PASSAGEIRO',
+      tipoPerfilSolicitado: 'MOTORISTA',
       statusVerificacao: 'NAO_ENVIADO',
     });
 

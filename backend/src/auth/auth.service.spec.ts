@@ -46,6 +46,7 @@ describe('AuthService', () => {
       instituicao: 'UniSalesiano',
       campus: 'Araçatuba',
       tipoPerfil: 'AMBOS',
+      tipoPerfilSolicitado: null,
       statusVerificacao: 'APROVADO',
     });
     jwtService.signAsync.mockResolvedValue('token-teste');
@@ -63,6 +64,7 @@ describe('AuthService', () => {
       instituicao: 'UniSalesiano',
       campus: 'Araçatuba',
       tipoPerfil: 'AMBOS',
+      tipoPerfilSolicitado: null,
       statusVerificacao: 'APROVADO',
     });
     expect(resultado.usuario).not.toHaveProperty('senha');
