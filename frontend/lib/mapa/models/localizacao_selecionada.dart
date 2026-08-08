@@ -4,8 +4,10 @@ class LocalizacaoSelecionada {
   final LatLng ponto;
   final String endereco;
   final String? cidade;
+  final String? estado;
+  final String? pais;
 
-  // Nome digitado pelo usuario, como "UniSalesiano".
+  // Nome digitado pelo usuário, como "UniSalesiano".
   final String? nome;
 
   const LocalizacaoSelecionada({
@@ -13,9 +15,11 @@ class LocalizacaoSelecionada {
     required this.endereco,
     this.nome,
     this.cidade,
+    this.estado,
+    this.pais,
   });
 
-  // Une o nome conhecido ao endereco completo.
+  // Une o nome conhecido ao endereço completo.
   String get descricaoCompleta {
     final nomeLimpo = nome?.trim();
 

@@ -13,7 +13,10 @@ class EnderecoService {
       double longitude,
       ) async {
     try {
-      final locais = await placemarkFromCoordinates(latitude, longitude);
+      final locais = await placemarkFromCoordinates(
+        latitude,
+        longitude,
+      );
 
       if (locais.isEmpty) {
         return null;
@@ -21,21 +24,39 @@ class EnderecoService {
 
       final local = locais.first;
 
-      final rua = local.street;
-      final bairro = local.subLocality;
-      final cidade = local.locality?.isNotEmpty == true
-          ? local.locality
-          : local.subAdministrativeArea;
-      final estado = local.administrativeArea;
-      final pais = local.country;
+      final rua = local.street?.trim();
+      final bairro = local.subLocality?.trim();
 
-      final partes = [
-        rua,
-        bairro,
-        cidade,
-        estado,
-        pais,
-      ].where((parte) => parte != null && parte.isNotEmpty).join(', ');
+      final cidade = local.locality?.trim().isNotEmpty == true
+          ? local.locality!.trim()
+          : local.subAdministrativeArea?.trim();
+
+      final estado = local.administrativeArea?.trim();
+      final pais = local.country?.trim();
+
+      // Monta o endereço evitando informações repetidas.
+      final partes = <String>[];
+
+      void adicionarParte(String? parte) {
+        if (parte == null || parte.isEmpty) {
+          return;
+        }
+
+        final jaExiste = partes.any(
+              (existente) =>
+          existente.toLowerCase() == parte.toLowerCase(),
+        );
+
+        if (!jaExiste) {
+          partes.add(parte);
+        }
+      }
+
+      adicionarParte(rua);
+      adicionarParte(bairro);
+      adicionarParte(cidade);
+      adicionarParte(estado);
+      adicionarParte(pais);
 
       if (partes.isEmpty) {
         return null;
@@ -43,11 +64,16 @@ class EnderecoService {
 
       return LocalizacaoSelecionada(
         ponto: LatLng(latitude, longitude),
-        endereco: partes,
+        endereco: partes.join(', '),
         cidade: cidade,
+        estado: estado,
+        pais: pais,
       );
     } catch (erro) {
-      debugPrint('Erro ao identificar localização: $erro');
+      debugPrint(
+        'Erro ao identificar localização: $erro',
+      );
+
       return null;
     }
   }
@@ -62,67 +88,112 @@ class EnderecoService {
         return [];
       }
 
-      final uri = Uri.https('photon.komoot.io', '/api', {
-        'q': textoBusca,
-        'limit': '5',
-      });
+      final uri = Uri.https(
+        'photon.komoot.io',
+        '/api',
+        {
+          'q': textoBusca,
+          'limit': '5',
+        },
+      );
 
       final response = await http.get(
         uri,
-        headers: {'User-Agent': 'UniCarona/1.0'},
+        headers: {
+          'User-Agent': 'UniCarona/1.0',
+        },
       );
 
       if (response.statusCode != 200) {
-        debugPrint('Erro Photon: ${response.statusCode}');
+        debugPrint(
+          'Erro Photon: ${response.statusCode}',
+        );
+
         return [];
       }
 
       final json = jsonDecode(response.body);
 
-      final features = (json['features'] as List).where((feature) {
-        final properties = feature['properties'];
-        return (properties['countrycode'] ?? '').toString().toUpperCase() ==
-            'BR';
-      }).toList();
+      final features = (json['features'] as List).where(
+            (feature) {
+          final properties = feature['properties'];
 
-      return features.map((feature) {
-        final properties = feature['properties'];
+          return (properties['countrycode'] ?? '')
+              .toString()
+              .toUpperCase() ==
+              'BR';
+        },
+      ).toList();
 
-        final nome = properties['name'] ?? '';
+      return features.map<LocalizacaoSelecionada>(
+            (feature) {
+          final properties = feature['properties'];
 
-        final rua = properties['street'] ?? '';
+          final nome = properties['name']?.toString().trim() ?? '';
 
-        final bairro = properties['district'] ?? '';
+          final rua = properties['street']?.toString().trim();
 
-        final cidade =
-            properties['city'] ??
-                properties['locality'] ??
-                properties['county'] ??
-                '';
+          final bairro = properties['district']?.toString().trim();
 
-        final estado = properties['state'] ?? '';
+          final cidade = (
+              properties['city'] ??
+                  properties['locality'] ??
+                  properties['county'] ??
+                  ''
+          ).toString().trim();
 
-        final pais = properties['country'] ?? '';
+          final estado = properties['state']?.toString().trim();
 
-        final coordinates = feature['geometry']['coordinates'];
+          final pais = properties['country']?.toString().trim();
 
-        final endereco = [
-          rua,
-          bairro,
-          cidade,
-          estado,
-          pais,
-        ].where((item) => item.isNotEmpty).join(', ');
+          final coordinates =
+          feature['geometry']['coordinates'];
 
-        return LocalizacaoSelecionada(
-          ponto: LatLng(coordinates[1], coordinates[0]),
-          nome: nome,
-          endereco: endereco.isEmpty ? nome : endereco,
-          cidade: cidade.toString(),
-        );
-      }).toList();
+          // Monta o endereço evitando repetições.
+          final partes = <String>[];
+
+          void adicionarParte(String? parte) {
+            if (parte == null || parte.isEmpty) {
+              return;
+            }
+
+            final jaExiste = partes.any(
+                  (existente) =>
+              existente.toLowerCase() ==
+                  parte.toLowerCase(),
+            );
+
+            if (!jaExiste) {
+              partes.add(parte);
+            }
+          }
+
+          adicionarParte(rua);
+          adicionarParte(bairro);
+          adicionarParte(cidade);
+          adicionarParte(estado);
+          adicionarParte(pais);
+
+          final endereco = partes.join(', ');
+
+          return LocalizacaoSelecionada(
+            ponto: LatLng(
+              coordinates[1],
+              coordinates[0],
+            ),
+            nome: nome,
+            endereco: endereco.isEmpty ? nome : endereco,
+            cidade: cidade.isEmpty ? null : cidade,
+            estado: estado,
+            pais: pais,
+          );
+        },
+      ).toList();
     } catch (erro) {
-      debugPrint('Erro Photon: $erro');
+      debugPrint(
+        'Erro Photon: $erro',
+      );
+
       return [];
     }
   }

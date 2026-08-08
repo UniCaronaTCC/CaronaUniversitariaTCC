@@ -37,6 +37,7 @@ class _TesteMapaState extends State<TesteMapa> {
   LatLng? _pontoEncontro;
 
   String? _enderecoPontoEncontro;
+  String? _nomePontoEncontro;
   String? _cidadePontoEncontro;
 
   bool _buscandoLocalizacao = true;
@@ -125,6 +126,7 @@ class _TesteMapaState extends State<TesteMapa> {
   void _selecionarEnderecoPesquisado(LocalizacaoSelecionada local) {
     setState(() {
       _pontoEncontro = local.ponto;
+      _nomePontoEncontro = local.nome;
       _enderecoPontoEncontro = local.endereco;
       _cidadePontoEncontro = local.cidade;
       _buscandoEndereco = false;
@@ -149,6 +151,7 @@ class _TesteMapaState extends State<TesteMapa> {
           ponto: _pontoEncontro!,
           endereco: _enderecoPontoEncontro ?? 'Endereço não encontrado',
           cidade: _cidadePontoEncontro,
+          nome: _nomePontoEncontro,
         ),
       );
       return;
@@ -260,7 +263,10 @@ class _TesteMapaState extends State<TesteMapa> {
                     const Text('Buscando endereço...')
                   else
                     Text(
-                      _enderecoPontoEncontro ??
+                      _nomePontoEncontro != null &&
+                          _nomePontoEncontro!.trim().isNotEmpty
+                          ? '$_nomePontoEncontro - ${_enderecoPontoEncontro ?? ''}'
+                          : _enderecoPontoEncontro ??
                           'Toque no mapa para ajustar a origem',
                     ),
                   const SizedBox(height: 12),

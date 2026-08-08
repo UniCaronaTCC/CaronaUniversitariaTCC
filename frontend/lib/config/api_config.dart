@@ -5,7 +5,7 @@ class ApiConfig {
   // Em outro ambiente, use --dart-define=API_BASE_URL=http://endereco:porta.
   static const String baseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://192.168.137.1',
+    defaultValue: 'http://10.0.2.2:3000',
     // 192.168.137.1 para usar no celular
     //http://10.0.2.2:3000 para usar no emulador
   );
