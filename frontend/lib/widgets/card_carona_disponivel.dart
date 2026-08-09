@@ -121,9 +121,10 @@ class CardCaronaDisponivel extends StatelessWidget {
               ),
 
               // Mostra somente uma origem aproximada, quando existir.
-              if (carona.origemCidade?.isNotEmpty == true) ...[
+              if (carona.origem.isNotEmpty) ...[
                 const SizedBox(height: 12),
                 Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Icon(
                       Icons.trip_origin,
@@ -133,7 +134,8 @@ class CardCaronaDisponivel extends StatelessWidget {
                     const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Saída em ${carona.origemCidade}',
+                        'Saída em ${carona.origem}',
+                        maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(
                           color: Colors.black54,

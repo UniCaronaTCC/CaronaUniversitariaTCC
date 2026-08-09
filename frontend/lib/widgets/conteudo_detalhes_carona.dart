@@ -109,13 +109,12 @@ class ConteudoDetalhesCarona extends StatelessWidget {
             conteudo: carona.destino,
           ),
 
-          if (carona.origemCidade?.trim().isNotEmpty == true) ...[
+          if (carona.origem.trim().isNotEmpty) ...[
             const SizedBox(height: 22),
             _SecaoDetalhe(
-              titulo: 'Região de saída',
+              titulo: 'Origem',
               icone: Icons.trip_origin,
-              conteudo: carona.origemCidade!.trim(),
-              discreto: true,
+              conteudo: carona.origem.trim(),
             ),
           ],
 
