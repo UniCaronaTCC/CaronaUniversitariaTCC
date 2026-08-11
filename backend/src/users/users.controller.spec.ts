@@ -24,6 +24,9 @@ describe('UsersController', () => {
       email: 'joao@email.com',
       instituicao: 'UniSalesiano',
       campus: 'Araçatuba',
+      tipoPerfil: 'AMBOS',
+      tipoPerfilSolicitado: null,
+      statusVerificacao: 'APROVADO',
       senha: 'hash-que-nao-deve-sair',
     });
 
@@ -41,6 +44,9 @@ describe('UsersController', () => {
       email: 'joao@email.com',
       instituicao: 'UniSalesiano',
       campus: 'Araçatuba',
+      tipoPerfil: 'AMBOS',
+      tipoPerfilSolicitado: null,
+      statusVerificacao: 'APROVADO',
     });
     expect(resultado.dados).not.toHaveProperty('senha');
   });
@@ -59,13 +65,16 @@ describe('UsersController', () => {
     );
   });
 
-  it('atualiza os dados acadêmicos do perfil', async () => {
+  it('atualiza os dados do perfil', async () => {
     usersService.atualizarPerfil.mockResolvedValue({
       idUsuario: 1,
       nome: 'João',
       email: 'joao@email.com',
       instituicao: 'UniSalesiano',
       campus: 'Araçatuba',
+      tipoPerfil: 'PASSAGEIRO',
+      tipoPerfilSolicitado: 'MOTORISTA',
+      statusVerificacao: 'NAO_ENVIADO',
     });
 
     const request = {
@@ -75,11 +84,23 @@ describe('UsersController', () => {
     };
 
     const resultado = await controller.atualizarPerfil(
-      { instituicao: 'UniSalesiano', campus: 'Araçatuba' },
+      {
+        instituicao: 'UniSalesiano',
+        campus: 'Araçatuba',
+        tipoPerfil: 'MOTORISTA',
+        statusVerificacao: 'APROVADO',
+      },
       request,
     );
 
     expect(resultado.mensagem).toBe('Perfil atualizado com sucesso');
     expect(resultado.dados.instituicao).toBe('UniSalesiano');
+    expect(resultado.dados.tipoPerfil).toBe('PASSAGEIRO');
+    expect(resultado.dados.statusVerificacao).toBe('NAO_ENVIADO');
+    expect(usersService.atualizarPerfil).toHaveBeenCalledWith(
+      1,
+      'UniSalesiano',
+      'Araçatuba',
+    );
   });
 });

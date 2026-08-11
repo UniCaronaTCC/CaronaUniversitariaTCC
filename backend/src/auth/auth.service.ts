@@ -47,6 +47,9 @@ export class AuthService {
         email: usuario.email,
         instituicao: usuario.instituicao,
         campus: usuario.campus,
+        tipoPerfil: usuario.tipoPerfil,
+        tipoPerfilSolicitado: usuario.tipoPerfilSolicitado,
+        statusVerificacao: usuario.statusVerificacao,
       },
     };
   }

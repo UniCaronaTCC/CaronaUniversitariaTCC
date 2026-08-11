@@ -59,8 +59,13 @@ describe('UsersService', () => {
     });
   });
 
-  it('atualiza instituição e campus do usuário', async () => {
-    const usuario = { idUsuario: 1, instituicao: null, campus: null };
+  it('atualiza instituição e campus sem mudar o tipo do perfil', async () => {
+    const usuario = {
+      idUsuario: 1,
+      instituicao: null,
+      campus: null,
+      tipoPerfil: 'PASSAGEIRO',
+    };
     repository.findOne.mockResolvedValue(usuario);
     repository.save.mockImplementation((dados: User) => Promise.resolve(dados));
 
@@ -72,6 +77,7 @@ describe('UsersService', () => {
 
     expect(resultado?.instituicao).toBe('UniSalesiano');
     expect(resultado?.campus).toBe('Araçatuba');
+    expect(resultado?.tipoPerfil).toBe('PASSAGEIRO');
     expect(repository.save).toHaveBeenCalledWith(usuario);
   });
 });

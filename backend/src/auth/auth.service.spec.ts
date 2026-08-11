@@ -11,9 +11,7 @@ describe('AuthService', () => {
     buscarPorEmailComSenha: jest.Mock;
     criarUsuario: jest.Mock;
   };
-  let jwtService: {
-    signAsync: jest.Mock;
-  };
+  let jwtService: { signAsync: jest.Mock };
 
   beforeEach(() => {
     usersService = {
@@ -21,9 +19,7 @@ describe('AuthService', () => {
       buscarPorEmailComSenha: jest.fn(),
       criarUsuario: jest.fn(),
     };
-    jwtService = {
-      signAsync: jest.fn(),
-    };
+    jwtService = { signAsync: jest.fn() };
 
     service = new AuthService(
       usersService as unknown as UsersService,
@@ -49,6 +45,9 @@ describe('AuthService', () => {
       senha: senhaHash,
       instituicao: 'UniSalesiano',
       campus: 'Araçatuba',
+      tipoPerfil: 'AMBOS',
+      tipoPerfilSolicitado: null,
+      statusVerificacao: 'APROVADO',
     });
     jwtService.signAsync.mockResolvedValue('token-teste');
 
@@ -64,6 +63,9 @@ describe('AuthService', () => {
       email: 'joao@email.com',
       instituicao: 'UniSalesiano',
       campus: 'Araçatuba',
+      tipoPerfil: 'AMBOS',
+      tipoPerfilSolicitado: null,
+      statusVerificacao: 'APROVADO',
     });
     expect(resultado.usuario).not.toHaveProperty('senha');
   });
