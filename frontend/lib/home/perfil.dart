@@ -3,9 +3,11 @@ import 'package:flutter/material.dart';
 import '../auth/login.dart';
 import '../config/app_colors.dart';
 import '../navigation/navegacao_principal.dart';
+import '../services/avaliacao_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/componentes_padrao.dart';
+import 'avaliacoes_recebidas.dart';
 
 typedef CarregarPerfil = Future<Map<String, dynamic>> Function();
 typedef AtualizarPerfil =
@@ -14,8 +16,14 @@ typedef AtualizarPerfil =
 class PerfilTela extends StatefulWidget {
   final CarregarPerfil? carregarPerfil;
   final AtualizarPerfil? atualizarPerfil;
+  final CarregarAvaliacoes? carregarAvaliacoes;
 
-  const PerfilTela({super.key, this.carregarPerfil, this.atualizarPerfil});
+  const PerfilTela({
+    super.key,
+    this.carregarPerfil,
+    this.atualizarPerfil,
+    this.carregarAvaliacoes,
+  });
 
   @override
   State<PerfilTela> createState() => _PerfilTelaState();
@@ -25,6 +33,9 @@ class _PerfilTelaState extends State<PerfilTela> {
   Map<String, dynamic> usuario = AuthService.usuarioLogado ?? {};
   bool carregando = true;
   String? mensagemErro;
+  String? mensagemErroAvaliacoes;
+  double mediaAvaliacao = 0;
+  int totalAvaliacoes = 0;
 
   @override
   void initState() {
@@ -36,24 +47,77 @@ class _PerfilTelaState extends State<PerfilTela> {
     setState(() {
       carregando = true;
       mensagemErro = null;
+      mensagemErroAvaliacoes = null;
     });
 
-    final resultado =
+    final resultadoPerfil =
         await (widget.carregarPerfil?.call() ?? AuthService.buscarPerfil());
 
     if (!mounted) {
       return;
     }
 
-    setState(() {
-      carregando = false;
+    if (resultadoPerfil['sucesso'] != true ||
+        resultadoPerfil['dados'] is! Map) {
+      setState(() {
+        carregando = false;
+        mensagemErro = resultadoPerfil['mensagem']?.toString();
+      });
+      return;
+    }
 
-      if (resultado['sucesso'] == true && resultado['dados'] is Map) {
-        usuario = Map<String, dynamic>.from(resultado['dados']);
+    final novoUsuario = Map<String, dynamic>.from(resultadoPerfil['dados']);
+    final idUsuario = int.tryParse(novoUsuario['id']?.toString() ?? '');
+    Map<String, dynamic>? dadosAvaliacoes;
+    String? erroAvaliacoes;
+
+    if (idUsuario != null) {
+      final resultadoAvaliacoes =
+          await (widget.carregarAvaliacoes?.call(idUsuario, 1) ??
+              AvaliacaoService.listarRecebidas(idUsuario));
+
+      if (resultadoAvaliacoes['sucesso'] == true &&
+          resultadoAvaliacoes['dados'] is Map) {
+        dadosAvaliacoes = Map<String, dynamic>.from(
+          resultadoAvaliacoes['dados'],
+        );
       } else {
-        mensagemErro = resultado['mensagem']?.toString();
+        erroAvaliacoes = resultadoAvaliacoes['mensagem']?.toString();
       }
+    }
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      usuario = novoUsuario;
+      mediaAvaliacao =
+          double.tryParse(dadosAvaliacoes?['media']?.toString() ?? '') ?? 0;
+      totalAvaliacoes =
+          int.tryParse(dadosAvaliacoes?['total']?.toString() ?? '') ?? 0;
+      mensagemErroAvaliacoes = erroAvaliacoes;
+      carregando = false;
     });
+  }
+
+  void abrirAvaliacoes() {
+    final idUsuario = int.tryParse(usuario['id']?.toString() ?? '');
+
+    if (idUsuario == null) {
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AvaliacoesRecebidasTela(
+          idUsuario: idUsuario,
+          nomeUsuario: usuario['nome']?.toString() ?? 'Usuário',
+          carregarAvaliacoes: widget.carregarAvaliacoes,
+        ),
+      ),
+    );
   }
 
   Future<void> editarPerfil() async {
@@ -225,12 +289,8 @@ class _PerfilTelaState extends State<PerfilTela> {
     final statusVerificacao =
         usuario['statusVerificacao']?.toString().trim() ?? 'NAO_ENVIADO';
     final inicial = nome.isNotEmpty ? nome[0].toUpperCase() : 'U';
-    final mediaRecebida =
-        double.tryParse(usuario['avaliacaoMedia']?.toString() ?? '') ?? 0;
-    final mediaAvaliacao = mediaRecebida.clamp(0, 5).toDouble();
-    final totalAvaliacoes =
-        int.tryParse(usuario['totalAvaliacoes']?.toString() ?? '') ?? 0;
-    final textoMedia = mediaAvaliacao.toStringAsFixed(1).replaceAll('.', ',');
+    final mediaExibida = mediaAvaliacao.clamp(0, 5).toDouble();
+    final textoMedia = mediaExibida.toStringAsFixed(1).replaceAll('.', ',');
     final textoTotalAvaliacoes = totalAvaliacoes == 0
         ? 'Sem avaliações'
         : totalAvaliacoes == 1
@@ -327,29 +387,51 @@ class _PerfilTelaState extends State<PerfilTela> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(
-                        Icons.star,
-                        color: AppColors.primary,
-                        size: 24,
+                  InkWell(
+                    onTap: abrirAvaliacoes,
+                    borderRadius: BorderRadius.circular(8),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 6,
                       ),
-                      const SizedBox(width: 6),
-                      Text(
-                        '$textoMedia / 5',
-                        style: const TextStyle(
-                          color: AppColors.text,
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.star,
+                                color: AppColors.primary,
+                                size: 24,
+                              ),
+                              const SizedBox(width: 6),
+                              Text(
+                                '$textoMedia / 5',
+                                style: const TextStyle(
+                                  color: AppColors.text,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(width: 4),
+                              const Icon(
+                                Icons.chevron_right,
+                                color: Colors.black45,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            mensagemErroAvaliacoes ?? textoTotalAvaliacoes,
+                            style: const TextStyle(
+                              color: Colors.black54,
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    textoTotalAvaliacoes,
-                    style: const TextStyle(color: Colors.black54, fontSize: 13),
+                    ),
                   ),
                 ],
               ),
