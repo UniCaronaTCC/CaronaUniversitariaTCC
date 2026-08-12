@@ -8,6 +8,7 @@ import { AuthModule } from './auth/auth.module'; // Importa o módulo de autenti
 import { UsersModule } from './users/users.module'; // Importa o módulo de usuários
 import { AvaliacoesModule } from './avaliacoes/avaliacoes.module';
 import { CaronasModule } from './caronas/caronas.module';
+import { InstituicoesModule } from './instituicoes/instituicoes.module';
 import { SolicitacoesModule } from './solicitacoes/solicitacoes.module';
 
 
@@ -35,6 +36,7 @@ import { EmailModule } from './email/email.module';
     SolicitacoesModule,
     AvaliacoesModule,
     EmailModule,
+    InstituicoesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

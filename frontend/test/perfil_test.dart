@@ -89,8 +89,7 @@ void main() {
     await tester.tap(find.byTooltip('Voltar'));
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(find.text('Editar perfil'), 200);
-    await tester.tap(find.text('Editar perfil'));
+    await tester.tap(find.byTooltip('Editar perfil'));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).at(0), 'Fatec');

@@ -13,6 +13,8 @@ class SolicitacaoEnviada {
   final DateTime dataInicio;
   final String horario;
   final double valor;
+  final bool avaliada;
+  final bool podeAvaliar;
 
   const SolicitacaoEnviada({
     required this.id,
@@ -24,6 +26,8 @@ class SolicitacaoEnviada {
     required this.dataInicio,
     required this.horario,
     required this.valor,
+    this.avaliada = false,
+    this.podeAvaliar = false,
   });
 
   factory SolicitacaoEnviada.fromJson(Map<String, dynamic> json) {
@@ -44,6 +48,8 @@ class SolicitacaoEnviada {
       dataInicio: DateTime.parse(carona['dataInicio'].toString()),
       horario: carona['horario']?.toString() ?? '',
       valor: converterJsonParaDouble(carona['valor']),
+      avaliada: json['avaliada'] == true,
+      podeAvaliar: json['podeAvaliar'] == true,
     );
   }
 

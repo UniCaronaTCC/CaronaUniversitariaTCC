@@ -95,8 +95,9 @@ class EstadoConteudoPadrao extends StatelessWidget {
 class BarraSuperiorPadrao extends StatelessWidget
     implements PreferredSizeWidget {
   final String titulo;
+  final List<Widget>? actions;
 
-  const BarraSuperiorPadrao({super.key, required this.titulo});
+  const BarraSuperiorPadrao({super.key, required this.titulo, this.actions});
 
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
@@ -108,6 +109,7 @@ class BarraSuperiorPadrao extends StatelessWidget
       backgroundColor: AppColors.background,
       foregroundColor: AppColors.text,
       elevation: 0,
+      actions: actions,
       leading: IconButton(
         tooltip: 'Voltar',
         icon: const Icon(Icons.arrow_back),

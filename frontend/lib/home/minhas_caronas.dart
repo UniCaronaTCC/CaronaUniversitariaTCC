@@ -6,12 +6,14 @@ import '../models/solicitacao_enviada.dart';
 import '../models/solicitacao_recebida.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/carona_service.dart';
+import '../services/avaliacao_service.dart';
 import '../services/solicitacao_service.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/card_carona_disponivel.dart';
 import '../widgets/card_solicitacao_enviada.dart';
 import '../widgets/card_solicitacao_recebida.dart';
 import '../widgets/componentes_padrao.dart';
+import '../widgets/dialogo_avaliacao.dart';
 import 'detalhes_carona.dart';
 
 enum FiltroOfertadas { solicitacoes, ofertas }
@@ -109,6 +111,40 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
       SnackBar(
         content: Text(
           resultado['mensagem']?.toString() ?? 'Erro ao responder solicitação',
+        ),
+      ),
+    );
+
+    if (resultado['sucesso'] == true) {
+      await carregarDados();
+    }
+  }
+
+  Future<void> avaliar(int idSolicitacao, String nome) async {
+    final dados = await mostrarDialogoAvaliacao(context, nome);
+
+    if (!mounted || dados == null) {
+      return;
+    }
+
+    setState(() => idProcessando = idSolicitacao);
+
+    final resultado = await AvaliacaoService.enviar(
+      idSolicitacao: idSolicitacao,
+      nota: dados.nota,
+      comentario: dados.comentario,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => idProcessando = null);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          resultado['mensagem']?.toString() ?? 'Erro ao enviar avaliação',
         ),
       ),
     );
@@ -250,6 +286,7 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
           processando: idProcessando == solicitacao.id,
           onAceitar: () => responder(solicitacao, 'ACEITA'),
           onRecusar: () => responder(solicitacao, 'RECUSADA'),
+          onAvaliar: () => avaliar(solicitacao.id, solicitacao.passageiro),
         ),
       ),
     ];
@@ -291,7 +328,11 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
           else
             _listaSeparada(
               solicitacoesEnviadas,
-              (solicitacao) => CardSolicitacaoEnviada(solicitacao: solicitacao),
+              (solicitacao) => CardSolicitacaoEnviada(
+                solicitacao: solicitacao,
+                processando: idProcessando == solicitacao.id,
+                onAvaliar: () => avaliar(solicitacao.id, solicitacao.motorista),
+              ),
             ),
         ],
       ),

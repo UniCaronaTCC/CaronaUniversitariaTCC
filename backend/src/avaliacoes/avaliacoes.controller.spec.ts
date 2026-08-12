@@ -1,15 +1,17 @@
 import { BadRequestException } from '@nestjs/common';
 
+import type { RequisicaoComUsuario } from '../auth/requisicao-com-usuario';
 import { Avaliacao } from './avaliacao.entity';
 import { AvaliacoesController } from './avaliacoes.controller';
 import { AvaliacoesService } from './avaliacoes.service';
 
 describe('AvaliacoesController', () => {
   let controller: AvaliacoesController;
-  let avaliacoesService: { listarRecebidas: jest.Mock };
+  let avaliacoesService: { listarRecebidas: jest.Mock; criar: jest.Mock };
 
   beforeEach(() => {
     avaliacoesService = {
+      criar: jest.fn().mockResolvedValue({ idAvaliacao: 3 }),
       listarRecebidas: jest.fn().mockResolvedValue({
         media: 5,
         total: 1,
@@ -35,6 +37,36 @@ describe('AvaliacoesController', () => {
     controller = new AvaliacoesController(
       avaliacoesService as unknown as AvaliacoesService,
     );
+  });
+
+  it('envia uma avaliação válida usando o usuário do token', async () => {
+    const request = {
+      usuario: { sub: 1, nome: 'João', email: 'joao@email.com' },
+    } as RequisicaoComUsuario;
+
+    const resultado = await controller.criar(
+      { idSolicitacao: 10, nota: 5, comentario: 'Boa carona' },
+      request,
+    );
+
+    expect(avaliacoesService.criar).toHaveBeenCalledWith(
+      1,
+      10,
+      5,
+      'Boa carona',
+    );
+    expect(resultado.dados.id).toBe(3);
+  });
+
+  it('recusa uma nota fora do intervalo', async () => {
+    const request = {
+      usuario: { sub: 1, nome: 'João', email: 'joao@email.com' },
+    } as RequisicaoComUsuario;
+
+    await expect(
+      controller.criar({ idSolicitacao: 10, nota: 6 }, request),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(avaliacoesService.criar).not.toHaveBeenCalled();
   });
 
   it('retorna somente os dados publicos das avaliacoes', async () => {

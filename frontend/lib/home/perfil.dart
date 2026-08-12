@@ -303,7 +303,16 @@ class _PerfilTelaState extends State<PerfilTela> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const BarraSuperiorPadrao(titulo: 'Perfil'),
+      appBar: BarraSuperiorPadrao(
+        titulo: 'Perfil',
+        actions: [
+          IconButton(
+            tooltip: 'Editar perfil',
+            onPressed: carregando ? null : editarPerfil,
+            icon: const Icon(Icons.edit_outlined),
+          ),
+        ],
+      ),
       bottomNavigationBar: BarraNavegacaoHome(
         currentIndex: 3,
         onTap: (indice) =>
@@ -466,21 +475,6 @@ class _PerfilTelaState extends State<PerfilTela> {
               valor: email.isNotEmpty ? email : 'Não informado',
             ),
             const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: editarPerfil,
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text('Editar perfil'),
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 12),
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(

@@ -9,6 +9,7 @@ import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
 
 import { Carona } from '../caronas/carona.entity';
 import { CaronasService } from '../caronas/caronas.service';
+import { AvaliacoesService } from '../avaliacoes/avaliacoes.service';
 import { Solicitacao } from './solicitacao.entity';
 
 export interface DadosNovaSolicitacao {
@@ -28,6 +29,7 @@ export class SolicitacoesService {
     private readonly caronasRepository: Repository<Carona>,
     private readonly dataSource: DataSource,
     private readonly caronasService: CaronasService,
+    private readonly avaliacoesService: AvaliacoesService,
   ) {}
 
   async criarSolicitacao(dados: DadosNovaSolicitacao): Promise<Solicitacao> {
@@ -89,7 +91,8 @@ export class SolicitacoesService {
 
   async listarRecebidas(idMotorista: number): Promise<Solicitacao[]> {
     await this.atualizarCaronasVencidas();
-    return this.consultaRecebidas(idMotorista).getMany();
+    const solicitacoes = await this.consultaRecebidas(idMotorista).getMany();
+    return this.marcarAvaliacoes(solicitacoes, idMotorista);
   }
 
   async listarRecebidasDaCarona(
@@ -97,9 +100,10 @@ export class SolicitacoesService {
     idCarona: number,
   ): Promise<Solicitacao[]> {
     await this.atualizarCaronasVencidas();
-    return this.consultaRecebidas(idMotorista)
+    const solicitacoes = await this.consultaRecebidas(idMotorista)
       .andWhere('carona.idCarona = :idCarona', { idCarona })
       .getMany();
+    return this.marcarAvaliacoes(solicitacoes, idMotorista);
   }
 
   private consultaRecebidas(
@@ -116,6 +120,9 @@ export class SolicitacoesService {
         'carona.destino',
         'carona.dataInicio',
         'carona.horario',
+        'carona.status',
+        'carona.recorrente',
+        'carona.diasSemana',
         'passageiro.idUsuario',
         'passageiro.nome',
       ])
@@ -126,7 +133,7 @@ export class SolicitacoesService {
 
   async listarEnviadas(idPassageiro: number): Promise<Solicitacao[]> {
     await this.atualizarCaronasVencidas();
-    return this.solicitacoesRepository
+    const solicitacoes = await this.solicitacoesRepository
       .createQueryBuilder('solicitacao')
       .innerJoinAndSelect('solicitacao.carona', 'carona')
       .innerJoinAndSelect('carona.usuario', 'motorista')
@@ -138,6 +145,9 @@ export class SolicitacoesService {
         'carona.dataInicio',
         'carona.horario',
         'carona.valor',
+        'carona.status',
+        'carona.recorrente',
+        'carona.diasSemana',
         'motorista.idUsuario',
         'motorista.nome',
       ])
@@ -145,6 +155,8 @@ export class SolicitacoesService {
       .orderBy("CASE WHEN solicitacao.status = 'PENDENTE' THEN 0 ELSE 1 END")
       .addOrderBy('solicitacao.criadoEm', 'DESC')
       .getMany();
+
+    return this.marcarAvaliacoes(solicitacoes, idPassageiro);
   }
 
   async responderSolicitacao(
@@ -221,5 +233,25 @@ export class SolicitacoesService {
         { statusCarona: 'FINALIZADA' },
       )
       .execute();
+  }
+
+  private async marcarAvaliacoes(
+    solicitacoes: Solicitacao[],
+    idUsuario: number,
+  ): Promise<Solicitacao[]> {
+    const idsAvaliados =
+      await this.avaliacoesService.buscarSolicitacoesAvaliadas(
+        idUsuario,
+        solicitacoes.map((item) => item.idSolicitacao),
+      );
+
+    for (const solicitacao of solicitacoes) {
+      solicitacao.avaliada = idsAvaliados.has(solicitacao.idSolicitacao);
+      solicitacao.podeAvaliar =
+        !solicitacao.avaliada &&
+        this.avaliacoesService.podeAvaliarSolicitacao(solicitacao);
+    }
+
+    return solicitacoes;
   }
 }
