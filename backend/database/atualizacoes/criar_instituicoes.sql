@@ -1,4 +1,5 @@
 USE carona_universitaria;
+SET NAMES utf8mb4;
 
 CREATE TABLE IF NOT EXISTS instituicoes (
   id_instituicao INT AUTO_INCREMENT PRIMARY KEY,
