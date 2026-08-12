@@ -17,6 +17,9 @@ import { User } from '../users/user.entity';
   unique: true,
 })
 export class Solicitacao {
+  avaliada = false;
+  podeAvaliar = false;
+
   @PrimaryGeneratedColumn({ name: 'id_solicitacao' })
   idSolicitacao!: number;
 

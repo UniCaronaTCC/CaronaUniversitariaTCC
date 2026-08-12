@@ -6,6 +6,57 @@ import '../config/api_config.dart';
 import 'auth_service.dart';
 
 class AvaliacaoService {
+  static Future<Map<String, dynamic>> enviar({
+    required int idSolicitacao,
+    required int nota,
+    String? comentario,
+  }) async {
+    final token = AuthService.tokenUsuarioLogado;
+
+    if (token == null) {
+      return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+    }
+
+    try {
+      final resposta = await http.post(
+        Uri.parse('${ApiConfig.baseUrl}/avaliacoes'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'idSolicitacao': idSolicitacao,
+          'nota': nota,
+          'comentario': comentario,
+        }),
+      );
+      final corpo = _decodificarResposta(resposta.body);
+
+      if (resposta.statusCode == 200 || resposta.statusCode == 201) {
+        return {
+          'sucesso': true,
+          'mensagem':
+              corpo['mensagem']?.toString() ?? 'Avaliação enviada com sucesso',
+        };
+      }
+
+      if (resposta.statusCode == 401) {
+        await AuthService.sair();
+      }
+
+      return {
+        'sucesso': false,
+        'mensagem':
+            corpo['mensagem'] ?? corpo['message'] ?? 'Erro ao enviar avaliação',
+      };
+    } catch (erro) {
+      return {
+        'sucesso': false,
+        'mensagem': 'Não foi possível conectar ao servidor',
+      };
+    }
+  }
+
   static Future<Map<String, dynamic>> listarRecebidas(
     int idUsuario, {
     int pagina = 1,

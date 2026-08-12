@@ -39,4 +39,41 @@ void main() {
     expect(aceitou, isTrue);
     expect(recusou, isTrue);
   });
+
+  testWidgets('permite avaliar passageiro depois da carona', (tester) async {
+    var avaliou = false;
+    final solicitacao = SolicitacaoRecebida(
+      id: 1,
+      status: 'ACEITA',
+      localEmbarque: 'Rua A, 100',
+      embarqueLatitude: -21.2,
+      embarqueLongitude: -50.4,
+      passageiro: 'Maria',
+      idCarona: 2,
+      destino: 'UniSalesiano',
+      dataInicio: DateTime(2026, 7, 22),
+      horario: '19:00:00',
+      podeAvaliar: true,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CardSolicitacaoRecebida(
+            solicitacao: solicitacao,
+            processando: false,
+            onAceitar: () {},
+            onRecusar: () {},
+            onAvaliar: () => avaliou = true,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('AVALIAR'));
+
+    expect(avaliou, isTrue);
+    expect(find.text('ACEITAR'), findsNothing);
+    expect(find.text('RECUSAR'), findsNothing);
+  });
 }

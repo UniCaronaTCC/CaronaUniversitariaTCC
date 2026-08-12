@@ -7,6 +7,7 @@ void main() {
   testWidgets('mostra motorista, status e dados da carona solicitada', (
     tester,
   ) async {
+    var avaliou = false;
     final solicitacao = SolicitacaoEnviada(
       id: 1,
       status: 'ACEITA',
@@ -17,11 +18,17 @@ void main() {
       dataInicio: DateTime(2026, 7, 25),
       horario: '19:00:00',
       valor: 12.5,
+      podeAvaliar: true,
     );
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: CardSolicitacaoEnviada(solicitacao: solicitacao)),
+        home: Scaffold(
+          body: CardSolicitacaoEnviada(
+            solicitacao: solicitacao,
+            onAvaliar: () => avaliou = true,
+          ),
+        ),
       ),
     );
 
@@ -30,5 +37,9 @@ void main() {
     expect(find.text('UniSalesiano'), findsOneWidget);
     expect(find.text('Praça central'), findsOneWidget);
     expect(find.text('R\$ 12,50'), findsOneWidget);
+    expect(find.text('AVALIAR'), findsOneWidget);
+
+    await tester.tap(find.text('AVALIAR'));
+    expect(avaliou, isTrue);
   });
 }

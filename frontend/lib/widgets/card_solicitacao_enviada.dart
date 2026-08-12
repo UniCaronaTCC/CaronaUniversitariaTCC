@@ -6,8 +6,15 @@ import 'status_solicitacao.dart';
 
 class CardSolicitacaoEnviada extends StatelessWidget {
   final SolicitacaoEnviada solicitacao;
+  final bool processando;
+  final VoidCallback? onAvaliar;
 
-  const CardSolicitacaoEnviada({super.key, required this.solicitacao});
+  const CardSolicitacaoEnviada({
+    super.key,
+    required this.solicitacao,
+    this.processando = false,
+    this.onAvaliar,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -68,6 +75,17 @@ class CardSolicitacaoEnviada extends StatelessWidget {
               icone: Icons.person_pin_circle_outlined,
               texto: solicitacao.localEmbarque,
             ),
+            if (solicitacao.podeAvaliar && onAvaliar != null) ...[
+              const Divider(height: 30),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: processando ? null : onAvaliar,
+                  icon: const Icon(Icons.star_outline),
+                  label: Text(processando ? 'ENVIANDO...' : 'AVALIAR'),
+                ),
+              ),
+            ],
           ],
         ),
       ),

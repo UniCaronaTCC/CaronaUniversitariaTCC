@@ -9,6 +9,7 @@ class CardSolicitacaoRecebida extends StatelessWidget {
   final bool processando;
   final VoidCallback onAceitar;
   final VoidCallback onRecusar;
+  final VoidCallback? onAvaliar;
 
   const CardSolicitacaoRecebida({
     super.key,
@@ -16,6 +17,7 @@ class CardSolicitacaoRecebida extends StatelessWidget {
     required this.processando,
     required this.onAceitar,
     required this.onRecusar,
+    this.onAvaliar,
   });
 
   @override
@@ -95,6 +97,16 @@ class CardSolicitacaoRecebida extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ] else if (solicitacao.podeAvaliar && onAvaliar != null) ...[
+              const Divider(height: 30),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: processando ? null : onAvaliar,
+                  icon: const Icon(Icons.star_outline),
+                  label: Text(processando ? 'ENVIANDO...' : 'AVALIAR'),
+                ),
               ),
             ],
           ],

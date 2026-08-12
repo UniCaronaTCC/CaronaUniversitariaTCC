@@ -3,6 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 
 import { Carona } from '../caronas/carona.entity';
 import { CaronasService } from '../caronas/caronas.service';
+import { AvaliacoesService } from '../avaliacoes/avaliacoes.service';
 import { Solicitacao } from './solicitacao.entity';
 import { SolicitacoesService } from './solicitacoes.service';
 
@@ -23,6 +24,7 @@ describe('SolicitacoesService', () => {
   let caronasService: {
     finalizarCaronasVencidas: jest.Mock;
   };
+  let avaliacoesService: { buscarSolicitacoesAvaliadas: jest.Mock };
   let atualizarQueryBuilder: {
     update: jest.Mock;
     set: jest.Mock;
@@ -69,12 +71,16 @@ describe('SolicitacoesService', () => {
     caronasService = {
       finalizarCaronasVencidas: jest.fn().mockResolvedValue(undefined),
     };
+    avaliacoesService = {
+      buscarSolicitacoesAvaliadas: jest.fn().mockResolvedValue(new Set()),
+    };
 
     service = new SolicitacoesService(
       solicitacoesRepository as unknown as Repository<Solicitacao>,
       caronasRepository as unknown as Repository<Carona>,
       dataSource as unknown as DataSource,
       caronasService as unknown as CaronasService,
+      avaliacoesService as unknown as AvaliacoesService,
     );
   });
 

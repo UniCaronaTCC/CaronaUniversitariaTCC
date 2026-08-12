@@ -119,6 +119,8 @@ export class SolicitacoesController {
       dados: solicitacoes.map((solicitacao) => ({
         id: solicitacao.idSolicitacao,
         status: solicitacao.status,
+        avaliada: solicitacao.avaliada,
+        podeAvaliar: solicitacao.podeAvaliar,
         localEmbarque: solicitacao.localEmbarque,
         embarqueLatitude: solicitacao.embarqueLatitude,
         embarqueLongitude: solicitacao.embarqueLongitude,
@@ -193,6 +195,8 @@ export class SolicitacoesController {
     return {
       id: solicitacao.idSolicitacao,
       status: solicitacao.status,
+      avaliada: solicitacao.avaliada,
+      podeAvaliar: solicitacao.podeAvaliar,
       localEmbarque: solicitacao.localEmbarque,
       embarqueLatitude: solicitacao.embarqueLatitude,
       embarqueLongitude: solicitacao.embarqueLongitude,
