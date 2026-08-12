@@ -167,7 +167,7 @@ class AuthService {
   }
 
   static Future<Map<String, dynamic>> atualizarPerfil(
-    String instituicao,
+    int idInstituicao,
     String campus,
   ) async {
     final token = tokenUsuarioLogado;
@@ -184,7 +184,7 @@ class AuthService {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({'instituicao': instituicao, 'campus': campus}),
+        body: jsonEncode({'idInstituicao': idInstituicao, 'campus': campus}),
       );
 
       final Map<String, dynamic> respostaJson = resposta.body.isNotEmpty

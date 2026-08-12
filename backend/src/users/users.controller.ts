@@ -40,20 +40,20 @@ export class UsersController {
     @Body() body: DadosPerfilRecebidos,
     @Req() request: RequisicaoComUsuario,
   ) {
-    const instituicao = body?.instituicao?.toString().trim() ?? '';
+    const idInstituicao = Number(body?.idInstituicao);
     const campusRecebido = body?.campus?.toString().trim() ?? '';
 
-    if (instituicao.length < 2 || instituicao.length > 150) {
+    if (!Number.isInteger(idInstituicao) || idInstituicao <= 0) {
       throw new BadRequestException('Instituição inválida');
     }
 
-    if (campusRecebido.length > 150) {
+    if (campusRecebido.length === 0 || campusRecebido.length > 150) {
       throw new BadRequestException('Campus inválido');
     }
 
     const usuario = await this.usersService.atualizarPerfil(
       request.usuario.sub,
-      instituicao,
+      idInstituicao,
       campusRecebido || null,
     );
 
@@ -73,6 +73,7 @@ export class UsersController {
       id: usuario.idUsuario,
       nome: usuario.nome,
       email: usuario.email,
+      idInstituicao: usuario.idInstituicao,
       instituicao: usuario.instituicao,
       campus: usuario.campus,
       tipoPerfil: usuario.tipoPerfil,

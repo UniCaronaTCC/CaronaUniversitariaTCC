@@ -22,6 +22,7 @@ describe('UsersController', () => {
       idUsuario: 1,
       nome: 'João',
       email: 'joao@email.com',
+      idInstituicao: 1,
       instituicao: 'UniSalesiano',
       campus: 'Araçatuba',
       tipoPerfil: 'AMBOS',
@@ -42,6 +43,7 @@ describe('UsersController', () => {
       id: 1,
       nome: 'João',
       email: 'joao@email.com',
+      idInstituicao: 1,
       instituicao: 'UniSalesiano',
       campus: 'Araçatuba',
       tipoPerfil: 'AMBOS',
@@ -70,6 +72,7 @@ describe('UsersController', () => {
       idUsuario: 1,
       nome: 'João',
       email: 'joao@email.com',
+      idInstituicao: 1,
       instituicao: 'UniSalesiano',
       campus: 'Araçatuba',
       tipoPerfil: 'PASSAGEIRO',
@@ -85,7 +88,7 @@ describe('UsersController', () => {
 
     const resultado = await controller.atualizarPerfil(
       {
-        instituicao: 'UniSalesiano',
+        idInstituicao: 1,
         campus: 'Araçatuba',
         tipoPerfil: 'MOTORISTA',
         statusVerificacao: 'APROVADO',
@@ -99,7 +102,7 @@ describe('UsersController', () => {
     expect(resultado.dados.statusVerificacao).toBe('NAO_ENVIADO');
     expect(usersService.atualizarPerfil).toHaveBeenCalledWith(
       1,
-      'UniSalesiano',
+      1,
       'Araçatuba',
     );
   });

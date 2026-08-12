@@ -35,7 +35,7 @@ void main() {
     expect(find.text('R\$ 5,50'), findsOneWidget);
     expect(find.text('19:00'), findsOneWidget);
     expect(find.text('UniSalesiano, Araçatuba, SP'), findsOneWidget);
-    expect(find.text('Araçatuba, SP'), findsOneWidget);
+    expect(find.text('Araçatuba, SP'), findsNothing);
     expect(find.text('3 vagas'), findsOneWidget);
     expect(find.text('SOLICITAR VAGA'), findsOneWidget);
   });

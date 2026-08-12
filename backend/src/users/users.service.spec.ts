@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { InstituicoesService } from '../instituicoes/instituicoes.service';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
 
@@ -10,6 +11,10 @@ describe('UsersService', () => {
     createQueryBuilder: jest.Mock;
     create: jest.Mock;
     save: jest.Mock;
+  };
+  let instituicoesService: {
+    buscarPorId: jest.Mock;
+    campusValido: jest.Mock;
   };
 
   beforeEach(async () => {
@@ -25,6 +30,10 @@ describe('UsersService', () => {
       create: jest.fn(),
       save: jest.fn(),
     };
+    instituicoesService = {
+      buscarPorId: jest.fn(),
+      campusValido: jest.fn().mockResolvedValue(true),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -32,6 +41,10 @@ describe('UsersService', () => {
         {
           provide: getRepositoryToken(User),
           useValue: repository,
+        },
+        {
+          provide: InstituicoesService,
+          useValue: instituicoesService,
         },
       ],
     }).compile();
@@ -62,22 +75,28 @@ describe('UsersService', () => {
   it('atualiza instituição e campus sem mudar o tipo do perfil', async () => {
     const usuario = {
       idUsuario: 1,
+      idInstituicao: null,
       instituicao: null,
       campus: null,
       tipoPerfil: 'PASSAGEIRO',
     };
     repository.findOne.mockResolvedValue(usuario);
+    instituicoesService.buscarPorId.mockResolvedValue({
+      idInstituicao: 1,
+      nome: 'Centro Universitário Salesiano',
+    });
     repository.save.mockImplementation((dados: User) => Promise.resolve(dados));
 
-    const resultado = await service.atualizarPerfil(
-      1,
-      'UniSalesiano',
-      'Araçatuba',
-    );
+    const resultado = await service.atualizarPerfil(1, 1, 'Araçatuba');
 
-    expect(resultado?.instituicao).toBe('UniSalesiano');
+    expect(resultado?.idInstituicao).toBe(1);
+    expect(resultado?.instituicao).toBe('Centro Universitário Salesiano');
     expect(resultado?.campus).toBe('Araçatuba');
     expect(resultado?.tipoPerfil).toBe('PASSAGEIRO');
     expect(repository.save).toHaveBeenCalledWith(usuario);
+    expect(instituicoesService.campusValido).toHaveBeenCalledWith(
+      1,
+      'Araçatuba',
+    );
   });
 });

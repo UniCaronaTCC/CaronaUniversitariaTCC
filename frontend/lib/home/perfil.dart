@@ -2,27 +2,38 @@ import 'package:flutter/material.dart';
 
 import '../auth/login.dart';
 import '../config/app_colors.dart';
+import '../models/instituicao.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/avaliacao_service.dart';
 import '../services/auth_service.dart';
 import '../widgets/barra_navegacao_home.dart';
+import '../widgets/campo_busca_instituicao.dart';
 import '../widgets/componentes_padrao.dart';
 import 'avaliacoes_recebidas.dart';
 
 typedef CarregarPerfil = Future<Map<String, dynamic>> Function();
 typedef AtualizarPerfil =
-    Future<Map<String, dynamic>> Function(String instituicao, String campus);
+    Future<Map<String, dynamic>> Function(int idInstituicao, String campus);
+
+class _DadosPerfilEditado {
+  final int idInstituicao;
+  final String campus;
+
+  const _DadosPerfilEditado(this.idInstituicao, this.campus);
+}
 
 class PerfilTela extends StatefulWidget {
   final CarregarPerfil? carregarPerfil;
   final AtualizarPerfil? atualizarPerfil;
   final CarregarAvaliacoes? carregarAvaliacoes;
+  final BuscarInstituicoes? buscarInstituicoes;
 
   const PerfilTela({
     super.key,
     this.carregarPerfil,
     this.atualizarPerfil,
     this.carregarAvaliacoes,
+    this.buscarInstituicoes,
   });
 
   @override
@@ -121,44 +132,64 @@ class _PerfilTelaState extends State<PerfilTela> {
   }
 
   Future<void> editarPerfil() async {
-    var novaInstituicao = usuario['instituicao']?.toString() ?? '';
-    var novoCampus = usuario['campus']?.toString() ?? '';
+    final nomeInstituicao = usuario['instituicao']?.toString() ?? '';
+    final idInstituicao = int.tryParse(
+      usuario['idInstituicao']?.toString() ?? '',
+    );
+    final campusAtual = usuario['campus']?.toString() ?? '';
+    Instituicao? instituicaoSelecionada;
 
-    final dados = await showDialog<List<String>>(
+    if (idInstituicao != null && nomeInstituicao.isNotEmpty) {
+      instituicaoSelecionada = Instituicao(
+        id: idInstituicao,
+        nome: nomeInstituicao,
+        sigla: null,
+        campus: campusAtual,
+        municipio: '',
+        uf: '',
+      );
+    }
+
+    final dados = await showDialog<_DadosPerfilEditado>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Editar perfil'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CampoTextoPadrao(
-                label: 'Instituição',
-                valorInicial: novaInstituicao,
-                onChanged: (valor) => novaInstituicao = valor,
-              ),
-              const SizedBox(height: 16),
-              CampoTextoPadrao(
-                label: 'Campus',
-                valorInicial: novoCampus,
-                onChanged: (valor) => novoCampus = valor,
-              ),
-            ],
+      builder: (context) => StatefulBuilder(
+        builder: (context, atualizarDialogo) => AlertDialog(
+          title: const Text('Editar perfil'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CampoBuscaInstituicao(
+                  valorInicial: nomeInstituicao,
+                  buscarInstituicoes: widget.buscarInstituicoes,
+                  onChanged: (instituicao) {
+                    atualizarDialogo(
+                      () => instituicaoSelecionada = instituicao,
+                    );
+                  },
+                ),
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: instituicaoSelecionada == null
+                  ? null
+                  : () => Navigator.pop(
+                      context,
+                      _DadosPerfilEditado(
+                        instituicaoSelecionada!.id,
+                        instituicaoSelecionada!.campus,
+                      ),
+                    ),
+              child: const Text('Salvar'),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, [
-              novaInstituicao.trim(),
-              novoCampus.trim(),
-            ]),
-            child: const Text('Salvar'),
-          ),
-        ],
       ),
     );
 
@@ -169,8 +200,11 @@ class _PerfilTelaState extends State<PerfilTela> {
     setState(() => carregando = true);
 
     final resultado =
-        await (widget.atualizarPerfil?.call(dados[0], dados[1]) ??
-            AuthService.atualizarPerfil(dados[0], dados[1]));
+        await (widget.atualizarPerfil?.call(
+              dados.idInstituicao,
+              dados.campus,
+            ) ??
+            AuthService.atualizarPerfil(dados.idInstituicao, dados.campus));
 
     if (!mounted) {
       return;

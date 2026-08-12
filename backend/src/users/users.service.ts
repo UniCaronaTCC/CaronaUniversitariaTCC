@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common'; // Importa o Injectable para permitir que o service seja usado pelo NestJS
+import { BadRequestException, Injectable } from '@nestjs/common'; // Importa o Injectable para permitir que o service seja usado pelo NestJS
 import { InjectRepository } from '@nestjs/typeorm'; // Permite injetar o repositório da tabela
 import { Repository } from 'typeorm'; // Importa o tipo Repository do TypeORM
 
+import { InstituicoesService } from '../instituicoes/instituicoes.service';
 import { User } from './user.entity'; // Importa a entidade User, que representa a tabela usuarios
 
 @Injectable()
@@ -9,6 +10,7 @@ export class UsersService {
   constructor(
     @InjectRepository(User) // Injeta o repositório da entidade User
     private readonly usersRepository: Repository<User>, // Cria o acesso à tabela usuarios
+    private readonly instituicoesService: InstituicoesService,
   ) {}
 
   async buscarPorEmail(email: string): Promise<User | null> {
@@ -26,7 +28,7 @@ export class UsersService {
 
   async atualizarPerfil(
     idUsuario: number,
-    instituicao: string,
+    idInstituicao: number,
     campus: string | null,
   ): Promise<User | null> {
     const usuario = await this.buscarPorId(idUsuario);
@@ -35,7 +37,22 @@ export class UsersService {
       return null;
     }
 
-    usuario.instituicao = instituicao;
+    const instituicao =
+      await this.instituicoesService.buscarPorId(idInstituicao);
+
+    if (!instituicao) {
+      throw new BadRequestException('Instituição inválida');
+    }
+
+    if (
+      !campus ||
+      !(await this.instituicoesService.campusValido(idInstituicao, campus))
+    ) {
+      throw new BadRequestException('Campus inválido');
+    }
+
+    usuario.idInstituicao = instituicao.idInstituicao;
+    usuario.instituicao = instituicao.nome;
     usuario.campus = campus;
 
     return this.usersRepository.save(usuario);

@@ -17,12 +17,18 @@ describe('InstituicoesController', () => {
   it('retorna as instituições encontradas', async () => {
     service.buscar.mockResolvedValue([
       {
-        idInstituicao: 1,
-        codigoEmec: 123,
-        nome: 'Centro Universitário Salesiano',
-        sigla: 'UNISALESIANO',
-        municipio: 'Araçatuba',
-        uf: 'SP',
+        instituicao: {
+          idInstituicao: 1,
+          codigoEmec: 123,
+          nome: 'Centro Universitário Salesiano',
+          sigla: 'UNISALESIANO',
+        },
+        campus: {
+          nome: 'Araçatuba',
+          municipio: 'Araçatuba',
+          uf: 'SP',
+        },
+        distanciaKm: 2.5,
       },
     ]);
 
@@ -34,10 +40,19 @@ describe('InstituicoesController', () => {
         codigoEmec: 123,
         nome: 'Centro Universitário Salesiano',
         sigla: 'UNISALESIANO',
+        campus: 'Araçatuba',
         municipio: 'Araçatuba',
         uf: 'SP',
+        distanciaKm: 2.5,
       },
     ]);
+    expect(service.buscar).toHaveBeenCalledWith(
+      'unisalesiano',
+      undefined,
+      undefined,
+      undefined,
+      undefined,
+    );
   });
 
   it('exige pelo menos dois caracteres', async () => {

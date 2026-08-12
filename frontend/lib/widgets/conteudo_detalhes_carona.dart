@@ -178,19 +178,15 @@ class _SecaoDetalhe extends StatelessWidget {
   final String titulo;
   final IconData icone;
   final String conteudo;
-  final bool discreto;
 
   const _SecaoDetalhe({
     required this.titulo,
     required this.icone,
     required this.conteudo,
-    this.discreto = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final cor = discreto ? Colors.black54 : AppColors.text;
-
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -202,19 +198,15 @@ class _SecaoDetalhe extends StatelessWidget {
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icone,
-              color: discreto ? Colors.black45 : AppColors.primary,
-              size: 22,
-            ),
+            Icon(icone, color: AppColors.primary, size: 22),
             const SizedBox(width: 10),
             Expanded(
               child: Text(
                 conteudo,
-                style: TextStyle(
-                  color: cor,
-                  fontSize: discreto ? 14 : 16,
-                  fontWeight: discreto ? FontWeight.w400 : FontWeight.w600,
+                style: const TextStyle(
+                  color: AppColors.text,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
                   height: 1.35,
                 ),
               ),

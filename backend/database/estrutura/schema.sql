@@ -5,20 +5,6 @@ CREATE DATABASE IF NOT EXISTS carona_universitaria
 USE carona_universitaria;
 SET NAMES utf8mb4;
 
-CREATE TABLE IF NOT EXISTS usuarios (
-  id_usuario INT AUTO_INCREMENT PRIMARY KEY,
-  nome VARCHAR(100) NOT NULL,
-  email VARCHAR(100) NOT NULL UNIQUE,
-  instituicao VARCHAR(150) NULL,
-  campus VARCHAR(150) NULL,
-  tipo_perfil VARCHAR(20) NOT NULL DEFAULT 'PASSAGEIRO',
-  tipo_perfil_solicitado VARCHAR(20) NULL,
-  status_verificacao VARCHAR(20) NOT NULL DEFAULT 'NAO_ENVIADO',
-  documento_verificacao VARCHAR(255) NULL,
-  senha VARCHAR(255) NOT NULL,
-  criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
-) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS instituicoes (
   id_instituicao INT AUTO_INCREMENT PRIMARY KEY,
   codigo_emec INT NOT NULL UNIQUE,
@@ -29,6 +15,53 @@ CREATE TABLE IF NOT EXISTS instituicoes (
   ativa BOOLEAN NOT NULL DEFAULT TRUE,
   INDEX idx_instituicoes_nome (nome),
   INDEX idx_instituicoes_sigla (sigla)
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS instituicoes_campi (
+  id_campus INT AUTO_INCREMENT PRIMARY KEY,
+  id_instituicao INT NOT NULL,
+  nome VARCHAR(150) NOT NULL,
+  municipio VARCHAR(100) NOT NULL,
+  uf CHAR(2) NOT NULL,
+  latitude DECIMAL(10, 8) NULL,
+  longitude DECIMAL(11, 8) NULL,
+  ativo BOOLEAN NOT NULL DEFAULT TRUE,
+
+  UNIQUE KEY uq_campus_instituicao_municipio (
+    id_instituicao,
+    nome,
+    municipio,
+    uf
+  ),
+
+  CONSTRAINT fk_campi_instituicoes
+    FOREIGN KEY (id_instituicao)
+    REFERENCES instituicoes(id_instituicao)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS usuarios (
+  id_usuario INT AUTO_INCREMENT PRIMARY KEY,
+  nome VARCHAR(100) NOT NULL,
+  email VARCHAR(100) NOT NULL UNIQUE,
+  id_instituicao INT NULL,
+  instituicao VARCHAR(255) NULL,
+  campus VARCHAR(150) NULL,
+  tipo_perfil VARCHAR(20) NOT NULL DEFAULT 'PASSAGEIRO',
+  tipo_perfil_solicitado VARCHAR(20) NULL,
+  status_verificacao VARCHAR(20) NOT NULL DEFAULT 'NAO_ENVIADO',
+  documento_verificacao VARCHAR(255) NULL,
+  senha VARCHAR(255) NOT NULL,
+  criado_em TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+  INDEX idx_usuarios_instituicao (id_instituicao),
+
+  CONSTRAINT fk_usuarios_instituicoes
+    FOREIGN KEY (id_instituicao)
+    REFERENCES instituicoes(id_instituicao)
+    ON UPDATE CASCADE
+    ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS caronas (

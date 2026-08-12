@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:uni_carona/auth/login.dart';
 import 'package:uni_carona/home/avaliacoes_recebidas.dart';
 import 'package:uni_carona/home/perfil.dart';
+import 'package:uni_carona/models/instituicao.dart';
 import 'package:uni_carona/services/auth_service.dart';
 
 void main() {
@@ -21,6 +22,7 @@ void main() {
       'id': 1,
       'nome': 'João',
       'email': 'joao@email.com',
+      'idInstituicao': 1,
       'instituicao': 'UniSalesiano',
       'campus': 'Araçatuba',
       'tipoPerfil': 'AMBOS',
@@ -36,15 +38,26 @@ void main() {
             'sucesso': true,
             'dados': AuthService.usuarioLogado,
           },
-          atualizarPerfil: (instituicao, campus) async => {
+          atualizarPerfil: (idInstituicao, campus) async => {
             'sucesso': true,
             'mensagem': 'Perfil atualizado com sucesso',
             'dados': {
               ...AuthService.usuarioLogado!,
-              'instituicao': instituicao,
+              'idInstituicao': idInstituicao,
+              'instituicao': 'Fatec',
               'campus': campus,
             },
           },
+          buscarInstituicoes: (termo) async => const [
+            Instituicao(
+              id: 2,
+              nome: 'Fatec',
+              sigla: null,
+              campus: 'Araçatuba',
+              municipio: 'Araçatuba',
+              uf: 'SP',
+            ),
+          ],
           carregarAvaliacoes: (idUsuario, pagina) async => {
             'sucesso': true,
             'dados': {
@@ -93,7 +106,10 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).at(0), 'Fatec');
-    await tester.enterText(find.byType(TextField).at(1), 'Araçatuba');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ListTile, 'Fatec'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Salvar'));
     await tester.pumpAndSettle();
 
