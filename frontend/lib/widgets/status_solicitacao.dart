@@ -13,6 +13,7 @@ class StatusSolicitacao extends StatelessWidget {
       'ACEITA' => Colors.green,
       'RECUSADA' => Colors.red,
       'EXPIRADA' => Colors.black54,
+      'FINALIZADA' => Colors.black54,
       _ => AppColors.primary,
     };
 

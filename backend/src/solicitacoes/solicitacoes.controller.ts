@@ -135,6 +135,7 @@ export class SolicitacoesController {
           dataInicio: solicitacao.carona.dataInicio,
           horario: solicitacao.carona.horario,
           valor: solicitacao.carona.valor,
+          status: solicitacao.carona.status,
         },
       })),
     };
@@ -210,6 +211,7 @@ export class SolicitacoesController {
         destino: solicitacao.carona.destino,
         dataInicio: solicitacao.carona.dataInicio,
         horario: solicitacao.carona.horario,
+        status: solicitacao.carona.status,
       },
     };
   }

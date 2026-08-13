@@ -81,7 +81,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('João'), findsNWidgets(2));
+    expect(find.text('João'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('joao@email.com'), 200);
     expect(find.text('joao@email.com'), findsOneWidget);
     expect(find.text('UniSalesiano - Campus Araçatuba'), findsOneWidget);

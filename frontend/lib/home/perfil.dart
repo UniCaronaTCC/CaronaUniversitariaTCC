@@ -10,6 +10,7 @@ import '../widgets/barra_navegacao_home.dart';
 import '../widgets/campo_busca_instituicao.dart';
 import '../widgets/componentes_padrao.dart';
 import 'avaliacoes_recebidas.dart';
+import 'historico_caronas.dart';
 
 typedef CarregarPerfil = Future<Map<String, dynamic>> Function();
 typedef AtualizarPerfil =
@@ -128,6 +129,13 @@ class _PerfilTelaState extends State<PerfilTela> {
           carregarAvaliacoes: widget.carregarAvaliacoes,
         ),
       ),
+    );
+  }
+
+  void abrirHistorico() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const HistoricoCaronasTela()),
     );
   }
 
@@ -488,6 +496,24 @@ class _PerfilTelaState extends State<PerfilTela> {
               ),
             ],
             const SizedBox(height: 32),
+            const Text(
+              'Sua atividade',
+              style: TextStyle(
+                color: AppColors.text,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.history, color: AppColors.primary),
+              title: const Text('Histórico de caronas'),
+              subtitle: const Text('Como motorista e passageiro'),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: abrirHistorico,
+            ),
+            const SizedBox(height: 24),
             const Text(
               'Dados da conta',
               style: TextStyle(

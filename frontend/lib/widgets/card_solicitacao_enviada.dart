@@ -19,7 +19,10 @@ class CardSolicitacaoEnviada extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      key: ValueKey('card-pedido-${solicitacao.id}'),
+      color: solicitacao.caronaFinalizada
+          ? const Color(0xFFF1F1F1)
+          : Colors.white,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -56,7 +59,11 @@ class CardSolicitacaoEnviada extends StatelessWidget {
             const SizedBox(height: 8),
             Align(
               alignment: Alignment.centerRight,
-              child: StatusSolicitacao(status: solicitacao.status),
+              child: StatusSolicitacao(
+                status: solicitacao.caronaFinalizada
+                    ? 'FINALIZADA'
+                    : solicitacao.status,
+              ),
             ),
             const SizedBox(height: 16),
             _LinhaSolicitacao(

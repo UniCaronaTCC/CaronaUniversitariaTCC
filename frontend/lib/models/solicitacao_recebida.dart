@@ -13,6 +13,7 @@ class SolicitacaoRecebida {
   final String destino;
   final DateTime dataInicio;
   final String horario;
+  final String statusCarona;
   final bool avaliada;
   final bool podeAvaliar;
 
@@ -27,6 +28,7 @@ class SolicitacaoRecebida {
     required this.destino,
     required this.dataInicio,
     required this.horario,
+    this.statusCarona = 'ATIVA',
     this.avaliada = false,
     this.podeAvaliar = false,
   });
@@ -50,6 +52,7 @@ class SolicitacaoRecebida {
       destino: carona['destino']?.toString() ?? '',
       dataInicio: DateTime.parse(carona['dataInicio'].toString()),
       horario: carona['horario']?.toString() ?? '',
+      statusCarona: carona['status']?.toString() ?? 'ATIVA',
       avaliada: json['avaliada'] == true,
       podeAvaliar: json['podeAvaliar'] == true,
     );
@@ -58,4 +61,6 @@ class SolicitacaoRecebida {
   String get dataFormatada => FormatadorData.relativa(dataInicio);
 
   String get horarioFormatado => DataHoraUtils.formatarHorarioTexto(horario);
+
+  bool get caronaFinalizada => statusCarona == 'FINALIZADA';
 }

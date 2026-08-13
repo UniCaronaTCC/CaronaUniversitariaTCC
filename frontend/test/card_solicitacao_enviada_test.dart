@@ -4,6 +4,25 @@ import 'package:uni_carona/models/solicitacao_enviada.dart';
 import 'package:uni_carona/widgets/card_solicitacao_enviada.dart';
 
 void main() {
+  test('lê o status da carona enviado pelo backend', () {
+    final solicitacao = SolicitacaoEnviada.fromJson({
+      'id': 1,
+      'status': 'ACEITA',
+      'localEmbarque': 'Praça central',
+      'motorista': {'id': 2, 'nome': 'Henrique'},
+      'carona': {
+        'id': 3,
+        'destino': 'UniSalesiano',
+        'dataInicio': '2026-08-10',
+        'horario': '19:00:00',
+        'valor': 12.5,
+        'status': 'FINALIZADA',
+      },
+    });
+
+    expect(solicitacao.caronaFinalizada, isTrue);
+  });
+
   testWidgets('mostra motorista, status e dados da carona solicitada', (
     tester,
   ) async {
@@ -41,5 +60,36 @@ void main() {
 
     await tester.tap(find.text('AVALIAR'));
     expect(avaliou, isTrue);
+  });
+
+  testWidgets('deixa cinza a carona finalizada como passageiro', (
+    tester,
+  ) async {
+    final solicitacao = SolicitacaoEnviada(
+      id: 3,
+      status: 'ACEITA',
+      localEmbarque: 'Praça central',
+      motorista: 'Henrique',
+      idCarona: 4,
+      destino: 'UniSalesiano',
+      dataInicio: DateTime(2026, 7, 25),
+      horario: '19:00:00',
+      valor: 12.5,
+      statusCarona: 'FINALIZADA',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: CardSolicitacaoEnviada(solicitacao: solicitacao)),
+      ),
+    );
+
+    final material = tester.widget<Material>(
+      find.byKey(const ValueKey('card-pedido-3')),
+    );
+
+    expect(material.color, const Color(0xFFF1F1F1));
+    expect(find.text('FINALIZADA'), findsOneWidget);
+    expect(find.text('ACEITA'), findsNothing);
   });
 }
