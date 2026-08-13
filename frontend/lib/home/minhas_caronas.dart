@@ -302,14 +302,60 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
       ];
     }
 
+    final caronasAtivas = caronasOfertadas
+        .where((carona) => !carona.finalizada)
+        .toList();
+    final caronasFinalizadas = caronasOfertadas
+        .where((carona) => carona.finalizada)
+        .toList();
+
     return [
-      _listaSeparada(
-        caronasOfertadas,
-        (carona) => CardCaronaDisponivel(
-          carona: carona,
-          onTap: () => abrirDetalhes(carona),
+      if (caronasAtivas.isEmpty)
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 16),
+          child: Center(
+            child: Text(
+              'Nenhuma carona ativa',
+              style: TextStyle(color: Colors.black54),
+            ),
+          ),
+        )
+      else
+        _listaSeparada(
+          caronasAtivas,
+          (carona) => CardCaronaDisponivel(
+            carona: carona,
+            onTap: () => abrirDetalhes(carona),
+          ),
         ),
-      ),
+      if (caronasFinalizadas.isNotEmpty) ...[
+        const SizedBox(height: 32),
+        const Row(
+          children: [
+            Expanded(child: Divider()),
+            Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: Text(
+                'Caronas finalizadas',
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+            Expanded(child: Divider()),
+          ],
+        ),
+        const SizedBox(height: 16),
+        _listaSeparada(
+          caronasFinalizadas,
+          (carona) => CardCaronaDisponivel(
+            carona: carona,
+            onTap: () => abrirDetalhes(carona),
+          ),
+        ),
+      ],
     ];
   }
 

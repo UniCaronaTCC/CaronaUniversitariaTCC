@@ -12,7 +12,8 @@ class CardCaronaDisponivel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      key: ValueKey('card-carona-${carona.id}'),
+      color: carona.finalizada ? const Color(0xFFF1F1F1) : Colors.white,
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
         onTap: onTap,
