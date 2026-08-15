@@ -4,6 +4,14 @@ import { Repository } from 'typeorm';
 
 import { Carona } from './carona.entity';
 
+export interface DadosPontoEmbarque {
+  nome: string | null;
+  endereco: string;
+  latitude: number;
+  longitude: number;
+  ordem: number;
+}
+
 export interface DadosCriacaoCarona {
   idUsuario: number;
 
@@ -25,6 +33,8 @@ export interface DadosCriacaoCarona {
   recorrente: boolean;
   diasSemana: string[] | null;
   observacoes?: string;
+
+  pontosEmbarque: DadosPontoEmbarque[];
 }
 
 @Injectable()

@@ -4,10 +4,12 @@ import {
   Entity,
   JoinColumn,
   ManyToOne,
+  OneToMany,
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
 import { User } from '../users/user.entity';
+import { PontoEmbarque } from './ponto-embarque.entity';
 
 @Entity('caronas')
 export class Carona {
@@ -102,6 +104,15 @@ export class Carona {
   @ManyToOne(() => User)
   @JoinColumn({ name: 'id_usuario' })
   usuario!: User;
+
+  @OneToMany(
+    () => PontoEmbarque,
+    (ponto) => ponto.carona,
+    {
+      cascade: true,
+    },
+  )
+  pontosEmbarque!: PontoEmbarque[];
 
   @CreateDateColumn({ name: 'criado_em' })
   criadoEm!: Date;

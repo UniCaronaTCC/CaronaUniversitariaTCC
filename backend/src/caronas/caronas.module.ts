@@ -7,11 +7,15 @@ import { AuthModule } from '../auth/auth.module';
 import { Carona } from './carona.entity';
 import { CaronasController } from './caronas.controller';
 import { CaronasService } from './caronas.service';
+import { PontoEmbarque } from './ponto-embarque.entity';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([Carona]),
-    // Permite usar o repositório da entidade Carona
+    TypeOrmModule.forFeature([
+      Carona,
+      PontoEmbarque,
+    ]),
+    // Permite usar os repositórios de Carona e PontoEmbarque
 
     AuthModule,
     // Permite proteger rotas de caronas com JWT
