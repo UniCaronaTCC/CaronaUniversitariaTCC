@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 
 import { Carona } from './carona.entity';
+import { PontoEmbarque } from './ponto-embarque.entity';
 
 export interface DadosPontoEmbarque {
   nome: string | null;
@@ -42,26 +43,80 @@ export class CaronasService {
   constructor(
     @InjectRepository(Carona)
     private readonly caronasRepository: Repository<Carona>,
+
+    @InjectRepository(PontoEmbarque)
+    private readonly pontosEmbarqueRepository: Repository<PontoEmbarque>,
+
+    private readonly dataSource: DataSource,
   ) {}
 
+  // Cria a carona e os pontos de embarque juntos.
   async criarCarona(dados: DadosCriacaoCarona): Promise<Carona> {
-    const novaCarona = this.caronasRepository.create({
-      status: 'ATIVA',
-      usuario: {
-        idUsuario: dados.idUsuario,
-      },
+    return this.dataSource.transaction(async (manager) => {
+      const caronasRepository = manager.getRepository(Carona);
+      const pontosRepository = manager.getRepository(PontoEmbarque);
+
+      const novaCarona = caronasRepository.create({
+        status: 'ATIVA',
+        usuario: {
+          idUsuario: dados.idUsuario,
+        },
+      });
+
+      this.aplicarDados(novaCarona, dados);
+
+      // Primeiro salva a carona para gerar o id_carona.
+      const caronaSalva = await caronasRepository.save(novaCarona);
+
+      // Depois salva os pontos ligados a essa carona.
+      if (dados.pontosEmbarque.length > 0) {
+        const pontos = dados.pontosEmbarque.map((ponto) =>
+          pontosRepository.create({
+            nome: ponto.nome,
+            endereco: ponto.endereco,
+            latitude: ponto.latitude,
+            longitude: ponto.longitude,
+            ordem: ponto.ordem,
+            carona: {
+              idCarona: caronaSalva.idCarona,
+            },
+          }),
+        );
+
+        await pontosRepository.save(pontos);
+      }
+
+      // Retorna a carona já com motorista e pontos carregados.
+      const caronaCompleta = await caronasRepository.findOne({
+        where: {
+          idCarona: caronaSalva.idCarona,
+        },
+        relations: {
+          usuario: true,
+          pontosEmbarque: true,
+        },
+      });
+
+      if (!caronaCompleta) {
+        throw new NotFoundException('Carona não encontrada');
+      }
+
+      caronaCompleta.pontosEmbarque.sort(
+        (a, b) => a.ordem - b.ordem,
+      );
+
+      return caronaCompleta;
     });
-
-    this.aplicarDados(novaCarona, dados);
-
-    return this.caronasRepository.save(novaCarona);
   }
 
   async atualizarCarona(
     idCarona: number,
     dados: DadosCriacaoCarona,
   ): Promise<Carona> {
-    const carona = await this.buscarCaronaDoUsuario(idCarona, dados.idUsuario);
+    const carona = await this.buscarCaronaDoUsuario(
+      idCarona,
+      dados.idUsuario,
+    );
 
     this.aplicarDados(carona, dados);
 
@@ -69,14 +124,27 @@ export class CaronasService {
       carona.status = 'ATIVA';
     }
 
-    return this.caronasRepository.save(carona);
+    await this.caronasRepository.save(carona);
+
+    /*
+     * Por enquanto não vamos substituir os pontos na edição.
+     * Primeiro vamos terminar o cadastro deles no Flutter.
+     */
+    return carona;
   }
 
-  async excluirCarona(idCarona: number, idUsuario: number): Promise<void> {
-    const carona = await this.buscarCaronaDoUsuario(idCarona, idUsuario);
+  async excluirCarona(
+    idCarona: number,
+    idUsuario: number,
+  ): Promise<void> {
+    const carona = await this.buscarCaronaDoUsuario(
+      idCarona,
+      idUsuario,
+    );
 
-    // Mantém o histórico das solicitações relacionadas à oferta.
+    // Mantém a carona no histórico.
     carona.status = 'CANCELADA';
+
     await this.caronasRepository.save(carona);
   }
 
@@ -84,8 +152,12 @@ export class CaronasService {
     await this.caronasRepository
       .createQueryBuilder()
       .update(Carona)
-      .set({ status: 'FINALIZADA' })
-      .where('status IN (:...status)', { status: ['ATIVA', 'LOTADA'] })
+      .set({
+        status: 'FINALIZADA',
+      })
+      .where('status IN (:...status)', {
+        status: ['ATIVA', 'LOTADA'],
+      })
       .andWhere(
         `
         (
@@ -103,73 +175,140 @@ export class CaronasService {
       .execute();
   }
 
-  // Lista somente ofertas ativas e que ainda podem acontecer.
+  // Lista as caronas que ainda estão disponíveis.
   async listarCaronas(idUsuario: number): Promise<Carona[]> {
     await this.finalizarCaronasVencidas();
 
-    return (
-      this.caronasRepository
-        .createQueryBuilder('carona')
+    const caronas = await this.caronasRepository
+      .createQueryBuilder('carona')
 
-        // Carrega somente identificacao e nome do motorista.
-        .leftJoinAndSelect('carona.usuario', 'usuario')
-        .select(['carona', 'usuario.idUsuario', 'usuario.nome'])
+      .leftJoinAndSelect(
+        'carona.usuario',
+        'usuario',
+      )
 
-        .where('carona.status = :status', {
-          status: 'ATIVA',
-        })
+      .leftJoinAndSelect(
+        'carona.pontosEmbarque',
+        'pontoEmbarque',
+      )
 
-        // A Home nunca mostra ofertas publicadas pelo proprio usuario.
-        .andWhere('usuario.idUsuario <> :idUsuario', { idUsuario })
+      .select([
+        'carona',
+        'usuario.idUsuario',
+        'usuario.nome',
+        'pontoEmbarque',
+      ])
 
-        // Depois da resposta do motorista, a carona passa para a area Caronas.
-        .andWhere(
-          `NOT EXISTS (
-            SELECT 1
-            FROM solicitacoes solicitacao_usuario
-            WHERE solicitacao_usuario.id_carona = carona.id_carona
-              AND solicitacao_usuario.id_passageiro = :idUsuario
-              AND solicitacao_usuario.status IN ('ACEITA', 'RECUSADA')
-          )`,
-          { idUsuario },
-        )
+      .where('carona.status = :status', {
+        status: 'ATIVA',
+      })
 
-        // Remove caronas unicas antigas e recorrencias encerradas.
-        .andWhere(
-          `
-          (
-            carona.dataInicio >= CURDATE()
-            OR (
-              carona.recorrente = true
-              AND (
-                carona.dataFim IS NULL
-                OR carona.dataFim >= CURDATE()
-              )
+      // Não mostra a própria carona na tela de busca.
+      .andWhere(
+        'usuario.idUsuario <> :idUsuario',
+        {
+          idUsuario,
+        },
+      )
+
+      .andWhere(
+        `NOT EXISTS (
+          SELECT 1
+          FROM solicitacoes solicitacao_usuario
+          WHERE solicitacao_usuario.id_carona = carona.id_carona
+            AND solicitacao_usuario.id_passageiro = :idUsuario
+            AND solicitacao_usuario.status IN ('ACEITA', 'RECUSADA')
+        )`,
+        {
+          idUsuario,
+        },
+      )
+
+      .andWhere(
+        `
+        (
+          carona.dataInicio >= CURDATE()
+          OR (
+            carona.recorrente = true
+            AND (
+              carona.dataFim IS NULL
+              OR carona.dataFim >= CURDATE()
             )
           )
-        `,
         )
+        `,
+      )
 
-        // Mostra primeiro as caronas mais proximas.
-        .orderBy('carona.dataInicio', 'ASC')
-        .addOrderBy('carona.horario', 'ASC')
-        .getMany()
-    );
+      .orderBy(
+        'carona.dataInicio',
+        'ASC',
+      )
+      .addOrderBy(
+        'carona.horario',
+        'ASC',
+      )
+      .addOrderBy(
+        'pontoEmbarque.ordem',
+        'ASC',
+      )
+
+      .getMany();
+
+    return caronas;
   }
 
-  async listarMinhasCaronas(idUsuario: number): Promise<Carona[]> {
+  async listarMinhasCaronas(
+    idUsuario: number,
+  ): Promise<Carona[]> {
     await this.finalizarCaronasVencidas();
 
     return this.caronasRepository
       .createQueryBuilder('carona')
-      .innerJoinAndSelect('carona.usuario', 'usuario')
-      .select(['carona', 'usuario.idUsuario', 'usuario.nome'])
-      .where('usuario.idUsuario = :idUsuario', { idUsuario })
-      .andWhere('carona.status <> :statusCancelada', {
-        statusCancelada: 'CANCELADA',
-      })
-      .orderBy('carona.dataInicio', 'DESC')
-      .addOrderBy('carona.horario', 'DESC')
+
+      .innerJoinAndSelect(
+        'carona.usuario',
+        'usuario',
+      )
+
+      .leftJoinAndSelect(
+        'carona.pontosEmbarque',
+        'pontoEmbarque',
+      )
+
+      .select([
+        'carona',
+        'usuario.idUsuario',
+        'usuario.nome',
+        'pontoEmbarque',
+      ])
+
+      .where(
+        'usuario.idUsuario = :idUsuario',
+        {
+          idUsuario,
+        },
+      )
+
+      .andWhere(
+        'carona.status <> :statusCancelada',
+        {
+          statusCancelada: 'CANCELADA',
+        },
+      )
+
+      .orderBy(
+        'carona.dataInicio',
+        'DESC',
+      )
+      .addOrderBy(
+        'carona.horario',
+        'DESC',
+      )
+      .addOrderBy(
+        'pontoEmbarque.ordem',
+        'ASC',
+      )
+
       .getMany();
   }
 
@@ -178,36 +317,66 @@ export class CaronasService {
     idUsuario: number,
   ): Promise<Carona> {
     const carona = await this.caronasRepository.findOne({
-      where: { idCarona },
-      relations: { usuario: true },
+      where: {
+        idCarona,
+      },
+      relations: {
+        usuario: true,
+        pontosEmbarque: true,
+      },
     });
 
-    // A mesma resposta evita revelar a existência de caronas de outro usuário.
-    if (!carona || carona.usuario.idUsuario !== idUsuario) {
-      throw new NotFoundException('Carona não encontrada');
+    // Não deixa outro usuário mexer na carona.
+    if (
+      !carona ||
+      carona.usuario.idUsuario !== idUsuario
+    ) {
+      throw new NotFoundException(
+        'Carona não encontrada',
+      );
     }
+
+    carona.pontosEmbarque.sort(
+      (a, b) => a.ordem - b.ordem,
+    );
 
     return carona;
   }
 
-  private aplicarDados(carona: Carona, dados: DadosCriacaoCarona): void {
-    const possuiRecorrencia = dados.recorrente === true;
+  private aplicarDados(
+    carona: Carona,
+    dados: DadosCriacaoCarona,
+  ): void {
+    const possuiRecorrencia =
+        dados.recorrente === true;
 
     carona.origem = dados.origem;
     carona.origemCidade = dados.origemCidade;
     carona.origemLatitude = dados.origemLatitude;
     carona.origemLongitude = dados.origemLongitude;
+
     carona.destino = dados.destino;
     carona.destinoCidade = dados.destinoCidade;
     carona.destinoLatitude = dados.destinoLatitude;
     carona.destinoLongitude = dados.destinoLongitude;
+
     carona.dataInicio = dados.dataInicio;
-    carona.dataFim = possuiRecorrencia ? dados.dataFim : null;
+
+    carona.dataFim = possuiRecorrencia
+        ? dados.dataFim
+        : null;
+
     carona.horario = dados.horario;
     carona.vagas = dados.vagas;
     carona.valor = dados.valor;
+
     carona.recorrente = possuiRecorrencia;
-    carona.diasSemana = possuiRecorrencia ? dados.diasSemana : null;
-    carona.observacoes = dados.observacoes?.trim() || null;
+
+    carona.diasSemana = possuiRecorrencia
+        ? dados.diasSemana
+        : null;
+
+    carona.observacoes =
+        dados.observacoes?.trim() || null;
   }
 }
