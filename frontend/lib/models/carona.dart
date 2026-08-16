@@ -1,3 +1,5 @@
+import 'ponto_embarque.dart';
+
 import '../utils/conversores_json.dart';
 import '../utils/data_hora_utils.dart';
 import '../utils/formatador_data.dart';
@@ -5,6 +7,7 @@ import '../utils/formatador_moeda.dart';
 
 class Carona {
   final int id;
+
   final String origem;
   final String? origemCidade;
   final double? origemLatitude;
@@ -14,6 +17,8 @@ class Carona {
   final String? destinoCidade;
   final double? destinoLatitude;
   final double? destinoLongitude;
+
+  final List<PontoEmbarque> pontosEmbarque;
 
   final DateTime dataInicio;
   final DateTime? dataFim;
@@ -37,6 +42,7 @@ class Carona {
     this.destinoCidade,
     this.destinoLatitude,
     this.destinoLongitude,
+    this.pontosEmbarque = const [],
     required this.dataInicio,
     this.dataFim,
     required this.horario,
@@ -54,32 +60,83 @@ class Carona {
   factory Carona.fromJson(Map<String, dynamic> json) {
     final usuario = json['usuario'];
 
+    final pontosRecebidos = json['pontosEmbarque'];
+
+    final pontosEmbarque = <PontoEmbarque>[];
+
+    if (pontosRecebidos is List) {
+      for (final item in pontosRecebidos) {
+        if (item is Map) {
+          pontosEmbarque.add(
+            PontoEmbarque.fromJson(
+              Map<String, dynamic>.from(item),
+            ),
+          );
+        }
+      }
+    }
+
     return Carona(
       id: converterJsonParaInt(json['idCarona']),
+
       origem: json['origem']?.toString() ?? '',
       origemCidade: json['origemCidade']?.toString(),
-      origemLatitude: converterJsonParaDoubleOpcional(json['origemLatitude']),
-      origemLongitude: converterJsonParaDoubleOpcional(json['origemLongitude']),
+      origemLatitude: converterJsonParaDoubleOpcional(
+        json['origemLatitude'],
+      ),
+      origemLongitude: converterJsonParaDoubleOpcional(
+        json['origemLongitude'],
+      ),
+
       destino: json['destino']?.toString() ?? '',
       destinoCidade: json['destinoCidade']?.toString(),
-      destinoLatitude: converterJsonParaDoubleOpcional(json['destinoLatitude']),
+      destinoLatitude: converterJsonParaDoubleOpcional(
+        json['destinoLatitude'],
+      ),
       destinoLongitude: converterJsonParaDoubleOpcional(
         json['destinoLongitude'],
       ),
-      dataInicio: DateTime.parse(json['dataInicio'].toString()),
+
+      pontosEmbarque: pontosEmbarque,
+
+      dataInicio: DateTime.parse(
+        json['dataInicio'].toString(),
+      ),
+
       dataFim: json['dataFim'] == null
           ? null
-          : DateTime.tryParse(json['dataFim'].toString()),
+          : DateTime.tryParse(
+        json['dataFim'].toString(),
+      ),
+
       horario: json['horario']?.toString() ?? '',
-      vagas: converterJsonParaInt(json['vagas']),
-      valor: converterJsonParaDouble(json['valor']),
-      recorrente: converterJsonParaBool(json['recorrente']),
-      diasSemana: converterJsonParaListaString(json['diasSemana']),
+
+      vagas: converterJsonParaInt(
+        json['vagas'],
+      ),
+
+      valor: converterJsonParaDouble(
+        json['valor'],
+      ),
+
+      recorrente: converterJsonParaBool(
+        json['recorrente'],
+      ),
+
+      diasSemana: converterJsonParaListaString(
+        json['diasSemana'],
+      ),
+
       observacoes: json['observacoes']?.toString(),
+
       status: json['status']?.toString() ?? 'ATIVA',
+
       idMotorista: usuario is Map
-          ? converterJsonParaInt(usuario['idUsuario'] ?? usuario['id'])
+          ? converterJsonParaInt(
+        usuario['idUsuario'] ?? usuario['id'],
+      )
           : 0,
+
       motorista: usuario is Map
           ? usuario['nome']?.toString() ?? 'Motorista'
           : 'Motorista',
@@ -87,13 +144,16 @@ class Carona {
   }
 
   // Formata a data para o padrao brasileiro.
-  String get dataFormatada => FormatadorData.relativa(dataInicio);
+  String get dataFormatada =>
+      FormatadorData.relativa(dataInicio);
 
   // Remove os segundos do horario retornado pelo MySQL.
-  String get horarioFormatado => DataHoraUtils.formatarHorarioTexto(horario);
+  String get horarioFormatado =>
+      DataHoraUtils.formatarHorarioTexto(horario);
 
   // Formata o valor no padrao brasileiro.
-  String get valorFormatado => formatarDoubleComoMoedaReal(valor);
+  String get valorFormatado =>
+      formatarDoubleComoMoedaReal(valor);
 
   bool get finalizada => status == 'FINALIZADA';
 
