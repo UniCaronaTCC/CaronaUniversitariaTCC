@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../widgets/seletor_horario.dart';
+
 class DataHoraUtils {
   const DataHoraUtils._();
 
@@ -26,12 +28,10 @@ class DataHoraUtils {
     BuildContext context, {
     TimeOfDay? horarioInicial,
     required String textoAjuda,
-  }) => showTimePicker(
-    context: context,
-    initialTime: horarioInicial ?? TimeOfDay.now(),
-    helpText: textoAjuda,
-    cancelText: 'CANCELAR',
-    confirmText: 'CONFIRMAR',
+  }) => SeletorHorario.abrir(
+    context,
+    titulo: textoAjuda,
+    horarioInicial: horarioInicial,
   );
 
   static String formatarDataExibicao(DateTime data) =>
