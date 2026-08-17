@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
 import '../mapa/widgets/barra_pesquisa_endereco.dart';
+import '../models/ponto_embarque.dart';
 import '../utils/formatador_moeda.dart';
 import 'botao_acao_home.dart';
 import 'campo_recorrencia_carona.dart';
@@ -14,6 +15,7 @@ class FormularioOfertarCarona extends StatelessWidget {
   final String descricao;
   final String textoBotao;
   final String textoCarregando;
+
   final TextEditingController origemController;
   final TextEditingController destinoController;
   final TextEditingController dataController;
@@ -24,14 +26,19 @@ class FormularioOfertarCarona extends StatelessWidget {
 
   final bool caronaRecorrente;
   final bool enviandoCarona;
+  final bool pontosEmbarqueEditaveis;
+
   final List<String> diasSelecionados;
+  final List<PontoEmbarque> pontosEmbarque;
 
   final VoidCallback onSelecionarOrigem;
   final VoidCallback onSelecionarDestino;
   final VoidCallback onSelecionarData;
   final VoidCallback onSelecionarHorario;
+  final VoidCallback onAdicionarPontoEmbarque;
   final VoidCallback onOfertarCarona;
 
+  final ValueChanged<int> onRemoverPontoEmbarque;
   final ValueChanged<String> onDestinoChanged;
   final ValueChanged<LocalizacaoSelecionada> onDestinoSelecionado;
   final ValueChanged<bool> onRecorrenciaChanged;
@@ -52,10 +59,14 @@ class FormularioOfertarCarona extends StatelessWidget {
     required this.observacoesController,
     required this.caronaRecorrente,
     required this.diasSelecionados,
+    required this.pontosEmbarque,
+    required this.pontosEmbarqueEditaveis,
     required this.onSelecionarOrigem,
     required this.onSelecionarDestino,
     required this.onSelecionarData,
     required this.onSelecionarHorario,
+    required this.onAdicionarPontoEmbarque,
+    required this.onRemoverPontoEmbarque,
     required this.onOfertarCarona,
     required this.onDestinoChanged,
     required this.onDestinoSelecionado,
@@ -77,26 +88,35 @@ class FormularioOfertarCarona extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
+
         const SizedBox(height: 8),
+
         Text(
           descricao,
-          style: const TextStyle(color: AppColors.text, fontSize: 18),
+          style: const TextStyle(
+            color: AppColors.text,
+            fontSize: 18,
+          ),
         ),
+
         const SizedBox(height: 32),
 
-        // A origem vem da localizacao estimada e pode ser ajustada no mapa.
+        // A origem pode ser ajustada no mapa.
         CampoTextoCarona(
           label: 'Origem',
           icone: Icons.my_location,
           controller: origemController,
           somenteLeitura: true,
           onTap: onSelecionarOrigem,
-          suffixIcon: const Icon(Icons.map_outlined, color: AppColors.primary),
+          suffixIcon: const Icon(
+            Icons.map_outlined,
+            color: AppColors.primary,
+          ),
         ),
+
         const SizedBox(height: 16),
 
-        // O destino pode ser pesquisado ou selecionado diretamente no mapa.
-
+        // O destino pode ser pesquisado ou marcado direto no mapa.
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -113,7 +133,9 @@ class FormularioOfertarCarona extends StatelessWidget {
                 usarLabelComoHint: false,
               ),
             ),
+
             const SizedBox(width: 8),
+
             IconButton(
               onPressed: onSelecionarDestino,
               icon: const Icon(
@@ -124,8 +146,11 @@ class FormularioOfertarCarona extends StatelessWidget {
           ],
         ),
 
+        const SizedBox(height: 24),
 
-        const SizedBox(height: 16),
+        _secaoPontosEmbarque(),
+
+        const SizedBox(height: 24),
 
         CampoTextoCarona(
           label: 'Data',
@@ -135,6 +160,7 @@ class FormularioOfertarCarona extends StatelessWidget {
           onTap: onSelecionarData,
           suffixIcon: const Icon(Icons.arrow_drop_down),
         ),
+
         const SizedBox(height: 16),
 
         CampoTextoCarona(
@@ -145,6 +171,7 @@ class FormularioOfertarCarona extends StatelessWidget {
           onTap: onSelecionarHorario,
           suffixIcon: const Icon(Icons.arrow_drop_down),
         ),
+
         const SizedBox(height: 16),
 
         CampoTextoCarona(
@@ -152,8 +179,11 @@ class FormularioOfertarCarona extends StatelessWidget {
           icone: Icons.people_outline,
           controller: vagasController,
           keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          inputFormatters: [
+            FilteringTextInputFormatter.digitsOnly,
+          ],
         ),
+
         const SizedBox(height: 16),
 
         CampoTextoCarona(
@@ -161,8 +191,11 @@ class FormularioOfertarCarona extends StatelessWidget {
           icone: Icons.payments_outlined,
           controller: valorController,
           keyboardType: TextInputType.number,
-          inputFormatters: [FormatadorMoedaReal()],
+          inputFormatters: [
+            FormatadorMoedaReal(),
+          ],
         ),
+
         const SizedBox(height: 16),
 
         CampoRecorrenciaCarona(
@@ -171,6 +204,7 @@ class FormularioOfertarCarona extends StatelessWidget {
           onRecorrenciaChanged: onRecorrenciaChanged,
           onDiaSelecionado: onDiaSelecionado,
         ),
+
         const SizedBox(height: 16),
 
         CampoTextoCarona(
@@ -179,13 +213,216 @@ class FormularioOfertarCarona extends StatelessWidget {
           controller: observacoesController,
           maxLines: 3,
         ),
+
         const SizedBox(height: 32),
 
         BotaoAcaoHome(
-          texto: enviandoCarona ? textoCarregando : textoBotao,
-          icone: enviandoCarona ? Icons.hourglass_top : Icons.groups_outlined,
-          onPressed: enviandoCarona ? null : onOfertarCarona,
+          texto: enviandoCarona
+              ? textoCarregando
+              : textoBotao,
+          icone: enviandoCarona
+              ? Icons.hourglass_top
+              : Icons.groups_outlined,
+          onPressed: enviandoCarona
+              ? null
+              : onOfertarCarona,
         ),
+      ],
+    );
+  }
+
+  Widget _secaoPontosEmbarque() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Pontos de embarque',
+          style: TextStyle(
+            color: AppColors.text,
+            fontSize: 18,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+
+        const SizedBox(height: 6),
+
+        const Text(
+          'Adicione os locais onde os passageiros poderão embarcar.',
+          style: TextStyle(
+            color: Colors.black54,
+            fontSize: 14,
+          ),
+        ),
+
+        const SizedBox(height: 14),
+
+        if (pontosEmbarque.isEmpty)
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.primary.withValues(
+                alpha: 0.06,
+              ),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(
+                color: AppColors.primary.withValues(
+                  alpha: 0.20,
+                ),
+              ),
+            ),
+            child: const Row(
+              children: [
+                Icon(
+                  Icons.location_off_outlined,
+                  color: Colors.black45,
+                ),
+                SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Nenhum ponto de embarque adicionado.',
+                    style: TextStyle(
+                      color: Colors.black54,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          )
+        else
+          ...List.generate(
+            pontosEmbarque.length,
+                (indice) {
+              final ponto = pontosEmbarque[indice];
+
+              final nome = ponto.nome?.trim();
+
+              return Padding(
+                padding: const EdgeInsets.only(
+                  bottom: 10,
+                ),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.fromLTRB(
+                    14,
+                    12,
+                    8,
+                    12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.primary.withValues(
+                      alpha: 0.06,
+                    ),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: AppColors.primary.withValues(
+                        alpha: 0.18,
+                      ),
+                    ),
+                  ),
+                  child: Row(
+                    crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        width: 36,
+                        height: 36,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withValues(
+                            alpha: 0.12,
+                          ),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Text(
+                          '${indice + 1}',
+                          style: const TextStyle(
+                            color: AppColors.primary,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(width: 12),
+
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment:
+                          CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              nome != null &&
+                                  nome.isNotEmpty
+                                  ? nome
+                                  : 'Ponto de embarque ${indice + 1}',
+                              style: const TextStyle(
+                                color: AppColors.text,
+                                fontSize: 15,
+                                fontWeight:
+                                FontWeight.w600,
+                              ),
+                            ),
+
+                            const SizedBox(height: 4),
+
+                            Text(
+                              ponto.endereco,
+                              style: const TextStyle(
+                                color: Colors.black54,
+                                fontSize: 13,
+                                height: 1.3,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      if (pontosEmbarqueEditaveis)
+                        IconButton(
+                          tooltip: 'Remover ponto',
+                          onPressed: () =>
+                              onRemoverPontoEmbarque(
+                                indice,
+                              ),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.redAccent,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+
+        const SizedBox(height: 4),
+
+        SizedBox(
+          width: double.infinity,
+          child: OutlinedButton.icon(
+            onPressed: pontosEmbarqueEditaveis
+                ? onAdicionarPontoEmbarque
+                : null,
+            icon: const Icon(
+              Icons.add_location_alt_outlined,
+            ),
+            label: const Text(
+              'ADICIONAR PONTO DE EMBARQUE',
+            ),
+          ),
+        ),
+
+        if (!pontosEmbarqueEditaveis) ...[
+          const SizedBox(height: 8),
+          const Text(
+            'A edição dos pontos de embarque será adicionada depois.',
+            style: TextStyle(
+              color: Colors.black45,
+              fontSize: 12,
+            ),
+          ),
+        ],
       ],
     );
   }

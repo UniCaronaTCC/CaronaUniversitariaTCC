@@ -5,12 +5,13 @@ import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
 import '../mapa/screens/mapa_screen.dart';
 import '../models/carona.dart';
+import '../models/ponto_embarque.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/carona_service.dart';
 import '../utils/data_hora_utils.dart';
 import '../utils/formatador_moeda.dart';
-import '../widgets/componentes_padrao.dart';
 import '../widgets/barra_navegacao_home.dart';
+import '../widgets/componentes_padrao.dart';
 import '../widgets/formulario_ofertar_carona.dart';
 
 class OfertarCaronaTela extends StatefulWidget {
@@ -40,6 +41,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
   LocalizacaoSelecionada? origemSelecionada;
   LocalizacaoSelecionada? destinoSelecionado;
+
   DateTime? dataSelecionada;
   TimeOfDay? horarioSelecionado;
 
@@ -47,6 +49,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   bool enviandoCarona = false;
 
   final List<String> diasSelecionados = [];
+  final List<PontoEmbarque> pontosEmbarque = [];
 
   bool get editando => widget.caronaParaEditar != null;
 
@@ -68,17 +71,24 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   void _preencherEdicao(Carona carona) {
     origemController.text = carona.origem;
     destinoController.text = carona.destino;
+
     dataSelecionada = carona.dataInicio;
     dataController.text = DataHoraUtils.formatarDataExibicao(carona.dataInicio);
+
     horarioSelecionado = _converterHorario(carona.horario);
     horarioController.text = horarioSelecionado == null
         ? carona.horario
         : DataHoraUtils.formatarHorario(horarioSelecionado!);
+
     vagasController.text = carona.vagas.toString();
     valorController.text = formatarDoubleComoMoedaReal(carona.valor);
     observacoesController.text = carona.observacoes ?? '';
+
     caronaRecorrente = carona.recorrente;
     diasSelecionados.addAll(carona.diasSemana);
+
+    // Carrega os pontos que já pertencem a essa carona.
+    pontosEmbarque.addAll(carona.pontosEmbarque);
 
     if (carona.origemLatitude != null && carona.origemLongitude != null) {
       origemSelecionada = LocalizacaoSelecionada(
@@ -114,13 +124,14 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     return TimeOfDay(hour: hora, minute: minuto);
   }
 
-  // Abre o mapa com a localizacao atual estimada.
+  // Abre o mapa para escolher a origem.
   Future<void> escolherOrigemNoMapa() async {
     final resultado = await Navigator.push<LocalizacaoSelecionada>(
       context,
       MaterialPageRoute(
-        builder: (context) =>
-            TesteMapa(indiceNavegacao: widget.indiceNavegacao),
+        builder: (context) => TesteMapa(
+          indiceNavegacao: widget.indiceNavegacao,
+        ),
       ),
     );
 
@@ -157,7 +168,62 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     });
   }
 
-  // Abre o calendario sem permitir datas anteriores.
+  // Usa o mesmo mapa para cadastrar um ponto de embarque.
+  Future<void> adicionarPontoEmbarque() async {
+    if (editando) {
+      return;
+    }
+
+    final resultado = await Navigator.push<LocalizacaoSelecionada>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => TesteMapa(
+          indiceNavegacao: widget.indiceNavegacao,
+          titulo: 'Ponto de embarque',
+          instrucao: 'Escolha onde os passageiros poderão embarcar',
+          textoBotao: 'ADICIONAR PONTO',
+        ),
+      ),
+    );
+
+    if (!mounted || resultado == null) {
+      return;
+    }
+
+    final pontoJaExiste = pontosEmbarque.any(
+          (ponto) =>
+      ponto.latitude == resultado.ponto.latitude &&
+          ponto.longitude == resultado.ponto.longitude,
+    );
+
+    if (pontoJaExiste) {
+      mostrarMensagem('Esse ponto de embarque já foi adicionado');
+      return;
+    }
+
+    setState(() {
+      pontosEmbarque.add(
+        PontoEmbarque(
+          nome: resultado.nome,
+          endereco: resultado.endereco,
+          latitude: resultado.ponto.latitude,
+          longitude: resultado.ponto.longitude,
+          ordem: pontosEmbarque.length + 1,
+        ),
+      );
+    });
+  }
+
+  void removerPontoEmbarque(int indice) {
+    if (editando || indice < 0 || indice >= pontosEmbarque.length) {
+      return;
+    }
+
+    setState(() {
+      pontosEmbarque.removeAt(indice);
+    });
+  }
+
   Future<void> escolherData() async {
     final resultado = await DataHoraUtils.selecionarData(
       context,
@@ -175,7 +241,6 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     });
   }
 
-  // Abre o seletor de horario do celular.
   Future<void> escolherHorario() async {
     final resultado = await DataHoraUtils.selecionarHorario(
       context,
@@ -193,7 +258,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     });
   }
 
-  // Invalida a localizacao antiga quando o texto muda.
+  // Invalida o destino antigo quando o texto muda.
   void alterarTextoDestino(String texto) {
     if (destinoSelecionado == null ||
         texto == destinoSelecionado!.descricaoCompleta) {
@@ -232,7 +297,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     });
   }
 
-  // Valida e envia a oferta ao backend.
+  // Valida e envia a oferta para o backend.
   Future<void> ofertarCarona() async {
     final erro = validarFormulario();
 
@@ -251,6 +316,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
     final resultado = await CaronaService.salvarCarona(
       idCarona: widget.caronaParaEditar?.id,
+
       origem: origem.endereco,
       origemCidade: origem.cidade ?? widget.caronaParaEditar?.origemCidade,
       origemLatitude: origem.ponto.latitude,
@@ -261,17 +327,21 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       destinoLatitude: destino.ponto.latitude,
       destinoLongitude: destino.ponto.longitude,
 
+      pontosEmbarque: pontosEmbarque,
+
       dataInicio: DataHoraUtils.formatarDataBackend(dataSelecionada!),
       dataFim: widget.caronaParaEditar?.dataFim == null
           ? null
           : DataHoraUtils.formatarDataBackend(
-              widget.caronaParaEditar!.dataFim!,
-            ),
+        widget.caronaParaEditar!.dataFim!,
+      ),
       horario: '${DataHoraUtils.formatarHorario(horarioSelecionado!)}:00',
       vagas: int.parse(vagasController.text),
       valor: converterMoedaRealParaDouble(valorController.text),
       recorrente: caronaRecorrente,
-      diasSemana: caronaRecorrente ? List<String>.from(diasSelecionados) : null,
+      diasSemana: caronaRecorrente
+          ? List<String>.from(diasSelecionados)
+          : null,
       observacoes: observacoes.isEmpty ? null : observacoes,
     );
 
@@ -293,7 +363,6 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
                 : 'Carona criada com sucesso'),
       );
 
-      // Volta para a Home quando a tela foi aberta por navegacao.
       if (Navigator.canPop(context)) {
         Navigator.pop(context, true);
       }
@@ -326,6 +395,10 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
     if (destinoSelecionado == null) {
       return 'Busque e selecione o destino';
+    }
+
+    if (!editando && pontosEmbarque.isEmpty) {
+      return 'Adicione pelo menos um ponto de embarque';
     }
 
     if (dataSelecionada == null || horarioSelecionado == null) {
@@ -389,6 +462,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
                 : 'Informe os dados da viagem',
             textoBotao: editando ? 'SALVAR ALTERAÇÕES' : 'OFERTAR CARONA',
             textoCarregando: editando ? 'SALVANDO...' : 'ENVIANDO...',
+
             origemController: origemController,
             destinoController: destinoController,
             dataController: dataController,
@@ -396,11 +470,18 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
             vagasController: vagasController,
             valorController: valorController,
             observacoesController: observacoesController,
+
             caronaRecorrente: caronaRecorrente,
             enviandoCarona: enviandoCarona,
             diasSelecionados: diasSelecionados,
+
+            pontosEmbarque: pontosEmbarque,
+            pontosEmbarqueEditaveis: !editando,
+
             onSelecionarOrigem: escolherOrigemNoMapa,
             onSelecionarDestino: escolherDestinoNoMapa,
+            onAdicionarPontoEmbarque: adicionarPontoEmbarque,
+            onRemoverPontoEmbarque: removerPontoEmbarque,
             onSelecionarData: escolherData,
             onSelecionarHorario: escolherHorario,
             onDestinoChanged: alterarTextoDestino,
