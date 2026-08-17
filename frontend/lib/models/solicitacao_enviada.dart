@@ -63,4 +63,11 @@ class SolicitacaoEnviada {
   String get valorFormatado => formatarDoubleComoMoedaReal(valor);
 
   bool get caronaFinalizada => statusCarona == 'FINALIZADA';
+
+  bool get cancelada => status.startsWith('CANCELADA_');
+
+  bool get podeCancelar =>
+      !caronaFinalizada &&
+      !cancelada &&
+      (status == 'PENDENTE' || status == 'ACEITA');
 }

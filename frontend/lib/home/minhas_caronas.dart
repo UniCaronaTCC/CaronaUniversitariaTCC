@@ -11,6 +11,7 @@ import '../widgets/card_solicitacao_enviada.dart';
 import '../widgets/card_solicitacao_recebida.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/dialogo_avaliacao.dart';
+import '../widgets/dialogo_cancelamento.dart';
 import 'caronas_publicadas.dart';
 
 class MinhasCaronasTela extends StatefulWidget {
@@ -71,12 +72,20 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
 
     setState(() {
       carregando = false;
-      solicitacoesRecebidas = _listaTipada<SolicitacaoRecebida>(
-        resultados[0]['dados'],
-      ).where((solicitacao) => !solicitacao.caronaFinalizada).toList();
-      solicitacoesEnviadas = _listaTipada<SolicitacaoEnviada>(
-        resultados[1]['dados'],
-      ).where((solicitacao) => !solicitacao.caronaFinalizada).toList();
+      solicitacoesRecebidas =
+          _listaTipada<SolicitacaoRecebida>(resultados[0]['dados'])
+              .where(
+                (solicitacao) =>
+                    !solicitacao.caronaFinalizada && !solicitacao.cancelada,
+              )
+              .toList();
+      solicitacoesEnviadas =
+          _listaTipada<SolicitacaoEnviada>(resultados[1]['dados'])
+              .where(
+                (solicitacao) =>
+                    !solicitacao.caronaFinalizada && !solicitacao.cancelada,
+              )
+              .toList();
     });
   }
 
@@ -148,6 +157,42 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
         content: Text(
           resultado['mensagem']?.toString() ?? 'Erro ao enviar avaliação',
         ),
+      ),
+    );
+
+    if (resultado['sucesso'] == true) {
+      await carregarDados();
+    }
+  }
+
+  Future<void> cancelar({
+    required int idSolicitacao,
+    required bool confirmada,
+    required bool motorista,
+  }) async {
+    final confirmou = await confirmarCancelamento(
+      context,
+      confirmada: confirmada,
+      motorista: motorista,
+    );
+
+    if (!mounted || !confirmou) {
+      return;
+    }
+
+    setState(() => idProcessando = idSolicitacao);
+    final resultado = await SolicitacaoService.cancelarSolicitacao(
+      idSolicitacao,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => idProcessando = null);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(resultado['mensagem']?.toString() ?? 'Erro ao cancelar'),
       ),
     );
 
@@ -255,6 +300,11 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
           onAceitar: () => responder(solicitacao, 'ACEITA'),
           onRecusar: () => responder(solicitacao, 'RECUSADA'),
           onAvaliar: () => avaliar(solicitacao.id, solicitacao.passageiro),
+          onCancelar: () => cancelar(
+            idSolicitacao: solicitacao.id,
+            confirmada: true,
+            motorista: true,
+          ),
         ),
       ),
     ];
@@ -284,6 +334,11 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
                 solicitacao: solicitacao,
                 processando: idProcessando == solicitacao.id,
                 onAvaliar: () => avaliar(solicitacao.id, solicitacao.motorista),
+                onCancelar: () => cancelar(
+                  idSolicitacao: solicitacao.id,
+                  confirmada: solicitacao.status == 'ACEITA',
+                  motorista: false,
+                ),
               ),
             ),
         ],

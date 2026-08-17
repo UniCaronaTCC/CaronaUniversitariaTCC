@@ -122,7 +122,7 @@ export class CaronasController {
     const vagas = Number(dados.vagas);
     const valor = Number(dados.valor);
 
-    if (!Number.isInteger(vagas) || vagas <= 0) {
+    if (!Number.isInteger(vagas) || vagas <= 0 || vagas > 4) {
       throw new BadRequestException('Quantidade de vagas inválida');
     }
 

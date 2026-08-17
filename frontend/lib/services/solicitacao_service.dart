@@ -120,6 +120,35 @@ class SolicitacaoService {
     }
   }
 
+  static Future<Map<String, dynamic>> cancelarSolicitacao(
+    int idSolicitacao,
+  ) async {
+    try {
+      final token = AuthService.tokenUsuarioLogado;
+
+      if (token == null) {
+        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+      }
+
+      final resposta = await http.patch(
+        Uri.parse('${ApiConfig.baseUrl}/solicitacoes/$idSolicitacao/cancelar'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final corpo = _decodificarResposta(resposta);
+
+      if (resposta.statusCode == 200) {
+        return {
+          'sucesso': true,
+          'mensagem': corpo['mensagem']?.toString() ?? 'Cancelamento realizado',
+        };
+      }
+
+      return _tratarErro(resposta.statusCode, corpo);
+    } catch (erro) {
+      return _erroConexao();
+    }
+  }
+
   static Future<Map<String, dynamic>> solicitarVaga({
     required int idCarona,
     required String localEmbarque,

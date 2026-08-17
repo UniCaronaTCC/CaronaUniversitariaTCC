@@ -407,8 +407,8 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
     final vagas = int.tryParse(vagasController.text);
 
-    if (vagas == null || vagas <= 0) {
-      return 'Informe uma quantidade de vagas válida';
+    if (vagas == null || vagas <= 0 || vagas > 4) {
+      return 'Informe entre 1 e 4 vagas';
     }
 
     if (caronaRecorrente && diasSelecionados.isEmpty) {

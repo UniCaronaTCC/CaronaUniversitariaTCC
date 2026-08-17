@@ -5,6 +5,7 @@ import '../models/solicitacao_recebida.dart';
 import '../services/solicitacao_service.dart';
 import 'card_solicitacao_recebida.dart';
 import 'componentes_padrao.dart';
+import 'dialogo_cancelamento.dart';
 
 class PainelSolicitacoesCarona extends StatefulWidget {
   final int idCarona;
@@ -80,6 +81,34 @@ class _PainelSolicitacoesCaronaState extends State<PainelSolicitacoesCarona> {
     }
   }
 
+  Future<void> cancelar(SolicitacaoRecebida solicitacao) async {
+    final confirmou = await confirmarCancelamento(
+      context,
+      confirmada: true,
+      motorista: true,
+    );
+
+    if (!mounted || !confirmou) {
+      return;
+    }
+
+    setState(() => idProcessando = solicitacao.id);
+    final resultado = await SolicitacaoService.cancelarSolicitacao(
+      solicitacao.id,
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => idProcessando = null);
+    _mostrarMensagem(resultado['mensagem']?.toString() ?? 'Erro ao cancelar');
+
+    if (resultado['sucesso'] == true) {
+      await carregarSolicitacoes();
+    }
+  }
+
   void _mostrarMensagem(String mensagem) {
     ScaffoldMessenger.of(
       context,
@@ -124,6 +153,7 @@ class _PainelSolicitacoesCaronaState extends State<PainelSolicitacoesCarona> {
                 processando: idProcessando == solicitacao.id,
                 onAceitar: () => responder(solicitacao, 'ACEITA'),
                 onRecusar: () => responder(solicitacao, 'RECUSADA'),
+                onCancelar: () => cancelar(solicitacao),
               );
             },
           ),

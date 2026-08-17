@@ -10,6 +10,7 @@ class CardSolicitacaoRecebida extends StatelessWidget {
   final VoidCallback onAceitar;
   final VoidCallback onRecusar;
   final VoidCallback? onAvaliar;
+  final VoidCallback? onCancelar;
 
   const CardSolicitacaoRecebida({
     super.key,
@@ -18,6 +19,7 @@ class CardSolicitacaoRecebida extends StatelessWidget {
     required this.onAceitar,
     required this.onRecusar,
     this.onAvaliar,
+    this.onCancelar,
   });
 
   @override
@@ -27,7 +29,9 @@ class CardSolicitacaoRecebida extends StatelessWidget {
 
     return Material(
       key: ValueKey('card-solicitacao-${solicitacao.id}'),
-      color: finalizada ? const Color(0xFFF1F1F1) : Colors.white,
+      color: finalizada || solicitacao.cancelada
+          ? const Color(0xFFF1F1F1)
+          : Colors.white,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -101,6 +105,16 @@ class CardSolicitacaoRecebida extends StatelessWidget {
                     ),
                   ),
                 ],
+              ),
+            ] else if (solicitacao.podeCancelar && onCancelar != null) ...[
+              const Divider(height: 30),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: processando ? null : onCancelar,
+                  icon: const Icon(Icons.close),
+                  label: const Text('CANCELAR PARTICIPAÇÃO'),
+                ),
               ),
             ] else if (solicitacao.podeAvaliar && onAvaliar != null) ...[
               const Divider(height: 30),

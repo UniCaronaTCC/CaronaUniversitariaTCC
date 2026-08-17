@@ -92,4 +92,33 @@ void main() {
     expect(find.text('FINALIZADA'), findsOneWidget);
     expect(find.text('ACEITA'), findsNothing);
   });
+
+  testWidgets('permite cancelar participação aceita', (tester) async {
+    var cancelou = false;
+    final solicitacao = SolicitacaoEnviada(
+      id: 5,
+      status: 'ACEITA',
+      localEmbarque: 'Praça central',
+      motorista: 'Henrique',
+      idCarona: 6,
+      destino: 'UniSalesiano',
+      dataInicio: DateTime(2026, 9, 25),
+      horario: '19:00:00',
+      valor: 12.5,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CardSolicitacaoEnviada(
+            solicitacao: solicitacao,
+            onCancelar: () => cancelou = true,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('CANCELAR PARTICIPAÇÃO'));
+    expect(cancelou, isTrue);
+  });
 }

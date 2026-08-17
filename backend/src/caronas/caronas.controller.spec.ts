@@ -1,3 +1,5 @@
+import { BadRequestException } from '@nestjs/common';
+
 import { CaronasController } from './caronas.controller';
 import { CaronasService } from './caronas.service';
 
@@ -54,5 +56,33 @@ describe('CaronasController', () => {
 
     expect(JSON.stringify(resultado)).not.toContain('senha');
     expect(JSON.stringify(resultado)).not.toContain('hash-que-nao-pode-sair');
+  });
+
+  it('não permite oferecer mais de quatro vagas', async () => {
+    const service = { criarCarona: jest.fn() };
+    const controller = new CaronasController(
+      service as unknown as CaronasService,
+    );
+
+    await expect(
+      controller.criarCarona(
+        {
+          origem: 'Rua A',
+          origemLatitude: -21.2,
+          origemLongitude: -50.4,
+          destino: 'UniSalesiano',
+          destinoLatitude: -21.19,
+          destinoLongitude: -50.43,
+          dataInicio: '2026-07-25',
+          horario: '19:00:00',
+          vagas: 5,
+          valor: 8.5,
+          recorrente: false,
+        },
+        { usuario: { sub: 1 } } as never,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(service.criarCarona).not.toHaveBeenCalled();
   });
 });

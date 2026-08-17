@@ -136,4 +136,37 @@ void main() {
     expect(find.text('ACEITAR'), findsNothing);
     expect(find.text('RECUSAR'), findsNothing);
   });
+
+  testWidgets('motorista pode cancelar participação aceita', (tester) async {
+    var cancelou = false;
+    final solicitacao = SolicitacaoRecebida(
+      id: 5,
+      status: 'ACEITA',
+      localEmbarque: 'Rua A, 100',
+      embarqueLatitude: -21.2,
+      embarqueLongitude: -50.4,
+      passageiro: 'Maria',
+      idCarona: 6,
+      destino: 'UniSalesiano',
+      dataInicio: DateTime(2026, 9, 22),
+      horario: '19:00:00',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CardSolicitacaoRecebida(
+            solicitacao: solicitacao,
+            processando: false,
+            onAceitar: () {},
+            onRecusar: () {},
+            onCancelar: () => cancelou = true,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('CANCELAR PARTICIPAÇÃO'));
+    expect(cancelou, isTrue);
+  });
 }

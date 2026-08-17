@@ -205,4 +205,50 @@ describe('SolicitacoesService', () => {
     expect(salvarCarona).toHaveBeenCalledTimes(1);
     expect(salvarSolicitacao).toHaveBeenCalledTimes(1);
   });
+
+  it('cancela uma solicitação aceita e devolve a vaga', async () => {
+    const carona = {
+      idCarona: 10,
+      status: 'LOTADA',
+      vagas: 0,
+      usuario: { idUsuario: 2 },
+    };
+    const solicitacao = {
+      idSolicitacao: 1,
+      status: 'ACEITA',
+      passageiro: { idUsuario: 1 },
+      carona,
+    };
+    const salvarSolicitacao = jest.fn((dados: Solicitacao) =>
+      Promise.resolve(dados),
+    );
+    const salvarCarona = jest.fn((dados: Carona) => Promise.resolve(dados));
+    const queryBuilder = {
+      innerJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      getOne: jest.fn().mockResolvedValue(solicitacao),
+    };
+
+    dataSource.transaction.mockImplementation(
+      (executar: (manager: unknown) => Promise<Solicitacao>) =>
+        executar({
+          getRepository: (entidade: unknown) =>
+            entidade === Solicitacao
+              ? {
+                  createQueryBuilder: () => queryBuilder,
+                  save: salvarSolicitacao,
+                }
+              : { save: salvarCarona },
+        }),
+    );
+
+    const resultado = await service.cancelarSolicitacao(1, 1);
+
+    expect(resultado.status).toBe('CANCELADA_PASSAGEIRO');
+    expect(carona.vagas).toBe(1);
+    expect(carona.status).toBe('ATIVA');
+    expect(salvarCarona).toHaveBeenCalledTimes(1);
+    expect(salvarSolicitacao).toHaveBeenCalledTimes(1);
+  });
 });

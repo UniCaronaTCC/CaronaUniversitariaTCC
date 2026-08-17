@@ -8,19 +8,21 @@ class CardSolicitacaoEnviada extends StatelessWidget {
   final SolicitacaoEnviada solicitacao;
   final bool processando;
   final VoidCallback? onAvaliar;
+  final VoidCallback? onCancelar;
 
   const CardSolicitacaoEnviada({
     super.key,
     required this.solicitacao,
     this.processando = false,
     this.onAvaliar,
+    this.onCancelar,
   });
 
   @override
   Widget build(BuildContext context) {
     return Material(
       key: ValueKey('card-pedido-${solicitacao.id}'),
-      color: solicitacao.caronaFinalizada
+      color: solicitacao.caronaFinalizada || solicitacao.cancelada
           ? const Color(0xFFF1F1F1)
           : Colors.white,
       borderRadius: BorderRadius.circular(8),
@@ -82,6 +84,21 @@ class CardSolicitacaoEnviada extends StatelessWidget {
               icone: Icons.person_pin_circle_outlined,
               texto: solicitacao.localEmbarque,
             ),
+            if (solicitacao.podeCancelar && onCancelar != null) ...[
+              const Divider(height: 30),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: processando ? null : onCancelar,
+                  icon: const Icon(Icons.close),
+                  label: Text(
+                    solicitacao.status == 'ACEITA'
+                        ? 'CANCELAR PARTICIPAÇÃO'
+                        : 'CANCELAR PEDIDO',
+                  ),
+                ),
+              ),
+            ],
             if (solicitacao.podeAvaliar && onAvaliar != null) ...[
               const Divider(height: 30),
               SizedBox(

@@ -63,4 +63,9 @@ class SolicitacaoRecebida {
   String get horarioFormatado => DataHoraUtils.formatarHorarioTexto(horario);
 
   bool get caronaFinalizada => statusCarona == 'FINALIZADA';
+
+  bool get cancelada => status.startsWith('CANCELADA_');
+
+  bool get podeCancelar =>
+      !caronaFinalizada && !cancelada && status == 'ACEITA';
 }

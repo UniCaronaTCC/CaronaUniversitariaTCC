@@ -177,6 +177,32 @@ export class SolicitacoesController {
     };
   }
 
+  @Patch('solicitacoes/:idSolicitacao/cancelar')
+  async cancelarSolicitacao(
+    @Param('idSolicitacao') idRecebido: string,
+    @Req() request: RequisicaoComUsuario,
+  ) {
+    const idSolicitacao = Number(idRecebido);
+
+    if (!Number.isInteger(idSolicitacao) || idSolicitacao <= 0) {
+      throw new BadRequestException('Solicitação inválida');
+    }
+
+    const solicitacao = await this.solicitacoesService.cancelarSolicitacao(
+      idSolicitacao,
+      request.usuario.sub,
+    );
+
+    return {
+      sucesso: true,
+      mensagem: 'Cancelamento realizado com sucesso',
+      dados: {
+        id: solicitacao.idSolicitacao,
+        status: solicitacao.status,
+      },
+    };
+  }
+
   private validarCoordenada(
     valorRecebido: unknown,
     minimo: number,

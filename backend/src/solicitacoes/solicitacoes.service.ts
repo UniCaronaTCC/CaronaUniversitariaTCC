@@ -217,6 +217,74 @@ export class SolicitacoesService {
     });
   }
 
+  async cancelarSolicitacao(
+    idSolicitacao: number,
+    idUsuario: number,
+  ): Promise<Solicitacao> {
+    await this.atualizarCaronasVencidas();
+
+    return this.dataSource.transaction(async (manager) => {
+      const solicitacoesRepository = manager.getRepository(Solicitacao);
+      const caronasRepository = manager.getRepository(Carona);
+
+      const solicitacao = await solicitacoesRepository
+        .createQueryBuilder('solicitacao')
+        .innerJoinAndSelect('solicitacao.carona', 'carona')
+        .innerJoinAndSelect('carona.usuario', 'motorista')
+        .innerJoinAndSelect('solicitacao.passageiro', 'passageiro')
+        .where('solicitacao.idSolicitacao = :idSolicitacao', {
+          idSolicitacao,
+        })
+        .setLock('pessimistic_write')
+        .getOne();
+
+      if (!solicitacao) {
+        throw new NotFoundException('Solicitação não encontrada');
+      }
+
+      const passageiroCancelando =
+        solicitacao.passageiro.idUsuario === idUsuario;
+      const motoristaCancelando =
+        solicitacao.carona.usuario.idUsuario === idUsuario;
+
+      if (!passageiroCancelando && !motoristaCancelando) {
+        throw new BadRequestException(
+          'Você não pode cancelar esta solicitação',
+        );
+      }
+
+      if (
+        solicitacao.carona.status === 'FINALIZADA' ||
+        solicitacao.carona.status === 'CANCELADA'
+      ) {
+        throw new ConflictException('Esta carona já foi encerrada');
+      }
+
+      if (
+        solicitacao.status !== 'PENDENTE' &&
+        solicitacao.status !== 'ACEITA'
+      ) {
+        throw new ConflictException('Esta solicitação não pode ser cancelada');
+      }
+
+      if (solicitacao.status === 'ACEITA') {
+        solicitacao.carona.vagas = Math.min(solicitacao.carona.vagas + 1, 4);
+
+        if (solicitacao.carona.status === 'LOTADA') {
+          solicitacao.carona.status = 'ATIVA';
+        }
+
+        await caronasRepository.save(solicitacao.carona);
+      }
+
+      solicitacao.status = passageiroCancelando
+        ? 'CANCELADA_PASSAGEIRO'
+        : 'CANCELADA_MOTORISTA';
+
+      return solicitacoesRepository.save(solicitacao);
+    });
+  }
+
   private async atualizarCaronasVencidas(): Promise<void> {
     await this.caronasService.finalizarCaronasVencidas();
 
