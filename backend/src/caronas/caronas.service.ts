@@ -336,6 +336,7 @@ export class CaronasService {
       );
     }
 
+    carona.pontosEmbarque ??= [];
     carona.pontosEmbarque.sort(
       (a, b) => a.ordem - b.ordem,
     );

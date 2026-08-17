@@ -93,6 +93,24 @@ CREATE TABLE IF NOT EXISTS caronas (
     ON DELETE RESTRICT
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS pontos_embarque (
+  id_ponto_embarque INT AUTO_INCREMENT PRIMARY KEY,
+  nome VARCHAR(100) NULL,
+  endereco VARCHAR(255) NOT NULL,
+  latitude DECIMAL(10, 8) NOT NULL,
+  longitude DECIMAL(11, 8) NOT NULL,
+  ordem INT UNSIGNED NOT NULL DEFAULT 1,
+  id_carona INT NOT NULL,
+
+  INDEX idx_pontos_embarque_carona (id_carona),
+
+  CONSTRAINT fk_pontos_embarque_carona
+    FOREIGN KEY (id_carona)
+    REFERENCES caronas(id_carona)
+    ON UPDATE CASCADE
+    ON DELETE CASCADE
+) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
 CREATE TABLE IF NOT EXISTS solicitacoes (
   id_solicitacao INT AUTO_INCREMENT PRIMARY KEY,
   id_carona INT NOT NULL,
