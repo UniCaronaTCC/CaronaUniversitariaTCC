@@ -51,3 +51,23 @@ app.*.map.json
 backend/node_modules/
 backend/dist/
 backend/.env
+
+# Segredos e variáveis de ambiente
+**/.env*
+!**/.env.example
+
+# Certificados e credenciais
+**/*.pem
+**/*.key
+**/*.p12
+**/*.pfx
+**/*.crt
+**/*.cer
+**/*.mobileprovision
+**/google-services.json
+**/GoogleService-Info.plist
+
+# Arquivos enviados em tempo de execução
+backend/uploads/
+backend/documents/
+backend/storage/
