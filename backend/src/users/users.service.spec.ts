@@ -99,4 +99,17 @@ describe('UsersService', () => {
       'Araçatuba',
     );
   });
+
+  it('salva a URL da foto no usuário', async () => {
+    const usuario = { idUsuario: 1, fotoPerfil: null } as User;
+    repository.save.mockImplementation((dados: User) => Promise.resolve(dados));
+
+    const resultado = await service.atualizarFotoPerfil(
+      usuario,
+      'https://exemplo.com/foto',
+    );
+
+    expect(resultado.fotoPerfil).toBe('https://exemplo.com/foto');
+    expect(repository.save).toHaveBeenCalledWith(usuario);
+  });
 });

@@ -26,6 +26,9 @@ export class User {
   @Column({ type: 'varchar', length: 150, nullable: true })
   campus: string | null = null;
 
+  @Column({ name: 'foto_perfil', type: 'varchar', length: 500, nullable: true })
+  fotoPerfil: string | null = null;
+
   @Column({
     name: 'tipo_perfil',
     type: 'varchar',

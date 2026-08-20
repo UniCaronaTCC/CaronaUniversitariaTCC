@@ -58,6 +58,11 @@ export class UsersService {
     return this.usersRepository.save(usuario);
   }
 
+  async atualizarFotoPerfil(usuario: User, fotoPerfil: string): Promise<User> {
+    usuario.fotoPerfil = fotoPerfil;
+    return this.usersRepository.save(usuario);
+  }
+
   // Busca as credenciais apenas durante a autenticação.
   async buscarPorEmailComSenha(email: string): Promise<User | null> {
     return this.usersRepository

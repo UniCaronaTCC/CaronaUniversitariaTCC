@@ -1,20 +1,31 @@
 import { NotFoundException } from '@nestjs/common';
 import { Request } from 'express';
 
+import { FotoPerfilService } from './foto-perfil.service';
 import { UsersController } from './users.controller';
 import { UsersService } from './users.service';
 
 describe('UsersController', () => {
   let controller: UsersController;
-  let usersService: { buscarPorId: jest.Mock; atualizarPerfil: jest.Mock };
+  let usersService: {
+    buscarPorId: jest.Mock;
+    atualizarPerfil: jest.Mock;
+    atualizarFotoPerfil: jest.Mock;
+  };
+  let fotoPerfilService: { enviar: jest.Mock };
 
   beforeEach(() => {
     usersService = {
       buscarPorId: jest.fn(),
       atualizarPerfil: jest.fn(),
+      atualizarFotoPerfil: jest.fn(),
     };
+    fotoPerfilService = { enviar: jest.fn() };
 
-    controller = new UsersController(usersService as unknown as UsersService);
+    controller = new UsersController(
+      usersService as unknown as UsersService,
+      fotoPerfilService as unknown as FotoPerfilService,
+    );
   });
 
   it('retorna os dados públicos do perfil', async () => {
@@ -25,6 +36,7 @@ describe('UsersController', () => {
       idInstituicao: 1,
       instituicao: 'UniSalesiano',
       campus: 'Araçatuba',
+      fotoPerfil: null,
       tipoPerfil: 'AMBOS',
       tipoPerfilSolicitado: null,
       statusVerificacao: 'APROVADO',
@@ -46,6 +58,7 @@ describe('UsersController', () => {
       idInstituicao: 1,
       instituicao: 'UniSalesiano',
       campus: 'Araçatuba',
+      fotoPerfil: null,
       tipoPerfil: 'AMBOS',
       tipoPerfilSolicitado: null,
       statusVerificacao: 'APROVADO',
@@ -75,6 +88,7 @@ describe('UsersController', () => {
       idInstituicao: 1,
       instituicao: 'UniSalesiano',
       campus: 'Araçatuba',
+      fotoPerfil: null,
       tipoPerfil: 'PASSAGEIRO',
       tipoPerfilSolicitado: 'MOTORISTA',
       statusVerificacao: 'NAO_ENVIADO',
@@ -105,5 +119,22 @@ describe('UsersController', () => {
       1,
       'Araçatuba',
     );
+  });
+
+  it('recusa arquivo que não é uma imagem permitida', async () => {
+    const request = {
+      usuario: { sub: 1, nome: 'João', email: 'joao@email.com' },
+    } as unknown as Request & {
+      usuario: { sub: number; nome: string; email: string };
+    };
+
+    await expect(
+      controller.atualizarFotoPerfil(
+        { buffer: Buffer.from('arquivo-invalido') },
+        request,
+      ),
+    ).rejects.toThrow('Envie uma imagem JPG, PNG ou WebP');
+
+    expect(fotoPerfilService.enviar).not.toHaveBeenCalled();
   });
 });

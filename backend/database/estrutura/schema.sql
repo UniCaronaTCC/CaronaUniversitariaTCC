@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS usuarios (
   id_instituicao INT NULL,
   instituicao VARCHAR(255) NULL,
   campus VARCHAR(150) NULL,
+  foto_perfil VARCHAR(500) NULL,
   tipo_perfil VARCHAR(20) NOT NULL DEFAULT 'PASSAGEIRO',
   tipo_perfil_solicitado VARCHAR(20) NULL,
   status_verificacao VARCHAR(20) NOT NULL DEFAULT 'NAO_ENVIADO',
