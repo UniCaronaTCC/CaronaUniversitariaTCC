@@ -10,12 +10,17 @@ import {
 } from 'typeorm';
 
 import { Carona } from '../caronas/carona.entity';
+import { PontoEmbarque } from '../caronas/ponto-embarque.entity';
 import { User } from '../users/user.entity';
 
 @Entity('solicitacoes')
-@Index('uq_solicitacao_carona_passageiro', ['carona', 'passageiro'], {
-  unique: true,
-})
+@Index(
+  'uq_solicitacao_carona_passageiro',
+  ['carona', 'passageiro'],
+  {
+    unique: true,
+  },
+)
 export class Solicitacao {
   avaliada = false;
   podeAvaliar = false;
@@ -31,6 +36,24 @@ export class Solicitacao {
   @JoinColumn({ name: 'id_passageiro' })
   passageiro!: User;
 
+  // Quando o passageiro escolhe um ponto que já existe na carona.
+  @ManyToOne(() => PontoEmbarque, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn({ name: 'id_ponto_embarque' })
+  pontoEmbarque: PontoEmbarque | null = null;
+
+  // Diferencia ponto já existente de um novo ponto solicitado.
+  @Column({
+    name: 'tipo_ponto_embarque',
+    type: 'varchar',
+    length: 30,
+    default: 'EXISTENTE',
+  })
+  tipoPontoEmbarque: string = 'EXISTENTE';
+
+  // Também guarda os dados do local escolhido ou solicitado.
   @Column({ name: 'local_embarque', length: 255 })
   localEmbarque!: string;
 
