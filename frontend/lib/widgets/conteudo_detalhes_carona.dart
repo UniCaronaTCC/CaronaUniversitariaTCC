@@ -2,13 +2,18 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 import '../models/carona.dart';
+import '../models/ponto_embarque.dart';
 import '../utils/formatador_data.dart';
 
 class ConteudoDetalhesCarona extends StatelessWidget {
   final Carona carona;
   final Widget? rodape;
 
-  const ConteudoDetalhesCarona({super.key, required this.carona, this.rodape});
+  const ConteudoDetalhesCarona({
+    super.key,
+    required this.carona,
+    this.rodape,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -46,6 +51,7 @@ class ConteudoDetalhesCarona extends StatelessWidget {
               ),
             ],
           ),
+
           if (carona.status != 'ATIVA') ...[
             const SizedBox(height: 12),
             Text(
@@ -57,6 +63,7 @@ class ConteudoDetalhesCarona extends StatelessWidget {
               ),
             ),
           ],
+
           const SizedBox(height: 32),
 
           Container(
@@ -101,6 +108,7 @@ class ConteudoDetalhesCarona extends StatelessWidget {
               ],
             ),
           ),
+
           const SizedBox(height: 30),
 
           _SecaoDetalhe(
@@ -119,6 +127,13 @@ class ConteudoDetalhesCarona extends StatelessWidget {
           ],
 
           const SizedBox(height: 22),
+
+          _SecaoPontosEmbarque(
+            pontos: carona.pontosEmbarque,
+          ),
+
+          const SizedBox(height: 22),
+
           _SecaoDetalhe(
             titulo: 'Vagas disponíveis',
             icone: Icons.people_outline,
@@ -143,7 +158,10 @@ class ConteudoDetalhesCarona extends StatelessWidget {
             ),
           ],
 
-          if (rodape != null) ...[const SizedBox(height: 30), rodape!],
+          if (rodape != null) ...[
+            const SizedBox(height: 30),
+            rodape!,
+          ],
         ],
       ),
     );
@@ -174,6 +192,122 @@ class ConteudoDetalhesCarona extends StatelessWidget {
   }
 }
 
+class _SecaoPontosEmbarque extends StatelessWidget {
+  final List<PontoEmbarque> pontos;
+
+  const _SecaoPontosEmbarque({
+    required this.pontos,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Pontos de embarque',
+          style: TextStyle(
+            color: Colors.black54,
+            fontSize: 13,
+          ),
+        ),
+
+        const SizedBox(height: 8),
+
+        if (pontos.isEmpty)
+          const Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(
+                Icons.location_off_outlined,
+                color: AppColors.primary,
+                size: 22,
+              ),
+              SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  'Nenhum ponto de embarque cadastrado',
+                  style: TextStyle(
+                    color: AppColors.text,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ],
+          )
+        else
+          ...pontos.map(
+                (ponto) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _ItemPontoEmbarque(
+                ponto: ponto,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _ItemPontoEmbarque extends StatelessWidget {
+  final PontoEmbarque ponto;
+
+  const _ItemPontoEmbarque({
+    required this.ponto,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final nome = ponto.nome?.trim();
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(
+          Icons.person_pin_circle_outlined,
+          color: AppColors.primary,
+          size: 22,
+        ),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (nome != null && nome.isNotEmpty) ...[
+                Text(
+                  nome,
+                  style: const TextStyle(
+                    color: AppColors.text,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 2),
+              ],
+              Text(
+                ponto.endereco,
+                style: TextStyle(
+                  color: nome != null && nome.isNotEmpty
+                      ? Colors.black54
+                      : AppColors.text,
+                  fontSize: nome != null && nome.isNotEmpty
+                      ? 14
+                      : 16,
+                  fontWeight: nome != null && nome.isNotEmpty
+                      ? FontWeight.normal
+                      : FontWeight.w600,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _SecaoDetalhe extends StatelessWidget {
   final String titulo;
   final IconData icone;
@@ -192,13 +326,20 @@ class _SecaoDetalhe extends StatelessWidget {
       children: [
         Text(
           titulo,
-          style: const TextStyle(color: Colors.black54, fontSize: 13),
+          style: const TextStyle(
+            color: Colors.black54,
+            fontSize: 13,
+          ),
         ),
         const SizedBox(height: 7),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icone, color: AppColors.primary, size: 22),
+            Icon(
+              icone,
+              color: AppColors.primary,
+              size: 22,
+            ),
             const SizedBox(width: 10),
             Expanded(
               child: Text(

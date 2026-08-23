@@ -27,6 +27,14 @@ class CardSolicitacaoRecebida extends StatelessWidget {
     final finalizada = solicitacao.caronaFinalizada;
     final pendente = solicitacao.status == 'PENDENTE' && !finalizada;
 
+    final tituloEmbarque = solicitacao.pontoNovoSolicitado
+        ? 'Novo ponto solicitado'
+        : 'Ponto de embarque escolhido';
+
+    final iconeEmbarque = solicitacao.pontoNovoSolicitado
+        ? Icons.add_location_alt_outlined
+        : Icons.person_pin_circle_outlined;
+
     return Material(
       key: ValueKey('card-solicitacao-${solicitacao.id}'),
       color: finalizada || solicitacao.cancelada
@@ -40,7 +48,10 @@ class CardSolicitacaoRecebida extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(Icons.person_outline, color: AppColors.primary),
+                const Icon(
+                  Icons.person_outline,
+                  color: AppColors.primary,
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -53,32 +64,59 @@ class CardSolicitacaoRecebida extends StatelessWidget {
                   ),
                 ),
                 StatusSolicitacao(
-                  status: finalizada ? 'FINALIZADA' : solicitacao.status,
+                  status: finalizada
+                      ? 'FINALIZADA'
+                      : solicitacao.status,
                 ),
               ],
             ),
+
             const SizedBox(height: 18),
+
             _LinhaInformacao(
               icone: Icons.access_time,
               texto:
-                  '${solicitacao.horarioFormatado} · ${solicitacao.dataFormatada}',
+              '${solicitacao.horarioFormatado} · ${solicitacao.dataFormatada}',
               destaque: true,
             ),
+
             const SizedBox(height: 12),
+
             _LinhaInformacao(
               icone: Icons.location_on_outlined,
               texto: solicitacao.destino,
             ),
+
             const SizedBox(height: 12),
-            const Text(
-              'Buscar passageiro em',
-              style: TextStyle(color: Colors.black54, fontSize: 13),
+
+            Text(
+              tituloEmbarque,
+              style: const TextStyle(
+                color: Colors.black54,
+                fontSize: 13,
+              ),
             ),
+
             const SizedBox(height: 5),
+
             _LinhaInformacao(
-              icone: Icons.person_pin_circle_outlined,
-              texto: solicitacao.localEmbarque,
+              icone: iconeEmbarque,
+              texto: solicitacao.localEmbarque.isNotEmpty
+                  ? solicitacao.localEmbarque
+                  : 'Local de embarque não informado',
             ),
+
+            if (solicitacao.pontoNovoSolicitado) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Este local foi sugerido pelo passageiro e ainda depende da aprovação do motorista.',
+                style: TextStyle(
+                  color: Colors.black54,
+                  fontSize: 12,
+                ),
+              ),
+            ],
+
             if (pendente) ...[
               const Divider(height: 30),
               Row(
@@ -96,37 +134,51 @@ class CardSolicitacaoRecebida extends StatelessWidget {
                       onPressed: processando ? null : onAceitar,
                       icon: processando
                           ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                        ),
+                      )
                           : const Icon(Icons.check),
                       label: const Text('ACEITAR'),
                     ),
                   ),
                 ],
               ),
-            ] else if (solicitacao.podeCancelar && onCancelar != null) ...[
-              const Divider(height: 30),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: processando ? null : onCancelar,
-                  icon: const Icon(Icons.close),
-                  label: const Text('CANCELAR PARTICIPAÇÃO'),
+            ] else if (
+            solicitacao.podeCancelar &&
+                onCancelar != null
+            ) ...[
+                const Divider(height: 30),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: processando ? null : onCancelar,
+                    icon: const Icon(Icons.close),
+                    label: const Text(
+                      'CANCELAR PARTICIPAÇÃO',
+                    ),
+                  ),
                 ),
-              ),
-            ] else if (solicitacao.podeAvaliar && onAvaliar != null) ...[
-              const Divider(height: 30),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: processando ? null : onAvaliar,
-                  icon: const Icon(Icons.star_outline),
-                  label: Text(processando ? 'ENVIANDO...' : 'AVALIAR'),
-                ),
-              ),
-            ],
+              ] else if (
+              solicitacao.podeAvaliar &&
+                  onAvaliar != null
+              ) ...[
+                  const Divider(height: 30),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: processando ? null : onAvaliar,
+                      icon: const Icon(Icons.star_outline),
+                      label: Text(
+                        processando
+                            ? 'ENVIANDO...'
+                            : 'AVALIAR',
+                      ),
+                    ),
+                  ),
+                ],
           ],
         ),
       ),
@@ -150,7 +202,11 @@ class _LinhaInformacao extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icone, color: AppColors.primary, size: 21),
+        Icon(
+          icone,
+          color: AppColors.primary,
+          size: 21,
+        ),
         const SizedBox(width: 8),
         Expanded(
           child: Text(
@@ -158,7 +214,8 @@ class _LinhaInformacao extends StatelessWidget {
             style: TextStyle(
               color: AppColors.text,
               fontSize: destaque ? 17 : 15,
-              fontWeight: destaque ? FontWeight.bold : FontWeight.w500,
+              fontWeight:
+              destaque ? FontWeight.bold : FontWeight.w500,
             ),
           ),
         ),
