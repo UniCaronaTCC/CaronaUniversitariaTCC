@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../utils/validacao_email.dart';
 import '../utils/validacao_senha.dart';
 import '../widgets/auth_widgets.dart';
+import 'confirmar_email.dart';
 import 'login.dart';
 
 class CadastroTela extends StatefulWidget {
@@ -18,6 +19,7 @@ class _CadastroTelaState extends State<CadastroTela> {
   final TextEditingController nomeController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController senhaController = TextEditingController();
+
   bool carregando = false;
 
   Future<void> fazerCadastro() async {
@@ -56,13 +58,15 @@ class _CadastroTelaState extends State<CadastroTela> {
       return;
     }
 
+    final email = emailController.text.trim().toLowerCase();
+
     setState(() {
       carregando = true;
     });
 
     final resultado = await AuthService.fazerCadastro(
       nomeController.text,
-      emailController.text.trim().toLowerCase(),
+      email,
       senhaController.text,
     );
 
@@ -78,21 +82,33 @@ class _CadastroTelaState extends State<CadastroTela> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            resultado['dados']['mensagem'] ?? 'Cadastro realizado com sucesso',
+            resultado['dados']['mensagem'] ??
+                'Cadastro realizado com sucesso',
           ),
         ),
       );
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const LoginTela()),
+        MaterialPageRoute(
+          builder: (context) => ConfirmarEmailTela(
+            email: email,
+          ),
+        ),
       );
+
       return;
     }
 
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(resultado['mensagem'])));
+    ).showSnackBar(
+      SnackBar(
+        content: Text(
+          resultado['mensagem']?.toString() ?? 'Erro ao cadastrar',
+        ),
+      ),
+    );
   }
 
   @override
