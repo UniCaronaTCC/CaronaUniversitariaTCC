@@ -1,22 +1,21 @@
-import { BadRequestException, Injectable } from '@nestjs/common'; // Importa o Injectable para permitir que o service seja usado pelo NestJS
-import { InjectRepository } from '@nestjs/typeorm'; // Permite injetar o repositório da tabela
-import { Repository } from 'typeorm'; // Importa o tipo Repository do TypeORM
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
 import { InstituicoesService } from '../instituicoes/instituicoes.service';
-import { User } from './user.entity'; // Importa a entidade User, que representa a tabela usuarios
+import { User } from './user.entity';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectRepository(User) // Injeta o repositório da entidade User
-    private readonly usersRepository: Repository<User>, // Cria o acesso à tabela usuarios
+    @InjectRepository(User)
+    private readonly usersRepository: Repository<User>,
     private readonly instituicoesService: InstituicoesService,
   ) {}
 
   async buscarPorEmail(email: string): Promise<User | null> {
-    // Busca um usuário pelo e-mail
     return this.usersRepository.findOne({
-      where: { email }, // Procura na coluna email
+      where: { email },
     });
   }
 
@@ -24,6 +23,35 @@ export class UsersService {
     return this.usersRepository.findOne({
       where: { idUsuario },
     });
+  }
+
+  async buscarPorEmailComSenha(
+    email: string,
+  ): Promise<User | null> {
+    return this.usersRepository
+      .createQueryBuilder('usuario')
+      .addSelect('usuario.senha')
+      .where('usuario.email = :email', { email })
+      .getOne();
+  }
+
+  // Busca o usuário incluindo os campos usados na confirmação de e-mail.
+  async buscarPorEmailComVerificacao(
+    email: string,
+  ): Promise<User | null> {
+    return this.usersRepository
+      .createQueryBuilder('usuario')
+      .addSelect('usuario.codigoVerificacaoEmail')
+      .addSelect('usuario.codigoVerificacaoEmailExpiraEm')
+      .addSelect('usuario.codigoVerificacaoEmailEnviadoEm')
+      .where('usuario.email = :email', { email })
+      .getOne();
+  }
+
+  async salvarUsuario(
+    usuario: User,
+  ): Promise<User> {
+    return this.usersRepository.save(usuario);
   }
 
   async atualizarPerfil(
@@ -46,30 +74,33 @@ export class UsersService {
 
     if (
       !campus ||
-      !(await this.instituicoesService.campusValido(idInstituicao, campus))
+      !(await this.instituicoesService.campusValido(
+        idInstituicao,
+        campus,
+      ))
     ) {
       throw new BadRequestException('Campus inválido');
     }
 
-    usuario.idInstituicao = instituicao.idInstituicao;
-    usuario.instituicao = instituicao.nome;
-    usuario.campus = campus;
+    usuario.idInstituicao =
+      instituicao.idInstituicao;
+
+    usuario.instituicao =
+      instituicao.nome;
+
+    usuario.campus =
+      campus;
 
     return this.usersRepository.save(usuario);
   }
 
-  async atualizarFotoPerfil(usuario: User, fotoPerfil: string): Promise<User> {
+  async atualizarFotoPerfil(
+    usuario: User,
+    fotoPerfil: string,
+  ): Promise<User> {
     usuario.fotoPerfil = fotoPerfil;
-    return this.usersRepository.save(usuario);
-  }
 
-  // Busca as credenciais apenas durante a autenticação.
-  async buscarPorEmailComSenha(email: string): Promise<User | null> {
-    return this.usersRepository
-      .createQueryBuilder('usuario')
-      .addSelect('usuario.senha')
-      .where('usuario.email = :email', { email })
-      .getOne();
+    return this.usersRepository.save(usuario);
   }
 
   async criarUsuario(
@@ -77,16 +108,15 @@ export class UsersService {
     email: string,
     senha: string,
   ): Promise<User> {
-    // cria um novo usuario no banco
+    const novoUsuario =
+      this.usersRepository.create({
+        nome,
+        email,
+        senha,
+      });
 
-    const novoUsuario = this.usersRepository.create({
-      nome,
-      email,
-      senha,
-    });
-    // monta o objeto do novo usuario
-
-    return this.usersRepository.save(novoUsuario);
-    // salva no banco e retorna o usuario criado
+    return this.usersRepository.save(
+      novoUsuario,
+    );
   }
 }

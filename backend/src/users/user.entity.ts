@@ -3,30 +3,86 @@ import {
   CreateDateColumn,
   Entity,
   PrimaryGeneratedColumn,
-} from 'typeorm'; // Importa os decorators do TypeORM para mapear a tabela
+} from 'typeorm';
 
-@Entity('usuarios') // Define que esta classe representa a tabela usuarios no banco
+@Entity('usuarios')
 export class User {
-  // Classe que representa um usuário do sistema
-  @PrimaryGeneratedColumn({ name: 'id_usuario' }) // Define a chave primária com auto incremento
+  @PrimaryGeneratedColumn({ name: 'id_usuario' })
   idUsuario: number;
 
-  @Column({ length: 100 }) // Define a coluna nome com limite de 100 caracteres
+  @Column({ length: 100 })
   nome: string;
 
-  @Column({ length: 100, unique: true }) // Define a coluna email com limite de 100 caracteres e valor único
+  @Column({ length: 100, unique: true })
   email: string;
 
-  @Column({ name: 'id_instituicao', type: 'int', nullable: true })
+  // =========================
+  // VERIFICAÇÃO DE E-MAIL
+  // =========================
+
+  @Column({
+    name: 'email_verificado',
+    type: 'boolean',
+    default: false,
+  })
+  emailVerificado: boolean = false;
+
+  @Column({
+    name: 'codigo_verificacao_email',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    select: false,
+  })
+  codigoVerificacaoEmail: string | null = null;
+
+  @Column({
+    name: 'codigo_verificacao_email_expira_em',
+    type: 'datetime',
+    nullable: true,
+    select: false,
+  })
+  codigoVerificacaoEmailExpiraEm: Date | null = null;
+
+  @Column({
+    name: 'codigo_verificacao_email_enviado_em',
+    type: 'datetime',
+    nullable: true,
+    select: false,
+  })
+  codigoVerificacaoEmailEnviadoEm: Date | null = null;
+
+  // =========================
+  // DADOS DO USUÁRIO
+  // =========================
+
+  @Column({
+    name: 'id_instituicao',
+    type: 'int',
+    nullable: true,
+  })
   idInstituicao: number | null = null;
 
-  @Column({ type: 'varchar', length: 255, nullable: true })
+  @Column({
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+  })
   instituicao: string | null = null;
 
-  @Column({ type: 'varchar', length: 150, nullable: true })
+  @Column({
+    type: 'varchar',
+    length: 150,
+    nullable: true,
+  })
   campus: string | null = null;
 
-  @Column({ name: 'foto_perfil', type: 'varchar', length: 500, nullable: true })
+  @Column({
+    name: 'foto_perfil',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
   fotoPerfil: string | null = null;
 
   @Column({
@@ -62,9 +118,12 @@ export class User {
   })
   documentoVerificacao: string | null = null;
 
-  @Column({ length: 255, select: false }) // Evita carregar o hash da senha em consultas comuns
+  @Column({
+    length: 255,
+    select: false,
+  })
   senha: string;
 
-  @CreateDateColumn({ name: 'criado_em' }) // Define a coluna criado_em como data automática de criação
+  @CreateDateColumn({ name: 'criado_em' })
   criadoEm: Date;
 }
