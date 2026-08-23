@@ -11,12 +11,19 @@ class BarraPesquisaEndereco extends StatefulWidget {
   final EnderecoService? enderecoService;
   final TextEditingController? controller;
   final ValueChanged<String>? onChanged;
+
   final String label;
   final IconData icone;
   final EdgeInsetsGeometry padding;
   final double elevacao;
   final double borderRadius;
   final bool usarLabelComoHint;
+
+  // Contexto usado para priorizar resultados próximos.
+  final double? latitudeReferencia;
+  final double? longitudeReferencia;
+  final String? cidadeReferencia;
+  final String? estadoReferencia;
 
   const BarraPesquisaEndereco({
     super.key,
@@ -30,13 +37,19 @@ class BarraPesquisaEndereco extends StatefulWidget {
     this.elevacao = 3,
     this.borderRadius = 12,
     this.usarLabelComoHint = true,
+    this.latitudeReferencia,
+    this.longitudeReferencia,
+    this.cidadeReferencia,
+    this.estadoReferencia,
   });
 
   @override
-  State<BarraPesquisaEndereco> createState() => _BarraPesquisaEnderecoState();
+  State<BarraPesquisaEndereco> createState() =>
+      _BarraPesquisaEnderecoState();
 }
 
-class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
+class _BarraPesquisaEnderecoState
+    extends State<BarraPesquisaEndereco> {
   late final TextEditingController _controller;
   late final bool _controllerInterno;
   late final EnderecoService _enderecoService;
@@ -45,15 +58,21 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
   int _numeroBusca = 0;
 
   List<LocalizacaoSelecionada> _resultados = [];
+
   bool _pesquisando = false;
   bool _pesquisaRealizada = false;
 
   @override
   void initState() {
     super.initState();
+
     _controllerInterno = widget.controller == null;
-    _controller = widget.controller ?? TextEditingController();
-    _enderecoService = widget.enderecoService ?? EnderecoService();
+
+    _controller =
+        widget.controller ?? TextEditingController();
+
+    _enderecoService =
+        widget.enderecoService ?? EnderecoService();
   }
 
   @override
@@ -69,28 +88,33 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
 
   void _aoDigitar(String texto) {
     widget.onChanged?.call(texto);
+
     _debounce?.cancel();
 
-    if (texto.trim().isEmpty) {
+    final textoBusca = texto.trim();
+
+    if (textoBusca.length < 3) {
       _numeroBusca++;
+
       setState(() {
         _resultados = [];
         _pesquisando = false;
         _pesquisaRealizada = false;
       });
+
       return;
     }
 
     _debounce = Timer(
       const Duration(milliseconds: 500),
-      () => _pesquisar(texto),
+          () => _pesquisar(textoBusca),
     );
   }
 
   Future<void> _pesquisar(String texto) async {
     final textoBusca = texto.trim();
 
-    if (textoBusca.isEmpty) {
+    if (textoBusca.length < 3) {
       return;
     }
 
@@ -101,8 +125,13 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
       _pesquisaRealizada = false;
     });
 
-    final resultados = await _enderecoService.buscarLocalizacoesPorEndereco(
+    final resultados =
+    await _enderecoService.buscarLocalizacoesPorEndereco(
       textoBusca,
+      latitudeReferencia: widget.latitudeReferencia,
+      longitudeReferencia: widget.longitudeReferencia,
+      cidadeReferencia: widget.cidadeReferencia,
+      estadoReferencia: widget.estadoReferencia,
     );
 
     if (!mounted ||
@@ -118,9 +147,13 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
     });
   }
 
-  void _selecionar(LocalizacaoSelecionada local) {
+  void _selecionar(
+      LocalizacaoSelecionada local,
+      ) {
     _debounce?.cancel();
+
     _numeroBusca++;
+
     _controller.text = local.descricaoCompleta;
 
     setState(() {
@@ -130,6 +163,7 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
     });
 
     FocusScope.of(context).unfocus();
+
     widget.onSelecionado(local);
   }
 
@@ -142,7 +176,9 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
         children: [
           Material(
             elevation: widget.elevacao,
-            borderRadius: BorderRadius.circular(widget.borderRadius),
+            borderRadius: BorderRadius.circular(
+              widget.borderRadius,
+            ),
             child: TextField(
               controller: _controller,
               keyboardType: TextInputType.streetAddress,
@@ -152,39 +188,61 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
                 _debounce?.cancel();
                 _pesquisar(texto);
               },
-              style: const TextStyle(color: AppColors.text),
+              style: const TextStyle(
+                color: AppColors.text,
+              ),
               decoration: InputDecoration(
-                labelText: widget.usarLabelComoHint ? null : widget.label,
-                hintText: widget.usarLabelComoHint ? widget.label : null,
-                prefixIcon: Icon(widget.icone, color: AppColors.primary),
+                labelText: widget.usarLabelComoHint
+                    ? null
+                    : widget.label,
+                hintText: widget.usarLabelComoHint
+                    ? widget.label
+                    : null,
+                prefixIcon: Icon(
+                  widget.icone,
+                  color: AppColors.primary,
+                ),
                 suffixIcon: _pesquisando
                     ? const Padding(
-                        padding: EdgeInsets.all(12),
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        ),
-                      )
+                  padding: EdgeInsets.all(12),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child:
+                    CircularProgressIndicator(
+                      strokeWidth: 2,
+                    ),
+                  ),
+                )
                     : null,
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(widget.borderRadius),
+                  borderRadius:
+                  BorderRadius.circular(
+                    widget.borderRadius,
+                  ),
                   borderSide: BorderSide.none,
                 ),
               ),
             ),
           ),
+
           if (_resultados.isNotEmpty)
             Container(
               margin: const EdgeInsets.only(top: 8),
-              constraints: const BoxConstraints(maxHeight: 250),
+              constraints: const BoxConstraints(
+                maxHeight: 250,
+              ),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius:
+                BorderRadius.circular(12),
                 boxShadow: const [
-                  BoxShadow(blurRadius: 6, color: Colors.black26),
+                  BoxShadow(
+                    blurRadius: 6,
+                    color: Colors.black26,
+                  ),
                 ],
               ),
               child: ListView.builder(
@@ -192,36 +250,65 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
                 shrinkWrap: true,
                 itemCount: _resultados.length,
                 itemBuilder: (context, index) {
-                  final local = _resultados[index];
+                  final local =
+                  _resultados[index];
+
+                  final nome =
+                  local.nome?.trim();
 
                   return ListTile(
-                    leading: const Icon(Icons.location_on),
-                    title: Text(local.nome ?? local.endereco),
-                    subtitle: Text(local.endereco),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => _selecionar(local),
+                    leading: const Icon(
+                      Icons.location_on,
+                    ),
+                    title: Text(
+                      nome != null &&
+                          nome.isNotEmpty
+                          ? nome
+                          : local.endereco,
+                    ),
+                    subtitle: nome != null &&
+                        nome.isNotEmpty
+                        ? Text(local.endereco)
+                        : null,
+                    trailing: const Icon(
+                      Icons.chevron_right,
+                    ),
+                    onTap: () =>
+                        _selecionar(local),
                   );
                 },
               ),
             ),
-          if (_pesquisaRealizada && !_pesquisando && _resultados.isEmpty)
+
+          if (_pesquisaRealizada &&
+              !_pesquisando &&
+              _resultados.isEmpty)
             Container(
-              margin: const EdgeInsets.only(top: 8),
+              margin:
+              const EdgeInsets.only(top: 8),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(12),
+                borderRadius:
+                BorderRadius.circular(12),
                 boxShadow: const [
-                  BoxShadow(blurRadius: 6, color: Colors.black26),
+                  BoxShadow(
+                    blurRadius: 6,
+                    color: Colors.black26,
+                  ),
                 ],
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.search_off, color: Colors.grey),
+                  Icon(
+                    Icons.search_off,
+                    color: Colors.grey,
+                  ),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
-                      'Nenhum endereço encontrado.\nTente pesquisar por rua, bairro ou cidade.',
+                      'Nenhum endereço encontrado.\n'
+                          'Tente pesquisar por rua, bairro ou cidade.',
                     ),
                   ),
                 ],

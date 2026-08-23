@@ -1,14 +1,14 @@
-import 'package:flutter/material.dart'; // Importa os componentes visuais do Flutter
-import 'package:flutter_map/flutter_map.dart'; // Importa o mapa OpenStreetMap
-import 'package:latlong2/latlong.dart'; // Importa o tipo LatLng para latitude e longitude
+import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
-import '../services/endereco_service.dart'; // Service que converte coordenadas em endereco
-import '../services/localizacao_service.dart'; // Service que pega a localizacao atual
-import '../models/localizacao_selecionada.dart'; // Model com ponto e endereco escolhido
-import '../widgets/barra_pesquisa_endereco.dart'; // barra de pesquisa
 import '../../navigation/navegacao_principal.dart';
 import '../../widgets/barra_navegacao_home.dart';
 import '../../widgets/componentes_padrao.dart';
+import '../models/localizacao_selecionada.dart';
+import '../services/endereco_service.dart';
+import '../services/localizacao_service.dart';
+import '../widgets/barra_pesquisa_endereco.dart';
 
 class TesteMapa extends StatefulWidget {
   final String titulo;
@@ -39,6 +39,7 @@ class _TesteMapaState extends State<TesteMapa> {
   String? _enderecoPontoEncontro;
   String? _nomePontoEncontro;
   String? _cidadePontoEncontro;
+  String? _estadoPontoEncontro;
 
   bool _buscandoLocalizacao = true;
   bool _buscandoEndereco = false;
@@ -49,7 +50,7 @@ class _TesteMapaState extends State<TesteMapa> {
     _obterLocalizacao();
   }
 
-  // Obtem a localizacao atual, centraliza o mapa e busca o endereco estimado
+  // Obtém a localização atual e centraliza o mapa.
   Future<void> _obterLocalizacao() async {
     try {
       final posicao = await _localizacaoService.obterLocalizacaoAtual();
@@ -58,7 +59,10 @@ class _TesteMapaState extends State<TesteMapa> {
         return;
       }
 
-      final pontoAtual = LatLng(posicao.latitude, posicao.longitude);
+      final pontoAtual = LatLng(
+        posicao.latitude,
+        posicao.longitude,
+      );
 
       setState(() {
         _localizacaoAtual = pontoAtual;
@@ -66,13 +70,18 @@ class _TesteMapaState extends State<TesteMapa> {
         _buscandoLocalizacao = false;
       });
 
-      // Abre o mapa na localizacao atual do usuario
-      _mapController.move(pontoAtual, 16);
+      _mapController.move(
+        pontoAtual,
+        16,
+      );
 
-      // Busca o endereco aproximado da localizacao atual
-      await _buscarEnderecoDoPonto(pontoAtual);
+      await _buscarEnderecoDoPonto(
+        pontoAtual,
+      );
     } catch (erro) {
-      debugPrint('Erro ao obter localizacao: $erro');
+      debugPrint(
+        'Erro ao obter localização: $erro',
+      );
 
       if (!mounted) {
         return;
@@ -83,20 +92,29 @@ class _TesteMapaState extends State<TesteMapa> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível obter sua localização')),
+        const SnackBar(
+          content: Text(
+            'Não foi possível obter sua localização',
+          ),
+        ),
       );
     }
   }
 
-  // Busca o endereco a partir de um ponto do mapa
-  Future<void> _buscarEnderecoDoPonto(LatLng ponto) async {
+  // Busca o endereço correspondente ao ponto escolhido.
+  Future<void> _buscarEnderecoDoPonto(
+      LatLng ponto,
+      ) async {
     setState(() {
       _buscandoEndereco = true;
       _enderecoPontoEncontro = null;
+      _nomePontoEncontro = null;
       _cidadePontoEncontro = null;
+      _estadoPontoEncontro = null;
     });
 
-    final localizacao = await _enderecoService.buscarLocalizacaoPorCoordenadas(
+    final localizacao =
+    await _enderecoService.buscarLocalizacaoPorCoordenadas(
       ponto.latitude,
       ponto.longitude,
     );
@@ -108,37 +126,57 @@ class _TesteMapaState extends State<TesteMapa> {
     setState(() {
       _enderecoPontoEncontro =
           localizacao?.endereco ?? 'Endereço não encontrado';
+
+      _nomePontoEncontro = localizacao?.nome;
       _cidadePontoEncontro = localizacao?.cidade;
+      _estadoPontoEncontro = localizacao?.estado;
+
       _buscandoEndereco = false;
     });
   }
 
-  // Permite ajustar manualmente o ponto tocando no mapa
-  Future<void> _selecionarPonto(LatLng ponto) async {
+  // Permite ajustar o ponto tocando no mapa.
+  Future<void> _selecionarPonto(
+      LatLng ponto,
+      ) async {
     setState(() {
       _pontoEncontro = ponto;
     });
 
-    await _buscarEnderecoDoPonto(ponto);
+    await _buscarEnderecoDoPonto(
+      ponto,
+    );
   }
 
-  // Move o mapa para uma das opções encontradas pela pesquisa.
-  void _selecionarEnderecoPesquisado(LocalizacaoSelecionada local) {
+  // Move o mapa para o resultado selecionado na pesquisa.
+  void _selecionarEnderecoPesquisado(
+      LocalizacaoSelecionada local,
+      ) {
     setState(() {
       _pontoEncontro = local.ponto;
+
       _nomePontoEncontro = local.nome;
       _enderecoPontoEncontro = local.endereco;
       _cidadePontoEncontro = local.cidade;
+      _estadoPontoEncontro = local.estado;
+
       _buscandoEndereco = false;
     });
 
-    _mapController.move(local.ponto, 16);
+    _mapController.move(
+      local.ponto,
+      16,
+    );
   }
 
   void _confirmarPontoEncontro() {
     if (_pontoEncontro == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Aguarde a localização ou toque no mapa')),
+        const SnackBar(
+          content: Text(
+            'Aguarde a localização ou toque no mapa',
+          ),
+        ),
       );
 
       return;
@@ -149,52 +187,65 @@ class _TesteMapaState extends State<TesteMapa> {
         context,
         LocalizacaoSelecionada(
           ponto: _pontoEncontro!,
-          endereco: _enderecoPontoEncontro ?? 'Endereço não encontrado',
+          endereco:
+          _enderecoPontoEncontro ?? 'Endereço não encontrado',
           cidade: _cidadePontoEncontro,
+          estado: _estadoPontoEncontro,
           nome: _nomePontoEncontro,
         ),
       );
+
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Ponto confirmado')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Ponto confirmado',
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final bool mesmoPonto =
+    final mesmoPonto =
         _localizacaoAtual != null &&
-        _pontoEncontro != null &&
-        _localizacaoAtual == _pontoEncontro;
+            _pontoEncontro != null &&
+            _localizacaoAtual == _pontoEncontro;
+
+    final pontoReferencia =
+        _pontoEncontro ?? _localizacaoAtual;
 
     return Scaffold(
-      appBar: BarraSuperiorPadrao(titulo: widget.titulo),
-
+      appBar: BarraSuperiorPadrao(
+        titulo: widget.titulo,
+      ),
       body: Stack(
         children: [
           FlutterMap(
             mapController: _mapController,
-
             options: MapOptions(
-              // Ponto inicial temporario enquanto o GPS carrega
-              initialCenter: const LatLng(-21.2080, -50.4320),
+              // Ponto inicial temporário enquanto o GPS carrega.
+              initialCenter: const LatLng(
+                -21.2080,
+                -50.4320,
+              ),
               initialZoom: 14,
-
-              // Se o endereco estimado estiver errado, o usuario pode ajustar no mapa
               onTap: (tapPosition, point) {
                 _selecionarPonto(point);
               },
             ),
-
             children: [
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.unicarona.app',
+                urlTemplate:
+                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName:
+                'com.unicarona.app',
               ),
 
-              if (_localizacaoAtual != null && !mesmoPonto)
+              if (_localizacaoAtual != null &&
+                  !mesmoPonto)
                 MarkerLayer(
                   markers: [
                     Marker(
@@ -228,10 +279,19 @@ class _TesteMapaState extends State<TesteMapa> {
             ],
           ),
 
-          // Barra de pesquisa sobre o mapa
+          // Usa a localização atual/selecionada para melhorar os resultados.
           SafeArea(
             child: BarraPesquisaEndereco(
-              onSelecionado: _selecionarEnderecoPesquisado,
+              onSelecionado:
+              _selecionarEnderecoPesquisado,
+              latitudeReferencia:
+              pontoReferencia?.latitude,
+              longitudeReferencia:
+              pontoReferencia?.longitude,
+              cidadeReferencia:
+              _cidadePontoEncontro,
+              estadoReferencia:
+              _estadoPontoEncontro,
             ),
           ),
         ],
@@ -247,7 +307,8 @@ class _TesteMapaState extends State<TesteMapa> {
               bottom: false,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment:
+                CrossAxisAlignment.start,
                 children: [
                   Text(
                     _buscandoLocalizacao
@@ -258,39 +319,57 @@ class _TesteMapaState extends State<TesteMapa> {
                       fontSize: 16,
                     ),
                   ),
+
                   const SizedBox(height: 8),
+
                   if (_buscandoEndereco)
-                    const Text('Buscando endereço...')
+                    const Text(
+                      'Buscando endereço...',
+                    )
                   else
                     Text(
                       _nomePontoEncontro != null &&
-                          _nomePontoEncontro!.trim().isNotEmpty
-                          ? '$_nomePontoEncontro - ${_enderecoPontoEncontro ?? ''}'
+                          _nomePontoEncontro!
+                              .trim()
+                              .isNotEmpty
+                          ? '$_nomePontoEncontro - '
+                          '${_enderecoPontoEncontro ?? ''}'
                           : _enderecoPontoEncontro ??
                           'Toque no mapa para ajustar a origem',
                     ),
+
                   const SizedBox(height: 12),
+
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed: _pontoEncontro == null
+                      onPressed:
+                      _pontoEncontro == null
                           ? null
                           : _confirmarPontoEncontro,
-                      icon: const Icon(Icons.check),
-                      label: Text(widget.textoBotao),
+                      icon: const Icon(
+                        Icons.check,
+                      ),
+                      label: Text(
+                        widget.textoBotao,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ),
+
           BarraNavegacaoHome(
-            currentIndex: widget.indiceNavegacao,
-            onTap: (indice) => NavegacaoPrincipal.selecionar(
-              context,
-              indice,
-              indiceAtual: widget.indiceNavegacao,
-            ),
+            currentIndex:
+            widget.indiceNavegacao,
+            onTap: (indice) =>
+                NavegacaoPrincipal.selecionar(
+                  context,
+                  indice,
+                  indiceAtual:
+                  widget.indiceNavegacao,
+                ),
           ),
         ],
       ),
