@@ -11,3 +11,9 @@ ALTER TABLE solicitacoes
     REFERENCES pontos_embarque(id_ponto_embarque)
     ON UPDATE CASCADE
     ON DELETE SET NULL;
+
+-- Corrige solicitações criadas antes da escolha do ponto de embarque.
+UPDATE solicitacoes
+SET tipo_ponto_embarque = 'NOVO_SOLICITADO'
+WHERE tipo_ponto_embarque = 'EXISTENTE'
+  AND id_ponto_embarque IS NULL;
