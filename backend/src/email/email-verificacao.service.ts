@@ -3,6 +3,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
+import { randomInt } from 'crypto';
 
 import { UsersService } from '../users/users.service';
 import { EmailService } from './email.service';
@@ -164,8 +165,6 @@ export class EmailVerificacaoService {
   }
 
   private gerarCodigo(): string {
-    return Math.floor(
-      100000 + Math.random() * 900000,
-    ).toString();
+    return randomInt(100000, 1000000).toString();
   }
 }
