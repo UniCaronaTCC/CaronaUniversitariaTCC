@@ -1,6 +1,7 @@
 import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { EmailVerificacaoService } from '../email/email-verificacao.service';
 import { UsersService } from '../users/users.service';
 import { AuthService } from './auth.service';
 
@@ -12,6 +13,10 @@ describe('AuthService', () => {
     criarUsuario: jest.Mock;
   };
   let jwtService: { signAsync: jest.Mock };
+  let emailVerificacaoService: {
+    enviarCodigo: jest.Mock;
+    confirmarCodigo: jest.Mock;
+  };
 
   beforeEach(() => {
     usersService = {
@@ -20,10 +25,15 @@ describe('AuthService', () => {
       criarUsuario: jest.fn(),
     };
     jwtService = { signAsync: jest.fn() };
+    emailVerificacaoService = {
+      enviarCodigo: jest.fn(),
+      confirmarCodigo: jest.fn(),
+    };
 
     service = new AuthService(
       usersService as unknown as UsersService,
       jwtService as unknown as JwtService,
+      emailVerificacaoService as unknown as EmailVerificacaoService,
     );
   });
 
@@ -49,6 +59,7 @@ describe('AuthService', () => {
       tipoPerfil: 'AMBOS',
       tipoPerfilSolicitado: null,
       statusVerificacao: 'APROVADO',
+      emailVerificado: true,
     });
     jwtService.signAsync.mockResolvedValue('token-teste');
 
@@ -68,8 +79,24 @@ describe('AuthService', () => {
       tipoPerfil: 'AMBOS',
       tipoPerfilSolicitado: null,
       statusVerificacao: 'APROVADO',
+      emailVerificado: true,
     });
     expect(resultado.usuario).not.toHaveProperty('senha');
+  });
+
+  it('recusa login quando o e-mail ainda não foi confirmado', async () => {
+    const senhaHash = await bcrypt.hash('123456', 4);
+
+    usersService.buscarPorEmailComSenha.mockResolvedValue({
+      idUsuario: 1,
+      email: 'joao@email.com',
+      senha: senhaHash,
+      emailVerificado: false,
+    });
+
+    await expect(
+      service.login('joao@email.com', '123456'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
   it('recusa cadastro com senha fraca', async () => {

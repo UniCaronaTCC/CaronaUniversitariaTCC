@@ -3,6 +3,7 @@ import { DataSource, Repository } from 'typeorm';
 
 import { Carona } from '../caronas/carona.entity';
 import { CaronasService } from '../caronas/caronas.service';
+import { PontoEmbarque } from '../caronas/ponto-embarque.entity';
 import { AvaliacoesService } from '../avaliacoes/avaliacoes.service';
 import { Solicitacao } from './solicitacao.entity';
 import { SolicitacoesService } from './solicitacoes.service';
@@ -16,6 +17,9 @@ describe('SolicitacoesService', () => {
     createQueryBuilder: jest.Mock;
   };
   let caronasRepository: {
+    findOne: jest.Mock;
+  };
+  let pontosEmbarqueRepository: {
     findOne: jest.Mock;
   };
   let dataSource: {
@@ -32,6 +36,7 @@ describe('SolicitacoesService', () => {
     andWhere: jest.Mock;
     execute: jest.Mock;
     innerJoinAndSelect: jest.Mock;
+    leftJoinAndSelect: jest.Mock;
     innerJoin: jest.Mock;
     select: jest.Mock;
     orderBy: jest.Mock;
@@ -47,6 +52,7 @@ describe('SolicitacoesService', () => {
       andWhere: jest.fn().mockReturnThis(),
       execute: jest.fn().mockResolvedValue(undefined),
       innerJoinAndSelect: jest.fn().mockReturnThis(),
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
       innerJoin: jest.fn().mockReturnThis(),
       select: jest.fn().mockReturnThis(),
       orderBy: jest.fn().mockReturnThis(),
@@ -65,6 +71,9 @@ describe('SolicitacoesService', () => {
     caronasRepository = {
       findOne: jest.fn(),
     };
+    pontosEmbarqueRepository = {
+      findOne: jest.fn(),
+    };
     dataSource = {
       transaction: jest.fn(),
     };
@@ -78,6 +87,7 @@ describe('SolicitacoesService', () => {
     service = new SolicitacoesService(
       solicitacoesRepository as unknown as Repository<Solicitacao>,
       caronasRepository as unknown as Repository<Carona>,
+      pontosEmbarqueRepository as unknown as Repository<PontoEmbarque>,
       dataSource as unknown as DataSource,
       caronasService as unknown as CaronasService,
       avaliacoesService as unknown as AvaliacoesService,
@@ -99,6 +109,7 @@ describe('SolicitacoesService', () => {
     const resultado = await service.criarSolicitacao({
       idCarona: 10,
       idPassageiro: 1,
+      tipoPontoEmbarque: 'NOVO_SOLICITADO',
       localEmbarque: 'Rua A, 100',
       embarqueLatitude: -21.2,
       embarqueLongitude: -50.4,
@@ -131,6 +142,7 @@ describe('SolicitacoesService', () => {
       service.criarSolicitacao({
         idCarona: 10,
         idPassageiro: 1,
+        tipoPontoEmbarque: 'NOVO_SOLICITADO',
         localEmbarque: 'Rua A, 100',
         embarqueLatitude: -21.2,
         embarqueLongitude: -50.4,
@@ -154,6 +166,7 @@ describe('SolicitacoesService', () => {
       service.criarSolicitacao({
         idCarona: 10,
         idPassageiro: 1,
+        tipoPontoEmbarque: 'NOVO_SOLICITADO',
         localEmbarque: 'Rua A, 100',
         embarqueLatitude: -21.2,
         embarqueLongitude: -50.4,
@@ -179,6 +192,7 @@ describe('SolicitacoesService', () => {
     const salvarCarona = jest.fn((dados: Carona) => Promise.resolve(dados));
     const queryBuilder = {
       innerJoinAndSelect: jest.fn().mockReturnThis(),
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       setLock: jest.fn().mockReturnThis(),
       getOne: jest.fn().mockResolvedValue(solicitacao),
@@ -225,6 +239,7 @@ describe('SolicitacoesService', () => {
     const salvarCarona = jest.fn((dados: Carona) => Promise.resolve(dados));
     const queryBuilder = {
       innerJoinAndSelect: jest.fn().mockReturnThis(),
+      leftJoinAndSelect: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
       setLock: jest.fn().mockReturnThis(),
       getOne: jest.fn().mockResolvedValue(solicitacao),
