@@ -9,6 +9,7 @@ void main() {
     expect(find.text('ENTRAR'), findsNWidgets(2));
     expect(find.widgetWithText(TextField, 'E-mail'), findsOneWidget);
     expect(find.widgetWithText(TextField, 'Senha'), findsOneWidget);
+    expect(find.text('Esqueceu sua senha?'), findsOneWidget);
     expect(find.text('Não tem uma conta? Cadastre-se'), findsOneWidget);
   });
 }

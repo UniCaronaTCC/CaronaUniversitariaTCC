@@ -5,6 +5,7 @@ import '../home/tela_inicial.dart';
 import '../services/auth_service.dart';
 import '../widgets/auth_widgets.dart';
 import 'cadastro.dart';
+import 'esqueci_senha.dart';
 
 class LoginTela extends StatefulWidget {
   const LoginTela({super.key});
@@ -120,7 +121,24 @@ class _LoginTelaState extends State<LoginTela> {
                   controller: senhaController,
                   obscureText: true,
                 ),
-                const SizedBox(height: 24),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const EsqueciSenhaTela(),
+                        ),
+                      );
+                    },
+                    child: const Text(
+                      'Esqueceu sua senha?',
+                      style: TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
                 AuthBotaoPrincipal(
                   texto: carregando ? 'ENTRANDO...' : 'ENTRAR',
                   onPressed: carregando ? null : fazerLogin,
