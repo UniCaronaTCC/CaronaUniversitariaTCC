@@ -217,4 +217,54 @@ class AuthService {
       };
     }
   }
+
+  static Future<Map<String, dynamic>> atualizarFotoPerfil(
+    String caminhoFoto,
+  ) async {
+    final token = tokenUsuarioLogado;
+
+    if (token == null) {
+      return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+    }
+
+    try {
+      final requisicao = http.MultipartRequest(
+        'PATCH',
+        Uri.parse('${ApiConfig.baseUrl}/usuarios/perfil/foto'),
+      );
+
+      requisicao.headers['Authorization'] = 'Bearer $token';
+      requisicao.files.add(
+        await http.MultipartFile.fromPath('foto', caminhoFoto),
+      );
+
+      final respostaStream = await requisicao.send();
+      final resposta = await http.Response.fromStream(respostaStream);
+      final Map<String, dynamic> respostaJson = resposta.body.isNotEmpty
+          ? jsonDecode(resposta.body)
+          : {};
+
+      if (resposta.statusCode == 200 &&
+          respostaJson['dados'] is Map<String, dynamic>) {
+        usuarioLogado = Map<String, dynamic>.from(respostaJson['dados']);
+        await SessaoService.salvar(token, usuarioLogado!);
+
+        return {
+          'sucesso': true,
+          'mensagem': respostaJson['mensagem'],
+          'dados': usuarioLogado,
+        };
+      }
+
+      return {
+        'sucesso': false,
+        'mensagem':
+            respostaJson['mensagem'] ??
+            respostaJson['message'] ??
+            'Erro ao atualizar foto',
+      };
+    } catch (erro) {
+      return {'sucesso': false, 'mensagem': 'Não foi possível enviar a foto'};
+    }
+  }
 }

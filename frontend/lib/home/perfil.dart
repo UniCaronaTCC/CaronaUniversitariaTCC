@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 
 import '../auth/login.dart';
 import '../config/app_colors.dart';
@@ -9,12 +10,16 @@ import '../services/auth_service.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/campo_busca_instituicao.dart';
 import '../widgets/componentes_padrao.dart';
+import '../widgets/foto_perfil.dart';
 import 'avaliacoes_recebidas.dart';
 import 'historico_caronas.dart';
 
 typedef CarregarPerfil = Future<Map<String, dynamic>> Function();
 typedef AtualizarPerfil =
     Future<Map<String, dynamic>> Function(int idInstituicao, String campus);
+typedef SelecionarFotoPerfil = Future<XFile?> Function();
+typedef EnviarFotoPerfil =
+    Future<Map<String, dynamic>> Function(String caminho);
 
 class _DadosPerfilEditado {
   final int idInstituicao;
@@ -28,6 +33,8 @@ class PerfilTela extends StatefulWidget {
   final AtualizarPerfil? atualizarPerfil;
   final CarregarAvaliacoes? carregarAvaliacoes;
   final BuscarInstituicoes? buscarInstituicoes;
+  final SelecionarFotoPerfil? selecionarFoto;
+  final EnviarFotoPerfil? enviarFoto;
 
   const PerfilTela({
     super.key,
@@ -35,6 +42,8 @@ class PerfilTela extends StatefulWidget {
     this.atualizarPerfil,
     this.carregarAvaliacoes,
     this.buscarInstituicoes,
+    this.selecionarFoto,
+    this.enviarFoto,
   });
 
   @override
@@ -44,6 +53,7 @@ class PerfilTela extends StatefulWidget {
 class _PerfilTelaState extends State<PerfilTela> {
   Map<String, dynamic> usuario = AuthService.usuarioLogado ?? {};
   bool carregando = true;
+  bool enviandoFoto = false;
   String? mensagemErro;
   String? mensagemErroAvaliacoes;
   double mediaAvaliacao = 0;
@@ -235,6 +245,59 @@ class _PerfilTelaState extends State<PerfilTela> {
     );
   }
 
+  Future<void> alterarFoto() async {
+    try {
+      final foto =
+          await (widget.selecionarFoto?.call() ??
+              ImagePicker().pickImage(
+                source: ImageSource.gallery,
+                maxWidth: 1024,
+                maxHeight: 1024,
+                imageQuality: 80,
+              ));
+
+      if (foto == null || !mounted) {
+        return;
+      }
+
+      setState(() => enviandoFoto = true);
+
+      final resultado =
+          await (widget.enviarFoto?.call(foto.path) ??
+              AuthService.atualizarFotoPerfil(foto.path));
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        enviandoFoto = false;
+
+        if (resultado['sucesso'] == true && resultado['dados'] is Map) {
+          usuario = Map<String, dynamic>.from(resultado['dados']);
+        }
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            resultado['mensagem']?.toString() ??
+                'Não foi possível atualizar a foto',
+          ),
+        ),
+      );
+    } catch (erro) {
+      if (!mounted) {
+        return;
+      }
+
+      setState(() => enviandoFoto = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Não foi possível selecionar a foto')),
+      );
+    }
+  }
+
   Future<void> sair() async {
     await AuthService.sair();
 
@@ -330,7 +393,7 @@ class _PerfilTelaState extends State<PerfilTela> {
     final tipoPerfil = usuario['tipoPerfil']?.toString().trim() ?? 'PASSAGEIRO';
     final statusVerificacao =
         usuario['statusVerificacao']?.toString().trim() ?? 'NAO_ENVIADO';
-    final inicial = nome.isNotEmpty ? nome[0].toUpperCase() : 'U';
+    final fotoPerfil = usuario['fotoPerfil']?.toString().trim();
     final mediaExibida = mediaAvaliacao.clamp(0, 5).toDouble();
     final textoMedia = mediaExibida.toStringAsFixed(1).replaceAll('.', ',');
     final textoTotalAvaliacoes = totalAvaliacoes == 0
@@ -375,17 +438,11 @@ class _PerfilTelaState extends State<PerfilTela> {
               ),
               child: Column(
                 children: [
-                  CircleAvatar(
-                    radius: 42,
-                    backgroundColor: const Color(0xFFECDDF5),
-                    child: Text(
-                      inicial,
-                      style: const TextStyle(
-                        color: AppColors.primary,
-                        fontSize: 30,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                  FotoPerfil(
+                    nome: nome,
+                    urlFoto: fotoPerfil,
+                    carregando: enviandoFoto,
+                    onTap: carregando ? null : alterarFoto,
                   ),
                   const SizedBox(height: 12),
                   Text(

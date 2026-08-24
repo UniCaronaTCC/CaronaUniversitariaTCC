@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:uni_carona/auth/login.dart';
 import 'package:uni_carona/home/avaliacoes_recebidas.dart';
 import 'package:uni_carona/home/perfil.dart';
@@ -17,6 +18,8 @@ void main() {
   testWidgets('exibe os dados do usuário e permite editar e sair', (
     tester,
   ) async {
+    String? fotoEnviada;
+
     AuthService.tokenUsuarioLogado = 'token-teste';
     AuthService.usuarioLogado = {
       'id': 1,
@@ -58,6 +61,16 @@ void main() {
               uf: 'SP',
             ),
           ],
+          selecionarFoto: () async => XFile('foto-teste.jpg'),
+          enviarFoto: (caminho) async {
+            fotoEnviada = caminho;
+
+            return {
+              'sucesso': true,
+              'mensagem': 'Foto atualizada com sucesso',
+              'dados': AuthService.usuarioLogado,
+            };
+          },
           carregarAvaliacoes: (idUsuario, pagina) async => {
             'sucesso': true,
             'dados': {
@@ -87,6 +100,17 @@ void main() {
     expect(find.text('UniSalesiano - Campus Araçatuba'), findsOneWidget);
     expect(find.text('Motorista e passageiro'), findsOneWidget);
     expect(find.text('Perfil verificado'), findsOneWidget);
+
+    await tester.ensureVisible(find.byTooltip('Alterar foto de perfil'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Alterar foto de perfil'));
+    await tester.pumpAndSettle();
+
+    expect(fotoEnviada, 'foto-teste.jpg');
+    expect(find.text('Foto atualizada com sucesso'), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(find.text('4,7 / 5'), 200);
 
