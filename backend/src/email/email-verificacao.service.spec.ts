@@ -9,19 +9,23 @@ describe('EmailVerificacaoService', () => {
   let service: EmailVerificacaoService;
   let usersService: {
     buscarPorEmailComVerificacao: jest.Mock;
+    buscarPorEmailComRedefinicao: jest.Mock;
     salvarUsuario: jest.Mock;
   };
   let emailService: {
     enviarCodigoVerificacao: jest.Mock;
+    enviarCodigoRedefinicaoSenha: jest.Mock;
   };
 
   beforeEach(() => {
     usersService = {
       buscarPorEmailComVerificacao: jest.fn(),
+      buscarPorEmailComRedefinicao: jest.fn(),
       salvarUsuario: jest.fn(),
     };
     emailService = {
       enviarCodigoVerificacao: jest.fn(),
+      enviarCodigoRedefinicaoSenha: jest.fn(),
     };
 
     service = new EmailVerificacaoService(
@@ -99,5 +103,118 @@ describe('EmailVerificacaoService', () => {
       service.confirmarCodigo('joao@email.com', '123456'),
     ).rejects.toThrow('Código expirado. Solicite um novo código.');
     expect(usersService.salvarUsuario).not.toHaveBeenCalled();
+  });
+
+  it('envia código para redefinir a senha', async () => {
+    const usuario = {
+      nome: 'João',
+      email: 'joao@email.com',
+      codigoRedefinicaoSenha: null,
+      codigoRedefinicaoSenhaExpiraEm: null,
+      codigoRedefinicaoSenhaEnviadoEm: null,
+    };
+    usersService.buscarPorEmailComRedefinicao.mockResolvedValue(usuario);
+
+    await service.enviarCodigoRedefinicaoSenha('joao@email.com');
+
+    const codigoEnviado =
+      emailService.enviarCodigoRedefinicaoSenha.mock.calls[0][2];
+
+    expect(codigoEnviado).toMatch(/^\d{6}$/);
+    expect(
+      await bcrypt.compare(codigoEnviado, usuario.codigoRedefinicaoSenha!),
+    ).toBe(true);
+    expect(emailService.enviarCodigoRedefinicaoSenha).toHaveBeenCalledWith(
+      usuario.email,
+      usuario.nome,
+      codigoEnviado,
+    );
+  });
+
+  it('não revela quando o e-mail não está cadastrado', async () => {
+    usersService.buscarPorEmailComRedefinicao.mockResolvedValue(null);
+
+    await expect(
+      service.enviarCodigoRedefinicaoSenha('outro@email.com'),
+    ).resolves.toBeUndefined();
+
+    expect(usersService.salvarUsuario).not.toHaveBeenCalled();
+    expect(emailService.enviarCodigoRedefinicaoSenha).not.toHaveBeenCalled();
+  });
+
+  it('não revela que um código já foi enviado recentemente', async () => {
+    usersService.buscarPorEmailComRedefinicao.mockResolvedValue({
+      codigoRedefinicaoSenhaEnviadoEm: new Date(),
+    });
+
+    await expect(
+      service.enviarCodigoRedefinicaoSenha('joao@email.com'),
+    ).resolves.toBeUndefined();
+
+    expect(usersService.salvarUsuario).not.toHaveBeenCalled();
+    expect(emailService.enviarCodigoRedefinicaoSenha).not.toHaveBeenCalled();
+  });
+
+  it('limpa o código quando o serviço de e-mail falha', async () => {
+    const usuario = {
+      nome: 'João',
+      email: 'joao@email.com',
+      codigoRedefinicaoSenha: null,
+      codigoRedefinicaoSenhaExpiraEm: null,
+      codigoRedefinicaoSenhaEnviadoEm: null,
+    };
+    usersService.buscarPorEmailComRedefinicao.mockResolvedValue(usuario);
+    emailService.enviarCodigoRedefinicaoSenha.mockRejectedValue(
+      new Error('Falha no envio'),
+    );
+
+    await expect(
+      service.enviarCodigoRedefinicaoSenha('joao@email.com'),
+    ).resolves.toBeUndefined();
+
+    expect(usuario.codigoRedefinicaoSenha).toBeNull();
+    expect(usuario.codigoRedefinicaoSenhaExpiraEm).toBeNull();
+    expect(usuario.codigoRedefinicaoSenhaEnviadoEm).toBeNull();
+    expect(usersService.salvarUsuario).toHaveBeenCalledTimes(2);
+  });
+
+  it('redefine a senha com código válido', async () => {
+    const senhaAntiga = await bcrypt.hash('antiga123', 4);
+    const usuario = {
+      senha: senhaAntiga,
+      codigoRedefinicaoSenha: await bcrypt.hash('123456', 4),
+      codigoRedefinicaoSenhaExpiraEm: new Date(Date.now() + 60000),
+      codigoRedefinicaoSenhaEnviadoEm: new Date(),
+    };
+    usersService.buscarPorEmailComRedefinicao.mockResolvedValue(usuario);
+
+    await service.redefinirSenha('joao@email.com', '123456', 'novaSenha123');
+
+    expect(await bcrypt.compare('novaSenha123', usuario.senha)).toBe(true);
+    expect(usuario.codigoRedefinicaoSenha).toBeNull();
+    expect(usuario.codigoRedefinicaoSenhaExpiraEm).toBeNull();
+    expect(usuario.codigoRedefinicaoSenhaEnviadoEm).toBeNull();
+    expect(usersService.salvarUsuario).toHaveBeenCalledWith(usuario);
+  });
+
+  it('recusa redefinição com código expirado', async () => {
+    usersService.buscarPorEmailComRedefinicao.mockResolvedValue({
+      senha: await bcrypt.hash('antiga123', 4),
+      codigoRedefinicaoSenha: await bcrypt.hash('123456', 4),
+      codigoRedefinicaoSenhaExpiraEm: new Date(Date.now() - 60000),
+      codigoRedefinicaoSenhaEnviadoEm: new Date(),
+    });
+
+    await expect(
+      service.redefinirSenha('joao@email.com', '123456', 'novaSenha123'),
+    ).rejects.toThrow('Código expirado. Solicite um novo código.');
+    expect(usersService.salvarUsuario).not.toHaveBeenCalled();
+  });
+
+  it('recusa uma nova senha fraca', async () => {
+    await expect(
+      service.redefinirSenha('joao@email.com', '123456', '12345678'),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(usersService.buscarPorEmailComRedefinicao).not.toHaveBeenCalled();
   });
 });

@@ -194,4 +194,31 @@ export class AuthService {
         'Novo código enviado para seu e-mail',
     };
   }
+
+  async solicitarRedefinicaoSenha(email: string) {
+    await this.emailVerificacaoService.enviarCodigoRedefinicaoSenha(
+      email,
+    );
+
+    return {
+      mensagem:
+        'Se o e-mail estiver cadastrado, enviaremos um código de redefinição',
+    };
+  }
+
+  async redefinirSenha(
+    email: string,
+    codigo: string,
+    novaSenha: string,
+  ) {
+    await this.emailVerificacaoService.redefinirSenha(
+      email,
+      codigo,
+      novaSenha,
+    );
+
+    return {
+      mensagem: 'Senha redefinida com sucesso',
+    };
+  }
 }

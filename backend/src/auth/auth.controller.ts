@@ -104,4 +104,46 @@ export class AuthController {
       email,
     );
   }
+
+  @Post('esqueci-senha')
+  esqueciSenha(
+    @Body() body: DadosAuthRecebidos,
+  ) {
+    const email =
+      body?.email?.toString().trim() ?? '';
+
+    if (!email) {
+      throw new BadRequestException(
+        'E-mail é obrigatório',
+      );
+    }
+
+    return this.authService.solicitarRedefinicaoSenha(
+      email,
+    );
+  }
+
+  @Post('redefinir-senha')
+  redefinirSenha(
+    @Body() body: DadosAuthRecebidos,
+  ) {
+    const email =
+      body?.email?.toString().trim() ?? '';
+    const codigo =
+      body?.codigo?.toString().trim() ?? '';
+    const novaSenha =
+      body?.novaSenha?.toString() ?? '';
+
+    if (!email || !codigo || !novaSenha) {
+      throw new BadRequestException(
+        'E-mail, código e nova senha são obrigatórios',
+      );
+    }
+
+    return this.authService.redefinirSenha(
+      email,
+      codigo,
+      novaSenha,
+    );
+  }
 }

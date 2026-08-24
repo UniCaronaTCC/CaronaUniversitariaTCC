@@ -16,6 +16,8 @@ describe('AuthService', () => {
   let emailVerificacaoService: {
     enviarCodigo: jest.Mock;
     confirmarCodigo: jest.Mock;
+    enviarCodigoRedefinicaoSenha: jest.Mock;
+    redefinirSenha: jest.Mock;
   };
 
   beforeEach(() => {
@@ -28,6 +30,8 @@ describe('AuthService', () => {
     emailVerificacaoService = {
       enviarCodigo: jest.fn(),
       confirmarCodigo: jest.fn(),
+      enviarCodigoRedefinicaoSenha: jest.fn(),
+      redefinirSenha: jest.fn(),
     };
 
     service = new AuthService(

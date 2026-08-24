@@ -48,6 +48,19 @@ export class UsersService {
       .getOne();
   }
 
+  async buscarPorEmailComRedefinicao(
+    email: string,
+  ): Promise<User | null> {
+    return this.usersRepository
+      .createQueryBuilder('usuario')
+      .addSelect('usuario.senha')
+      .addSelect('usuario.codigoRedefinicaoSenha')
+      .addSelect('usuario.codigoRedefinicaoSenhaExpiraEm')
+      .addSelect('usuario.codigoRedefinicaoSenhaEnviadoEm')
+      .where('usuario.email = :email', { email })
+      .getOne();
+  }
+
   async salvarUsuario(
     usuario: User,
   ): Promise<User> {

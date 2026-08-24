@@ -137,6 +137,104 @@ export class EmailVerificacaoService {
     );
   }
 
+  async enviarCodigoRedefinicaoSenha(email: string): Promise<void> {
+    const emailNormalizado = email.trim().toLowerCase();
+
+    const usuario =
+      await this.usersService.buscarPorEmailComRedefinicao(
+        emailNormalizado,
+      );
+
+    // A resposta é igual para não informar se o e-mail está cadastrado.
+    if (!usuario) {
+      return;
+    }
+
+    const ultimoEnvio = usuario.codigoRedefinicaoSenhaEnviadoEm;
+
+    if (
+      ultimoEnvio &&
+      Date.now() - ultimoEnvio.getTime() <
+        this.tempoReenvioSegundos * 1000
+    ) {
+      return;
+    }
+
+    const codigo = this.gerarCodigo();
+
+    usuario.codigoRedefinicaoSenha =
+      await bcrypt.hash(codigo, 10);
+    usuario.codigoRedefinicaoSenhaEnviadoEm = new Date();
+    usuario.codigoRedefinicaoSenhaExpiraEm = new Date(
+      Date.now() + this.tempoExpiracaoMinutos * 60 * 1000,
+    );
+
+    await this.usersService.salvarUsuario(usuario);
+
+    try {
+      await this.emailService.enviarCodigoRedefinicaoSenha(
+        usuario.email,
+        usuario.nome,
+        codigo,
+      );
+    } catch {
+      usuario.codigoRedefinicaoSenha = null;
+      usuario.codigoRedefinicaoSenhaExpiraEm = null;
+      usuario.codigoRedefinicaoSenhaEnviadoEm = null;
+      await this.usersService.salvarUsuario(usuario);
+    }
+  }
+
+  async redefinirSenha(
+    email: string,
+    codigo: string,
+    novaSenha: string,
+  ): Promise<void> {
+    const emailNormalizado = email.trim().toLowerCase();
+    const codigoNormalizado = codigo.trim();
+
+    if (!/^\d{6}$/.test(codigoNormalizado)) {
+      throw new BadRequestException('Código de redefinição inválido');
+    }
+
+    this.validarSenha(novaSenha);
+
+    const usuario =
+      await this.usersService.buscarPorEmailComRedefinicao(
+        emailNormalizado,
+      );
+
+    if (
+      !usuario ||
+      !usuario.codigoRedefinicaoSenha ||
+      !usuario.codigoRedefinicaoSenhaExpiraEm
+    ) {
+      throw new BadRequestException('Código de redefinição inválido');
+    }
+
+    if (usuario.codigoRedefinicaoSenhaExpiraEm.getTime() < Date.now()) {
+      throw new BadRequestException(
+        'Código expirado. Solicite um novo código.',
+      );
+    }
+
+    const codigoCorreto = await bcrypt.compare(
+      codigoNormalizado,
+      usuario.codigoRedefinicaoSenha,
+    );
+
+    if (!codigoCorreto) {
+      throw new BadRequestException('Código de redefinição inválido');
+    }
+
+    usuario.senha = await bcrypt.hash(novaSenha, 10);
+    usuario.codigoRedefinicaoSenha = null;
+    usuario.codigoRedefinicaoSenhaExpiraEm = null;
+    usuario.codigoRedefinicaoSenhaEnviadoEm = null;
+
+    await this.usersService.salvarUsuario(usuario);
+  }
+
   private validarTempoReenvio(
     ultimoEnvio: Date | null,
   ): void {
@@ -166,5 +264,16 @@ export class EmailVerificacaoService {
 
   private gerarCodigo(): string {
     return randomInt(100000, 1000000).toString();
+  }
+
+  private validarSenha(senha: string): void {
+    const temLetra = /[A-Za-zÀ-ÖØ-öø-ÿ]/.test(senha);
+    const temNumero = /[0-9]/.test(senha);
+
+    if (senha.length < 8 || !temLetra || !temNumero) {
+      throw new BadRequestException(
+        'A senha deve ter pelo menos 8 caracteres, com letras e números',
+      );
+    }
   }
 }

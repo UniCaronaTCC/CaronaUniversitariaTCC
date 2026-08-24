@@ -52,6 +52,31 @@ export class User {
   })
   codigoVerificacaoEmailEnviadoEm: Date | null = null;
 
+  @Column({
+    name: 'codigo_redefinicao_senha',
+    type: 'varchar',
+    length: 255,
+    nullable: true,
+    select: false,
+  })
+  codigoRedefinicaoSenha: string | null = null;
+
+  @Column({
+    name: 'codigo_redefinicao_senha_expira_em',
+    type: 'datetime',
+    nullable: true,
+    select: false,
+  })
+  codigoRedefinicaoSenhaExpiraEm: Date | null = null;
+
+  @Column({
+    name: 'codigo_redefinicao_senha_enviado_em',
+    type: 'datetime',
+    nullable: true,
+    select: false,
+  })
+  codigoRedefinicaoSenhaEnviadoEm: Date | null = null;
+
   // =========================
   // DADOS DO USUÁRIO
   // =========================

@@ -128,6 +128,42 @@ export class EmailService {
     }
   }
 
+  async enviarCodigoRedefinicaoSenha(
+    emailDestino: string,
+    nomeUsuario: string,
+    codigo: string,
+  ): Promise<void> {
+    const { error } = await this.resend.emails.send({
+      from: 'UniCarona <onboarding@resend.dev>',
+      to: [emailDestino],
+      subject: 'Redefinição de senha - UniCarona',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 520px; margin: 0 auto; color: #222;">
+          <h1>UniCarona</h1>
+          <p>Olá, ${this.escaparHtml(nomeUsuario)}!</p>
+          <p>Use o código abaixo para redefinir sua senha:</p>
+          <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; margin: 28px 0;">
+            ${this.escaparHtml(codigo)}
+          </div>
+          <p>Este código é válido por <strong>10 minutos</strong>.</p>
+          <p>Se você não solicitou a troca, ignore esta mensagem.</p>
+          <p><strong>UniCarona</strong></p>
+        </div>
+      `,
+    });
+
+    if (error) {
+      console.error(
+        'Erro ao enviar código de redefinição:',
+        error,
+      );
+
+      throw new InternalServerErrorException(
+        'Não foi possível enviar o código de redefinição',
+      );
+    }
+  }
+
   private escaparHtml(texto: string): string {
     return texto
       .replaceAll('&', '&amp;')

@@ -15,6 +15,8 @@ describe('AuthController', () => {
           useValue: {
             login: jest.fn(),
             cadastro: jest.fn(),
+            solicitarRedefinicaoSenha: jest.fn(),
+            redefinirSenha: jest.fn(),
           },
         },
       ],
@@ -29,5 +31,17 @@ describe('AuthController', () => {
 
   it('recusa login sem e-mail e senha', () => {
     expect(() => controller.login(undefined)).toThrow(BadRequestException);
+  });
+
+  it('recusa recuperação sem e-mail', () => {
+    expect(() => controller.esqueciSenha(undefined)).toThrow(
+      BadRequestException,
+    );
+  });
+
+  it('recusa redefinição sem os dados obrigatórios', () => {
+    expect(() =>
+      controller.redefinirSenha({ email: 'joao@email.com' }),
+    ).toThrow(BadRequestException);
   });
 });
