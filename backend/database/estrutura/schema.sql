@@ -45,6 +45,10 @@ CREATE TABLE IF NOT EXISTS usuarios (
   id_usuario INT AUTO_INCREMENT PRIMARY KEY,
   nome VARCHAR(100) NOT NULL,
   email VARCHAR(100) NOT NULL UNIQUE,
+  email_verificado BOOLEAN NOT NULL DEFAULT FALSE,
+  codigo_verificacao_email VARCHAR(255) NULL,
+  codigo_verificacao_email_expira_em DATETIME NULL,
+  codigo_verificacao_email_enviado_em DATETIME NULL,
   id_instituicao INT NULL,
   instituicao VARCHAR(255) NULL,
   campus VARCHAR(150) NULL,
@@ -116,6 +120,8 @@ CREATE TABLE IF NOT EXISTS solicitacoes (
   id_solicitacao INT AUTO_INCREMENT PRIMARY KEY,
   id_carona INT NOT NULL,
   id_passageiro INT NOT NULL,
+  id_ponto_embarque INT NULL,
+  tipo_ponto_embarque VARCHAR(30) NOT NULL DEFAULT 'EXISTENTE',
   local_embarque VARCHAR(255) NOT NULL,
   embarque_latitude DECIMAL(10, 8) NOT NULL,
   embarque_longitude DECIMAL(11, 8) NOT NULL,
@@ -127,6 +133,8 @@ CREATE TABLE IF NOT EXISTS solicitacoes (
   CONSTRAINT uq_solicitacao_carona_passageiro
     UNIQUE (id_carona, id_passageiro),
 
+  INDEX idx_solicitacoes_ponto_embarque (id_ponto_embarque),
+
   CONSTRAINT fk_solicitacoes_caronas
     FOREIGN KEY (id_carona)
     REFERENCES caronas(id_carona)
@@ -135,7 +143,13 @@ CREATE TABLE IF NOT EXISTS solicitacoes (
   CONSTRAINT fk_solicitacoes_usuarios
     FOREIGN KEY (id_passageiro)
     REFERENCES usuarios(id_usuario)
-    ON DELETE RESTRICT
+    ON DELETE RESTRICT,
+
+  CONSTRAINT fk_solicitacoes_pontos_embarque
+    FOREIGN KEY (id_ponto_embarque)
+    REFERENCES pontos_embarque(id_ponto_embarque)
+    ON UPDATE CASCADE
+    ON DELETE SET NULL
 ) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS veiculos (
