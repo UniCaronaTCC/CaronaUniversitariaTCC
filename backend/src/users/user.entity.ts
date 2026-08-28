@@ -38,7 +38,7 @@ export class User {
 
   @Column({
     name: 'codigo_verificacao_email_expira_em',
-    type: 'datetime',
+    type: 'timestamptz',
     nullable: true,
     select: false,
   })
@@ -46,7 +46,7 @@ export class User {
 
   @Column({
     name: 'codigo_verificacao_email_enviado_em',
-    type: 'datetime',
+    type: 'timestamptz',
     nullable: true,
     select: false,
   })
@@ -63,7 +63,7 @@ export class User {
 
   @Column({
     name: 'codigo_redefinicao_senha_expira_em',
-    type: 'datetime',
+    type: 'timestamptz',
     nullable: true,
     select: false,
   })
@@ -71,7 +71,7 @@ export class User {
 
   @Column({
     name: 'codigo_redefinicao_senha_enviado_em',
-    type: 'datetime',
+    type: 'timestamptz',
     nullable: true,
     select: false,
   })
@@ -149,6 +149,6 @@ export class User {
   })
   senha: string;
 
-  @CreateDateColumn({ name: 'criado_em' })
+  @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;
 }

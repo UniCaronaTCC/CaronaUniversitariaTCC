@@ -33,12 +33,12 @@ export class Avaliacao {
   @JoinColumn({ name: 'id_avaliado' })
   avaliado!: User;
 
-  @Column({ type: 'tinyint', unsigned: true })
+  @Column({ type: 'smallint' })
   nota!: number;
 
   @Column({ type: 'varchar', length: 500, nullable: true })
   comentario: string | null = null;
 
-  @CreateDateColumn({ name: 'criado_em' })
+  @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm!: Date;
 }

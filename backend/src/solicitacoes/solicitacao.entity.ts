@@ -11,6 +11,7 @@ import {
 
 import { Carona } from '../caronas/carona.entity';
 import { PontoEmbarque } from '../caronas/ponto-embarque.entity';
+import { numeroDecimalTransformer } from '../database/numero-decimal.transformer';
 import { User } from '../users/user.entity';
 
 @Entity('solicitacoes')
@@ -62,6 +63,7 @@ export class Solicitacao {
     type: 'decimal',
     precision: 10,
     scale: 8,
+    transformer: numeroDecimalTransformer,
   })
   embarqueLatitude!: number;
 
@@ -70,15 +72,16 @@ export class Solicitacao {
     type: 'decimal',
     precision: 11,
     scale: 8,
+    transformer: numeroDecimalTransformer,
   })
   embarqueLongitude!: number;
 
   @Column({ length: 30, default: 'PENDENTE' })
   status: string = 'PENDENTE';
 
-  @CreateDateColumn({ name: 'criado_em' })
+  @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm!: Date;
 
-  @UpdateDateColumn({ name: 'atualizado_em' })
+  @UpdateDateColumn({ name: 'atualizado_em', type: 'timestamptz' })
   atualizadoEm!: Date;
 }

@@ -1,8 +1,9 @@
 import { NotFoundException } from '@nestjs/common';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 
 import { Carona } from './carona.entity';
 import { CaronasService, DadosCriacaoCarona } from './caronas.service';
+import { PontoEmbarque } from './ponto-embarque.entity';
 
 describe('CaronasService', () => {
   let service: CaronasService;
@@ -37,6 +38,7 @@ describe('CaronasService', () => {
     valor: 8.5,
     recorrente: false,
     diasSemana: null,
+    pontosEmbarque: [],
   };
 
   beforeEach(() => {
@@ -54,7 +56,11 @@ describe('CaronasService', () => {
       save: jest.fn((carona: Carona) => Promise.resolve(carona)),
     };
 
-    service = new CaronasService(repository as unknown as Repository<Carona>);
+    service = new CaronasService(
+      repository as unknown as Repository<Carona>,
+      {} as Repository<PontoEmbarque>,
+      {} as DataSource,
+    );
   });
 
   it('atualiza uma carona pertencente ao usuário', async () => {

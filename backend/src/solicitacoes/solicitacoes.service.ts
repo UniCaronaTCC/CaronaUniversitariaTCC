@@ -422,7 +422,7 @@ export class SolicitacoesService {
       .andWhere(
         `id_carona IN (
           SELECT id_carona
-          FROM caronas
+          FROM unicarona.caronas
           WHERE status = :statusCarona
         )`,
         { statusCarona: 'FINALIZADA' },
