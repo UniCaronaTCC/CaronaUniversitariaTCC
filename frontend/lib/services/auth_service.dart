@@ -1,28 +1,42 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/api_config.dart';
 import 'sessao_service.dart';
+import 'supabase_auth_service.dart';
 
 class AuthService {
-  static String? tokenUsuarioLogado;
+  static String? _tokenUsuarioLogado;
   static Map<String, dynamic>? usuarioLogado;
+
+  static String? get tokenUsuarioLogado =>
+      SupabaseAuthService.tokenAtual ?? _tokenUsuarioLogado;
+
+  static set tokenUsuarioLogado(String? token) {
+    _tokenUsuarioLogado = token;
+  }
 
   static bool get estaLogado => tokenUsuarioLogado != null;
 
   static Future<void> carregarSessao() async {
     try {
       final sessao = await SessaoService.carregar();
+      final tokenSupabase = SupabaseAuthService.tokenAtual;
 
-      if (sessao == null) {
+      if (sessao == null && tokenSupabase == null) {
         tokenUsuarioLogado = null;
         usuarioLogado = null;
         return;
       }
 
-      tokenUsuarioLogado = sessao['token']?.toString();
-      usuarioLogado = sessao['usuario'] as Map<String, dynamic>?;
+      tokenUsuarioLogado = tokenSupabase ?? sessao?['token']?.toString();
+      usuarioLogado = sessao?['usuario'] as Map<String, dynamic>?;
+
+      if (tokenSupabase != null) {
+        await buscarPerfil();
+      }
     } catch (erro) {
       tokenUsuarioLogado = null;
       usuarioLogado = null;
@@ -31,12 +45,60 @@ class AuthService {
   }
 
   static Future<void> sair() async {
-    tokenUsuarioLogado = null;
-    usuarioLogado = null;
-    await SessaoService.limpar();
+    try {
+      await SupabaseAuthService.sair();
+    } finally {
+      tokenUsuarioLogado = null;
+      usuarioLogado = null;
+      await SessaoService.limpar();
+    }
   }
 
   static Future<Map<String, dynamic>> fazerLogin(
+    String email,
+    String senha,
+  ) async {
+    if (SupabaseAuthService.configurado) {
+      try {
+        final resposta = await SupabaseAuthService.entrar(email, senha);
+        tokenUsuarioLogado = resposta.session?.accessToken;
+
+        if (tokenUsuarioLogado != null) {
+          final perfil = await buscarPerfil();
+
+          if (perfil['sucesso'] == true) {
+            return {
+              'sucesso': true,
+              'dados': {
+                'mensagem': 'Login realizado com sucesso',
+                'usuario': perfil['dados'],
+              },
+            };
+          }
+
+          return perfil;
+        }
+
+        return {
+          'sucesso': false,
+          'mensagem': 'Confirme seu e-mail antes de entrar',
+        };
+      } on AuthException catch (erro) {
+        if (erro.message.toLowerCase().contains('email not confirmed')) {
+          return {
+            'sucesso': false,
+            'mensagem': 'Confirme seu e-mail antes de entrar',
+          };
+        }
+
+        // Usuários antigos ainda entram pelo login do backend.
+      }
+    }
+
+    return _fazerLoginAntigo(email, senha);
+  }
+
+  static Future<Map<String, dynamic>> _fazerLoginAntigo(
     String email,
     String senha,
   ) async {
@@ -92,6 +154,29 @@ class AuthService {
     String email,
     String senha,
   ) async {
+    if (SupabaseAuthService.configurado) {
+      try {
+        await SupabaseAuthService.cadastrar(nome, email, senha);
+
+        return {
+          'sucesso': true,
+          'dados': {
+            'mensagem': 'Enviamos um código de confirmação para seu e-mail',
+          },
+        };
+      } on AuthException catch (erro) {
+        return {
+          'sucesso': false,
+          'mensagem': _mensagemErroSupabase(erro.message),
+        };
+      } catch (erro) {
+        return {
+          'sucesso': false,
+          'mensagem': 'Não foi possível conectar ao serviço de cadastro',
+        };
+      }
+    }
+
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/auth/cadastro');
       final resposta = await http.post(
@@ -119,6 +204,25 @@ class AuthService {
         'mensagem': 'Não foi possível conectar ao servidor',
       };
     }
+  }
+
+  static String _mensagemErroSupabase(String mensagem) {
+    final texto = mensagem.toLowerCase();
+
+    if (texto.contains('already registered') ||
+        texto.contains('already been registered')) {
+      return 'Este e-mail já está cadastrado';
+    }
+
+    if (texto.contains('password')) {
+      return 'A senha não atende aos requisitos de segurança';
+    }
+
+    if (texto.contains('rate limit')) {
+      return 'Aguarde um pouco antes de tentar novamente';
+    }
+
+    return mensagem;
   }
 
   static Future<Map<String, dynamic>> buscarPerfil() async {

@@ -152,6 +152,7 @@ export class User {
   documentoVerificacao: string | null = null;
 
   @Column({
+    type: 'varchar',
     length: 255,
     nullable: true,
     select: false,
