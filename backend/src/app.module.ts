@@ -10,8 +10,9 @@ import { AvaliacoesModule } from './avaliacoes/avaliacoes.module';
 import { CaronasModule } from './caronas/caronas.module';
 import { InstituicoesModule } from './instituicoes/instituicoes.module';
 import { SolicitacoesModule } from './solicitacoes/solicitacoes.module';
-
 import { EmailModule } from './email/email.module';
+import { RotasModule } from './rotas/rotas.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -44,6 +45,7 @@ import { EmailModule } from './email/email.module';
     AvaliacoesModule,
     EmailModule,
     InstituicoesModule,
+    RotasModule,
   ],
   controllers: [AppController],
   providers: [AppService],
