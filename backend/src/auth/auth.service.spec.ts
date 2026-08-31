@@ -49,6 +49,17 @@ describe('AuthService', () => {
     ).rejects.toBeInstanceOf(UnauthorizedException);
   });
 
+  it('recusa o login antigo quando o usuário não tem senha local', async () => {
+    usersService.buscarPorEmailComSenha.mockResolvedValue({
+      email: 'joao@email.com',
+      senha: null,
+    });
+
+    await expect(
+      service.login('joao@email.com', 'senha123'),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
   it('gera token sem retornar a senha no login', async () => {
     const senhaHash = await bcrypt.hash('123456', 4);
 

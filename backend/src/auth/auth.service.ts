@@ -26,7 +26,7 @@ export class AuthService {
         emailNormalizado,
       );
 
-    if (!usuario) {
+    if (!usuario || !usuario.senha) {
       throw new UnauthorizedException(
         'E-mail ou senha inválidos',
       );

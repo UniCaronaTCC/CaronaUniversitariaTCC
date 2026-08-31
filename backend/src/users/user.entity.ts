@@ -10,6 +10,14 @@ export class User {
   @PrimaryGeneratedColumn({ name: 'id_usuario' })
   idUsuario: number;
 
+  @Column({
+    name: 'auth_id',
+    type: 'uuid',
+    nullable: true,
+    unique: true,
+  })
+  authId: string | null = null;
+
   @Column({ length: 100 })
   nome: string;
 
@@ -145,9 +153,10 @@ export class User {
 
   @Column({
     length: 255,
+    nullable: true,
     select: false,
   })
-  senha: string;
+  senha: string | null;
 
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;
