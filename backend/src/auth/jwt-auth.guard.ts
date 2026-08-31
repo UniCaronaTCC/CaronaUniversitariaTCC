@@ -5,14 +5,20 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import { UsersService } from '../users/users.service';
 import type {
   RequisicaoComUsuario,
   UsuarioToken,
 } from './requisicao-com-usuario';
+import { SupabaseAuthService } from './supabase-auth.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly supabaseAuthService: SupabaseAuthService,
+    private readonly usersService: UsersService,
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest<RequisicaoComUsuario>();
@@ -47,7 +53,30 @@ export class JwtAuthGuard implements CanActivate {
 
       return true;
     } catch {
+      // Se não for o token antigo, tenta validar pelo Supabase.
+    }
+
+    const usuarioSupabase =
+      await this.supabaseAuthService.buscarUsuario(token);
+
+    if (!usuarioSupabase) {
       throw new UnauthorizedException('Token inválido ou expirado');
     }
+
+    const usuario = await this.usersService.buscarPorAuthId(
+      usuarioSupabase.authId,
+    );
+
+    if (!usuario) {
+      throw new UnauthorizedException('Usuário não encontrado');
+    }
+
+    request.usuario = {
+      sub: usuario.idUsuario,
+      email: usuario.email,
+      nome: usuario.nome,
+    };
+
+    return true;
   }
 }

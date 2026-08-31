@@ -11,6 +11,7 @@ import { UsersController } from '../users/users.controller';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
+import { SupabaseAuthService } from './supabase-auth.service';
 
 @Module({
   imports: [
@@ -39,6 +40,7 @@ import { JwtAuthGuard } from './jwt-auth.guard';
   providers: [
     AuthService,
     JwtAuthGuard,
+    SupabaseAuthService,
   ],
   exports: [
     JwtAuthGuard,

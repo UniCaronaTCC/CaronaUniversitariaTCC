@@ -72,6 +72,16 @@ describe('UsersService', () => {
     });
   });
 
+  it('busca o perfil pelo identificador do Supabase', async () => {
+    repository.findOne.mockResolvedValue({ idUsuario: 1 });
+
+    await service.buscarPorAuthId('uuid-do-supabase');
+
+    expect(repository.findOne).toHaveBeenCalledWith({
+      where: { authId: 'uuid-do-supabase' },
+    });
+  });
+
   it('atualiza instituição e campus sem mudar o tipo do perfil', async () => {
     const usuario = {
       idUsuario: 1,

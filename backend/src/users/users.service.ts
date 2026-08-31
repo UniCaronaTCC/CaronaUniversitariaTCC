@@ -25,6 +25,12 @@ export class UsersService {
     });
   }
 
+  async buscarPorAuthId(authId: string): Promise<User | null> {
+    return this.usersRepository.findOne({
+      where: { authId },
+    });
+  }
+
   async buscarPorEmailComSenha(
     email: string,
   ): Promise<User | null> {
