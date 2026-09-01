@@ -83,7 +83,7 @@ export class MensagensService {
       .orderBy('conversa.criadoEm', 'DESC')
       .getMany();
 
-    return Promise.all(
+    const itens = await Promise.all(
       conversas.map(async (conversa) => ({
         conversa,
         ultimaMensagem: await this.mensagensRepository.findOne({
@@ -93,6 +93,13 @@ export class MensagensService {
         }),
       })),
     );
+
+    return itens.sort((itemA, itemB) => {
+      const dataA = itemA.ultimaMensagem?.criadoEm ?? itemA.conversa.criadoEm;
+      const dataB = itemB.ultimaMensagem?.criadoEm ?? itemB.conversa.criadoEm;
+
+      return dataB.getTime() - dataA.getTime();
+    });
   }
 
   async listarMensagens(

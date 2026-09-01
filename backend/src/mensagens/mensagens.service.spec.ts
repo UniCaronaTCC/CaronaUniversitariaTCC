@@ -100,6 +100,37 @@ describe('MensagensService', () => {
     );
   });
 
+  it('ordena conversas pela mensagem mais recente', async () => {
+    const conversaSemMensagem = {
+      idConversa: 1,
+      criadoEm: new Date('2026-09-01T10:00:00.000Z'),
+    } as Conversa;
+    const conversaComMensagemNova = {
+      idConversa: 2,
+      criadoEm: new Date('2026-08-20T10:00:00.000Z'),
+    } as Conversa;
+    const queryBuilder = {
+      innerJoinAndSelect: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      getMany: jest
+        .fn()
+        .mockResolvedValue([conversaSemMensagem, conversaComMensagemNova]),
+    };
+
+    conversasRepository.createQueryBuilder.mockReturnValue(queryBuilder);
+    mensagensRepository.findOne
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({
+        idMensagem: 5,
+        criadoEm: new Date('2026-09-02T10:00:00.000Z'),
+      });
+
+    const resultado = await service.listarConversas(1);
+
+    expect(resultado.map((item) => item.conversa.idConversa)).toEqual([2, 1]);
+  });
+
   it('salva mensagem sem espaços extras', async () => {
     conversasRepository.findOne.mockResolvedValue({
       idConversa: 30,
