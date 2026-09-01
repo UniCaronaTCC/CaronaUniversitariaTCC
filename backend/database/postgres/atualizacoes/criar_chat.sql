@@ -42,11 +42,91 @@ ON CONFLICT (id_solicitacao) DO NOTHING;
 CREATE INDEX IF NOT EXISTS idx_mensagens_conversa_criado_em
   ON unicarona.mensagens (id_conversa, criado_em);
 
+CREATE OR REPLACE FUNCTION unicarona.usuario_participa_conversa(topico TEXT)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM unicarona.conversas conversa
+    INNER JOIN unicarona.solicitacoes solicitacao
+      ON solicitacao.id_solicitacao = conversa.id_solicitacao
+    INNER JOIN unicarona.caronas carona
+      ON carona.id_carona = solicitacao.id_carona
+    INNER JOIN unicarona.usuarios passageiro
+      ON passageiro.id_usuario = solicitacao.id_passageiro
+    INNER JOIN unicarona.usuarios motorista
+      ON motorista.id_usuario = carona.id_usuario
+    WHERE topico = 'conversa:' || conversa.id_conversa::TEXT
+      AND (
+        passageiro.auth_id = (SELECT auth.uid())
+        OR motorista.auth_id = (SELECT auth.uid())
+      )
+  );
+$$;
+
+REVOKE ALL ON FUNCTION unicarona.usuario_participa_conversa(TEXT)
+  FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION unicarona.usuario_participa_conversa(TEXT)
+  TO authenticated;
+
+DROP POLICY IF EXISTS chat_participantes_recebem_mensagens
+  ON realtime.messages;
+
+CREATE POLICY chat_participantes_recebem_mensagens
+  ON realtime.messages
+  FOR SELECT
+  TO authenticated
+  USING (
+    realtime.messages.extension = 'broadcast'
+    AND unicarona.usuario_participa_conversa(
+      (SELECT realtime.topic())
+    )
+  );
+
+CREATE OR REPLACE FUNCTION unicarona.notificar_nova_mensagem()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  PERFORM realtime.broadcast_changes(
+    'conversa:' || NEW.id_conversa::TEXT,
+    TG_OP,
+    TG_OP,
+    TG_TABLE_NAME,
+    TG_TABLE_SCHEMA,
+    NEW,
+    OLD
+  );
+
+  RETURN NEW;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION unicarona.notificar_nova_mensagem()
+  FROM PUBLIC;
+
+DROP TRIGGER IF EXISTS notificar_nova_mensagem
+  ON unicarona.mensagens;
+
+CREATE TRIGGER notificar_nova_mensagem
+  AFTER INSERT ON unicarona.mensagens
+  FOR EACH ROW
+  EXECUTE FUNCTION unicarona.notificar_nova_mensagem();
+
+
 REVOKE ALL ON unicarona.conversas, unicarona.mensagens
   FROM PUBLIC, anon, authenticated;
 
 REVOKE ALL ON SEQUENCE unicarona.conversas_id_conversa_seq,
   unicarona.mensagens_id_mensagem_seq
   FROM PUBLIC, anon, authenticated;
+
+GRANT USAGE ON SCHEMA unicarona TO authenticated;
 
 COMMIT;
