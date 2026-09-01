@@ -5,12 +5,14 @@ import '../config/supabase_config.dart';
 class SupabaseAuthService {
   const SupabaseAuthService._();
 
+  static bool _inicializado = false;
+
   static bool get configurado => SupabaseConfig.configurado;
 
   static SupabaseClient get _cliente => Supabase.instance.client;
 
   static String? get tokenAtual =>
-      configurado ? _cliente.auth.currentSession?.accessToken : null;
+      _inicializado ? _cliente.auth.currentSession?.accessToken : null;
 
   static Future<void> inicializar() async {
     if (!configurado) return;
@@ -19,6 +21,7 @@ class SupabaseAuthService {
       url: SupabaseConfig.url,
       publishableKey: SupabaseConfig.publishableKey,
     );
+    _inicializado = true;
   }
 
   static Future<AuthResponse> entrar(String email, String senha) {
@@ -69,7 +72,7 @@ class SupabaseAuthService {
   }
 
   static Future<void> sair() async {
-    if (configurado) {
+    if (_inicializado) {
       await _cliente.auth.signOut();
     }
   }

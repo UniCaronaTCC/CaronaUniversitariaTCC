@@ -1,14 +1,10 @@
 import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 
 import { UsersService } from '../users/users.service';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { SupabaseAuthService } from './supabase-auth.service';
 
 describe('JwtAuthGuard', () => {
-  const jwtService = {
-    verifyAsync: jest.fn(),
-  };
   const supabaseAuthService = {
     buscarUsuario: jest.fn(),
   };
@@ -22,7 +18,6 @@ describe('JwtAuthGuard', () => {
     jest.clearAllMocks();
 
     guard = new JwtAuthGuard(
-      jwtService as unknown as JwtService,
       supabaseAuthService as unknown as SupabaseAuthService,
       usersService as unknown as UsersService,
     );
@@ -44,26 +39,7 @@ describe('JwtAuthGuard', () => {
     return { context, request };
   }
 
-  it('continua aceitando o JWT antigo', async () => {
-    jwtService.verifyAsync.mockResolvedValue({
-      sub: 1,
-      email: 'joao@email.com',
-      nome: 'João',
-    });
-    const { context, request } = criarContexto('token-antigo');
-
-    await expect(guard.canActivate(context)).resolves.toBe(true);
-
-    expect(request.usuario).toEqual({
-      sub: 1,
-      email: 'joao@email.com',
-      nome: 'João',
-    });
-    expect(supabaseAuthService.buscarUsuario).not.toHaveBeenCalled();
-  });
-
   it('aceita o token do Supabase e encontra o id local', async () => {
-    jwtService.verifyAsync.mockRejectedValue(new Error('token diferente'));
     supabaseAuthService.buscarUsuario.mockResolvedValue({
       authId: 'uuid-do-supabase',
       email: 'joao@email.com',
@@ -87,8 +63,7 @@ describe('JwtAuthGuard', () => {
     });
   });
 
-  it('recusa um token que não é válido em nenhum dos dois serviços', async () => {
-    jwtService.verifyAsync.mockRejectedValue(new Error('token inválido'));
+  it('recusa um token inválido', async () => {
     supabaseAuthService.buscarUsuario.mockResolvedValue(null);
     const { context } = criarContexto('token-invalido');
 

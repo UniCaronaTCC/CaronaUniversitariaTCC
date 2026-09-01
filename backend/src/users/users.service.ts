@@ -13,12 +13,6 @@ export class UsersService {
     private readonly instituicoesService: InstituicoesService,
   ) {}
 
-  async buscarPorEmail(email: string): Promise<User | null> {
-    return this.usersRepository.findOne({
-      where: { email },
-    });
-  }
-
   async buscarPorId(idUsuario: number): Promise<User | null> {
     return this.usersRepository.findOne({
       where: { idUsuario },
@@ -29,48 +23,6 @@ export class UsersService {
     return this.usersRepository.findOne({
       where: { authId },
     });
-  }
-
-  async buscarPorEmailComSenha(
-    email: string,
-  ): Promise<User | null> {
-    return this.usersRepository
-      .createQueryBuilder('usuario')
-      .addSelect('usuario.senha')
-      .where('usuario.email = :email', { email })
-      .getOne();
-  }
-
-  // Busca o usuário incluindo os campos usados na confirmação de e-mail.
-  async buscarPorEmailComVerificacao(
-    email: string,
-  ): Promise<User | null> {
-    return this.usersRepository
-      .createQueryBuilder('usuario')
-      .addSelect('usuario.codigoVerificacaoEmail')
-      .addSelect('usuario.codigoVerificacaoEmailExpiraEm')
-      .addSelect('usuario.codigoVerificacaoEmailEnviadoEm')
-      .where('usuario.email = :email', { email })
-      .getOne();
-  }
-
-  async buscarPorEmailComRedefinicao(
-    email: string,
-  ): Promise<User | null> {
-    return this.usersRepository
-      .createQueryBuilder('usuario')
-      .addSelect('usuario.senha')
-      .addSelect('usuario.codigoRedefinicaoSenha')
-      .addSelect('usuario.codigoRedefinicaoSenhaExpiraEm')
-      .addSelect('usuario.codigoRedefinicaoSenhaEnviadoEm')
-      .where('usuario.email = :email', { email })
-      .getOne();
-  }
-
-  async salvarUsuario(
-    usuario: User,
-  ): Promise<User> {
-    return this.usersRepository.save(usuario);
   }
 
   async atualizarPerfil(
@@ -122,20 +74,4 @@ export class UsersService {
     return this.usersRepository.save(usuario);
   }
 
-  async criarUsuario(
-    nome: string,
-    email: string,
-    senha: string,
-  ): Promise<User> {
-    const novoUsuario =
-      this.usersRepository.create({
-        nome,
-        email,
-        senha,
-      });
-
-    return this.usersRepository.save(
-      novoUsuario,
-    );
-  }
 }
