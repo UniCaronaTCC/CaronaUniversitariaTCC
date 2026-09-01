@@ -8,6 +8,7 @@ import '../services/mensagem_service.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/card_conversa.dart';
 import '../widgets/componentes_padrao.dart';
+import 'conversa_detalhe.dart';
 
 typedef CarregarConversas = Future<Map<String, dynamic>> Function();
 
@@ -74,6 +75,25 @@ class _ConversasTelaState extends State<ConversasTela> {
       mensagemErro =
           resultado['mensagem']?.toString() ?? 'Erro ao carregar conversas';
     });
+  }
+
+  Future<void> abrirConversa(Conversa conversa) async {
+    if (widget.abrirConversa != null) {
+      widget.abrirConversa!(conversa);
+      return;
+    }
+
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            ConversaDetalheTela(conversa: conversa, idUsuario: idUsuarioAtual),
+      ),
+    );
+
+    if (mounted) {
+      await carregarDados();
+    }
   }
 
   @override
@@ -150,9 +170,7 @@ class _ConversasTelaState extends State<ConversasTela> {
           return CardConversa(
             conversa: conversa,
             idUsuarioAtual: idUsuarioAtual,
-            onTap: widget.abrirConversa == null
-                ? null
-                : () => widget.abrirConversa!(conversa),
+            onTap: () => abrirConversa(conversa),
           );
         },
       ),
