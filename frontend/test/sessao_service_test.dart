@@ -10,7 +10,7 @@ void main() {
     AuthService.usuarioLogado = null;
   });
 
-  test('salva e restaura a sessão do usuário', () async {
+  test('não reutiliza token salvo fora da sessão do Supabase', () async {
     await SessaoService.salvar('token-teste', {
       'id': 1,
       'nome': 'João',
@@ -19,9 +19,9 @@ void main() {
 
     await AuthService.carregarSessao();
 
-    expect(AuthService.tokenUsuarioLogado, 'token-teste');
-    expect(AuthService.usuarioLogado?['nome'], 'João');
-    expect(AuthService.estaLogado, isTrue);
+    expect(AuthService.tokenUsuarioLogado, isNull);
+    expect(AuthService.usuarioLogado, isNull);
+    expect(AuthService.estaLogado, isFalse);
   });
 
   test('remove a sessão ao sair', () async {
