@@ -5,6 +5,7 @@ import { Carona } from '../caronas/carona.entity';
 import { CaronasService } from '../caronas/caronas.service';
 import { PontoEmbarque } from '../caronas/ponto-embarque.entity';
 import { AvaliacoesService } from '../avaliacoes/avaliacoes.service';
+import { Conversa } from '../mensagens/conversa.entity';
 import { Solicitacao } from './solicitacao.entity';
 import { SolicitacoesService } from './solicitacoes.service';
 
@@ -190,6 +191,8 @@ describe('SolicitacoesService', () => {
       Promise.resolve(dados),
     );
     const salvarCarona = jest.fn((dados: Carona) => Promise.resolve(dados));
+    const salvarConversa = jest.fn((dados: Conversa) => Promise.resolve(dados));
+    const criarConversa = jest.fn((dados: Partial<Conversa>) => dados);
     const queryBuilder = {
       innerJoinAndSelect: jest.fn().mockReturnThis(),
       leftJoinAndSelect: jest.fn().mockReturnThis(),
@@ -201,13 +204,24 @@ describe('SolicitacoesService', () => {
     dataSource.transaction.mockImplementation(
       (executar: (manager: unknown) => Promise<Solicitacao>) =>
         executar({
-          getRepository: (entidade: unknown) =>
-            entidade === Solicitacao
-              ? {
-                  createQueryBuilder: () => queryBuilder,
-                  save: salvarSolicitacao,
-                }
-              : { save: salvarCarona },
+          getRepository: (entidade: unknown) => {
+            if (entidade === Solicitacao) {
+              return {
+                createQueryBuilder: () => queryBuilder,
+                save: salvarSolicitacao,
+              };
+            }
+
+            if (entidade === Conversa) {
+              return {
+                findOne: jest.fn().mockResolvedValue(null),
+                create: criarConversa,
+                save: salvarConversa,
+              };
+            }
+
+            return { save: salvarCarona };
+          },
         }),
     );
 
@@ -218,6 +232,10 @@ describe('SolicitacoesService', () => {
     expect(carona.vagas).toBe(1);
     expect(salvarCarona).toHaveBeenCalledTimes(1);
     expect(salvarSolicitacao).toHaveBeenCalledTimes(1);
+    expect(criarConversa).toHaveBeenCalledWith({
+      solicitacao: { idSolicitacao: 1 },
+    });
+    expect(salvarConversa).toHaveBeenCalledTimes(1);
   });
 
   it('cancela uma solicitação aceita e devolve a vaga', async () => {

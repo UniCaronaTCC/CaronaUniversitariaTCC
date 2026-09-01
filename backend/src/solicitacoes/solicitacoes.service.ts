@@ -11,6 +11,7 @@ import { AvaliacoesService } from '../avaliacoes/avaliacoes.service';
 import { Carona } from '../caronas/carona.entity';
 import { CaronasService } from '../caronas/caronas.service';
 import { PontoEmbarque } from '../caronas/ponto-embarque.entity';
+import { Conversa } from '../mensagens/conversa.entity';
 import { Solicitacao } from './solicitacao.entity';
 
 export interface DadosNovaSolicitacao {
@@ -261,6 +262,7 @@ export class SolicitacoesService {
       const solicitacoesRepository = manager.getRepository(Solicitacao);
       const caronasRepository = manager.getRepository(Carona);
       const pontosRepository = manager.getRepository(PontoEmbarque);
+      const conversasRepository = manager.getRepository(Conversa);
 
       const solicitacao = await solicitacoesRepository
         .createQueryBuilder('solicitacao')
@@ -331,8 +333,22 @@ export class SolicitacoesService {
       }
 
       solicitacao.status = novoStatus;
+      const solicitacaoSalva = await solicitacoesRepository.save(solicitacao);
 
-      return solicitacoesRepository.save(solicitacao);
+      if (novoStatus === 'ACEITA') {
+        const conversaExistente = await conversasRepository.findOne({
+          where: { solicitacao: { idSolicitacao } },
+        });
+
+        if (!conversaExistente) {
+          const conversa = conversasRepository.create({
+            solicitacao: { idSolicitacao },
+          });
+          await conversasRepository.save(conversa);
+        }
+      }
+
+      return solicitacaoSalva;
     });
   }
 
