@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 class NavegacaoPrincipal {
   const NavegacaoPrincipal._();
 
+  static const rotaChat = '/chat';
   static const rotaCaronas = '/caronas';
   static const rotaPerfil = '/perfil';
 
@@ -19,6 +20,11 @@ class NavegacaoPrincipal {
 
     if (indice == 0) {
       navigator.popUntil((rota) => rota.isFirst);
+      return;
+    }
+
+    if (indice == 1) {
+      await navigator.pushNamedAndRemoveUntil(rotaChat, (rota) => rota.isFirst);
       return;
     }
 

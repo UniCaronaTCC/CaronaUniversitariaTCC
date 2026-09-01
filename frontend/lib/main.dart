@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'auth/login.dart';
 import 'config/app_theme.dart';
+import 'home/conversas.dart';
 import 'home/minhas_caronas.dart';
 import 'home/perfil.dart';
 import 'home/tela_inicial.dart';
@@ -24,6 +25,7 @@ Future<void> main() async {
           ? TelaInicial(nomeUsuario: nomeUsuario)
           : const LoginTela(),
       routes: {
+        NavegacaoPrincipal.rotaChat: (_) => const ConversasTela(),
         NavegacaoPrincipal.rotaCaronas: (_) => const MinhasCaronasTela(),
         NavegacaoPrincipal.rotaPerfil: (_) => const PerfilTela(),
       },
