@@ -13,4 +13,4 @@ class ApiConfig {
 // defaultValue: 'http://10.0.2.2:3000', <<
 
 // Celular
-// defaultValue: 'http://127.0.0.1:3000', <<
+// defaultValue: 'http://127.0.0.1:30060', <<3
