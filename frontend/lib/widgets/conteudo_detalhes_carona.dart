@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
+import '../mapa/widgets/mapa_rota_carona.dart';
 import '../models/carona.dart';
 import '../models/ponto_embarque.dart';
 import '../utils/formatador_data.dart';
@@ -157,6 +158,9 @@ class ConteudoDetalhesCarona extends StatelessWidget {
               conteudo: carona.observacoes!.trim(),
             ),
           ],
+
+          const SizedBox(height: 30),
+          MapaRotaCarona(carona: carona),
 
           if (rodape != null) ...[
             const SizedBox(height: 30),

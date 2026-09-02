@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
+import '../../config/api_config.dart';
+
 class RotaResultado {
   final List<LatLng> pontos;
   final double distanciaMetros;
@@ -16,11 +18,9 @@ class RotaResultado {
 }
 
 class RotaService {
-  static const String _baseUrl = 'http://10.0.2.2:3000';
-
   Future<RotaResultado> calcularRota(List<LatLng> pontos) async {
     final resposta = await http.post(
-      Uri.parse('$_baseUrl/rotas/calcular'),
+      Uri.parse('${ApiConfig.baseUrl}/rotas/calcular'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({
         'coordenadas': pontos
