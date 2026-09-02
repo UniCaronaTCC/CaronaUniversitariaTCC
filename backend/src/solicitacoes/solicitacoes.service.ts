@@ -272,7 +272,8 @@ export class SolicitacoesService {
         .where('solicitacao.idSolicitacao = :idSolicitacao', {
           idSolicitacao,
         })
-        .setLock('pessimistic_write')
+        // O ponto opcional fica fora do bloqueio; a carona protege as vagas.
+        .setLock('pessimistic_write', undefined, ['solicitacao', 'carona'])
         .getOne();
 
       if (!solicitacao) {

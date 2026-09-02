@@ -175,68 +175,132 @@ describe('SolicitacoesService', () => {
     ).rejects.toBeInstanceOf(ConflictException);
   });
 
-  it('aceita uma solicitação e desconta uma vaga', async () => {
-    const carona = {
-      idCarona: 10,
-      status: 'ATIVA',
-      vagas: 2,
-      usuario: { idUsuario: 2 },
-    };
-    const solicitacao = {
-      idSolicitacao: 1,
-      status: 'PENDENTE',
-      carona,
-    };
-    const salvarSolicitacao = jest.fn((dados: Solicitacao) =>
-      Promise.resolve(dados),
-    );
-    const salvarCarona = jest.fn((dados: Carona) => Promise.resolve(dados));
-    const salvarConversa = jest.fn((dados: Conversa) => Promise.resolve(dados));
-    const criarConversa = jest.fn((dados: Partial<Conversa>) => dados);
-    const queryBuilder = {
-      innerJoinAndSelect: jest.fn().mockReturnThis(),
-      leftJoinAndSelect: jest.fn().mockReturnThis(),
-      where: jest.fn().mockReturnThis(),
-      setLock: jest.fn().mockReturnThis(),
-      getOne: jest.fn().mockResolvedValue(solicitacao),
-    };
+  it.each([
+    { tipo: 'EXISTENTE', vagas: 2, resposta: 'ACEITA' as const },
+    { tipo: 'NOVO_SOLICITADO', vagas: 2, resposta: 'ACEITA' as const },
+    { tipo: 'EXISTENTE', vagas: 1, resposta: 'ACEITA' as const },
+    { tipo: 'NOVO_SOLICITADO', vagas: 2, resposta: 'RECUSADA' as const },
+  ])(
+    '$resposta com ponto $tipo e $vagas vaga(s)',
+    async ({ tipo, vagas, resposta }) => {
+      const carona = {
+        idCarona: 10,
+        status: 'ATIVA',
+        vagas,
+        usuario: { idUsuario: 2 },
+      };
+      const pontoExistente = { idPontoEmbarque: 5 };
+      const solicitacao = {
+        idSolicitacao: 1,
+        status: 'PENDENTE',
+        tipoPontoEmbarque: tipo,
+        pontoEmbarque: tipo === 'EXISTENTE' ? pontoExistente : null,
+        localEmbarque: 'Rua A, 100',
+        embarqueLatitude: -21.2,
+        embarqueLongitude: -50.4,
+        carona,
+      };
+      const salvarSolicitacao = jest.fn((dados: Solicitacao) =>
+        Promise.resolve(dados),
+      );
+      const salvarCarona = jest.fn((dados: Carona) => Promise.resolve(dados));
+      const salvarConversa = jest.fn((dados: Conversa) =>
+        Promise.resolve(dados),
+      );
+      const criarConversa = jest.fn((dados: Partial<Conversa>) => dados);
+      const pontosRepository = {
+        count: jest.fn().mockResolvedValue(1),
+        create: jest.fn((dados: Partial<PontoEmbarque>) => dados),
+        save: jest.fn((dados: Partial<PontoEmbarque>) =>
+          Promise.resolve({ ...dados, idPontoEmbarque: 6 }),
+        ),
+      };
+      const queryBuilder = {
+        innerJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        setLock: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(solicitacao),
+      };
 
-    dataSource.transaction.mockImplementation(
-      (executar: (manager: unknown) => Promise<Solicitacao>) =>
-        executar({
-          getRepository: (entidade: unknown) => {
-            if (entidade === Solicitacao) {
-              return {
-                createQueryBuilder: () => queryBuilder,
-                save: salvarSolicitacao,
-              };
-            }
+      dataSource.transaction.mockImplementation(
+        (executar: (manager: unknown) => Promise<Solicitacao>) =>
+          executar({
+            getRepository: (entidade: unknown) => {
+              if (entidade === Solicitacao) {
+                return {
+                  createQueryBuilder: () => queryBuilder,
+                  save: salvarSolicitacao,
+                };
+              }
 
-            if (entidade === Conversa) {
-              return {
-                findOne: jest.fn().mockResolvedValue(null),
-                create: criarConversa,
-                save: salvarConversa,
-              };
-            }
+              if (entidade === Conversa) {
+                return {
+                  findOne: jest.fn().mockResolvedValue(null),
+                  create: criarConversa,
+                  save: salvarConversa,
+                };
+              }
 
-            return { save: salvarCarona };
-          },
-        }),
-    );
+              if (entidade === PontoEmbarque) {
+                return pontosRepository;
+              }
 
-    const resultado = await service.responderSolicitacao(1, 2, 'ACEITA');
+              return { save: salvarCarona };
+            },
+          }),
+      );
 
-    expect(resultado.status).toBe('ACEITA');
-    expect(caronasService.finalizarCaronasVencidas).toHaveBeenCalledTimes(1);
-    expect(carona.vagas).toBe(1);
-    expect(salvarCarona).toHaveBeenCalledTimes(1);
-    expect(salvarSolicitacao).toHaveBeenCalledTimes(1);
-    expect(criarConversa).toHaveBeenCalledWith({
-      solicitacao: { idSolicitacao: 1 },
-    });
-    expect(salvarConversa).toHaveBeenCalledTimes(1);
-  });
+      const resultado = await service.responderSolicitacao(1, 2, resposta);
+
+      expect(queryBuilder.leftJoinAndSelect).toHaveBeenCalledWith(
+        'solicitacao.pontoEmbarque',
+        'pontoEmbarque',
+      );
+      expect(queryBuilder.setLock).toHaveBeenCalledWith(
+        'pessimistic_write',
+        undefined,
+        ['solicitacao', 'carona'],
+      );
+      expect(resultado.status).toBe(resposta);
+      expect(caronasService.finalizarCaronasVencidas).toHaveBeenCalledTimes(1);
+      expect(salvarSolicitacao).toHaveBeenCalledTimes(1);
+
+      if (resposta === 'ACEITA') {
+        expect(carona.vagas).toBe(vagas - 1);
+        expect(carona.status).toBe(vagas === 1 ? 'LOTADA' : 'ATIVA');
+        expect(salvarCarona).toHaveBeenCalledTimes(1);
+        expect(criarConversa).toHaveBeenCalledWith({
+          solicitacao: { idSolicitacao: 1 },
+        });
+        expect(salvarConversa).toHaveBeenCalledTimes(1);
+      } else {
+        expect(carona.vagas).toBe(vagas);
+        expect(salvarCarona).not.toHaveBeenCalled();
+        expect(criarConversa).not.toHaveBeenCalled();
+        expect(salvarConversa).not.toHaveBeenCalled();
+      }
+
+      if (resposta === 'ACEITA' && tipo === 'NOVO_SOLICITADO') {
+        expect(pontosRepository.create).toHaveBeenCalledWith({
+          nome: null,
+          endereco: 'Rua A, 100',
+          latitude: -21.2,
+          longitude: -50.4,
+          ordem: 2,
+          carona: { idCarona: 10 },
+        });
+        expect(pontosRepository.save).toHaveBeenCalledTimes(1);
+        expect(resultado.pontoEmbarque?.idPontoEmbarque).toBe(6);
+        expect(resultado.tipoPontoEmbarque).toBe('NOVO_SOLICITADO');
+      } else {
+        expect(pontosRepository.save).not.toHaveBeenCalled();
+        expect(resultado.pontoEmbarque).toBe(
+          tipo === 'EXISTENTE' ? pontoExistente : null,
+        );
+      }
+    },
+  );
 
   it('cancela uma solicitação aceita e devolve a vaga', async () => {
     const carona = {
