@@ -14,6 +14,7 @@ class SolicitacaoEnviada {
   final String horario;
   final double valor;
   final String statusCarona;
+  final bool recorrente;
   final bool avaliada;
   final bool podeAvaliar;
 
@@ -28,6 +29,7 @@ class SolicitacaoEnviada {
     required this.horario,
     required this.valor,
     this.statusCarona = 'ATIVA',
+    this.recorrente = false,
     this.avaliada = false,
     this.podeAvaliar = false,
   });
@@ -51,6 +53,7 @@ class SolicitacaoEnviada {
       horario: carona['horario']?.toString() ?? '',
       valor: converterJsonParaDouble(carona['valor']),
       statusCarona: carona['status']?.toString() ?? 'ATIVA',
+      recorrente: carona['recorrente'] == true,
       avaliada: json['avaliada'] == true,
       podeAvaliar: json['podeAvaliar'] == true,
     );
@@ -65,6 +68,9 @@ class SolicitacaoEnviada {
   bool get caronaFinalizada => statusCarona == 'FINALIZADA';
 
   bool get cancelada => status.startsWith('CANCELADA_');
+
+  bool get podePagarPix =>
+      status == 'ACEITA' && !recorrente && !caronaFinalizada && !cancelada;
 
   bool get podeCancelar =>
       !caronaFinalizada &&

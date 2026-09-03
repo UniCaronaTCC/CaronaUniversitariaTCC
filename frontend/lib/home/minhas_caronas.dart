@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
+import '../models/pagamento_pix.dart';
 import '../models/solicitacao_enviada.dart';
 import '../models/solicitacao_recebida.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/avaliacao_service.dart';
+import '../services/pagamento_service.dart';
 import '../services/solicitacao_service.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/card_solicitacao_enviada.dart';
@@ -13,9 +15,12 @@ import '../widgets/componentes_padrao.dart';
 import '../widgets/dialogo_avaliacao.dart';
 import '../widgets/dialogo_cancelamento.dart';
 import 'caronas_publicadas.dart';
+import 'pagamento_pix.dart';
 
 class MinhasCaronasTela extends StatefulWidget {
-  const MinhasCaronasTela({super.key});
+  final PagamentoService? pagamentoService;
+
+  const MinhasCaronasTela({super.key, this.pagamentoService});
 
   @override
   State<MinhasCaronasTela> createState() => _MinhasCaronasTelaState();
@@ -27,10 +32,12 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
   bool carregando = true;
   String? mensagemErro;
   int? idProcessando;
+  late final PagamentoService _pagamentoService;
 
   @override
   void initState() {
     super.initState();
+    _pagamentoService = widget.pagamentoService ?? PagamentoService();
     carregarDados();
   }
 
@@ -163,6 +170,39 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
     if (resultado['sucesso'] == true) {
       await carregarDados();
     }
+  }
+
+  Future<void> pagarComPix(SolicitacaoEnviada solicitacao) async {
+    setState(() => idProcessando = solicitacao.id);
+    final resultado = await _pagamentoService.criarOuObterPix(solicitacao.id);
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() => idProcessando = null);
+
+    if (resultado['sucesso'] != true) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            resultado['mensagem']?.toString() ??
+                'Não foi possível preparar o pagamento',
+          ),
+        ),
+      );
+      return;
+    }
+
+    final pagamento = resultado['dados'];
+    if (pagamento is! PagamentoPix) {
+      return;
+    }
+
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(builder: (_) => PagamentoPixTela(pagamento: pagamento)),
+    );
   }
 
   Future<void> cancelar({
@@ -333,6 +373,7 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
               (solicitacao) => CardSolicitacaoEnviada(
                 solicitacao: solicitacao,
                 processando: idProcessando == solicitacao.id,
+                onPagarPix: () => pagarComPix(solicitacao),
                 onAvaliar: () => avaliar(solicitacao.id, solicitacao.motorista),
                 onCancelar: () => cancelar(
                   idSolicitacao: solicitacao.id,

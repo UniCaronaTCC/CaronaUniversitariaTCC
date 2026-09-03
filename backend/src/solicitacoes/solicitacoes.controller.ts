@@ -184,6 +184,7 @@ export class SolicitacoesController {
           horario: solicitacao.carona.horario,
           valor: solicitacao.carona.valor,
           status: solicitacao.carona.status,
+          recorrente: solicitacao.carona.recorrente,
         },
       })),
     };
