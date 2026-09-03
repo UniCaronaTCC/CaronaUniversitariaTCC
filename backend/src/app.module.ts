@@ -10,6 +10,7 @@ import { AvaliacoesModule } from './avaliacoes/avaliacoes.module';
 import { CaronasModule } from './caronas/caronas.module';
 import { InstituicoesModule } from './instituicoes/instituicoes.module';
 import { MensagensModule } from './mensagens/mensagens.module';
+import { PagamentosModule } from './pagamentos/pagamentos.module';
 import { RotasModule } from './rotas/rotas.module';
 import { SolicitacoesModule } from './solicitacoes/solicitacoes.module';
 
@@ -45,6 +46,7 @@ import { SolicitacoesModule } from './solicitacoes/solicitacoes.module';
     AvaliacoesModule,
     InstituicoesModule,
     MensagensModule,
+    PagamentosModule,
     RotasModule,
   ],
   controllers: [AppController],
