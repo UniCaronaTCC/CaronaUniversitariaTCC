@@ -15,6 +15,9 @@ de pagamento no Flutter.
 - `pagamento.entity.ts`: mapeia a tabela `unicarona.pagamentos`.
 - `pagamentos.service.ts`: valida a solicitacao, evita duplicacao e persiste o Pix.
 - `pagamentos.controller.ts`: expoe a rota autenticada do backend.
+- `abacatepay-webhook.controller.ts`: recebe notificacoes da AbacatePay sem JWT.
+- `abacatepay-webhook.service.ts`: valida o webhook e confirma o Pix no provedor.
+- `pagamento-evento-webhook.entity.ts`: impede processar o mesmo evento duas vezes.
 
 ## Como funciona
 
@@ -48,6 +51,30 @@ INCERTA e exigem conciliacao futura.
 O bloqueio do banco termina antes da chamada HTTP. Ao receber a cobranca, o
 backend salva identificador, status, QR Code, codigo copia e cola e vencimento.
 CONFIRMADA quer dizer que a cobranca foi criada, nao que o Pix foi pago.
+
+## Webhook
+
+`POST /pagamentos/webhooks/abacatepay?webhookSecret=...`
+
+Essa rota nao usa JWT de usuario porque e chamada pelos servidores da AbacatePay.
+Ela exige as duas verificacoes oficiais: `webhookSecret` comparado com
+`ABACATEPAY_WEBHOOK_SECRET` e HMAC-SHA256 do corpo bruto recebido no header
+`X-Webhook-Signature`. O `main.ts` preserva esse corpo com `rawBody: true`.
+
+Somente `transparent.completed` e processado. Antes de marcar `PAID`, o backend
+confere identificador, referencia UUID, valor, metodo, pagamento integral e modo
+de teste, e consulta o status diretamente na API da AbacatePay. O payload bruto e
+dados do pagador nao sao armazenados.
+
+Cada `id` de evento e salvo em `pagamentos_eventos_webhook`. A atualizacao do
+pagamento e o registro do evento ocorrem na mesma transacao com bloqueio da linha.
+Uma entrega repetida retorna sucesso sem aplicar a operacao novamente.
+
+Antes de configurar o webhook no painel, executar manualmente somente
+`database/postgres/atualizacoes/criar_eventos_webhook_pagamentos.sql`. Depois,
+criar um secret aleatorio forte com pelo menos 32 caracteres e guarda-lo apenas no
+`.env` do backend como `ABACATEPAY_WEBHOOK_SECRET`. Nunca usar a chave da API como
+secret do webhook e nunca colocar nenhum dos dois valores no Flutter ou Git.
 
 ## Limites e seguranca
 
@@ -110,6 +137,9 @@ Ainda nao ha tabela de eventos de webhook, carteira, saldo ou repasse.
 - https://docs.abacatepay.com/pages/transparents/create
 - https://docs.abacatepay.com/pages/transparents/check
 - https://docs.abacatepay.com/pages/authentication
+- https://docs.abacatepay.com/pages/webhooks/security
+- https://docs.abacatepay.com/pages/webhooks/events/transparent
+- https://docs.nestjs.com/faq/raw-body
 
 As regras de quando cobrar, reservar vaga, expirar reserva e reembolsar ainda
 serao discutidas. Esta etapa nao define nem altera essas regras.
