@@ -1,8 +1,8 @@
 # Pagamentos: cliente da API e estrutura SQL
 
-O cliente da API v2 da AbacatePay esta implementado e o script da tabela esta
-preparado para execucao manual. Ainda nao existe endpoint publico, entidade
-TypeORM, persistencia pelo backend, webhook ou tela de pagamento no Flutter.
+O cliente da API v2 da AbacatePay, a entidade TypeORM e a rota autenticada para
+criar ou reutilizar um Pix estao implementados. Ainda nao existe webhook nem tela
+de pagamento no Flutter.
 
 ## Arquivos
 
@@ -12,6 +12,9 @@ TypeORM, persistencia pelo backend, webhook ou tela de pagamento no Flutter.
   Estes tipos nao criam tabelas nem validam JSON sozinhos; o service valida os dados.
 - `pagamentos.module.ts`: registra e exporta o service para uso futuro no NestJS.
 - `abacatepay.service.spec.ts`: testa o service com chave e respostas ficticias.
+- `pagamento.entity.ts`: mapeia a tabela `unicarona.pagamentos`.
+- `pagamentos.service.ts`: valida a solicitacao, evita duplicacao e persiste o Pix.
+- `pagamentos.controller.ts`: expoe a rota autenticada do backend.
 
 ## Como funciona
 
@@ -26,6 +29,25 @@ TypeORM, persistencia pelo backend, webhook ou tela de pagamento no Flutter.
 5. `consultarPix` usa `GET /v2/transparents/check?id=...` e confere se o id
    retornado corresponde ao solicitado. A resposta dessa consulta nao documenta
    `devMode`, por isso ela nao e uma forma de validar o ambiente da chave.
+
+## Rota do backend
+
+`POST /pagamentos/solicitacoes/:idSolicitacao/pix`
+
+A rota nao recebe valor no corpo. Ela usa o usuario autenticado pelo Supabase e
+busca o valor da carona no banco. Somente o passageiro de uma solicitacao ACEITA
+e nao recorrente pode usa-la nesta primeira versao.
+
+Antes da chamada externa, o backend bloqueia brevemente a solicitacao e salva uma
+tentativa PREPARADA com uma referencia UUID. Tentativas PREPARADA, CONFIRMADA ou
+INCERTA sao reutilizadas; isso impede que repeticoes da rota criem novos Pix.
+FALHOU permite uma nova tentativa porque representa uma falha definitiva antes
+da criacao. Essa classificacao e conservadora: timeout e respostas duvidosas ficam
+INCERTA e exigem conciliacao futura.
+
+O bloqueio do banco termina antes da chamada HTTP. Ao receber a cobranca, o
+backend salva identificador, status, QR Code, codigo copia e cola e vencimento.
+CONFIRMADA quer dizer que a cobranca foi criada, nao que o Pix foi pago.
 
 ## Limites e seguranca
 

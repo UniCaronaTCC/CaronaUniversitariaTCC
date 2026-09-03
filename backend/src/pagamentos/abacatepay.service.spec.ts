@@ -9,7 +9,6 @@ import { Test } from '@nestjs/testing';
 
 import { AbacatePayService } from './abacatepay.service';
 import { STATUS_PIX } from './abacatepay.types';
-import { PagamentosModule } from './pagamentos.module';
 
 describe('AbacatePayService', () => {
   let service: AbacatePayService;
@@ -59,10 +58,10 @@ describe('AbacatePayService', () => {
     jest.restoreAllMocks();
   });
 
-  it('carrega o modulo sem chave, sem ler o .env e sem fazer requisicoes', async () => {
+  it('carrega o cliente sem chave, sem ler o .env e sem fazer requisicoes', async () => {
     delete configuracao.ABACATEPAY_API_KEY;
     const modulo = await Test.createTestingModule({
-      imports: [PagamentosModule],
+      providers: [AbacatePayService, ConfigService],
     })
       .overrideProvider(ConfigService)
       .useValue(configService)
