@@ -1,16 +1,22 @@
-# uni_carona
+```
 
-TCC
+## Testes
 
-## Getting Started
+Os testes unitários do aplicativo Flutter estão na pasta:
 
-This project is a starting point for a Flutter application.
+```text
+frontend/test
+```
 
-A few resources to get you started if this is your first Flutter project:
+Para executá-los localmente:
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+```bash
+cd frontend
+flutter test
+```
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Para gerar o APK de teste:
+
+```bash
+flutter build apk --debug
+```
