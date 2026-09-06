@@ -151,6 +151,28 @@ describe('SolicitacoesService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
   });
 
+  it('impede solicitar vaga quando a carona não possui vagas', async () => {
+    caronasRepository.findOne.mockResolvedValue({
+      idCarona: 10,
+      status: 'ATIVA',
+      vagas: 0,
+      usuario: { idUsuario: 2 },
+    });
+
+    await expect(
+      service.criarSolicitacao({
+        idCarona: 10,
+        idPassageiro: 1,
+        tipoPontoEmbarque: 'NOVO_SOLICITADO',
+        localEmbarque: 'Rua A, 100',
+        embarqueLatitude: -21.2,
+        embarqueLongitude: -50.4,
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+
+    expect(solicitacoesRepository.save).not.toHaveBeenCalled();
+  });
+
   it('impede uma segunda solicitação ativa para a mesma carona', async () => {
     caronasRepository.findOne.mockResolvedValue({
       idCarona: 10,
