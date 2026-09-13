@@ -18,7 +18,7 @@ jobs:
         working-directory: backend
 
     steps:
-      - name: Baixar o cÃ³digo
+      - name: Baixar o código
         uses: actions/checkout@v4
 
       - name: Configurar Node.js
@@ -28,10 +28,10 @@ jobs:
           cache: npm
           cache-dependency-path: backend/package-lock.json
 
-      - name: Instalar dependÃªncias
+      - name: Instalar dependências
         run: npm ci
 
-      - name: Executar testes unitÃ¡rios
+      - name: Executar testes unitários
         run: npm test -- --runInBand
 
       - name: Fazer build do backend
@@ -45,7 +45,7 @@ jobs:
         working-directory: frontend
 
     steps:
-      - name: Baixar o cÃ³digo
+      - name: Baixar o código
         uses: actions/checkout@v4
 
       - name: Configurar Java
@@ -60,10 +60,10 @@ jobs:
           channel: stable
           flutter-version: '3.38.9'
 
-      - name: Instalar dependÃªncias
+      - name: Instalar dependências
         run: flutter pub get
 
-      - name: Executar testes unitÃ¡rios
+      - name: Executar testes unitários
         run: flutter test
 
       - name: Gerar APK de teste
