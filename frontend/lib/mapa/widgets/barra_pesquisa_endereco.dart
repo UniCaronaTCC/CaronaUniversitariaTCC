@@ -256,25 +256,28 @@ class _BarraPesquisaEnderecoState
                   final nome =
                   local.nome?.trim();
 
-                  return ListTile(
-                    leading: const Icon(
-                      Icons.location_on,
-                    ),
-                    title: Text(
-                      nome != null &&
+                  return Material(
+                    color: Colors.transparent,
+                    child: ListTile(
+                      leading: const Icon(
+                        Icons.location_on,
+                      ),
+                      title: Text(
+                        nome != null &&
+                            nome.isNotEmpty
+                            ? nome
+                            : local.endereco,
+                      ),
+                      subtitle: nome != null &&
                           nome.isNotEmpty
-                          ? nome
-                          : local.endereco,
+                          ? Text(local.endereco)
+                          : null,
+                      trailing: const Icon(
+                        Icons.chevron_right,
+                      ),
+                      onTap: () =>
+                          _selecionar(local),
                     ),
-                    subtitle: nome != null &&
-                        nome.isNotEmpty
-                        ? Text(local.endereco)
-                        : null,
-                    trailing: const Icon(
-                      Icons.chevron_right,
-                    ),
-                    onTap: () =>
-                        _selecionar(local),
                   );
                 },
               ),
