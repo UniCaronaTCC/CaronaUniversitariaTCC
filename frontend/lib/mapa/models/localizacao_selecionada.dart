@@ -6,6 +6,7 @@ class LocalizacaoSelecionada {
   final String? cidade;
   final String? estado;
   final String? pais;
+  final bool pontoEspecifico;
 
   // Nome digitado pelo usuário, como "UniSalesiano".
   final String? nome;
@@ -17,7 +18,16 @@ class LocalizacaoSelecionada {
     this.cidade,
     this.estado,
     this.pais,
+    this.pontoEspecifico = true,
   });
+
+  bool get coordenadasValidas =>
+      ponto.latitude.isFinite &&
+      ponto.longitude.isFinite &&
+      ponto.latitude >= -90 &&
+      ponto.latitude <= 90 &&
+      ponto.longitude >= -180 &&
+      ponto.longitude <= 180;
 
   // Une o nome conhecido ao endereço completo.
   String get descricaoCompleta {

@@ -85,4 +85,26 @@ describe('CaronasController', () => {
 
     expect(service.criarCarona).not.toHaveBeenCalled();
   });
+
+  it('recusa coordenadas inválidas ao atualizar a posição', async () => {
+    const service = { atualizarPosicaoAtual: jest.fn() };
+    const controller = new CaronasController(
+      service as unknown as CaronasService,
+    );
+
+    await expect(
+      controller.atualizarPosicaoAtual(
+        '5',
+        {
+          latitude: 95,
+          longitude: -50.4,
+          direcao: 90,
+          precisao: 8,
+        },
+        { usuario: { sub: 1 } } as never,
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    expect(service.atualizarPosicaoAtual).not.toHaveBeenCalled();
+  });
 });

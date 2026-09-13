@@ -95,6 +95,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
         ponto: LatLng(carona.origemLatitude!, carona.origemLongitude!),
         endereco: carona.origem,
         cidade: carona.origemCidade,
+        pontoEspecifico: _origemExistentePareceEspecifica(carona),
       );
     }
 
@@ -105,6 +106,15 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
         cidade: carona.destinoCidade,
       );
     }
+  }
+
+  bool _origemExistentePareceEspecifica(Carona carona) {
+    final partes = carona.origem
+        .split(',')
+        .map((parte) => parte.trim())
+        .where((parte) => parte.isNotEmpty)
+        .toList();
+    return partes.length >= 4 || RegExp(r'\d').hasMatch(carona.origem);
   }
 
   TimeOfDay? _converterHorario(String horario) {
@@ -129,9 +139,8 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     final resultado = await Navigator.push<LocalizacaoSelecionada>(
       context,
       MaterialPageRoute(
-        builder: (context) => TesteMapa(
-          indiceNavegacao: widget.indiceNavegacao,
-        ),
+        builder: (context) =>
+            TesteMapa(indiceNavegacao: widget.indiceNavegacao),
       ),
     );
 
@@ -191,8 +200,8 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     }
 
     final pontoJaExiste = pontosEmbarque.any(
-          (ponto) =>
-      ponto.latitude == resultado.ponto.latitude &&
+      (ponto) =>
+          ponto.latitude == resultado.ponto.latitude &&
           ponto.longitude == resultado.ponto.longitude,
     );
 
@@ -333,15 +342,13 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       dataFim: widget.caronaParaEditar?.dataFim == null
           ? null
           : DataHoraUtils.formatarDataBackend(
-        widget.caronaParaEditar!.dataFim!,
-      ),
+              widget.caronaParaEditar!.dataFim!,
+            ),
       horario: '${DataHoraUtils.formatarHorario(horarioSelecionado!)}:00',
       vagas: int.parse(vagasController.text),
       valor: converterMoedaRealParaDouble(valorController.text),
       recorrente: caronaRecorrente,
-      diasSemana: caronaRecorrente
-          ? List<String>.from(diasSelecionados)
-          : null,
+      diasSemana: caronaRecorrente ? List<String>.from(diasSelecionados) : null,
       observacoes: observacoes.isEmpty ? null : observacoes,
     );
 
@@ -391,6 +398,14 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
     if (origemSelecionada == null) {
       return 'Confirme a origem pelo mapa';
+    }
+
+    if (!origemSelecionada!.coordenadasValidas) {
+      return 'A origem selecionada possui coordenadas inválidas';
+    }
+
+    if (!origemSelecionada!.pontoEspecifico) {
+      return 'Escolha uma rua, estabelecimento ou ponto exato para a origem';
     }
 
     if (destinoSelecionado == null) {
@@ -476,6 +491,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
             diasSelecionados: diasSelecionados,
 
             pontosEmbarque: pontosEmbarque,
+            origemSelecionada: origemSelecionada,
             pontosEmbarqueEditaveis: !editando,
 
             onSelecionarOrigem: escolherOrigemNoMapa,

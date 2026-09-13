@@ -8,12 +8,16 @@ import { Carona } from './carona.entity';
 import { CaronasController } from './caronas.controller';
 import { CaronasService } from './caronas.service';
 import { PontoEmbarque } from './ponto-embarque.entity';
+import { PosicaoAtualCarona } from './posicao-atual-carona.entity';
+import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([
       Carona,
       PontoEmbarque,
+      PosicaoAtualCarona,
+      Solicitacao,
     ]),
     // Permite usar os repositórios de Carona e PontoEmbarque
 

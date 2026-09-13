@@ -156,6 +156,7 @@ class Carona {
       formatarDoubleComoMoedaReal(valor);
 
   bool get finalizada => status == 'FINALIZADA';
+  bool get emAndamento => status == 'EM_ANDAMENTO';
 
   // Monta o periodo exibido no card.
   String get periodoFormatado {

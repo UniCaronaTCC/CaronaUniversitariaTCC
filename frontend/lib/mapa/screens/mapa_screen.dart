@@ -43,6 +43,7 @@ class _TesteMapaState extends State<TesteMapa> {
 
   bool _buscandoLocalizacao = true;
   bool _buscandoEndereco = false;
+  bool _pontoEspecifico = true;
 
   @override
   void initState() {
@@ -59,29 +60,20 @@ class _TesteMapaState extends State<TesteMapa> {
         return;
       }
 
-      final pontoAtual = LatLng(
-        posicao.latitude,
-        posicao.longitude,
-      );
+      final pontoAtual = LatLng(posicao.latitude, posicao.longitude);
 
       setState(() {
         _localizacaoAtual = pontoAtual;
         _pontoEncontro = pontoAtual;
         _buscandoLocalizacao = false;
+        _pontoEspecifico = true;
       });
 
-      _mapController.move(
-        pontoAtual,
-        16,
-      );
+      _mapController.move(pontoAtual, 16);
 
-      await _buscarEnderecoDoPonto(
-        pontoAtual,
-      );
+      await _buscarEnderecoDoPonto(pontoAtual);
     } catch (erro) {
-      debugPrint(
-        'Erro ao obter localização: $erro',
-      );
+      debugPrint('Erro ao obter localização: $erro');
 
       if (!mounted) {
         return;
@@ -92,19 +84,13 @@ class _TesteMapaState extends State<TesteMapa> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Não foi possível obter sua localização',
-          ),
-        ),
+        const SnackBar(content: Text('Não foi possível obter sua localização')),
       );
     }
   }
 
   // Busca o endereço correspondente ao ponto escolhido.
-  Future<void> _buscarEnderecoDoPonto(
-      LatLng ponto,
-      ) async {
+  Future<void> _buscarEnderecoDoPonto(LatLng ponto) async {
     setState(() {
       _buscandoEndereco = true;
       _enderecoPontoEncontro = null;
@@ -113,8 +99,7 @@ class _TesteMapaState extends State<TesteMapa> {
       _estadoPontoEncontro = null;
     });
 
-    final localizacao =
-    await _enderecoService.buscarLocalizacaoPorCoordenadas(
+    final localizacao = await _enderecoService.buscarLocalizacaoPorCoordenadas(
       ponto.latitude,
       ponto.longitude,
     );
@@ -136,22 +121,17 @@ class _TesteMapaState extends State<TesteMapa> {
   }
 
   // Permite ajustar o ponto tocando no mapa.
-  Future<void> _selecionarPonto(
-      LatLng ponto,
-      ) async {
+  Future<void> _selecionarPonto(LatLng ponto) async {
     setState(() {
       _pontoEncontro = ponto;
+      _pontoEspecifico = true;
     });
 
-    await _buscarEnderecoDoPonto(
-      ponto,
-    );
+    await _buscarEnderecoDoPonto(ponto);
   }
 
   // Move o mapa para o resultado selecionado na pesquisa.
-  void _selecionarEnderecoPesquisado(
-      LocalizacaoSelecionada local,
-      ) {
+  void _selecionarEnderecoPesquisado(LocalizacaoSelecionada local) {
     setState(() {
       _pontoEncontro = local.ponto;
 
@@ -159,78 +139,81 @@ class _TesteMapaState extends State<TesteMapa> {
       _enderecoPontoEncontro = local.endereco;
       _cidadePontoEncontro = local.cidade;
       _estadoPontoEncontro = local.estado;
+      _pontoEspecifico = local.pontoEspecifico;
 
       _buscandoEndereco = false;
     });
 
-    _mapController.move(
-      local.ponto,
-      16,
-    );
+    _mapController.move(local.ponto, 16);
   }
 
   void _confirmarPontoEncontro() {
     if (_pontoEncontro == null) {
       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Aguarde a localização ou toque no mapa')),
+      );
+
+      return;
+    }
+
+    final localSelecionado = LocalizacaoSelecionada(
+      ponto: _pontoEncontro!,
+      endereco: _enderecoPontoEncontro ?? 'Endereço não encontrado',
+      cidade: _cidadePontoEncontro,
+      estado: _estadoPontoEncontro,
+      nome: _nomePontoEncontro,
+      pontoEspecifico: _pontoEspecifico,
+    );
+
+    if (!localSelecionado.coordenadasValidas) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('O ponto escolhido possui coordenadas inválidas'),
+        ),
+      );
+      return;
+    }
+
+    if (!_pontoEspecifico) {
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Aguarde a localização ou toque no mapa',
+            'Escolha uma rua, estabelecimento ou marque um ponto exato no mapa',
           ),
         ),
       );
-
       return;
     }
 
     if (Navigator.canPop(context)) {
-      Navigator.pop(
-        context,
-        LocalizacaoSelecionada(
-          ponto: _pontoEncontro!,
-          endereco:
-          _enderecoPontoEncontro ?? 'Endereço não encontrado',
-          cidade: _cidadePontoEncontro,
-          estado: _estadoPontoEncontro,
-          nome: _nomePontoEncontro,
-        ),
-      );
+      Navigator.pop(context, localSelecionado);
 
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text(
-          'Ponto confirmado',
-        ),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Ponto confirmado')));
   }
 
   @override
   Widget build(BuildContext context) {
     final mesmoPonto =
         _localizacaoAtual != null &&
-            _pontoEncontro != null &&
-            _localizacaoAtual == _pontoEncontro;
+        _pontoEncontro != null &&
+        _localizacaoAtual == _pontoEncontro;
 
-    final pontoReferencia =
-        _pontoEncontro ?? _localizacaoAtual;
+    final pontoReferencia = _pontoEncontro ?? _localizacaoAtual;
 
     return Scaffold(
-      appBar: BarraSuperiorPadrao(
-        titulo: widget.titulo,
-      ),
+      appBar: BarraSuperiorPadrao(titulo: widget.titulo),
       body: Stack(
         children: [
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
               // Ponto inicial temporário enquanto o GPS carrega.
-              initialCenter: const LatLng(
-                -21.2080,
-                -50.4320,
-              ),
+              initialCenter: const LatLng(-21.2080, -50.4320),
               initialZoom: 14,
               onTap: (tapPosition, point) {
                 _selecionarPonto(point);
@@ -238,14 +221,11 @@ class _TesteMapaState extends State<TesteMapa> {
             ),
             children: [
               TileLayer(
-                urlTemplate:
-                'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName:
-                'com.unicarona.app',
+                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                userAgentPackageName: 'com.unicarona.app',
               ),
 
-              if (_localizacaoAtual != null &&
-                  !mesmoPonto)
+              if (_localizacaoAtual != null && !mesmoPonto)
                 MarkerLayer(
                   markers: [
                     Marker(
@@ -282,16 +262,11 @@ class _TesteMapaState extends State<TesteMapa> {
           // Usa a localização atual/selecionada para melhorar os resultados.
           SafeArea(
             child: BarraPesquisaEndereco(
-              onSelecionado:
-              _selecionarEnderecoPesquisado,
-              latitudeReferencia:
-              pontoReferencia?.latitude,
-              longitudeReferencia:
-              pontoReferencia?.longitude,
-              cidadeReferencia:
-              _cidadePontoEncontro,
-              estadoReferencia:
-              _estadoPontoEncontro,
+              onSelecionado: _selecionarEnderecoPesquisado,
+              latitudeReferencia: pontoReferencia?.latitude,
+              longitudeReferencia: pontoReferencia?.longitude,
+              cidadeReferencia: _cidadePontoEncontro,
+              estadoReferencia: _estadoPontoEncontro,
             ),
           ),
         ],
@@ -307,8 +282,7 @@ class _TesteMapaState extends State<TesteMapa> {
               bottom: false,
               child: Column(
                 mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment:
-                CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     _buscandoLocalizacao
@@ -323,19 +297,15 @@ class _TesteMapaState extends State<TesteMapa> {
                   const SizedBox(height: 8),
 
                   if (_buscandoEndereco)
-                    const Text(
-                      'Buscando endereço...',
-                    )
+                    const Text('Buscando endereço...')
                   else
                     Text(
                       _nomePontoEncontro != null &&
-                          _nomePontoEncontro!
-                              .trim()
-                              .isNotEmpty
+                              _nomePontoEncontro!.trim().isNotEmpty
                           ? '$_nomePontoEncontro - '
-                          '${_enderecoPontoEncontro ?? ''}'
+                                '${_enderecoPontoEncontro ?? ''}'
                           : _enderecoPontoEncontro ??
-                          'Toque no mapa para ajustar a origem',
+                                'Toque no mapa para ajustar a origem',
                     ),
 
                   const SizedBox(height: 12),
@@ -343,16 +313,11 @@ class _TesteMapaState extends State<TesteMapa> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton.icon(
-                      onPressed:
-                      _pontoEncontro == null
+                      onPressed: _pontoEncontro == null || _buscandoEndereco
                           ? null
                           : _confirmarPontoEncontro,
-                      icon: const Icon(
-                        Icons.check,
-                      ),
-                      label: Text(
-                        widget.textoBotao,
-                      ),
+                      icon: const Icon(Icons.check),
+                      label: Text(widget.textoBotao),
                     ),
                   ),
                 ],
@@ -361,15 +326,12 @@ class _TesteMapaState extends State<TesteMapa> {
           ),
 
           BarraNavegacaoHome(
-            currentIndex:
-            widget.indiceNavegacao,
-            onTap: (indice) =>
-                NavegacaoPrincipal.selecionar(
-                  context,
-                  indice,
-                  indiceAtual:
-                  widget.indiceNavegacao,
-                ),
+            currentIndex: widget.indiceNavegacao,
+            onTap: (indice) => NavegacaoPrincipal.selecionar(
+              context,
+              indice,
+              indiceAtual: widget.indiceNavegacao,
+            ),
           ),
         ],
       ),

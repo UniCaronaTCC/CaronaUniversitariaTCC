@@ -1,16 +1,21 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../config/app_colors.dart';
 import '../../models/carona.dart';
 import '../services/rota_service.dart';
+import '../utils/rota_mapa_utils.dart';
+import 'mapa_percurso.dart';
 
 class MapaRotaCarona extends StatefulWidget {
   final Carona carona;
+  final double alturaMapa;
 
-  const MapaRotaCarona({super.key, required this.carona});
+  const MapaRotaCarona({
+    super.key,
+    required this.carona,
+    this.alturaMapa = 260,
+  });
 
   @override
   State<MapaRotaCarona> createState() => _MapaRotaCaronaState();
@@ -27,52 +32,23 @@ class _MapaRotaCaronaState extends State<MapaRotaCarona> {
   @override
   void initState() {
     super.initState();
-    _paradas = _montarParadas();
+    _paradas = paradasDaCarona(widget.carona);
     _carregarRota();
   }
 
   @override
   void didUpdateWidget(covariant MapaRotaCarona oldWidget) {
     super.didUpdateWidget(oldWidget);
-    final novasParadas = _montarParadas();
-    if (!listEquals(_paradas, novasParadas)) {
-      _paradas = novasParadas;
+    if (oldWidget.carona != widget.carona) {
+      _paradas = paradasDaCarona(widget.carona);
       _carregarRota();
     }
   }
 
-  bool _coordenadaValida(double? latitude, double? longitude) {
-    return latitude != null &&
-        longitude != null &&
-        latitude.isFinite &&
-        longitude.isFinite &&
-        latitude >= -90 &&
-        latitude <= 90 &&
-        longitude >= -180 &&
-        longitude <= 180;
-  }
-
-  List<LatLng>? _montarParadas() {
-    final carona = widget.carona;
-    final pontos = [...carona.pontosEmbarque]
-      ..sort((a, b) => a.ordem.compareTo(b.ordem));
-    if (!_coordenadaValida(carona.origemLatitude, carona.origemLongitude) ||
-        !_coordenadaValida(carona.destinoLatitude, carona.destinoLongitude) ||
-        pontos.any((p) => !_coordenadaValida(p.latitude, p.longitude))) {
-      return null;
-    }
-    return [
-      LatLng(carona.origemLatitude!, carona.origemLongitude!),
-      ...pontos.map((p) => LatLng(p.latitude, p.longitude)),
-      LatLng(carona.destinoLatitude!, carona.destinoLongitude!),
-    ];
-  }
-
   Future<void> _carregarRota() async {
-    final requisicao = ++_requisicao;
     final paradas = _paradas;
+    final requisicao = ++_requisicao;
     setState(() {
-      _rota = null;
       _erro = null;
       _carregando = paradas != null;
     });
@@ -81,15 +57,8 @@ class _MapaRotaCaronaState extends State<MapaRotaCarona> {
     try {
       final rota = await _service
           .calcularRota(paradas)
-          .timeout(const Duration(seconds: 30));
-      if (rota.pontos.length < 2 ||
-          rota.pontos.any((p) => !_coordenadaValida(p.latitude, p.longitude)) ||
-          !rota.distanciaMetros.isFinite ||
-          rota.distanciaMetros < 0 ||
-          !rota.duracaoSegundos.isFinite ||
-          rota.duracaoSegundos < 0) {
-        throw const FormatException('Rota inválida');
-      }
+          .timeout(const Duration(seconds: 40));
+      if (!_rotaValida(rota)) throw const FormatException('Rota inválida');
       if (!mounted || requisicao != _requisicao) return;
       setState(() {
         _rota = rota;
@@ -104,57 +73,13 @@ class _MapaRotaCaronaState extends State<MapaRotaCarona> {
     }
   }
 
-  String _duracao(double segundos) {
-    final minutos = (segundos / 60).ceil();
-    if (minutos < 1) return 'Menos de 1 min';
-    if (minutos < 60) return '$minutos min';
-    final restante = minutos % 60;
-    return '${minutos ~/ 60} h${restante == 0 ? '' : ' $restante min'}';
-  }
-
-  Marker _marcador(int indice) {
-    final origem = indice == 0;
-    final destino = indice == _paradas!.length - 1;
-    final cor = origem
-        ? Colors.green.shade700
-        : destino
-        ? AppColors.primary
-        : Colors.blue.shade700;
-    final titulo = origem
-        ? 'Origem'
-        : destino
-        ? 'Destino'
-        : 'Embarque $indice';
-    return Marker(
-      point: _paradas![indice],
-      width: 36,
-      height: 36,
-      child: Tooltip(
-        message: titulo,
-        child: Container(
-          alignment: Alignment.center,
-          decoration: BoxDecoration(
-            color: cor,
-            shape: BoxShape.circle,
-            border: Border.all(color: Colors.white, width: 3),
-            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
-          ),
-          child: origem || destino
-              ? Icon(
-                  origem ? Icons.trip_origin : Icons.flag,
-                  size: 18,
-                  color: Colors.white,
-                )
-              : Text(
-                  '$indice',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-        ),
-      ),
-    );
+  bool _rotaValida(RotaResultado rota) {
+    return rota.pontos.length >= 2 &&
+        rota.pontos.every((p) => coordenadaValida(p.latitude, p.longitude)) &&
+        rota.distanciaMetros.isFinite &&
+        rota.distanciaMetros >= 0 &&
+        rota.duracaoSegundos.isFinite &&
+        rota.duracaoSegundos >= 0;
   }
 
   @override
@@ -183,142 +108,138 @@ class _MapaRotaCaronaState extends State<MapaRotaCarona> {
               ],
             ),
           ),
-          if (_carregando)
-            const Padding(
-              padding: EdgeInsets.all(28),
-              child: Column(
-                children: [
-                  CircularProgressIndicator(),
-                  SizedBox(height: 16),
-                  Text('Calculando o percurso pelas ruas...'),
-                ],
-              ),
-            )
-          else if (_paradas == null || _erro != null)
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              child: Column(
-                children: [
-                  const Icon(
-                    Icons.map_outlined,
-                    color: Colors.black45,
-                    size: 36,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    _erro ??
-                        'Esta carona não possui todas as coordenadas '
-                            'necessárias para mostrar o percurso.',
-                    textAlign: TextAlign.center,
-                  ),
-                  if (_erro != null)
-                    TextButton.icon(
-                      onPressed: _carregarRota,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Tentar novamente'),
-                    ),
-                ],
-              ),
+          if (_carregando && rota == null)
+            const _CarregandoRota()
+          else if (_paradas == null || (_erro != null && rota == null))
+            _ErroRota(
+              mensagem:
+                  _erro ??
+                  'Esta carona não possui todas as coordenadas necessárias para mostrar o percurso.',
+              onTentarNovamente: _erro == null ? null : _carregarRota,
             )
           else if (rota != null) ...[
             SizedBox(
-              height: 260,
-              child: FlutterMap(
-                key: ValueKey(_requisicao),
-                options: MapOptions(
-                  initialCameraFit: CameraFit.bounds(
-                    bounds: LatLngBounds.fromPoints([
-                      ...rota.pontos,
-                      ..._paradas!,
-                    ]),
-                    padding: const EdgeInsets.all(36),
-                    maxZoom: 16,
-                  ),
-                  // Mantém a rolagem da tela fluida neste mapa de preview.
-                  interactionOptions: const InteractionOptions(
-                    flags: InteractiveFlag.none,
-                  ),
-                ),
-                children: [
-                  TileLayer(
-                    urlTemplate:
-                        'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.unicarona.app',
-                  ),
-                  PolylineLayer(
-                    polylines: [
-                      Polyline(
-                        points: rota.pontos,
-                        color: Colors.blue.shade700,
-                        strokeWidth: 5,
-                        borderColor: Colors.white,
-                        borderStrokeWidth: 2,
-                      ),
-                    ],
-                  ),
-                  MarkerLayer(
-                    markers: List.generate(_paradas!.length, _marcador),
-                  ),
-                  const SimpleAttributionWidget(
-                    source: Text('OpenStreetMap contributors'),
-                  ),
-                ],
+              height: widget.alturaMapa,
+              child: MapaPercurso(
+                carona: widget.carona,
+                rota: rota,
+                paradas: _paradas!,
+                atualizando: _carregando,
+                erroAtualizacao: _erro,
+                onTentarNovamente: _carregarRota,
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Wrap(
-                    spacing: 20,
-                    runSpacing: 8,
-                    children: [
-                      Text(
-                        '${(rota.distanciaMetros / 1000).toStringAsFixed(1).replaceAll('.', ',')} km',
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Text(
-                        _duracao(rota.duracaoSegundos),
-                        style: const TextStyle(
-                          fontSize: 20,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'Distância total • Tempo estimado',
-                    style: TextStyle(color: Colors.black54, fontSize: 12),
-                  ),
-                  const SizedBox(height: 14),
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 6,
-                    children: [
-                      Text(
-                        '● Origem',
-                        style: TextStyle(color: Colors.green.shade700),
-                      ),
-                      if (_paradas!.length > 2)
-                        Text(
-                          '● Embarques numerados',
-                          style: TextStyle(color: Colors.blue.shade700),
-                        ),
-                      const Text(
-                        '⚑ Destino',
-                        style: TextStyle(color: AppColors.primary),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
+            _ResumoRota(rota: rota, quantidadeParadas: _paradas!.length),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CarregandoRota extends StatelessWidget {
+  const _CarregandoRota();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Padding(
+      padding: EdgeInsets.all(28),
+      child: Column(
+        children: [
+          CircularProgressIndicator(),
+          SizedBox(height: 16),
+          Text('Calculando o percurso pelas ruas...'),
+        ],
+      ),
+    );
+  }
+}
+
+class _ErroRota extends StatelessWidget {
+  final String mensagem;
+  final VoidCallback? onTentarNovamente;
+
+  const _ErroRota({required this.mensagem, this.onTentarNovamente});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+      child: Column(
+        children: [
+          const Icon(Icons.map_outlined, color: Colors.black45, size: 36),
+          const SizedBox(height: 10),
+          Text(mensagem, textAlign: TextAlign.center),
+          if (onTentarNovamente != null)
+            TextButton.icon(
+              onPressed: onTentarNovamente,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Tentar novamente'),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ResumoRota extends StatelessWidget {
+  final RotaResultado rota;
+  final int quantidadeParadas;
+
+  const _ResumoRota({required this.rota, required this.quantidadeParadas});
+
+  @override
+  Widget build(BuildContext context) {
+    final distancia = (rota.distanciaMetros / 1000)
+        .toStringAsFixed(1)
+        .replaceAll('.', ',');
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Wrap(
+            spacing: 20,
+            runSpacing: 8,
+            children: [
+              Text(
+                '$distancia km',
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                duracaoFormatada(rota.duracaoSegundos),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          const Text(
+            'Distância total • Tempo estimado',
+            style: TextStyle(color: Colors.black54, fontSize: 12),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 12,
+            runSpacing: 6,
+            children: [
+              Text('● Origem', style: TextStyle(color: Colors.green.shade700)),
+              if (quantidadeParadas > 2)
+                Text(
+                  '● Embarques numerados',
+                  style: TextStyle(color: Colors.blue.shade700),
+                ),
+              const Text(
+                '⚑ Destino',
+                style: TextStyle(color: AppColors.primary),
+              ),
+            ],
+          ),
         ],
       ),
     );

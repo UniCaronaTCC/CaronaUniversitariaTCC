@@ -7,6 +7,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -15,7 +16,11 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { RequisicaoComUsuario } from '../auth/requisicao-com-usuario';
 
 import { Carona } from './carona.entity';
-import { CaronasService, DadosCriacaoCarona } from './caronas.service';
+import {
+  CaronasService,
+  DadosCriacaoCarona,
+  DadosPosicaoAtualCarona,
+} from './caronas.service';
 
 type DadosCaronaRecebidos = Record<string, unknown> | undefined;
 
@@ -71,6 +76,72 @@ export class CaronasController {
     return {
       sucesso: true,
       mensagem: 'Carona excluída com sucesso',
+    };
+  }
+
+  @Patch(':idCarona/iniciar')
+  async iniciarCarona(
+    @Param('idCarona') idRecebido: string,
+    @Req() request: RequisicaoComUsuario,
+  ) {
+    const carona = await this.caronasService.iniciarCarona(
+      this.validarIdCarona(idRecebido),
+      request.usuario.sub,
+    );
+    return {
+      sucesso: true,
+      mensagem: 'Corrida iniciada com sucesso',
+      dados: this.formatarCarona(carona),
+    };
+  }
+
+  @Patch(':idCarona/finalizar')
+  async finalizarCarona(
+    @Param('idCarona') idRecebido: string,
+    @Req() request: RequisicaoComUsuario,
+  ) {
+    const carona = await this.caronasService.finalizarCarona(
+      this.validarIdCarona(idRecebido),
+      request.usuario.sub,
+    );
+    return {
+      sucesso: true,
+      mensagem: 'Corrida finalizada com sucesso',
+      dados: this.formatarCarona(carona),
+    };
+  }
+
+  @Put(':idCarona/posicao')
+  async atualizarPosicaoAtual(
+    @Param('idCarona') idRecebido: string,
+    @Body() body: DadosCaronaRecebidos,
+    @Req() request: RequisicaoComUsuario,
+  ) {
+    const posicao = await this.caronasService.atualizarPosicaoAtual(
+      this.validarIdCarona(idRecebido),
+      request.usuario.sub,
+      this.validarPosicaoAtual(body),
+    );
+
+    return {
+      sucesso: true,
+      dados: this.formatarPosicaoAtual(posicao),
+    };
+  }
+
+  @Get(':idCarona/posicao')
+  async buscarPosicaoAtual(
+    @Param('idCarona') idRecebido: string,
+    @Req() request: RequisicaoComUsuario,
+  ) {
+    const posicao = await this.caronasService.buscarPosicaoAtual(
+      this.validarIdCarona(idRecebido),
+      request.usuario.sub,
+    );
+
+    return {
+      sucesso: true,
+      dados: posicao == null ? null : this.formatarPosicaoAtual(posicao),
     };
   }
 
@@ -136,28 +207,18 @@ export class CaronasController {
       ? dados.diasSemana.map((dia: unknown) => dia?.toString() ?? '')
       : null;
 
-    if (
-      recorrente &&
-      (!Array.isArray(diasSemana) || diasSemana.length === 0)
-    ) {
-      throw new BadRequestException(
-        'Selecione pelo menos um dia da semana',
-      );
+    if (recorrente && (!Array.isArray(diasSemana) || diasSemana.length === 0)) {
+      throw new BadRequestException('Selecione pelo menos um dia da semana');
     }
 
-    const pontosEmbarque = this.validarPontosEmbarque(
-      dados.pontosEmbarque,
-    );
+    const pontosEmbarque = this.validarPontosEmbarque(dados.pontosEmbarque);
 
     return {
       idUsuario,
 
       origem,
 
-      origemCidade: this.textoOpcional(
-        dados.origemCidade,
-        100,
-      ),
+      origemCidade: this.textoOpcional(dados.origemCidade, 100),
 
       origemLatitude: this.validarCoordenada(
         dados.origemLatitude,
@@ -175,10 +236,7 @@ export class CaronasController {
 
       destino,
 
-      destinoCidade: this.textoOpcional(
-        dados.destinoCidade,
-        100,
-      ),
+      destinoCidade: this.textoOpcional(dados.destinoCidade, 100),
 
       destinoLatitude: this.validarCoordenada(
         dados.destinoLatitude,
@@ -196,9 +254,7 @@ export class CaronasController {
 
       dataInicio,
 
-      dataFim: this.textoOpcional(
-        dados.dataFim,
-      ),
+      dataFim: this.textoOpcional(dados.dataFim),
 
       horario,
       vagas,
@@ -206,8 +262,7 @@ export class CaronasController {
       recorrente,
       diasSemana,
 
-      observacoes:
-          this.textoOpcional(dados.observacoes) ?? undefined,
+      observacoes: this.textoOpcional(dados.observacoes) ?? undefined,
 
       pontosEmbarque,
     };
@@ -219,9 +274,7 @@ export class CaronasController {
     }
 
     if (!Array.isArray(valor)) {
-      throw new BadRequestException(
-        'Pontos de embarque inválidos',
-      );
+      throw new BadRequestException('Pontos de embarque inválidos');
     }
 
     return valor.map((item, indice) => {
@@ -233,8 +286,7 @@ export class CaronasController {
 
       const ponto = item as Record<string, unknown>;
 
-      const endereco =
-          ponto.endereco?.toString().trim() ?? '';
+      const endereco = ponto.endereco?.toString().trim() ?? '';
 
       if (!endereco) {
         throw new BadRequestException(
@@ -249,10 +301,7 @@ export class CaronasController {
       }
 
       return {
-        nome: this.textoOpcional(
-          ponto.nome,
-          100,
-        ),
+        nome: this.textoOpcional(ponto.nome, 100),
 
         endereco,
 
@@ -275,6 +324,28 @@ export class CaronasController {
     });
   }
 
+  private validarPosicaoAtual(
+    body: DadosCaronaRecebidos,
+  ): DadosPosicaoAtualCarona {
+    const dados = body ?? {};
+    const direcaoRecebida = dados.direcao;
+
+    return {
+      latitude: this.validarCoordenada(dados.latitude, -90, 90, 'Latitude'),
+      longitude: this.validarCoordenada(
+        dados.longitude,
+        -180,
+        180,
+        'Longitude',
+      ),
+      direcao:
+        direcaoRecebida == null
+          ? null
+          : this.validarCoordenada(direcaoRecebida, 0, 360, 'Direção'),
+      precisao: this.validarCoordenada(dados.precisao, 0, 10000, 'Precisão'),
+    };
+  }
+
   private validarIdCarona(idRecebido: string): number {
     const idCarona = Number(idRecebido);
 
@@ -285,10 +356,7 @@ export class CaronasController {
     return idCarona;
   }
 
-  private textoOpcional(
-    valor: unknown,
-    limite?: number,
-  ): string | null {
+  private textoOpcional(valor: unknown, limite?: number): string | null {
     const texto = valor?.toString().trim() ?? '';
 
     if (limite != null && texto.length > limite) {
@@ -306,11 +374,7 @@ export class CaronasController {
   ): number {
     const valor = Number(valorRecebido);
 
-    if (
-      !Number.isFinite(valor) ||
-      valor < minimo ||
-      valor > maximo
-    ) {
+    if (!Number.isFinite(valor) || valor < minimo || valor > maximo) {
       throw new BadRequestException(`${nome} inválida`);
     }
 
@@ -342,19 +406,35 @@ export class CaronasController {
       status: carona.status,
 
       pontosEmbarque:
-          carona.pontosEmbarque?.map((ponto) => ({
-            idPontoEmbarque: ponto.idPontoEmbarque,
-            nome: ponto.nome,
-            endereco: ponto.endereco,
-            latitude: ponto.latitude,
-            longitude: ponto.longitude,
-            ordem: ponto.ordem,
-          })) ?? [],
+        carona.pontosEmbarque?.map((ponto) => ({
+          idPontoEmbarque: ponto.idPontoEmbarque,
+          nome: ponto.nome,
+          endereco: ponto.endereco,
+          latitude: ponto.latitude,
+          longitude: ponto.longitude,
+          ordem: ponto.ordem,
+        })) ?? [],
 
       usuario: {
         idUsuario: carona.usuario.idUsuario,
         nome: carona.usuario.nome,
       },
+    };
+  }
+
+  private formatarPosicaoAtual(posicao: {
+    latitude: number;
+    longitude: number;
+    direcao: number | null;
+    precisao: number;
+    atualizadoEm: Date;
+  }) {
+    return {
+      latitude: posicao.latitude,
+      longitude: posicao.longitude,
+      direcao: posicao.direcao,
+      precisao: posicao.precisao,
+      atualizadoEm: posicao.atualizadoEm,
     };
   }
 }
