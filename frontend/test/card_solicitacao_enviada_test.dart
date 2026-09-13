@@ -121,4 +121,61 @@ void main() {
     await tester.tap(find.text('CANCELAR PARTICIPAÇÃO'));
     expect(cancelou, isTrue);
   });
+
+  testWidgets('oferece Pix somente para carona avulsa aceita', (tester) async {
+    var pagou = false;
+    final solicitacao = SolicitacaoEnviada(
+      id: 7,
+      status: 'ACEITA',
+      localEmbarque: 'Praça central',
+      motorista: 'Henrique',
+      idCarona: 8,
+      destino: 'UniSalesiano',
+      dataInicio: DateTime(2026, 9, 25),
+      horario: '19:00:00',
+      valor: 12.5,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CardSolicitacaoEnviada(
+            solicitacao: solicitacao,
+            onPagarPix: () => pagou = true,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('PAGAR COM PIX'));
+    expect(pagou, isTrue);
+  });
+
+  testWidgets('nao oferece Pix para carona recorrente', (tester) async {
+    final solicitacao = SolicitacaoEnviada(
+      id: 9,
+      status: 'ACEITA',
+      localEmbarque: 'Praça central',
+      motorista: 'Henrique',
+      idCarona: 10,
+      destino: 'UniSalesiano',
+      dataInicio: DateTime(2026, 9, 25),
+      horario: '19:00:00',
+      valor: 12.5,
+      recorrente: true,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CardSolicitacaoEnviada(
+            solicitacao: solicitacao,
+            onPagarPix: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('PAGAR COM PIX'), findsNothing);
+  });
 }

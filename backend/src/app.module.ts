@@ -9,10 +9,10 @@ import { UsersModule } from './users/users.module'; // Importa o m√≥dulo de usu√
 import { AvaliacoesModule } from './avaliacoes/avaliacoes.module';
 import { CaronasModule } from './caronas/caronas.module';
 import { InstituicoesModule } from './instituicoes/instituicoes.module';
-import { SolicitacoesModule } from './solicitacoes/solicitacoes.module';
-
+import { MensagensModule } from './mensagens/mensagens.module';
+import { PagamentosModule } from './pagamentos/pagamentos.module';
 import { RotasModule } from './rotas/rotas.module';
-
+import { SolicitacoesModule } from './solicitacoes/solicitacoes.module';
 
 @Module({
   imports: [
@@ -45,6 +45,8 @@ import { RotasModule } from './rotas/rotas.module';
     SolicitacoesModule,
     AvaliacoesModule,
     InstituicoesModule,
+    MensagensModule,
+    PagamentosModule,
     RotasModule,
   ],
   controllers: [AppController],

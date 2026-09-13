@@ -91,7 +91,7 @@ class AuthService {
     } on AuthException catch (erro) {
       return {
         'sucesso': false,
-        'mensagem': _mensagemErroSupabase(erro.message),
+        'mensagem': _mensagemErroSupabase(erro),
       };
     } catch (erro) {
       return {'sucesso': false, 'mensagem': 'Não foi possível fazer login'};
@@ -122,7 +122,7 @@ class AuthService {
     } on AuthException catch (erro) {
       return {
         'sucesso': false,
-        'mensagem': _mensagemErroSupabase(erro.message),
+        'mensagem': _mensagemErroSupabase(erro),
       };
     } catch (erro) {
       return {
@@ -132,16 +132,29 @@ class AuthService {
     }
   }
 
-  static String _mensagemErroSupabase(String mensagem) {
-    final texto = mensagem.toLowerCase();
+  static String _mensagemErroSupabase(AuthException erro) {
+    switch (erro.code) {
+      case 'invalid_credentials':
+        return 'E-mail ou senha inválidos';
+      case 'weak_password':
+        return 'A senha não atende aos requisitos de segurança';
+      case 'email_not_confirmed':
+        return 'Confirme seu e-mail antes de entrar';
+      case 'email_provider_disabled':
+        return 'A autenticação por e-mail e senha está desativada';
+      case 'over_request_rate_limit':
+      case 'over_email_send_rate_limit':
+        return 'Aguarde um pouco antes de tentar novamente';
+      case 'email_exists':
+      case 'user_already_exists':
+        return 'Este e-mail já está cadastrado';
+    }
+
+    final texto = erro.message.toLowerCase();
 
     if (texto.contains('already registered') ||
         texto.contains('already been registered')) {
       return 'Este e-mail já está cadastrado';
-    }
-
-    if (texto.contains('password')) {
-      return 'A senha não atende aos requisitos de segurança';
     }
 
     if (texto.contains('rate limit')) {
@@ -156,7 +169,7 @@ class AuthService {
       return 'Confirme seu e-mail antes de entrar';
     }
 
-    return mensagem;
+    return erro.message;
   }
 
   static Future<Map<String, dynamic>> buscarPerfil() async {
