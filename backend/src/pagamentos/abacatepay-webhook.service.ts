@@ -144,12 +144,10 @@ export class AbacatePayWebhookService {
       transparente.status !== 'PAID' ||
       transparente.devMode !== true ||
       transparente.frequency !== 'ONE_TIME' ||
-      !Array.isArray(transparente.methods) ||
-      !transparente.methods.includes('PIX') ||
       !this.inteiroSeguro(transparente.amount) ||
-      !this.inteiroSeguro(transparente.paidAmount) ||
       transparente.amount <= 0 ||
-      transparente.paidAmount !== transparente.amount
+      !this.metodoPixValido(transparente.methods) ||
+      !this.valorPagoValido(transparente.paidAmount, transparente.amount)
     ) {
       throw new BadRequestException('Dados do pagamento no webhook invalidos');
     }
@@ -226,5 +224,27 @@ export class AbacatePayWebhookService {
 
   private inteiroSeguro(valor: unknown): valor is number {
     return typeof valor === 'number' && Number.isSafeInteger(valor);
+  }
+
+  private metodoPixValido(valor: unknown): boolean {
+    if (valor == null) {
+      return true;
+    }
+
+    return (
+      Array.isArray(valor) && (valor.length === 0 || valor.includes('PIX'))
+    );
+  }
+
+  private valorPagoValido(valorPago: unknown, valorCobrado: unknown): boolean {
+    if (valorPago == null) {
+      return true;
+    }
+
+    return (
+      this.inteiroSeguro(valorPago) &&
+      this.inteiroSeguro(valorCobrado) &&
+      valorPago === valorCobrado
+    );
   }
 }

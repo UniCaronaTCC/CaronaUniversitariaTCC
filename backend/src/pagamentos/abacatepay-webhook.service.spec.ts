@@ -186,6 +186,43 @@ describe('AbacatePayWebhookService', () => {
     expect(pagamentosRepository.findOne).not.toHaveBeenCalled();
   });
 
+  it('aceita campos opcionais vazios enviados pelo sandbox', async () => {
+    const corpo = {
+      ...corpoValido,
+      data: {
+        transparent: {
+          ...corpoValido.data.transparent,
+          paidAmount: null,
+          methods: [],
+        },
+      },
+    };
+
+    await expect(processar(corpo)).resolves.toEqual({
+      processado: true,
+      duplicado: false,
+    });
+    expect(abacatePayService.consultarPix).toHaveBeenCalledWith('pix_123');
+    expect(pagamentosTransacaoRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ statusProvedor: 'PAID' }),
+    );
+  });
+
+  it('recusa outro metodo quando ele estiver informado', async () => {
+    const corpo = {
+      ...corpoValido,
+      data: {
+        transparent: {
+          ...corpoValido.data.transparent,
+          methods: ['CARD'],
+        },
+      },
+    };
+
+    await expect(processar(corpo)).rejects.toBeInstanceOf(BadRequestException);
+    expect(pagamentosRepository.findOne).not.toHaveBeenCalled();
+  });
+
   it('nao processa evento valido de outro tipo', async () => {
     const corpo = { ...corpoValido, event: 'transparent.refunded' };
 
