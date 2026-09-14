@@ -1,8 +1,7 @@
 # Pagamentos: cliente da API e estrutura SQL
 
-O cliente da API v2 da AbacatePay, a entidade TypeORM e a rota autenticada para
-criar ou reutilizar um Pix estao implementados. Ainda nao existe webhook nem tela
-de pagamento no Flutter.
+O cliente da API v2 da AbacatePay, a persistencia, as rotas autenticadas, o
+webhook e a tela de pagamento no Flutter estao implementados para o sandbox.
 
 ## Arquivos
 
@@ -51,6 +50,14 @@ INCERTA e exigem conciliacao futura.
 O bloqueio do banco termina antes da chamada HTTP. Ao receber a cobranca, o
 backend salva identificador, status, QR Code, codigo copia e cola e vencimento.
 CONFIRMADA quer dizer que a cobranca foi criada, nao que o Pix foi pago.
+
+`GET /pagamentos/:idPagamento`
+
+Retorna o estado atual da cobranca somente quando ela pertence ao passageiro
+autenticado. Enquanto o Pix estiver PENDING, a tela Flutter consulta essa rota a
+cada tres segundos. Ao receber PAID, interrompe as consultas, esconde QR Code e
+codigo copia e cola e mostra a confirmacao. Tambem existe atualizacao manual pelo
+botao na barra superior.
 
 ## Webhook
 
@@ -120,9 +127,10 @@ A tabela `unicarona.pagamentos` guarda uma tentativa de cobranca por registro:
 
 Uma solicitacao pode ter tentativas antigas: nao ha UNIQUE em `id_solicitacao`.
 Os identificadores unicos nao impedem duas referencias diferentes de cobrarem a
-mesma solicitacao. O controle de concorrencia, a reutilizacao da tentativa ativa
-e a conciliacao de resultados incertos ainda serao implementados no backend.
-Uma tentativa INCERTA nao deve provocar automaticamente outra cobranca.
+mesma solicitacao. O backend usa bloqueio pessimista e reutiliza tentativas
+PREPARADA, CONFIRMADA ou INCERTA para evitar duplicacao. A conciliacao manual de
+resultados incertos ainda nao foi implementada. Uma tentativa INCERTA nao deve
+provocar automaticamente outra cobranca.
 
 RLS esta habilitado sem politicas para clientes e as permissoes de tabelas e
 sequencias foram revogadas de PUBLIC, anon e authenticated. O backend continua
@@ -130,7 +138,7 @@ usando a conexao PostgreSQL atual com o proprietario da tabela. Uma futura role
 restrita exigira permissoes/politicas proprias. Nao conceder acesso ao Flutter.
 `modo_teste` e apenas um registro local; nao transforma a chave em sandbox.
 Nao sao guardadas chaves da API, dados de cartao ou payloads brutos de clientes.
-Ainda nao ha tabela de eventos de webhook, carteira, saldo ou repasse.
+Ainda nao ha carteira, saldo ou repasse.
 
 ## Referencias
 

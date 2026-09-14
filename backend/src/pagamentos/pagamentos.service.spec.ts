@@ -14,6 +14,7 @@ import { PagamentosService } from './pagamentos.service';
 describe('PagamentosService', () => {
   let service: PagamentosService;
   let pagamentosRepository: {
+    findOne: jest.Mock;
     save: jest.Mock;
     update: jest.Mock;
   };
@@ -51,6 +52,7 @@ describe('PagamentosService', () => {
     };
 
     pagamentosRepository = {
+      findOne: jest.fn(),
       save: jest.fn((pagamento: Pagamento) => Promise.resolve(pagamento)),
       update: jest.fn().mockResolvedValue({ affected: 1 }),
     };
@@ -91,6 +93,32 @@ describe('PagamentosService', () => {
       pagamentosRepository as unknown as Repository<Pagamento>,
       dataSource as unknown as DataSource,
       abacatePayService as unknown as AbacatePayService,
+    );
+  });
+
+  it('consulta o pagamento somente para o passageiro vinculado', async () => {
+    const pagamento = {
+      idPagamento: 30,
+      solicitacao: solicitacaoAceita,
+      statusProvedor: 'PAID',
+    } as Pagamento;
+    pagamentosRepository.findOne.mockResolvedValue(pagamento);
+
+    await expect(service.obterPagamento(30, 1)).resolves.toBe(pagamento);
+    expect(pagamentosRepository.findOne).toHaveBeenCalledWith({
+      where: {
+        idPagamento: 30,
+        solicitacao: { passageiro: { idUsuario: 1 } },
+      },
+      relations: { solicitacao: true },
+    });
+  });
+
+  it('nao revela pagamento ausente ou pertencente a outro passageiro', async () => {
+    pagamentosRepository.findOne.mockResolvedValue(null);
+
+    await expect(service.obterPagamento(30, 2)).rejects.toBeInstanceOf(
+      NotFoundException,
     );
   });
 

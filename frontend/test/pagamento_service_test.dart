@@ -72,6 +72,43 @@ void main() {
     );
   });
 
+  test('consulta o status do pagamento pelo backend', () async {
+    AuthService.tokenUsuarioLogado = 'token-teste';
+    late http.Request requisicaoRecebida;
+    final service = PagamentoService(
+      cliente: MockClient((requisicao) async {
+        requisicaoRecebida = requisicao;
+        return http.Response(
+          jsonEncode({
+            'sucesso': true,
+            'dados': {
+              'id': 30,
+              'idSolicitacao': 10,
+              'metodo': 'PIX',
+              'valorCentavos': 1250,
+              'statusCriacao': 'CONFIRMADA',
+              'status': 'PAID',
+              'pixCopiaECola': 'codigo-pix',
+              'qrCodeBase64': null,
+              'expiraEm': null,
+              'modoTeste': true,
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    final resultado = await service.obterPagamento(30);
+
+    expect(resultado['sucesso'], isTrue);
+    expect((resultado['dados'] as PagamentoPix).pago, isTrue);
+    expect(requisicaoRecebida.method, 'GET');
+    expect(requisicaoRecebida.url.path, '/pagamentos/30');
+    expect(requisicaoRecebida.headers['authorization'], 'Bearer token-teste');
+  });
+
   test('nao faz requisicao sem usuario autenticado', () async {
     var chamouBackend = false;
     final service = PagamentoService(

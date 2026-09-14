@@ -29,6 +29,25 @@ export class PagamentosService {
     private readonly abacatePayService: AbacatePayService,
   ) {}
 
+  async obterPagamento(
+    idPagamento: number,
+    idPassageiro: number,
+  ): Promise<Pagamento> {
+    const pagamento = await this.pagamentosRepository.findOne({
+      where: {
+        idPagamento,
+        solicitacao: { passageiro: { idUsuario: idPassageiro } },
+      },
+      relations: { solicitacao: true },
+    });
+
+    if (!pagamento) {
+      throw new NotFoundException('Pagamento nao encontrado');
+    }
+
+    return pagamento;
+  }
+
   async criarOuObterPix(
     idSolicitacao: number,
     idPassageiro: number,

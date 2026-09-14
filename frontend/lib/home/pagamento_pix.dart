@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
@@ -5,13 +6,108 @@ import 'package:flutter/services.dart';
 
 import '../config/app_colors.dart';
 import '../models/pagamento_pix.dart';
+import '../services/pagamento_service.dart';
 import '../utils/formatador_moeda.dart';
 import '../widgets/componentes_padrao.dart';
 
-class PagamentoPixTela extends StatelessWidget {
+class PagamentoPixTela extends StatefulWidget {
   final PagamentoPix pagamento;
+  final PagamentoService? pagamentoService;
+  final Duration intervaloAtualizacao;
+  final bool atualizarAutomaticamente;
 
-  const PagamentoPixTela({super.key, required this.pagamento});
+  const PagamentoPixTela({
+    super.key,
+    required this.pagamento,
+    this.pagamentoService,
+    this.intervaloAtualizacao = const Duration(seconds: 3),
+    this.atualizarAutomaticamente = true,
+  });
+
+  @override
+  State<PagamentoPixTela> createState() => _PagamentoPixTelaState();
+}
+
+class _PagamentoPixTelaState extends State<PagamentoPixTela> {
+  late PagamentoPix pagamento;
+  late final PagamentoService _pagamentoService;
+  Timer? _timer;
+  bool _consultando = false;
+  String? _erroAtualizacao;
+
+  @override
+  void initState() {
+    super.initState();
+    pagamento = widget.pagamento;
+    _pagamentoService = widget.pagamentoService ?? PagamentoService();
+
+    if (widget.atualizarAutomaticamente && pagamento.aguardandoConfirmacao) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _iniciarAtualizacao();
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _iniciarAtualizacao() {
+    if (!mounted || !pagamento.aguardandoConfirmacao) {
+      return;
+    }
+
+    _timer = Timer.periodic(widget.intervaloAtualizacao, (_) {
+      unawaited(_atualizarPagamento());
+    });
+    unawaited(_atualizarPagamento());
+  }
+
+  Future<void> _atualizarPagamento() async {
+    if (_consultando || !pagamento.aguardandoConfirmacao) {
+      return;
+    }
+
+    setState(() {
+      _consultando = true;
+      _erroAtualizacao = null;
+    });
+
+    final resultado = await _pagamentoService.obterPagamento(pagamento.id);
+    if (!mounted) {
+      return;
+    }
+
+    final dados = resultado['dados'];
+    final PagamentoPix? pagamentoAtualizado =
+        resultado['sucesso'] == true && dados is PagamentoPix ? dados : null;
+    final pagamentoConfirmado =
+        pagamentoAtualizado?.pago == true && !pagamento.pago;
+
+    setState(() {
+      _consultando = false;
+
+      if (pagamentoAtualizado != null) {
+        pagamento = pagamentoAtualizado;
+      } else {
+        _erroAtualizacao =
+            resultado['mensagem']?.toString() ??
+            'Não foi possível atualizar o pagamento';
+      }
+    });
+
+    if (!pagamento.aguardandoConfirmacao) {
+      _timer?.cancel();
+    }
+
+    if (pagamentoConfirmado) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Pagamento confirmado')));
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -19,7 +115,26 @@ class PagamentoPixTela extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: const BarraSuperiorPadrao(titulo: 'Pagamento Pix'),
+      appBar: BarraSuperiorPadrao(
+        titulo: 'Pagamento Pix',
+        actions: pagamento.aguardandoConfirmacao
+            ? [
+                SizedBox.square(
+                  dimension: 48,
+                  child: IconButton(
+                    tooltip: 'Atualizar pagamento',
+                    onPressed: _consultando ? null : _atualizarPagamento,
+                    icon: _consultando
+                        ? const SizedBox.square(
+                            dimension: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.refresh),
+                  ),
+                ),
+              ]
+            : null,
+      ),
       body: SafeArea(
         child: ListView(
           padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
@@ -41,6 +156,14 @@ class PagamentoPixTela extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             _StatusPix(pagamento: pagamento),
+            if (_erroAtualizacao != null &&
+                pagamento.aguardandoConfirmacao) ...[
+              const SizedBox(height: 12),
+              Text(
+                _erroAtualizacao!,
+                style: const TextStyle(color: Colors.black54),
+              ),
+            ],
             if (pagamento.pixDisponivel) ...[
               const SizedBox(height: 28),
               if (qrCode != null) ...[
@@ -77,7 +200,7 @@ class PagamentoPixTela extends StatelessWidget {
                 ),
               ),
             ],
-            if (pagamento.expiraEm != null) ...[
+            if (pagamento.pixDisponivel && pagamento.expiraEm != null) ...[
               const SizedBox(height: 20),
               Row(
                 children: [

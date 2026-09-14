@@ -63,8 +63,13 @@ class PagamentoPix {
     );
   }
 
+  bool get aguardandoConfirmacao =>
+      statusCriacao == 'CONFIRMADA' && status == 'PENDING';
+
+  bool get pago => statusCriacao == 'CONFIRMADA' && status == 'PAID';
+
   bool get pixDisponivel =>
-      statusCriacao == 'CONFIRMADA' &&
+      aguardandoConfirmacao &&
       pixCopiaECola != null &&
       pixCopiaECola!.trim().isNotEmpty;
 }
