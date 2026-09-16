@@ -1,7 +1,6 @@
 import {
   calcularDuracaoPixSegundos,
   calcularLimitePagamento,
-  DURACAO_MAXIMA_PIX_SEGUNDOS,
 } from './prazo-pagamento';
 
 describe('prazos de pagamento', () => {
@@ -25,15 +24,13 @@ describe('prazos de pagamento', () => {
     ).toBeLessThanOrEqual(agora.getTime());
   });
 
-  it('limita o Pix a trinta minutos', () => {
+  it('mantem o Pix valido durante todo o prazo de pagamento', () => {
     const limite = new Date('2026-09-15T13:00:00.000Z');
 
-    expect(calcularDuracaoPixSegundos(limite, agora)).toBe(
-      DURACAO_MAXIMA_PIX_SEGUNDOS,
-    );
+    expect(calcularDuracaoPixSegundos(limite, agora)).toBe(3600);
   });
 
-  it('reduz a validade do Pix quando resta menos de trinta minutos', () => {
+  it('usa somente o tempo restante quando o prazo esta proximo', () => {
     const limite = new Date('2026-09-15T12:10:00.000Z');
 
     expect(calcularDuracaoPixSegundos(limite, agora)).toBe(600);

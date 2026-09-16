@@ -43,7 +43,7 @@ e nao recorrente pode usa-la nesta primeira versao.
 Ao aceitar uma solicitacao avulsa, o backend reserva a vaga e define
 `pagamento_limite_em` como o menor valor entre uma hora apos o aceite e quinze
 minutos antes do inicio da carona. O Pix e criado somente quando o passageiro
-solicita e recebe validade maxima de trinta minutos, sem ultrapassar esse prazo.
+solicita e expira junto com esse prazo, evitando dois vencimentos diferentes.
 O arquivo `FLUXO.md` registra as decisoes de negocio simplificadas para o TCC.
 
 Antes da chamada externa, o backend bloqueia brevemente a solicitacao e salva uma

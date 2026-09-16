@@ -190,7 +190,7 @@ describe('PagamentosService', () => {
       expect.objectContaining({
         valorCentavos: 1250,
         descricao: 'Carona 20 - solicitacao 10',
-        expiraEmSegundos: 1800,
+        expiraEmSegundos: 3600,
       }),
     );
     expect(resultado).toEqual(

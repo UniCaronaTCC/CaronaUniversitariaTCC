@@ -1,8 +1,6 @@
 const UMA_HORA_EM_MILISSEGUNDOS = 60 * 60 * 1000;
 const QUINZE_MINUTOS_EM_MILISSEGUNDOS = 15 * 60 * 1000;
 
-export const DURACAO_MAXIMA_PIX_SEGUNDOS = 30 * 60;
-
 export function calcularLimitePagamento(
   dataInicio: string,
   horario: string,
@@ -31,5 +29,5 @@ export function calcularDuracaoPixSegundos(
     (limitePagamento.getTime() - agora.getTime()) / 1000,
   );
 
-  return Math.min(DURACAO_MAXIMA_PIX_SEGUNDOS, segundosRestantes);
+  return segundosRestantes;
 }

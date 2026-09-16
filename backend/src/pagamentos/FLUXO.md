@@ -6,7 +6,7 @@ O motorista aceita a solicitação, a vaga fica reservada provisoriamente e o pa
 
 ## Pix
 
-O Pix é gerado apenas quando o passageiro toca em **Pagar com Pix**. Após a geração, ele é válido por até 30 minutos, sem ultrapassar o prazo da solicitação.
+O Pix é gerado apenas quando o passageiro toca em **Pagar com Pix** e expira junto com o prazo da solicitação. Assim, existe um único prazo de pagamento, de no máximo 1 hora após o aceite e sempre respeitando o início da carona.
 
 ## Confirmação
 
