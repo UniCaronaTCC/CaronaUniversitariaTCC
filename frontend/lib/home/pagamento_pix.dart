@@ -33,6 +33,7 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
   late final PagamentoService _pagamentoService;
   Timer? _timer;
   bool _consultando = false;
+  bool _simulando = false;
   String? _erroAtualizacao;
 
   @override
@@ -107,6 +108,41 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
         context,
       ).showSnackBar(const SnackBar(content: Text('Pagamento confirmado')));
     }
+  }
+
+  Future<void> _simularPagamento() async {
+    if (_simulando || !pagamento.aguardandoConfirmacao) {
+      return;
+    }
+
+    setState(() {
+      _simulando = true;
+      _erroAtualizacao = null;
+    });
+
+    final resultado = await _pagamentoService.simularPagamento(pagamento.id);
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      _simulando = false;
+
+      if (resultado['sucesso'] != true) {
+        _erroAtualizacao =
+            resultado['mensagem']?.toString() ??
+            'Não foi possível simular o pagamento';
+      }
+    });
+
+    if (resultado['sucesso'] != true) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Pagamento simulado. Aguardando webhook')),
+    );
+    await _atualizarPagamento();
   }
 
   @override
@@ -199,6 +235,22 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
                   label: const Text('COPIAR CÓDIGO PIX'),
                 ),
               ),
+              if (pagamento.modoTeste && pagamento.aguardandoConfirmacao) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: _simulando ? null : _simularPagamento,
+                    icon: _simulando
+                        ? const SizedBox.square(
+                            dimension: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.science_outlined),
+                    label: const Text('SIMULAR PAGAMENTO'),
+                  ),
+                ),
+              ],
             ],
             if (pagamento.pixDisponivel && pagamento.expiraEm != null) ...[
               const SizedBox(height: 20),

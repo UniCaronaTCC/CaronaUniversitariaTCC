@@ -9,6 +9,7 @@ describe('PagamentosController', () => {
   let pagamentosService: {
     criarOuObterPix: jest.Mock;
     obterPagamento: jest.Mock;
+    simularPagamento: jest.Mock;
   };
 
   beforeEach(() => {
@@ -32,6 +33,18 @@ describe('PagamentosController', () => {
         valorCentavos: 1250,
         statusCriacao: 'CONFIRMADA',
         statusProvedor: 'PAID',
+        pixCopiaECola: 'codigo-pix',
+        qrCodeBase64: 'qr-base64',
+        expiraEm: new Date('2026-09-04T12:00:00.000Z'),
+        modoTeste: true,
+      }),
+      simularPagamento: jest.fn().mockResolvedValue({
+        idPagamento: 30,
+        solicitacao: { idSolicitacao: 10 },
+        metodo: 'PIX',
+        valorCentavos: 1250,
+        statusCriacao: 'CONFIRMADA',
+        statusProvedor: 'PENDING',
         pixCopiaECola: 'codigo-pix',
         qrCodeBase64: 'qr-base64',
         expiraEm: new Date('2026-09-04T12:00:00.000Z'),
@@ -78,6 +91,17 @@ describe('PagamentosController', () => {
         modoTeste: true,
       },
     });
+  });
+
+  it('simula somente o pagamento do passageiro autenticado', async () => {
+    const request = {
+      usuario: { sub: 1, nome: 'Passageiro', email: 'p@email.com' },
+    } as RequisicaoComUsuario;
+
+    const resultado = await controller.simularPagamento('30', request);
+
+    expect(pagamentosService.simularPagamento).toHaveBeenCalledWith(30, 1);
+    expect(resultado.dados.status).toBe('PENDING');
   });
 
   it.each(['abc', '0', '-1', '1.5'])('recusa o id invalido %s', async (id) => {

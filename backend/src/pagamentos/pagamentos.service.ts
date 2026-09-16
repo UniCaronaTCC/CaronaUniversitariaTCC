@@ -67,10 +67,7 @@ export class PagamentosService {
     idSolicitacao: number,
     idPassageiro: number,
   ): Promise<Pagamento> {
-    let preparacao = await this.prepararPagamento(
-      idSolicitacao,
-      idPassageiro,
-    );
+    let preparacao = await this.prepararPagamento(idSolicitacao, idPassageiro);
 
     if (!preparacao.criadoAgora) {
       const deveReutilizar = await this.reconciliarPagamentoExistente(
@@ -124,6 +121,38 @@ export class PagamentosService {
         'A cobranca foi criada, mas nao foi possivel salvar sua confirmacao. Nao tente novamente agora',
       );
     }
+  }
+
+  async simularPagamento(
+    idPagamento: number,
+    idPassageiro: number,
+  ): Promise<Pagamento> {
+    const pagamento = await this.obterPagamento(idPagamento, idPassageiro);
+
+    if (!pagamento.modoTeste) {
+      throw new ConflictException(
+        'A simulacao esta disponivel apenas no ambiente de testes',
+      );
+    }
+
+    if (pagamento.statusProvedor === 'PAID') {
+      return pagamento;
+    }
+
+    if (
+      pagamento.statusCriacao !== 'CONFIRMADA' ||
+      pagamento.statusProvedor !== 'PENDING' ||
+      !pagamento.idProvedor
+    ) {
+      throw new ConflictException(
+        'Este pagamento nao esta disponivel para simulacao',
+      );
+    }
+
+    await this.abacatePayService.simularPagamento(pagamento.idProvedor);
+
+    // O webhook continua sendo a unica fonte que confirma PAID no banco.
+    return pagamento;
   }
 
   private async prepararPagamento(
@@ -256,7 +285,9 @@ export class PagamentosService {
   }
 
   private statusPermiteNovaTentativa(status: StatusPix | null): boolean {
-    return status !== null && STATUS_PIX_QUE_PERMITEM_NOVA_TENTATIVA.has(status);
+    return (
+      status !== null && STATUS_PIX_QUE_PERMITEM_NOVA_TENTATIVA.has(status)
+    );
   }
 
   private async registrarStatusComTolerancia(

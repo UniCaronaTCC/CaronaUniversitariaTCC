@@ -34,6 +34,16 @@ class PagamentoService {
     );
   }
 
+  Future<Map<String, dynamic>> simularPagamento(int idPagamento) async {
+    return _executarRequisicao(
+      (token) => _cliente.post(
+        Uri.parse('${ApiConfig.baseUrl}/pagamentos/$idPagamento/simular'),
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+      mensagemPadrao: 'Não foi possível simular o pagamento',
+    );
+  }
+
   Future<Map<String, dynamic>> _executarRequisicao(
     Future<http.Response> Function(String token) enviar, {
     required String mensagemPadrao,

@@ -69,6 +69,17 @@ cada tres segundos. Ao receber PAID, interrompe as consultas, esconde QR Code e
 codigo copia e cola e mostra a confirmacao. Tambem existe atualizacao manual pelo
 botao na barra superior.
 
+`POST /pagamentos/:idPagamento/simular`
+
+Disponivel somente para o passageiro autenticado dono de uma cobranca PENDING
+criada no sandbox. A rota pede a simulacao de pagamento a AbacatePay, mas nao
+altera o status local para PAID. O webhook continua sendo a unica fonte que
+confirma o pagamento no banco, permitindo que o teste exercite o fluxo real.
+
+No Flutter, a tela Pix mostra **Simular pagamento** enquanto a cobranca de teste
+estiver pendente. Depois do clique, a atualizacao normal da tela aguarda o
+webhook, mostra a confirmacao e remove o botao.
+
 As listagens de solicitacoes tambem consultam os pagamentos confirmados. Quando
 existe um pagamento `PAID`, retornam `pagamentoConfirmado: true`; o aplicativo
 mostra `CONFIRMADA` e nao oferece a criacao de outro Pix.

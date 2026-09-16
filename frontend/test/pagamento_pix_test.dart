@@ -95,6 +95,7 @@ void main() {
     expect(find.text('Aguardando pagamento'), findsOneWidget);
     expect(find.byKey(const ValueKey('codigo-pix')), findsOneWidget);
     expect(find.text('COPIAR CÓDIGO PIX'), findsOneWidget);
+    expect(find.text('SIMULAR PAGAMENTO'), findsOneWidget);
   });
 
   testWidgets('nao oferece outro Pix quando a tentativa esta incerta', (
@@ -168,5 +169,61 @@ void main() {
     expect(find.byKey(const ValueKey('codigo-pix')), findsNothing);
     expect(requisicaoRecebida.method, 'GET');
     expect(requisicaoRecebida.url.path, '/pagamentos/30');
+  });
+
+  testWidgets('simula no backend e aguarda a confirmacao do webhook', (
+    tester,
+  ) async {
+    AuthService.tokenUsuarioLogado = 'token-teste';
+    final requisicoes = <http.Request>[];
+    final service = PagamentoService(
+      cliente: MockClient((requisicao) async {
+        requisicoes.add(requisicao);
+        final pago = requisicao.method == 'GET';
+
+        return http.Response(
+          jsonEncode({
+            'sucesso': true,
+            'dados': {
+              'id': 30,
+              'idSolicitacao': 10,
+              'metodo': 'PIX',
+              'valorCentavos': 1250,
+              'statusCriacao': 'CONFIRMADA',
+              'status': pago ? 'PAID' : 'PENDING',
+              'pixCopiaECola': 'codigo-pix-teste',
+              'qrCodeBase64': null,
+              'expiraEm': null,
+              'modoTeste': true,
+            },
+          }),
+          200,
+          headers: {'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PagamentoPixTela(
+          pagamento: pagamento,
+          pagamentoService: service,
+          atualizarAutomaticamente: false,
+        ),
+      ),
+    );
+
+    final botao = find.text('SIMULAR PAGAMENTO');
+    await tester.ensureVisible(botao);
+    await tester.tap(botao);
+    await tester.pumpAndSettle();
+
+    expect(requisicoes, hasLength(2));
+    expect(requisicoes.first.method, 'POST');
+    expect(requisicoes.first.url.path, '/pagamentos/30/simular');
+    expect(requisicoes.last.method, 'GET');
+    expect(requisicoes.last.url.path, '/pagamentos/30');
+    expect(find.text('Pagamento confirmado'), findsWidgets);
+    expect(find.text('SIMULAR PAGAMENTO'), findsNothing);
   });
 }

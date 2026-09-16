@@ -109,6 +109,43 @@ void main() {
     expect(requisicaoRecebida.headers['authorization'], 'Bearer token-teste');
   });
 
+  test('solicita a simulacao somente ao backend autenticado', () async {
+    AuthService.tokenUsuarioLogado = 'token-teste';
+    late http.Request requisicaoRecebida;
+    final service = PagamentoService(
+      cliente: MockClient((requisicao) async {
+        requisicaoRecebida = requisicao;
+        return http.Response(
+          jsonEncode({
+            'sucesso': true,
+            'dados': {
+              'id': 30,
+              'idSolicitacao': 10,
+              'metodo': 'PIX',
+              'valorCentavos': 1250,
+              'statusCriacao': 'CONFIRMADA',
+              'status': 'PENDING',
+              'pixCopiaECola': 'codigo-pix',
+              'qrCodeBase64': null,
+              'expiraEm': '2026-09-04T12:00:00.000Z',
+              'modoTeste': true,
+            },
+          }),
+          201,
+          headers: {'content-type': 'application/json'},
+        );
+      }),
+    );
+
+    final resultado = await service.simularPagamento(30);
+
+    expect(resultado['sucesso'], isTrue);
+    expect(requisicaoRecebida.method, 'POST');
+    expect(requisicaoRecebida.url.path, '/pagamentos/30/simular');
+    expect(requisicaoRecebida.headers['authorization'], 'Bearer token-teste');
+    expect(requisicaoRecebida.body, isEmpty);
+  });
+
   test('nao faz requisicao sem usuario autenticado', () async {
     var chamouBackend = false;
     final service = PagamentoService(

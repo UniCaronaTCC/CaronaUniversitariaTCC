@@ -23,7 +23,11 @@ describe('PagamentosService', () => {
     create: jest.Mock;
     save: jest.Mock;
   };
-  let abacatePayService: { criarPix: jest.Mock; consultarPix: jest.Mock };
+  let abacatePayService: {
+    criarPix: jest.Mock;
+    consultarPix: jest.Mock;
+    simularPagamento: jest.Mock;
+  };
   let dataSource: { transaction: jest.Mock };
   let consultaSolicitacao: {
     innerJoinAndSelect: jest.Mock;
@@ -83,6 +87,7 @@ describe('PagamentosService', () => {
         modoTeste: true,
       }),
       consultarPix: jest.fn(),
+      simularPagamento: jest.fn().mockResolvedValue(undefined),
     };
     dataSource = {
       transaction: jest.fn((executar: (manager: unknown) => Promise<unknown>) =>
@@ -130,6 +135,40 @@ describe('PagamentosService', () => {
     await expect(service.obterPagamento(30, 2)).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+
+  it('simula um Pix pendente sem confirmar o pagamento diretamente no banco', async () => {
+    const pagamento = {
+      idPagamento: 30,
+      solicitacao: solicitacaoAceita,
+      idProvedor: 'pix_123',
+      statusCriacao: 'CONFIRMADA',
+      statusProvedor: 'PENDING',
+      modoTeste: true,
+    } as Pagamento;
+    pagamentosRepository.findOne.mockResolvedValue(pagamento);
+
+    await expect(service.simularPagamento(30, 1)).resolves.toBe(pagamento);
+
+    expect(abacatePayService.simularPagamento).toHaveBeenCalledWith('pix_123');
+    expect(pagamento.statusProvedor).toBe('PENDING');
+    expect(pagamentosRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('recusa simulacao para cobranca fora do sandbox', async () => {
+    pagamentosRepository.findOne.mockResolvedValue({
+      idPagamento: 30,
+      solicitacao: solicitacaoAceita,
+      idProvedor: 'pix_123',
+      statusCriacao: 'CONFIRMADA',
+      statusProvedor: 'PENDING',
+      modoTeste: false,
+    });
+
+    await expect(service.simularPagamento(30, 1)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(abacatePayService.simularPagamento).not.toHaveBeenCalled();
   });
 
   it('calcula o valor no servidor, cria o Pix e salva sua confirmacao', async () => {

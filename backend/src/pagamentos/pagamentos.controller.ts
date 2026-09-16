@@ -52,6 +52,23 @@ export class PagamentosController {
     };
   }
 
+  @Post(':idPagamento/simular')
+  async simularPagamento(
+    @Param('idPagamento') idRecebido: string,
+    @Req() request: RequisicaoComUsuario,
+  ) {
+    const idPagamento = this.validarId(idRecebido, 'Pagamento invalido');
+    const pagamento = await this.pagamentosService.simularPagamento(
+      idPagamento,
+      request.usuario.sub,
+    );
+
+    return {
+      sucesso: true,
+      dados: this.formatarPagamento(pagamento),
+    };
+  }
+
   private formatarPagamento(pagamento: Pagamento) {
     return {
       id: pagamento.idPagamento,
