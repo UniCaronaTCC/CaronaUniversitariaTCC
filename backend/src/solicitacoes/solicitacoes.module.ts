@@ -6,6 +6,7 @@ import { AvaliacoesModule } from '../avaliacoes/avaliacoes.module';
 import { Carona } from '../caronas/carona.entity';
 import { CaronasModule } from '../caronas/caronas.module';
 import { PontoEmbarque } from '../caronas/ponto-embarque.entity';
+import { Pagamento } from '../pagamentos/pagamento.entity';
 
 import { Solicitacao } from './solicitacao.entity';
 import { SolicitacoesController } from './solicitacoes.controller';
@@ -13,11 +14,7 @@ import { SolicitacoesService } from './solicitacoes.service';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([
-      Solicitacao,
-      Carona,
-      PontoEmbarque,
-    ]),
+    TypeOrmModule.forFeature([Solicitacao, Carona, PontoEmbarque, Pagamento]),
     AuthModule,
     AvaliacoesModule,
     CaronasModule,

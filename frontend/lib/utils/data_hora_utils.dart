@@ -49,5 +49,24 @@ class DataHoraUtils {
     return partes.length >= 2 ? '${partes[0]}:${partes[1]}' : horario;
   }
 
+  static DateTime? interpretarInstanteEmBrasilia(Object? valor) {
+    if (valor == null) return null;
+
+    final instante = DateTime.tryParse(valor.toString());
+    if (instante == null) return null;
+
+    final brasilia = instante.toUtc().subtract(const Duration(hours: 3));
+    return DateTime(
+      brasilia.year,
+      brasilia.month,
+      brasilia.day,
+      brasilia.hour,
+      brasilia.minute,
+      brasilia.second,
+      brasilia.millisecond,
+      brasilia.microsecond,
+    );
+  }
+
   static String _doisDigitos(int valor) => valor.toString().padLeft(2, '0');
 }

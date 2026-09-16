@@ -40,9 +40,16 @@ A rota nao recebe valor no corpo. Ela usa o usuario autenticado pelo Supabase e
 busca o valor da carona no banco. Somente o passageiro de uma solicitacao ACEITA
 e nao recorrente pode usa-la nesta primeira versao.
 
+Ao aceitar uma solicitacao avulsa, o backend reserva a vaga e define
+`pagamento_limite_em` como o menor valor entre uma hora apos o aceite e quinze
+minutos antes do inicio da carona. O Pix e criado somente quando o passageiro
+solicita e recebe validade maxima de trinta minutos, sem ultrapassar esse prazo.
+O arquivo `FLUXO.md` registra as decisoes de negocio simplificadas para o TCC.
+
 Antes da chamada externa, o backend bloqueia brevemente a solicitacao e salva uma
 tentativa PREPARADA com uma referencia UUID. Tentativas PREPARADA, CONFIRMADA ou
-INCERTA sao reutilizadas; isso impede que repeticoes da rota criem novos Pix.
+INCERTA sao verificadas antes de criar outro Pix; isso impede que repeticoes da
+rota criem cobrancas duplicadas.
 FALHOU permite uma nova tentativa porque representa uma falha definitiva antes
 da criacao. Essa classificacao e conservadora: timeout e respostas duvidosas ficam
 INCERTA e exigem conciliacao futura.
@@ -50,6 +57,9 @@ INCERTA e exigem conciliacao futura.
 O bloqueio do banco termina antes da chamada HTTP. Ao receber a cobranca, o
 backend salva identificador, status, QR Code, codigo copia e cola e vencimento.
 CONFIRMADA quer dizer que a cobranca foi criada, nao que o Pix foi pago.
+Antes de reutilizar uma cobranca CONFIRMADA, o backend consulta seu estado. Pix
+EXPIRED, CANCELLED ou FAILED e atualizado no banco e pode ser substituido por
+outro, desde que ainda reste tempo no prazo da solicitacao.
 
 `GET /pagamentos/:idPagamento`
 
@@ -58,6 +68,10 @@ autenticado. Enquanto o Pix estiver PENDING, a tela Flutter consulta essa rota a
 cada tres segundos. Ao receber PAID, interrompe as consultas, esconde QR Code e
 codigo copia e cola e mostra a confirmacao. Tambem existe atualizacao manual pelo
 botao na barra superior.
+
+As listagens de solicitacoes tambem consultam os pagamentos confirmados. Quando
+existe um pagamento `PAID`, retornam `pagamentoConfirmado: true`; o aplicativo
+mostra `CONFIRMADA` e nao oferece a criacao de outro Pix.
 
 ## Webhook
 
