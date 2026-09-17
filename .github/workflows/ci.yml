@@ -1,4 +1,4 @@
-name: CI Backend
+name: CI
 
 on:
   push:
@@ -10,7 +10,7 @@ permissions:
   contents: read
 
 jobs:
-  testes-e-build:
+  backend:
     runs-on: ubuntu-latest
 
     defaults:
@@ -36,3 +36,35 @@ jobs:
 
       - name: Fazer build do backend
         run: npm run build
+
+  flutter:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Configurar Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Configurar Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: '3.38.9'
+
+      - name: Instalar dependências
+        run: flutter pub get
+
+      - name: Executar testes unitários
+        run: flutter test
+
+      - name: Gerar APK de teste
+        run: flutter build apk --debug
