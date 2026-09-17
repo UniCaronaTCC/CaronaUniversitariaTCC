@@ -6,6 +6,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
+import { numeroDecimalTransformer } from '../database/numero-decimal.transformer';
 import { Carona } from './carona.entity';
 
 @Entity('pontos_embarque')
@@ -30,6 +31,7 @@ export class PontoEmbarque {
     type: 'decimal',
     precision: 10,
     scale: 8,
+    transformer: numeroDecimalTransformer,
   })
   latitude!: number;
 
@@ -37,12 +39,12 @@ export class PontoEmbarque {
     type: 'decimal',
     precision: 11,
     scale: 8,
+    transformer: numeroDecimalTransformer,
   })
   longitude!: number;
 
   @Column({
     type: 'int',
-    unsigned: true,
     default: 1,
   })
   ordem: number = 1;

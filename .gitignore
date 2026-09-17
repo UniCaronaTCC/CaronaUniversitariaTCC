@@ -51,6 +51,7 @@ app.*.map.json
 backend/node_modules/
 backend/dist/
 backend/.env
+/backend/TESTE_PAGAMENTOS_LOCAL.md
 
 # Segredos e variáveis de ambiente
 **/.env*

@@ -6,6 +6,7 @@ void main() {
   testWidgets('solicita código e redefine a senha', (tester) async {
     String? emailSolicitado;
     String? senhaRecebida;
+    String? codigoRecebido;
 
     await tester.pumpWidget(
       MaterialApp(
@@ -15,6 +16,7 @@ void main() {
             return {'sucesso': true, 'mensagem': 'Código enviado'};
           },
           redefinirSenha: (email, codigo, senha) async {
+            codigoRecebido = codigo;
             senhaRecebida = senha;
             return {
               'sucesso': true,
@@ -35,7 +37,7 @@ void main() {
     expect(emailSolicitado, 'joao@email.com');
     expect(find.text('SALVAR NOVA SENHA'), findsOneWidget);
 
-    await tester.enterText(find.widgetWithText(TextField, '000000'), '123456');
+    await tester.enterText(find.widgetWithText(TextField, '00000000'), '12345678');
     await tester.enterText(
       find.widgetWithText(TextField, 'Nova senha'),
       'novaSenha123',
@@ -48,6 +50,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(senhaRecebida, 'novaSenha123');
+    expect(codigoRecebido, '12345678');
     expect(find.text('ENTRAR'), findsWidgets);
   });
 }

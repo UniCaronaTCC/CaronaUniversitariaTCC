@@ -11,6 +11,7 @@ import {
 
 import { Carona } from '../caronas/carona.entity';
 import { PontoEmbarque } from '../caronas/ponto-embarque.entity';
+import { numeroDecimalTransformer } from '../database/numero-decimal.transformer';
 import { User } from '../users/user.entity';
 
 @Entity('solicitacoes')
@@ -24,6 +25,7 @@ import { User } from '../users/user.entity';
 export class Solicitacao {
   avaliada = false;
   podeAvaliar = false;
+  pagamentoConfirmado = false;
 
   @PrimaryGeneratedColumn({ name: 'id_solicitacao' })
   idSolicitacao!: number;
@@ -62,6 +64,7 @@ export class Solicitacao {
     type: 'decimal',
     precision: 10,
     scale: 8,
+    transformer: numeroDecimalTransformer,
   })
   embarqueLatitude!: number;
 
@@ -70,15 +73,23 @@ export class Solicitacao {
     type: 'decimal',
     precision: 11,
     scale: 8,
+    transformer: numeroDecimalTransformer,
   })
   embarqueLongitude!: number;
 
   @Column({ length: 30, default: 'PENDENTE' })
   status: string = 'PENDENTE';
 
-  @CreateDateColumn({ name: 'criado_em' })
+  @Column({
+    name: 'pagamento_limite_em',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  pagamentoLimiteEm: Date | null = null;
+
+  @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm!: Date;
 
-  @UpdateDateColumn({ name: 'atualizado_em' })
+  @UpdateDateColumn({ name: 'atualizado_em', type: 'timestamptz' })
   atualizadoEm!: Date;
 }

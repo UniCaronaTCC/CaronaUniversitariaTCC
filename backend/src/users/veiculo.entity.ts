@@ -27,6 +27,6 @@ export class Veiculo {
   @JoinColumn({ name: 'id_usuario' })
   usuario: User;
 
-  @CreateDateColumn({ name: 'criado_em' })
+  @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm: Date;
 }

@@ -1,16 +1,43 @@
-name: CI Flutter
+name: CI
 
 on:
   push:
-    branches: [master]
+    branches: [master, desenvolvimento]
   pull_request:
-    branches: [master]
+    branches: [master, desenvolvimento]
 
 permissions:
   contents: read
 
 jobs:
-  testes-e-build:
+  backend:
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Baixar o código
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependências
+        run: npm ci
+
+      - name: Executar testes unitários
+        run: npm test -- --runInBand
+
+      - name: Fazer build do backend
+        run: npm run build
+
+  flutter:
     runs-on: ubuntu-latest
 
     defaults:
