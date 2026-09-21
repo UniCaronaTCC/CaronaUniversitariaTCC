@@ -333,7 +333,46 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
       itemCount: mensagens.length,
       separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, index) => _bolhaMensagem(mensagens[index]),
+      itemBuilder: (context, index) => _itemMensagem(index),
+    );
+  }
+
+  Widget _itemMensagem(int index) {
+    final mensagem = mensagens[index];
+    final mostrarData =
+        index == 0 ||
+        !_mesmoDia(mensagens[index - 1].criadoEm, mensagem.criadoEm);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (mostrarData) _separadorData(mensagem.criadoEm),
+        _bolhaMensagem(mensagem),
+      ],
+    );
+  }
+
+  Widget _separadorData(DateTime data) {
+    return Padding(
+      key: ValueKey('separador-data-${data.year}-${data.month}-${data.day}'),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          const Expanded(child: Divider(color: Color(0xFFE1E1E1))),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              _formatarData(data),
+              style: const TextStyle(
+                color: Colors.black54,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const Expanded(child: Divider(color: Color(0xFFE1E1E1))),
+        ],
+      ),
     );
   }
 
@@ -540,5 +579,46 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
   String _formatarHorario(DateTime data) {
     return '${data.hour.toString().padLeft(2, '0')}:'
         '${data.minute.toString().padLeft(2, '0')}';
+  }
+
+  bool _mesmoDia(DateTime primeira, DateTime segunda) {
+    return primeira.year == segunda.year &&
+        primeira.month == segunda.month &&
+        primeira.day == segunda.day;
+  }
+
+  String _formatarData(DateTime data) {
+    final agora = DateTime.now();
+    final hoje = DateTime(agora.year, agora.month, agora.day);
+    final diaDaMensagem = DateTime(data.year, data.month, data.day);
+    final diferenca = hoje.difference(diaDaMensagem).inDays;
+
+    if (diferenca == 0) {
+      return 'Hoje';
+    }
+    if (diferenca == 1) {
+      return 'Ontem';
+    }
+
+    const meses = [
+      'janeiro',
+      'fevereiro',
+      'março',
+      'abril',
+      'maio',
+      'junho',
+      'julho',
+      'agosto',
+      'setembro',
+      'outubro',
+      'novembro',
+      'dezembro',
+    ];
+    final dataFormatada = '${data.day} de ${meses[data.month - 1]}';
+
+    if (data.year == agora.year) {
+      return dataFormatada;
+    }
+    return '$dataFormatada de ${data.year}';
   }
 }

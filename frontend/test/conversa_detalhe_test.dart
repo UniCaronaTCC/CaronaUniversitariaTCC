@@ -249,6 +249,63 @@ void main() {
     expect(find.text('Nova mensagem'), findsOneWidget);
   });
 
+  testWidgets('separa mensagens por data e formata os horários', (
+    tester,
+  ) async {
+    final agora = DateTime.now();
+    final ontem = DateTime(agora.year, agora.month, agora.day - 1, 23, 8);
+    final hojeDeManha = DateTime(agora.year, agora.month, agora.day, 8, 5);
+    final hojeMaisTarde = DateTime(agora.year, agora.month, agora.day, 9, 7);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversaDetalheTela(
+          conversa: conversa,
+          idUsuario: 1,
+          usarRealtime: false,
+          carregarMensagens: () async => {
+            'sucesso': true,
+            'dados': [
+              Mensagem(
+                id: 1,
+                conteudo: 'Mensagem antiga',
+                criadoEm: DateTime(2024, 5, 2, 7, 4),
+                idRemetente: 2,
+              ),
+              Mensagem(
+                id: 2,
+                conteudo: 'Mensagem de ontem',
+                criadoEm: ontem,
+                idRemetente: 2,
+              ),
+              Mensagem(
+                id: 3,
+                conteudo: 'Bom dia',
+                criadoEm: hojeDeManha,
+                idRemetente: 2,
+              ),
+              Mensagem(
+                id: 4,
+                conteudo: 'Tudo certo',
+                criadoEm: hojeMaisTarde,
+                idRemetente: 1,
+              ),
+            ],
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 de maio de 2024'), findsOneWidget);
+    expect(find.text('Ontem'), findsOneWidget);
+    expect(find.text('Hoje'), findsOneWidget);
+    expect(find.text('07:04'), findsOneWidget);
+    expect(find.text('23:08'), findsOneWidget);
+    expect(find.text('08:05'), findsOneWidget);
+    expect(find.text('09:07'), findsOneWidget);
+  });
+
   testWidgets('conversa encerrada fica somente para leitura', (tester) async {
     final conversaEncerrada = Conversa(
       id: conversa.id,
