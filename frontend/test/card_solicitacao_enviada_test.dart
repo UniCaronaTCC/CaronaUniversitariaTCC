@@ -121,4 +121,117 @@ void main() {
     await tester.tap(find.text('CANCELAR PARTICIPAÇÃO'));
     expect(cancelou, isTrue);
   });
+
+  testWidgets('oferece Pix somente para carona avulsa aceita', (tester) async {
+    var pagou = false;
+    final solicitacao = SolicitacaoEnviada(
+      id: 7,
+      status: 'ACEITA',
+      localEmbarque: 'Praça central',
+      motorista: 'Henrique',
+      idCarona: 8,
+      destino: 'UniSalesiano',
+      dataInicio: DateTime(2026, 9, 25),
+      horario: '19:00:00',
+      valor: 12.5,
+      pagamentoLimiteEm: DateTime(2026, 9, 25, 18),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CardSolicitacaoEnviada(
+            solicitacao: solicitacao,
+            onPagarPix: () => pagou = true,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('PAGAR COM PIX'));
+    expect(pagou, isTrue);
+    expect(find.text('Pague até 25/09 às 18:00'), findsOneWidget);
+  });
+
+  testWidgets('nao oferece Pix para carona recorrente', (tester) async {
+    final solicitacao = SolicitacaoEnviada(
+      id: 9,
+      status: 'ACEITA',
+      localEmbarque: 'Praça central',
+      motorista: 'Henrique',
+      idCarona: 10,
+      destino: 'UniSalesiano',
+      dataInicio: DateTime(2026, 9, 25),
+      horario: '19:00:00',
+      valor: 12.5,
+      recorrente: true,
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CardSolicitacaoEnviada(
+            solicitacao: solicitacao,
+            onPagarPix: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('PAGAR COM PIX'), findsNothing);
+  });
+
+  test('mostra o prazo UTC no horário de Brasília', () {
+    final solicitacao = SolicitacaoEnviada.fromJson({
+      'id': 11,
+      'status': 'ACEITA',
+      'pagamentoLimiteEm': '2026-09-16T15:50:00.000Z',
+      'localEmbarque': 'Praça central',
+      'motorista': {'id': 2, 'nome': 'Henrique'},
+      'carona': {
+        'id': 12,
+        'destino': 'UniSalesiano',
+        'dataInicio': '2026-09-16',
+        'horario': '18:45:00',
+        'valor': 10,
+      },
+    });
+
+    expect(solicitacao.prazoPagamentoFormatado, '16/09 às 12:50');
+  });
+
+  testWidgets('mostra confirmação e não oferece novo Pix quando já foi pago', (
+    tester,
+  ) async {
+    final solicitacao = SolicitacaoEnviada(
+      id: 13,
+      status: 'ACEITA',
+      localEmbarque: 'Praça central',
+      motorista: 'Henrique',
+      idCarona: 14,
+      destino: 'UniSalesiano',
+      dataInicio: DateTime(2026, 9, 25),
+      horario: '19:00:00',
+      valor: 12.5,
+      pagamentoConfirmado: true,
+      pagamentoLimiteEm: DateTime(2026, 9, 25, 18),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CardSolicitacaoEnviada(
+            solicitacao: solicitacao,
+            onPagarPix: () {},
+            onCancelar: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('CONFIRMADA'), findsOneWidget);
+    expect(find.text('PAGAR COM PIX'), findsNothing);
+    expect(find.textContaining('Pague até'), findsNothing);
+    expect(find.text('CANCELAR PARTICIPAÇÃO'), findsNothing);
+  });
 }

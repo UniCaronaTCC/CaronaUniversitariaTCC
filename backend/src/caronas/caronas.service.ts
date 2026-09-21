@@ -162,13 +162,15 @@ export class CaronasService {
         `
         (
           recorrente = false
-          AND TIMESTAMP(data_inicio, horario) <= NOW()
+          AND (data_inicio + horario) <=
+            (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
         )
         OR
         (
           recorrente = true
           AND data_fim IS NOT NULL
-          AND TIMESTAMP(data_fim, horario) <= NOW()
+          AND (data_fim + horario) <=
+            (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
         )
         `,
       )
@@ -214,7 +216,7 @@ export class CaronasService {
       .andWhere(
         `NOT EXISTS (
           SELECT 1
-          FROM solicitacoes solicitacao_usuario
+          FROM unicarona.solicitacoes solicitacao_usuario
           WHERE solicitacao_usuario.id_carona = carona.id_carona
             AND solicitacao_usuario.id_passageiro = :idUsuario
             AND solicitacao_usuario.status IN ('ACEITA', 'RECUSADA')
@@ -227,12 +229,14 @@ export class CaronasService {
       .andWhere(
         `
         (
-          carona.dataInicio >= CURDATE()
+          carona.dataInicio >=
+            (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date
           OR (
             carona.recorrente = true
             AND (
               carona.dataFim IS NULL
-              OR carona.dataFim >= CURDATE()
+              OR carona.dataFim >=
+                (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date
             )
           )
         )

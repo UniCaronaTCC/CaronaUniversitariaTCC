@@ -8,6 +8,7 @@ import {
   PrimaryGeneratedColumn,
 } from 'typeorm';
 
+import { numeroDecimalTransformer } from '../database/numero-decimal.transformer';
 import { User } from '../users/user.entity';
 import { PontoEmbarque } from './ponto-embarque.entity';
 
@@ -16,7 +17,7 @@ export class Carona {
   @PrimaryGeneratedColumn({ name: 'id_carona' })
   idCarona!: number;
 
-  @Column({ length: 100 })
+  @Column({ length: 255 })
   origem!: string;
 
   @Column({
@@ -33,6 +34,7 @@ export class Carona {
     precision: 10,
     scale: 8,
     nullable: true,
+    transformer: numeroDecimalTransformer,
   })
   origemLatitude: number | null = null;
 
@@ -42,10 +44,11 @@ export class Carona {
     precision: 11,
     scale: 8,
     nullable: true,
+    transformer: numeroDecimalTransformer,
   })
   origemLongitude: number | null = null;
 
-  @Column({ length: 100 })
+  @Column({ length: 255 })
   destino!: string;
 
   @Column({
@@ -62,6 +65,7 @@ export class Carona {
     precision: 10,
     scale: 8,
     nullable: true,
+    transformer: numeroDecimalTransformer,
   })
   destinoLatitude: number | null = null;
 
@@ -71,6 +75,7 @@ export class Carona {
     precision: 11,
     scale: 8,
     nullable: true,
+    transformer: numeroDecimalTransformer,
   })
   destinoLongitude: number | null = null;
 
@@ -83,16 +88,21 @@ export class Carona {
   @Column({ type: 'time' })
   horario!: string;
 
-  @Column({ type: 'int', unsigned: true })
+  @Column({ type: 'int' })
   vagas!: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2 })
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    transformer: numeroDecimalTransformer,
+  })
   valor!: number;
 
   @Column({ default: false })
   recorrente: boolean = false;
 
-  @Column({ name: 'dias_semana', type: 'json', nullable: true })
+  @Column({ name: 'dias_semana', type: 'jsonb', nullable: true })
   diasSemana: string[] | null = null;
 
   @Column({ type: 'text', nullable: true })
@@ -114,6 +124,6 @@ export class Carona {
   )
   pontosEmbarque!: PontoEmbarque[];
 
-  @CreateDateColumn({ name: 'criado_em' })
+  @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm!: Date;
 }

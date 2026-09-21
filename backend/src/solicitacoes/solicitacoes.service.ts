@@ -11,6 +11,9 @@ import { AvaliacoesService } from '../avaliacoes/avaliacoes.service';
 import { Carona } from '../caronas/carona.entity';
 import { CaronasService } from '../caronas/caronas.service';
 import { PontoEmbarque } from '../caronas/ponto-embarque.entity';
+import { Conversa } from '../mensagens/conversa.entity';
+import { Pagamento } from '../pagamentos/pagamento.entity';
+import { calcularLimitePagamento } from '../pagamentos/prazo-pagamento';
 import { Solicitacao } from './solicitacao.entity';
 
 export interface DadosNovaSolicitacao {
@@ -41,6 +44,9 @@ export class SolicitacoesService {
 
     @InjectRepository(PontoEmbarque)
     private readonly pontosEmbarqueRepository: Repository<PontoEmbarque>,
+
+    @InjectRepository(Pagamento)
+    private readonly pagamentosRepository: Repository<Pagamento>,
 
     private readonly dataSource: DataSource,
     private readonly caronasService: CaronasService,
@@ -93,6 +99,7 @@ export class SolicitacoesService {
       existente.embarqueLatitude = embarque.latitude;
       existente.embarqueLongitude = embarque.longitude;
       existente.status = 'PENDENTE';
+      existente.pagamentoLimiteEm = null;
 
       return this.solicitacoesRepository.save(existente);
     }
@@ -176,7 +183,7 @@ export class SolicitacoesService {
 
     const solicitacoes = await this.consultaRecebidas(idMotorista).getMany();
 
-    return this.marcarAvaliacoes(solicitacoes, idMotorista);
+    return this.enriquecerSolicitacoes(solicitacoes, idMotorista);
   }
 
   async listarRecebidasDaCarona(
@@ -189,7 +196,7 @@ export class SolicitacoesService {
       .andWhere('carona.idCarona = :idCarona', { idCarona })
       .getMany();
 
-    return this.marcarAvaliacoes(solicitacoes, idMotorista);
+    return this.enriquecerSolicitacoes(solicitacoes, idMotorista);
   }
 
   private consultaRecebidas(
@@ -247,7 +254,7 @@ export class SolicitacoesService {
       .addOrderBy('solicitacao.criadoEm', 'DESC')
       .getMany();
 
-    return this.marcarAvaliacoes(solicitacoes, idPassageiro);
+    return this.enriquecerSolicitacoes(solicitacoes, idPassageiro);
   }
 
   async responderSolicitacao(
@@ -261,6 +268,7 @@ export class SolicitacoesService {
       const solicitacoesRepository = manager.getRepository(Solicitacao);
       const caronasRepository = manager.getRepository(Carona);
       const pontosRepository = manager.getRepository(PontoEmbarque);
+      const conversasRepository = manager.getRepository(Conversa);
 
       const solicitacao = await solicitacoesRepository
         .createQueryBuilder('solicitacao')
@@ -270,7 +278,8 @@ export class SolicitacoesService {
         .where('solicitacao.idSolicitacao = :idSolicitacao', {
           idSolicitacao,
         })
-        .setLock('pessimistic_write')
+        // O ponto opcional fica fora do bloqueio; a carona protege as vagas.
+        .setLock('pessimistic_write', undefined, ['solicitacao', 'carona'])
         .getOne();
 
       if (!solicitacao) {
@@ -293,6 +302,21 @@ export class SolicitacoesService {
           solicitacao.carona.vagas <= 0
         ) {
           throw new ConflictException('Não há vagas disponíveis');
+        }
+
+        let pagamentoLimiteEm: Date | null = null;
+
+        if (!solicitacao.carona.recorrente) {
+          pagamentoLimiteEm = calcularLimitePagamento(
+            solicitacao.carona.dataInicio,
+            solicitacao.carona.horario,
+          );
+
+          if (pagamentoLimiteEm.getTime() <= Date.now()) {
+            throw new ConflictException(
+              'Não há tempo suficiente para realizar o pagamento',
+            );
+          }
         }
 
         // Um ponto sugerido só vira oficial depois da aprovação do motorista.
@@ -322,6 +346,7 @@ export class SolicitacoesService {
         }
 
         solicitacao.carona.vagas -= 1;
+        solicitacao.pagamentoLimiteEm = pagamentoLimiteEm;
 
         if (solicitacao.carona.vagas === 0) {
           solicitacao.carona.status = 'LOTADA';
@@ -331,8 +356,22 @@ export class SolicitacoesService {
       }
 
       solicitacao.status = novoStatus;
+      const solicitacaoSalva = await solicitacoesRepository.save(solicitacao);
 
-      return solicitacoesRepository.save(solicitacao);
+      if (novoStatus === 'ACEITA') {
+        const conversaExistente = await conversasRepository.findOne({
+          where: { solicitacao: { idSolicitacao } },
+        });
+
+        if (!conversaExistente) {
+          const conversa = conversasRepository.create({
+            solicitacao: { idSolicitacao },
+          });
+          await conversasRepository.save(conversa);
+        }
+      }
+
+      return solicitacaoSalva;
     });
   }
 
@@ -422,7 +461,7 @@ export class SolicitacoesService {
       .andWhere(
         `id_carona IN (
           SELECT id_carona
-          FROM caronas
+          FROM unicarona.caronas
           WHERE status = :statusCarona
         )`,
         { statusCarona: 'FINALIZADA' },
@@ -430,18 +469,24 @@ export class SolicitacoesService {
       .execute();
   }
 
-  private async marcarAvaliacoes(
+  private async enriquecerSolicitacoes(
     solicitacoes: Solicitacao[],
     idUsuario: number,
   ): Promise<Solicitacao[]> {
-    const idsAvaliados =
-      await this.avaliacoesService.buscarSolicitacoesAvaliadas(
+    const idsSolicitacoes = solicitacoes.map((item) => item.idSolicitacao);
+    const [idsAvaliados, pagamentosConfirmados] = await Promise.all([
+      this.avaliacoesService.buscarSolicitacoesAvaliadas(
         idUsuario,
-        solicitacoes.map((item) => item.idSolicitacao),
-      );
+        idsSolicitacoes,
+      ),
+      this.buscarSolicitacoesPagas(idsSolicitacoes),
+    ]);
 
     for (const solicitacao of solicitacoes) {
       solicitacao.avaliada = idsAvaliados.has(solicitacao.idSolicitacao);
+      solicitacao.pagamentoConfirmado = pagamentosConfirmados.has(
+        solicitacao.idSolicitacao,
+      );
 
       solicitacao.podeAvaliar =
         !solicitacao.avaliada &&
@@ -449,5 +494,27 @@ export class SolicitacoesService {
     }
 
     return solicitacoes;
+  }
+
+  private async buscarSolicitacoesPagas(
+    idsSolicitacoes: number[],
+  ): Promise<Set<number>> {
+    if (idsSolicitacoes.length === 0) {
+      return new Set();
+    }
+
+    const registros = await this.pagamentosRepository
+      .createQueryBuilder('pagamento')
+      .innerJoin('pagamento.solicitacao', 'solicitacao')
+      .select('solicitacao.idSolicitacao', 'idSolicitacao')
+      .where('solicitacao.idSolicitacao IN (:...idsSolicitacoes)', {
+        idsSolicitacoes,
+      })
+      .andWhere('pagamento.statusProvedor = :statusPago', {
+        statusPago: 'PAID',
+      })
+      .getRawMany<{ idSolicitacao: string }>();
+
+    return new Set(registros.map((item) => Number(item.idSolicitacao)));
   }
 }

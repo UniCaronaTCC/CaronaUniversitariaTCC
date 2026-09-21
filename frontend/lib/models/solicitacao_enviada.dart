@@ -14,8 +14,11 @@ class SolicitacaoEnviada {
   final String horario;
   final double valor;
   final String statusCarona;
+  final bool recorrente;
   final bool avaliada;
   final bool podeAvaliar;
+  final bool pagamentoConfirmado;
+  final DateTime? pagamentoLimiteEm;
 
   const SolicitacaoEnviada({
     required this.id,
@@ -28,8 +31,11 @@ class SolicitacaoEnviada {
     required this.horario,
     required this.valor,
     this.statusCarona = 'ATIVA',
+    this.recorrente = false,
     this.avaliada = false,
     this.podeAvaliar = false,
+    this.pagamentoConfirmado = false,
+    this.pagamentoLimiteEm,
   });
 
   factory SolicitacaoEnviada.fromJson(Map<String, dynamic> json) {
@@ -51,8 +57,13 @@ class SolicitacaoEnviada {
       horario: carona['horario']?.toString() ?? '',
       valor: converterJsonParaDouble(carona['valor']),
       statusCarona: carona['status']?.toString() ?? 'ATIVA',
+      recorrente: carona['recorrente'] == true,
       avaliada: json['avaliada'] == true,
       podeAvaliar: json['podeAvaliar'] == true,
+      pagamentoConfirmado: json['pagamentoConfirmado'] == true,
+      pagamentoLimiteEm: DataHoraUtils.interpretarInstanteEmBrasilia(
+        json['pagamentoLimiteEm'],
+      ),
     );
   }
 
@@ -66,8 +77,29 @@ class SolicitacaoEnviada {
 
   bool get cancelada => status.startsWith('CANCELADA_');
 
+  String get statusExibicao => pagamentoConfirmado ? 'CONFIRMADA' : status;
+
+  bool get podePagarPix =>
+      status == 'ACEITA' &&
+      !pagamentoConfirmado &&
+      !recorrente &&
+      !caronaFinalizada &&
+      !cancelada;
+
   bool get podeCancelar =>
       !caronaFinalizada &&
       !cancelada &&
+      !pagamentoConfirmado &&
       (status == 'PENDENTE' || status == 'ACEITA');
+
+  String? get prazoPagamentoFormatado {
+    final limite = pagamentoLimiteEm;
+
+    if (limite == null) return null;
+
+    String doisDigitos(int valor) => valor.toString().padLeft(2, '0');
+
+    return '${doisDigitos(limite.day)}/${doisDigitos(limite.month)} '
+        'às ${doisDigitos(limite.hour)}:${doisDigitos(limite.minute)}';
+  }
 }

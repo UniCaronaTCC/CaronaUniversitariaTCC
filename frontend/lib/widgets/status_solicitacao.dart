@@ -12,6 +12,7 @@ class StatusSolicitacao extends StatelessWidget {
     final cancelada = status.startsWith('CANCELADA_');
     final cor = switch (status) {
       'ACEITA' => Colors.green,
+      'CONFIRMADA' => Colors.green,
       'RECUSADA' => Colors.red,
       'EXPIRADA' => Colors.black54,
       'FINALIZADA' => Colors.black54,

@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Like, Repository } from 'typeorm';
+import { ILike, In, Repository } from 'typeorm';
 
 import { InstituicaoCampus } from './instituicao-campus.entity';
 import { Instituicao } from './instituicao.entity';
@@ -42,8 +42,8 @@ export class InstituicoesService {
 
     const instituicoes = await this.instituicoesRepository.find({
       where: [
-        { nome: Like(`%${busca}%`), ativa: true },
-        { sigla: Like(`%${busca}%`), ativa: true },
+        { nome: ILike(`%${busca}%`), ativa: true },
+        { sigla: ILike(`%${busca}%`), ativa: true },
       ],
       order: {
         nome: 'ASC',

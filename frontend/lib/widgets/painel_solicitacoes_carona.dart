@@ -9,8 +9,13 @@ import 'dialogo_cancelamento.dart';
 
 class PainelSolicitacoesCarona extends StatefulWidget {
   final int idCarona;
+  final Future<void> Function()? onSolicitacaoAceita;
 
-  const PainelSolicitacoesCarona({super.key, required this.idCarona});
+  const PainelSolicitacoesCarona({
+    super.key,
+    required this.idCarona,
+    this.onSolicitacaoAceita,
+  });
 
   @override
   State<PainelSolicitacoesCarona> createState() =>
@@ -77,6 +82,10 @@ class _PainelSolicitacoesCaronaState extends State<PainelSolicitacoesCarona> {
     );
 
     if (resultado['sucesso'] == true) {
+      if (status == 'ACEITA') {
+        await widget.onSolicitacaoAceita?.call();
+        if (!mounted) return;
+      }
       await carregarSolicitacoes();
     }
   }

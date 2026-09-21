@@ -9,6 +9,7 @@ class CardSolicitacaoEnviada extends StatelessWidget {
   final bool processando;
   final VoidCallback? onAvaliar;
   final VoidCallback? onCancelar;
+  final VoidCallback? onPagarPix;
 
   const CardSolicitacaoEnviada({
     super.key,
@@ -16,6 +17,7 @@ class CardSolicitacaoEnviada extends StatelessWidget {
     this.processando = false,
     this.onAvaliar,
     this.onCancelar,
+    this.onPagarPix,
   });
 
   @override
@@ -64,7 +66,7 @@ class CardSolicitacaoEnviada extends StatelessWidget {
               child: StatusSolicitacao(
                 status: solicitacao.caronaFinalizada
                     ? 'FINALIZADA'
-                    : solicitacao.status,
+                    : solicitacao.statusExibicao,
               ),
             ),
             const SizedBox(height: 16),
@@ -84,6 +86,26 @@ class CardSolicitacaoEnviada extends StatelessWidget {
               icone: Icons.person_pin_circle_outlined,
               texto: solicitacao.localEmbarque,
             ),
+            if (solicitacao.podePagarPix &&
+                solicitacao.prazoPagamentoFormatado != null) ...[
+              const SizedBox(height: 12),
+              _LinhaSolicitacao(
+                icone: Icons.hourglass_bottom,
+                texto: 'Pague até ${solicitacao.prazoPagamentoFormatado}',
+                destaque: true,
+              ),
+            ],
+            if (solicitacao.podePagarPix && onPagarPix != null) ...[
+              const Divider(height: 30),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: processando ? null : onPagarPix,
+                  icon: const Icon(Icons.pix),
+                  label: Text(processando ? 'PREPARANDO...' : 'PAGAR COM PIX'),
+                ),
+              ),
+            ],
             if (solicitacao.podeCancelar && onCancelar != null) ...[
               const Divider(height: 30),
               SizedBox(

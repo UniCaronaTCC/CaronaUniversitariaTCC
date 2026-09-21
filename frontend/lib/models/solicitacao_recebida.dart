@@ -22,6 +22,8 @@ class SolicitacaoRecebida {
 
   final bool avaliada;
   final bool podeAvaliar;
+  final bool pagamentoConfirmado;
+  final DateTime? pagamentoLimiteEm;
 
   const SolicitacaoRecebida({
     required this.id,
@@ -39,6 +41,8 @@ class SolicitacaoRecebida {
     this.statusCarona = 'ATIVA',
     this.avaliada = false,
     this.podeAvaliar = false,
+    this.pagamentoConfirmado = false,
+    this.pagamentoLimiteEm,
   });
 
   factory SolicitacaoRecebida.fromJson(Map<String, dynamic> json) {
@@ -88,6 +92,12 @@ class SolicitacaoRecebida {
       avaliada: json['avaliada'] == true,
 
       podeAvaliar: json['podeAvaliar'] == true,
+
+      pagamentoConfirmado: json['pagamentoConfirmado'] == true,
+
+      pagamentoLimiteEm: DataHoraUtils.interpretarInstanteEmBrasilia(
+        json['pagamentoLimiteEm'],
+      ),
     );
   }
 
@@ -103,9 +113,13 @@ class SolicitacaoRecebida {
   bool get cancelada =>
       status.startsWith('CANCELADA_');
 
+  String get statusExibicao =>
+      pagamentoConfirmado ? 'CONFIRMADA' : status;
+
   bool get podeCancelar =>
       !caronaFinalizada &&
           !cancelada &&
+          !pagamentoConfirmado &&
           status == 'ACEITA';
 
   bool get pontoNovoSolicitado =>

@@ -159,6 +159,7 @@ export class SolicitacoesController {
       dados: solicitacoes.map((solicitacao) => ({
         id: solicitacao.idSolicitacao,
         status: solicitacao.status,
+        pagamentoConfirmado: solicitacao.pagamentoConfirmado,
         avaliada: solicitacao.avaliada,
         podeAvaliar: solicitacao.podeAvaliar,
 
@@ -171,6 +172,7 @@ export class SolicitacoesController {
         embarqueLongitude: solicitacao.embarqueLongitude,
 
         criadoEm: solicitacao.criadoEm,
+        pagamentoLimiteEm: solicitacao.pagamentoLimiteEm,
 
         motorista: {
           id: solicitacao.carona.usuario.idUsuario,
@@ -184,6 +186,7 @@ export class SolicitacoesController {
           horario: solicitacao.carona.horario,
           valor: solicitacao.carona.valor,
           status: solicitacao.carona.status,
+          recorrente: solicitacao.carona.recorrente,
         },
       })),
     };
@@ -225,6 +228,7 @@ export class SolicitacoesController {
       dados: {
         id: solicitacao.idSolicitacao,
         status: solicitacao.status,
+        pagamentoLimiteEm: solicitacao.pagamentoLimiteEm,
       },
     };
   }
@@ -275,6 +279,7 @@ export class SolicitacoesController {
     return {
       id: solicitacao.idSolicitacao,
       status: solicitacao.status,
+      pagamentoConfirmado: solicitacao.pagamentoConfirmado,
       avaliada: solicitacao.avaliada,
       podeAvaliar: solicitacao.podeAvaliar,
 
@@ -287,6 +292,7 @@ export class SolicitacoesController {
       embarqueLongitude: solicitacao.embarqueLongitude,
 
       criadoEm: solicitacao.criadoEm,
+      pagamentoLimiteEm: solicitacao.pagamentoLimiteEm,
 
       passageiro: {
         id: solicitacao.passageiro.idUsuario,
