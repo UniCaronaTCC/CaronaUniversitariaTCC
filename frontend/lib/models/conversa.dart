@@ -15,6 +15,7 @@ class Conversa {
   final String horario;
   final DateTime criadoEm;
   final Mensagem? ultimaMensagem;
+  final int mensagensNaoLidas;
 
   const Conversa({
     required this.id,
@@ -30,6 +31,7 @@ class Conversa {
     required this.horario,
     required this.criadoEm,
     this.ultimaMensagem,
+    this.mensagensNaoLidas = 0,
   });
 
   factory Conversa.fromJson(Map<String, dynamic> json) {
@@ -62,6 +64,7 @@ class Conversa {
       dataInicio: DateTime.parse(carona['dataInicio'].toString()),
       horario: carona['horario']?.toString() ?? '',
       criadoEm: DateTime.parse(json['criadoEm'].toString()).toLocal(),
+      mensagensNaoLidas: converterJsonParaInt(json['mensagensNaoLidas']),
       ultimaMensagem: ultimaMensagem is Map
           ? Mensagem.fromJson(Map<String, dynamic>.from(ultimaMensagem))
           : null,

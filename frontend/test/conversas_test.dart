@@ -20,6 +20,7 @@ void main() {
         dataInicio: DateTime(2026, 9, 2),
         horario: '19:00:00',
         criadoEm: DateTime(2026, 9, 1),
+        mensagensNaoLidas: 3,
         ultimaMensagem: Mensagem(
           id: 2,
           conteudo: 'Te encontro na entrada',
@@ -55,6 +56,8 @@ void main() {
 
     expect(find.text('Maria'), findsOneWidget);
     expect(find.text('Te encontro na entrada'), findsOneWidget);
+    expect(find.text('3'), findsOneWidget);
+    expect(find.byKey(const ValueKey('mensagens-nao-lidas-1')), findsOneWidget);
     expect(find.text('Carlos'), findsOneWidget);
     expect(find.text('Encerrada'), findsOneWidget);
     expect(find.text('UNESP'), findsOneWidget);

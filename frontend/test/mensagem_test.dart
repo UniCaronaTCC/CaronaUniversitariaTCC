@@ -6,6 +6,7 @@ void main() {
     final conversa = Conversa.fromJson({
       'id': 4,
       'status': 'ACEITA',
+      'mensagensNaoLidas': 2,
       'criadoEm': '2026-09-01T12:00:00.000Z',
       'solicitacao': {
         'id': 10,
@@ -29,6 +30,7 @@ void main() {
     expect(conversa.nomeOutroParticipante(1), 'Maria');
     expect(conversa.nomeOutroParticipante(2), 'João');
     expect(conversa.ultimaMensagem?.conteudo, 'Até amanhã!');
+    expect(conversa.mensagensNaoLidas, 2);
     expect(conversa.encerrada, isFalse);
   });
 

@@ -45,14 +45,35 @@ class _ConversasTelaState extends State<ConversasTela> {
   @override
   void initState() {
     super.initState();
+
+    if (widget.carregarConversas == null) {
+      MensagemService.totalMensagensNaoLidas.addListener(
+        atualizarConversasEmTempoReal,
+      );
+    }
+
     carregarDados();
   }
 
-  Future<void> carregarDados() async {
-    setState(() {
-      carregando = true;
-      mensagemErro = null;
-    });
+  @override
+  void dispose() {
+    MensagemService.totalMensagensNaoLidas.removeListener(
+      atualizarConversasEmTempoReal,
+    );
+    super.dispose();
+  }
+
+  void atualizarConversasEmTempoReal() {
+    carregarDados(silencioso: true);
+  }
+
+  Future<void> carregarDados({bool silencioso = false}) async {
+    if (!silencioso) {
+      setState(() {
+        carregando = true;
+        mensagemErro = null;
+      });
+    }
 
     final resultado =
         await (widget.carregarConversas?.call() ??

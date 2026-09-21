@@ -8,6 +8,7 @@ class SupabaseAuthService {
   static bool _inicializado = false;
 
   static bool get configurado => SupabaseConfig.configurado;
+  static bool get inicializado => _inicializado;
 
   static SupabaseClient get _cliente => Supabase.instance.client;
 

@@ -83,14 +83,34 @@ class CardConversa extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 5),
-                    Text(
-                      ultimaMensagem?.conteudo ?? 'Nenhuma mensagem ainda',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontSize: 14,
-                      ),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            ultimaMensagem?.conteudo ??
+                                'Nenhuma mensagem ainda',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              color: conversa.mensagensNaoLidas > 0
+                                  ? AppColors.text
+                                  : Colors.black54,
+                              fontSize: 14,
+                              fontWeight: conversa.mensagensNaoLidas > 0
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
+                            ),
+                          ),
+                        ),
+                        if (conversa.mensagensNaoLidas > 0) ...[
+                          const SizedBox(width: 8),
+                          Badge.count(
+                            key: ValueKey('mensagens-nao-lidas-${conversa.id}'),
+                            count: conversa.mensagensNaoLidas,
+                            backgroundColor: AppColors.primary,
+                          ),
+                        ],
+                      ],
                     ),
                     const SizedBox(height: 9),
                     Row(

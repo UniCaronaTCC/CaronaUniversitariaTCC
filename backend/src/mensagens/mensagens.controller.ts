@@ -43,13 +43,23 @@ export class MensagensController {
 
     return {
       sucesso: true,
-      dados: itens.map(({ conversa, ultimaMensagem }) => ({
+      dados: itens.map(({ conversa, ultimaMensagem, mensagensNaoLidas }) => ({
         ...this.formatarConversa(conversa),
+        mensagensNaoLidas,
         ultimaMensagem: ultimaMensagem
           ? this.formatarMensagem(ultimaMensagem)
           : null,
       })),
     };
+  }
+
+  @Get('conversas/nao-lidas')
+  async contarMensagensNaoLidas(@Req() request: RequisicaoComUsuario) {
+    const total = await this.mensagensService.contarMensagensNaoLidas(
+      request.usuario.sub,
+    );
+
+    return { sucesso: true, dados: { total } };
   }
 
   @Get('conversas/:idConversa/mensagens')

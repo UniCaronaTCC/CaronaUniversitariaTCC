@@ -21,8 +21,10 @@ describe('MensagensService', () => {
   let mensagensRepository: {
     findOne: jest.Mock;
     find: jest.Mock;
+    count: jest.Mock;
     create: jest.Mock;
     save: jest.Mock;
+    createQueryBuilder: jest.Mock;
   };
   let solicitacoesRepository: { findOne: jest.Mock };
 
@@ -49,10 +51,12 @@ describe('MensagensService', () => {
     mensagensRepository = {
       findOne: jest.fn(),
       find: jest.fn(),
+      count: jest.fn().mockResolvedValue(0),
       create: jest.fn((dados: Partial<Mensagem>) => dados as Mensagem),
       save: jest.fn((dados: Mensagem) =>
         Promise.resolve({ ...dados, idMensagem: 40 }),
       ),
+      createQueryBuilder: jest.fn(),
     };
 
     solicitacoesRepository = { findOne: jest.fn() };
@@ -125,10 +129,12 @@ describe('MensagensService', () => {
         idMensagem: 5,
         criadoEm: new Date('2026-09-02T10:00:00.000Z'),
       });
+    mensagensRepository.count.mockResolvedValueOnce(0).mockResolvedValueOnce(2);
 
     const resultado = await service.listarConversas(1);
 
     expect(resultado.map((item) => item.conversa.idConversa)).toEqual([2, 1]);
+    expect(resultado[0].mensagensNaoLidas).toBe(2);
   });
 
   it('salva mensagem sem espaços extras', async () => {
@@ -145,6 +151,55 @@ describe('MensagensService', () => {
       remetente: { idUsuario: 2 },
       conteudo: 'Olá!',
     });
+  });
+
+  it('marca como lidas as mensagens recebidas ao abrir a conversa', async () => {
+    conversasRepository.findOne.mockResolvedValue({
+      idConversa: 30,
+      solicitacao: solicitacaoAceita,
+    });
+    mensagensRepository.find.mockResolvedValue([]);
+
+    const queryBuilder = {
+      update: jest.fn().mockReturnThis(),
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      execute: jest.fn().mockResolvedValue({ affected: 2 }),
+    };
+    mensagensRepository.createQueryBuilder.mockReturnValue(queryBuilder);
+
+    await service.listarMensagens(30, 1);
+
+    expect(queryBuilder.update).toHaveBeenCalledWith(Mensagem);
+    expect(queryBuilder.where).toHaveBeenCalledWith(
+      'id_conversa = :idConversa',
+      { idConversa: 30 },
+    );
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+      'id_remetente <> :idUsuario',
+      { idUsuario: 1 },
+    );
+    expect(queryBuilder.execute).toHaveBeenCalled();
+  });
+
+  it('conta somente mensagens não lidas destinadas ao usuário', async () => {
+    const queryBuilder = {
+      innerJoin: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getCount: jest.fn().mockResolvedValue(3),
+    };
+    mensagensRepository.createQueryBuilder.mockReturnValue(queryBuilder);
+
+    await expect(service.contarMensagensNaoLidas(1)).resolves.toBe(3);
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+      'mensagem.remetente <> :idUsuario',
+      { idUsuario: 1 },
+    );
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+      'mensagem.lidaEm IS NULL',
+    );
   });
 
   it('recusa mensagem vazia', async () => {

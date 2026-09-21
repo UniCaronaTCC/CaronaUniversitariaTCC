@@ -369,6 +369,7 @@ CREATE TABLE IF NOT EXISTS unicarona.mensagens (
   id_remetente INTEGER NOT NULL,
   conteudo VARCHAR(1000) NOT NULL,
   criado_em TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  lida_em TIMESTAMPTZ,
 
   CONSTRAINT mensagens_pkey PRIMARY KEY (id_mensagem),
   CONSTRAINT chk_mensagens_conteudo
@@ -385,6 +386,10 @@ CREATE TABLE IF NOT EXISTS unicarona.mensagens (
 
 CREATE INDEX IF NOT EXISTS idx_mensagens_conversa_criado_em
   ON unicarona.mensagens (id_conversa, criado_em);
+
+CREATE INDEX IF NOT EXISTS idx_mensagens_nao_lidas
+  ON unicarona.mensagens (id_conversa, id_remetente)
+  WHERE lida_em IS NULL;
 
 CREATE OR REPLACE FUNCTION unicarona.usuario_participa_conversa(topico TEXT)
 RETURNS BOOLEAN
@@ -417,6 +422,30 @@ REVOKE ALL ON FUNCTION unicarona.usuario_participa_conversa(TEXT)
 GRANT EXECUTE ON FUNCTION unicarona.usuario_participa_conversa(TEXT)
   TO authenticated;
 
+CREATE OR REPLACE FUNCTION unicarona.usuario_recebe_notificacoes_mensagens(
+  topico TEXT
+)
+RETURNS BOOLEAN
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT EXISTS (
+    SELECT 1
+    FROM unicarona.usuarios usuario
+    WHERE usuario.auth_id = (SELECT auth.uid())
+      AND topico = 'usuario:' || usuario.id_usuario::TEXT
+  );
+$$;
+
+REVOKE ALL ON FUNCTION
+  unicarona.usuario_recebe_notificacoes_mensagens(TEXT)
+  FROM PUBLIC;
+GRANT EXECUTE ON FUNCTION
+  unicarona.usuario_recebe_notificacoes_mensagens(TEXT)
+  TO authenticated;
+
 DROP POLICY IF EXISTS chat_participantes_recebem_mensagens
   ON realtime.messages;
 
@@ -431,12 +460,28 @@ CREATE POLICY chat_participantes_recebem_mensagens
     )
   );
 
+DROP POLICY IF EXISTS chat_usuario_recebe_novas_mensagens
+  ON realtime.messages;
+
+CREATE POLICY chat_usuario_recebe_novas_mensagens
+  ON realtime.messages
+  FOR SELECT
+  TO authenticated
+  USING (
+    realtime.messages.extension = 'broadcast'
+    AND unicarona.usuario_recebe_notificacoes_mensagens(
+      (SELECT realtime.topic())
+    )
+  );
+
 CREATE OR REPLACE FUNCTION unicarona.notificar_nova_mensagem()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
+DECLARE
+  id_destinatario INTEGER;
 BEGIN
   PERFORM realtime.broadcast_changes(
     'conversa:' || NEW.id_conversa::TEXT,
@@ -447,6 +492,31 @@ BEGIN
     NEW,
     OLD
   );
+
+  SELECT CASE
+    WHEN solicitacao.id_passageiro = NEW.id_remetente
+      THEN carona.id_usuario
+    ELSE solicitacao.id_passageiro
+  END
+  INTO id_destinatario
+  FROM unicarona.conversas conversa
+  INNER JOIN unicarona.solicitacoes solicitacao
+    ON solicitacao.id_solicitacao = conversa.id_solicitacao
+  INNER JOIN unicarona.caronas carona
+    ON carona.id_carona = solicitacao.id_carona
+  WHERE conversa.id_conversa = NEW.id_conversa;
+
+  IF id_destinatario IS NOT NULL THEN
+    PERFORM realtime.broadcast_changes(
+      'usuario:' || id_destinatario::TEXT,
+      TG_OP,
+      TG_OP,
+      TG_TABLE_NAME,
+      TG_TABLE_SCHEMA,
+      NEW,
+      OLD
+    );
+  END IF;
 
   RETURN NEW;
 END;

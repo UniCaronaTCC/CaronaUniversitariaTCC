@@ -44,4 +44,31 @@ void main() {
 
     expect(barra.currentIndex, 2);
   });
+
+  testWidgets('mostra o total de mensagens não lidas no Chat', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: BarraNavegacaoHome(totalMensagensNaoLidas: 3),
+        ),
+      ),
+    );
+
+    expect(find.text('3'), findsOneWidget);
+    expect(find.byType(Badge), findsOneWidget);
+  });
+
+  testWidgets('oculta o contador quando não existem mensagens não lidas', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: BarraNavegacaoHome(totalMensagensNaoLidas: 0),
+        ),
+      ),
+    );
+
+    expect(find.text('0'), findsNothing);
+  });
 }
