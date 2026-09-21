@@ -22,6 +22,25 @@ void main() {
     criadoEm: DateTime(2026, 9, 1),
   );
 
+  List<Mensagem> criarHistorico(int quantidade) {
+    return List.generate(
+      quantidade,
+      (indice) => Mensagem(
+        id: indice + 1,
+        conteudo: 'Mensagem ${indice + 1}',
+        criadoEm: DateTime(2026, 9, 1, 18, indice),
+        idRemetente: indice.isEven ? 1 : 2,
+      ),
+    );
+  }
+
+  ScrollPosition posicaoLista(WidgetTester tester) {
+    final lista = tester.widget<ListView>(
+      find.byKey(const ValueKey('lista-mensagens')),
+    );
+    return lista.controller!.position;
+  }
+
   testWidgets('mostra histórico e envia nova mensagem', (tester) async {
     var textoEnviado = '';
 
@@ -165,6 +184,69 @@ void main() {
     expect(find.text('Não enviada'), findsNothing);
     expect(find.text('Tentar novamente'), findsNothing);
     expect(find.text('Enviada'), findsOneWidget);
+  });
+
+  testWidgets('abre uma conversa longa na mensagem mais recente', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversaDetalheTela(
+          conversa: conversa,
+          idUsuario: 1,
+          usarRealtime: false,
+          carregarMensagens: () async => {
+            'sucesso': true,
+            'dados': criarHistorico(30),
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final posicao = posicaoLista(tester);
+    expect(posicao.pixels, closeTo(posicao.maxScrollExtent, 0.1));
+    expect(find.text('Mensagem 30'), findsOneWidget);
+  });
+
+  testWidgets('volta ao final ao enviar uma nova mensagem', (tester) async {
+    final resposta = Completer<Map<String, dynamic>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversaDetalheTela(
+          conversa: conversa,
+          idUsuario: 1,
+          usarRealtime: false,
+          carregarMensagens: () async => {
+            'sucesso': true,
+            'dados': criarHistorico(30),
+          },
+          enviarMensagem: (_) => resposta.future,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    posicaoLista(tester).jumpTo(0);
+    await tester.enterText(find.byType(TextField), 'Nova mensagem');
+    await tester.tap(find.byTooltip('Enviar mensagem'));
+    await tester.pump();
+
+    resposta.complete({
+      'sucesso': true,
+      'dados': Mensagem(
+        id: 31,
+        conteudo: 'Nova mensagem',
+        criadoEm: DateTime(2026, 9, 1, 18, 30),
+        idRemetente: 1,
+      ),
+    });
+    await tester.pumpAndSettle();
+
+    final posicao = posicaoLista(tester);
+    expect(posicao.pixels, closeTo(posicao.maxScrollExtent, 0.1));
+    expect(find.text('Nova mensagem'), findsOneWidget);
   });
 
   testWidgets('conversa encerrada fica somente para leitura', (tester) async {

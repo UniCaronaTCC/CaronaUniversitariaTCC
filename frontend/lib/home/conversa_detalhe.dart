@@ -31,7 +31,8 @@ class ConversaDetalheTela extends StatefulWidget {
   State<ConversaDetalheTela> createState() => _ConversaDetalheTelaState();
 }
 
-class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
+class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
+    with WidgetsBindingObserver {
   final TextEditingController campoMensagem = TextEditingController();
   final ScrollController scrollController = ScrollController();
 
@@ -54,6 +55,7 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     carregarDados();
 
     if (widget.usarRealtime) {
@@ -63,10 +65,16 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     MensagemService.pararAcompanhamento(canal);
     campoMensagem.dispose();
     scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    rolarParaFinal();
   }
 
   Future<void> iniciarRealtime() async {
@@ -117,7 +125,7 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
         carregando = false;
         mensagemErro = null;
       });
-      rolarParaFinal();
+      rolarParaFinal(animar: silencioso);
       return;
     }
 
@@ -192,6 +200,7 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
         );
       }
     });
+    rolarParaFinal();
   }
 
   Future<void> reenviar(Mensagem mensagem) async {
@@ -211,21 +220,42 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
       enviando = true;
       mensagens[indice] = mensagemEmReenvio;
     });
+    rolarParaFinal();
 
     await _enviarMensagem(mensagemEmReenvio);
   }
 
-  void rolarParaFinal() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+  void rolarParaFinal({bool animar = true}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted || !scrollController.hasClients) {
         return;
       }
 
-      scrollController.animateTo(
-        scrollController.position.maxScrollExtent,
+      final posicao = scrollController.position;
+      if (!posicao.hasContentDimensions) {
+        return;
+      }
+
+      if (!animar) {
+        scrollController.jumpTo(posicao.maxScrollExtent);
+        return;
+      }
+
+      await scrollController.animateTo(
+        posicao.maxScrollExtent,
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOut,
       );
+      await WidgetsBinding.instance.endOfFrame;
+
+      if (!mounted || !scrollController.hasClients) {
+        return;
+      }
+
+      final posicaoAtualizada = scrollController.position;
+      if (posicaoAtualizada.pixels != posicaoAtualizada.maxScrollExtent) {
+        scrollController.jumpTo(posicaoAtualizada.maxScrollExtent);
+      }
     });
   }
 
@@ -298,6 +328,7 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
     }
 
     return ListView.separated(
+      key: const ValueKey('lista-mensagens'),
       controller: scrollController,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
       itemCount: mensagens.length,
