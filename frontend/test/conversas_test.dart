@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:uni_carona/config/app_colors.dart';
 import 'package:uni_carona/home/conversas.dart';
 import 'package:uni_carona/models/conversa.dart';
 import 'package:uni_carona/models/mensagem.dart';
@@ -61,6 +62,24 @@ void main() {
     expect(find.text('Carlos'), findsOneWidget);
     expect(find.text('Encerrada'), findsOneWidget);
     expect(find.text('UNESP'), findsOneWidget);
+
+    final cardComMensagemNova = tester.widget<Material>(
+      find
+          .ancestor(
+            of: find.byKey(const ValueKey('mensagens-nao-lidas-1')),
+            matching: find.byType(Material),
+          )
+          .first,
+    );
+    expect(cardComMensagemNova.color, const Color(0xFFFBF5FF));
+
+    final nomeComMensagemNova = tester.widget<Text>(find.text('Maria'));
+    expect(nomeComMensagemNova.style?.color, AppColors.primary);
+    expect(nomeComMensagemNova.style?.fontWeight, FontWeight.w700);
+
+    final nomeSemMensagemNova = tester.widget<Text>(find.text('Carlos'));
+    expect(nomeSemMensagemNova.style?.color, AppColors.text);
+    expect(nomeSemMensagemNova.style?.fontWeight, FontWeight.w600);
   });
 
   testWidgets('mostra estado vazio sem conversas', (tester) async {

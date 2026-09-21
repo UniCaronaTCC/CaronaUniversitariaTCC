@@ -19,9 +19,15 @@ class CardConversa extends StatelessWidget {
   Widget build(BuildContext context) {
     final nome = conversa.nomeOutroParticipante(idUsuarioAtual);
     final ultimaMensagem = conversa.ultimaMensagem;
-    final corFundo = conversa.encerrada
+    final temMensagensNaoLidas = conversa.mensagensNaoLidas > 0;
+    final corFundo = temMensagensNaoLidas
+        ? const Color(0xFFFBF5FF)
+        : conversa.encerrada
         ? const Color(0xFFF3F3F3)
         : Colors.white;
+    final corBorda = temMensagensNaoLidas
+        ? AppColors.primary
+        : const Color(0xFFE1E1E1);
 
     return Material(
       color: corFundo,
@@ -32,7 +38,10 @@ class CardConversa extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            border: Border.all(color: const Color(0xFFE1E1E1)),
+            border: Border.all(
+              color: corBorda,
+              width: temMensagensNaoLidas ? 1.5 : 1,
+            ),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(
@@ -66,18 +75,28 @@ class CardConversa extends StatelessWidget {
                             nome,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
+                            style: TextStyle(
+                              color: temMensagensNaoLidas
+                                  ? AppColors.primary
+                                  : AppColors.text,
                               fontSize: 16,
-                              fontWeight: FontWeight.w600,
+                              fontWeight: temMensagensNaoLidas
+                                  ? FontWeight.w700
+                                  : FontWeight.w600,
                             ),
                           ),
                         ),
                         if (ultimaMensagem != null)
                           Text(
                             _formatarData(ultimaMensagem.criadoEm),
-                            style: const TextStyle(
-                              color: Colors.black45,
+                            style: TextStyle(
+                              color: temMensagensNaoLidas
+                                  ? AppColors.primary
+                                  : Colors.black45,
                               fontSize: 12,
+                              fontWeight: temMensagensNaoLidas
+                                  ? FontWeight.w600
+                                  : FontWeight.normal,
                             ),
                           ),
                       ],
@@ -92,17 +111,17 @@ class CardConversa extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: TextStyle(
-                              color: conversa.mensagensNaoLidas > 0
+                              color: temMensagensNaoLidas
                                   ? AppColors.text
                                   : Colors.black54,
                               fontSize: 14,
-                              fontWeight: conversa.mensagensNaoLidas > 0
+                              fontWeight: temMensagensNaoLidas
                                   ? FontWeight.w600
                                   : FontWeight.normal,
                             ),
                           ),
                         ),
-                        if (conversa.mensagensNaoLidas > 0) ...[
+                        if (temMensagensNaoLidas) ...[
                           const SizedBox(width: 8),
                           Badge.count(
                             key: ValueKey('mensagens-nao-lidas-${conversa.id}'),
