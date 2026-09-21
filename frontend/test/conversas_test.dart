@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uni_carona/config/app_colors.dart';
@@ -96,9 +98,63 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    expect(find.text('Nenhuma conversa ainda'), findsOneWidget);
     expect(
-      find.text('Suas conversas aparecerão após uma carona ser aceita'),
+      find.text(
+        'Quando uma solicitação de carona for aceita, a conversa aparecerá aqui.',
+      ),
       findsOneWidget,
     );
+  });
+
+  testWidgets('explica o carregamento das conversas', (tester) async {
+    final resposta = Completer<Map<String, dynamic>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversasTela(
+          idUsuario: 1,
+          carregarConversas: () => resposta.future,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.text('Carregando conversas'), findsOneWidget);
+    expect(find.text('Buscando suas conversas mais recentes.'), findsOneWidget);
+
+    resposta.complete({'sucesso': true, 'dados': <Conversa>[]});
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('mostra erro e permite carregar novamente', (tester) async {
+    var tentativas = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversasTela(
+          idUsuario: 1,
+          carregarConversas: () async {
+            tentativas++;
+            if (tentativas == 1) {
+              return {'sucesso': false, 'mensagem': 'Sem conexão'};
+            }
+            return {'sucesso': true, 'dados': <Conversa>[]};
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Não foi possível carregar'), findsOneWidget);
+    expect(find.text('Sem conexão'), findsOneWidget);
+    expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
+
+    await tester.tap(find.text('Tentar novamente'));
+    await tester.pumpAndSettle();
+
+    expect(tentativas, 2);
+    expect(find.text('Nenhuma conversa ainda'), findsOneWidget);
   });
 }

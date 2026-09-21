@@ -139,41 +139,33 @@ class _ConversasTelaState extends State<ConversasTela> {
 
   Widget _conteudo() {
     if (carregando || mensagemErro != null) {
-      return RefreshIndicator(
-        onRefresh: carregarDados,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(24),
-          children: [
-            if (carregando)
-              const EstadoConteudoPadrao(
+      return _estadoAtualizavel(
+        carregando
+            ? const EstadoConteudoPadrao(
                 carregando: true,
-                mensagem: 'Carregando conversas...',
+                titulo: 'Carregando conversas',
+                mensagem: 'Buscando suas conversas mais recentes.',
               )
-            else
-              EstadoConteudoPadrao(
+            : EstadoConteudoPadrao(
                 icone: Icons.cloud_off_outlined,
+                corIcone: const Color(0xFFB3261E),
+                titulo: 'Não foi possível carregar',
                 mensagem: mensagemErro!,
                 textoBotao: 'Tentar novamente',
+                iconeBotao: Icons.refresh_rounded,
                 onPressed: carregarDados,
               ),
-          ],
-        ),
       );
     }
 
     if (conversas.isEmpty) {
-      return RefreshIndicator(
-        onRefresh: carregarDados,
-        child: ListView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.all(24),
-          children: const [
-            EstadoConteudoPadrao(
-              icone: Icons.chat_bubble_outline,
-              mensagem: 'Suas conversas aparecerão após uma carona ser aceita',
-            ),
-          ],
+      return _estadoAtualizavel(
+        const EstadoConteudoPadrao(
+          icone: Icons.chat_bubble_outline,
+          corIcone: AppColors.primary,
+          titulo: 'Nenhuma conversa ainda',
+          mensagem:
+              'Quando uma solicitação de carona for aceita, a conversa aparecerá aqui.',
         ),
       );
     }
@@ -194,6 +186,19 @@ class _ConversasTelaState extends State<ConversasTela> {
             onTap: () => abrirConversa(conversa),
           );
         },
+      ),
+    );
+  }
+
+  Widget _estadoAtualizavel(Widget estado) {
+    return RefreshIndicator(
+      onRefresh: carregarDados,
+      child: LayoutBuilder(
+        builder: (context, restricoes) => SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(24),
+          child: SizedBox(height: restricoes.maxHeight - 48, child: estado),
+        ),
       ),
     );
   }

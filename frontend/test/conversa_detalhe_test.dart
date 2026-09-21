@@ -306,6 +306,51 @@ void main() {
     expect(find.text('09:07'), findsOneWidget);
   });
 
+  testWidgets('orienta como iniciar uma conversa vazia', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversaDetalheTela(
+          conversa: conversa,
+          idUsuario: 1,
+          usarRealtime: false,
+          carregarMensagens: () async => {
+            'sucesso': true,
+            'dados': <Mensagem>[],
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Comece a conversa'), findsOneWidget);
+    expect(
+      find.text('Envie uma mensagem para combinar os detalhes da carona.'),
+      findsOneWidget,
+    );
+    expect(find.byType(TextField), findsOneWidget);
+  });
+
+  testWidgets('explica falha ao carregar mensagens', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversaDetalheTela(
+          conversa: conversa,
+          idUsuario: 1,
+          usarRealtime: false,
+          carregarMensagens: () async => {
+            'sucesso': false,
+            'mensagem': 'Sem conexão',
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Não foi possível carregar as mensagens'), findsOneWidget);
+    expect(find.text('Sem conexão'), findsOneWidget);
+    expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
+  });
+
   testWidgets('conversa encerrada fica somente para leitura', (tester) async {
     final conversaEncerrada = Conversa(
       id: conversa.id,
@@ -337,7 +382,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Esta conversa foi encerrada'), findsOneWidget);
+    expect(find.text('Conversa encerrada'), findsNWidgets(2));
+    expect(
+      find.text('Esta conversa foi encerrada antes do envio de mensagens.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'O histórico continua disponível, mas novas mensagens não podem ser enviadas.',
+      ),
+      findsOneWidget,
+    );
     expect(find.byType(TextField), findsNothing);
     expect(find.byTooltip('Enviar mensagem'), findsNothing);
   });

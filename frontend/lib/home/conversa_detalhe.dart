@@ -307,23 +307,37 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
     if (carregando) {
       return const EstadoConteudoPadrao(
         carregando: true,
-        mensagem: 'Carregando mensagens...',
+        titulo: 'Carregando mensagens',
+        mensagem: 'Buscando o histórico desta conversa.',
       );
     }
 
     if (mensagemErro != null) {
       return EstadoConteudoPadrao(
         icone: Icons.cloud_off_outlined,
+        corIcone: const Color(0xFFB3261E),
+        titulo: 'Não foi possível carregar as mensagens',
         mensagem: mensagemErro!,
         textoBotao: 'Tentar novamente',
+        iconeBotao: Icons.refresh_rounded,
         onPressed: carregarDados,
       );
     }
 
     if (mensagens.isEmpty) {
-      return const EstadoConteudoPadrao(
-        icone: Icons.forum_outlined,
-        mensagem: 'Nenhuma mensagem ainda',
+      return EstadoConteudoPadrao(
+        icone: widget.conversa.encerrada
+            ? Icons.lock_outline
+            : Icons.forum_outlined,
+        corIcone: widget.conversa.encerrada
+            ? Colors.black45
+            : AppColors.primary,
+        titulo: widget.conversa.encerrada
+            ? 'Conversa encerrada'
+            : 'Comece a conversa',
+        mensagem: widget.conversa.encerrada
+            ? 'Esta conversa foi encerrada antes do envio de mensagens.'
+            : 'Envie uma mensagem para combinar os detalhes da carona.',
       );
     }
 
@@ -557,19 +571,38 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
   Widget _avisoEncerrada() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
       decoration: const BoxDecoration(
         color: Color(0xFFF3F3F3),
         border: Border(top: BorderSide(color: Color(0xFFE1E1E1))),
       ),
       child: const Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.lock_outline, size: 18, color: Colors.black54),
-          SizedBox(width: 8),
-          Text(
-            'Esta conversa foi encerrada',
-            style: TextStyle(color: Colors.black54),
+          Icon(Icons.lock_outline, size: 20, color: Colors.black54),
+          SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Conversa encerrada',
+                  style: TextStyle(
+                    color: AppColors.text,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'O histórico continua disponível, mas novas mensagens não podem ser enviadas.',
+                  style: TextStyle(
+                    color: Colors.black54,
+                    fontSize: 12,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
