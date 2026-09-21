@@ -69,8 +69,6 @@ class _TesteMapaState extends State<TesteMapa> {
         _pontoEspecifico = true;
       });
 
-      _mapController.move(pontoAtual, 16);
-
       await _buscarEnderecoDoPonto(pontoAtual);
     } catch (erro) {
       debugPrint('Erro ao obter localização: $erro');
@@ -147,6 +145,13 @@ class _TesteMapaState extends State<TesteMapa> {
     _mapController.move(local.ponto, 16);
   }
 
+  Future<void> _usarLocalizacaoAtual() async {
+    final ponto = _localizacaoAtual;
+    if (ponto == null) return;
+    _mapController.move(ponto, 16);
+    await _selecionarPonto(ponto);
+  }
+
   void _confirmarPontoEncontro() {
     if (_pontoEncontro == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -209,66 +214,89 @@ class _TesteMapaState extends State<TesteMapa> {
       appBar: BarraSuperiorPadrao(titulo: widget.titulo),
       body: Stack(
         children: [
-          FlutterMap(
-            mapController: _mapController,
-            options: MapOptions(
-              // Ponto inicial temporário enquanto o GPS carrega.
-              initialCenter: const LatLng(-21.2080, -50.4320),
-              initialZoom: 14,
-              onTap: (tapPosition, point) {
-                _selecionarPonto(point);
-              },
-            ),
-            children: [
-              TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                userAgentPackageName: 'com.unicarona.app',
+          if (_buscandoLocalizacao)
+            const ColoredBox(
+              color: Color(0xFFF7F4F8),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CircularProgressIndicator(),
+                    SizedBox(height: 12),
+                    Text('Obtendo sua localização...'),
+                  ],
+                ),
               ),
-
-              if (_localizacaoAtual != null && !mesmoPonto)
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: _localizacaoAtual!,
-                      width: 50,
-                      height: 50,
-                      child: const Icon(
-                        Icons.my_location,
-                        color: Colors.red,
-                        size: 38,
-                      ),
-                    ),
-                  ],
+            )
+          else ...[
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter:
+                    _localizacaoAtual ?? const LatLng(-14.235, -51.9253),
+                initialZoom: _localizacaoAtual == null ? 4 : 16,
+                onTap: (tapPosition, point) {
+                  _selecionarPonto(point);
+                },
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.unicarona.app',
                 ),
-
-              if (_pontoEncontro != null)
-                MarkerLayer(
-                  markers: [
-                    Marker(
-                      point: _pontoEncontro!,
-                      width: 50,
-                      height: 50,
-                      child: const Icon(
-                        Icons.place,
-                        color: Colors.blue,
-                        size: 42,
+                if (_localizacaoAtual != null && !mesmoPonto)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: _localizacaoAtual!,
+                        width: 50,
+                        height: 50,
+                        child: const Icon(
+                          Icons.my_location,
+                          color: Colors.red,
+                          size: 38,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-            ],
-          ),
-
-          // Usa a localização atual/selecionada para melhorar os resultados.
-          SafeArea(
-            child: BarraPesquisaEndereco(
-              onSelecionado: _selecionarEnderecoPesquisado,
-              latitudeReferencia: pontoReferencia?.latitude,
-              longitudeReferencia: pontoReferencia?.longitude,
-              cidadeReferencia: _cidadePontoEncontro,
-              estadoReferencia: _estadoPontoEncontro,
+                    ],
+                  ),
+                if (_pontoEncontro != null)
+                  MarkerLayer(
+                    markers: [
+                      Marker(
+                        point: _pontoEncontro!,
+                        width: 50,
+                        height: 50,
+                        child: const Icon(
+                          Icons.place,
+                          color: Colors.blue,
+                          size: 42,
+                        ),
+                      ),
+                    ],
+                  ),
+              ],
             ),
-          ),
+            SafeArea(
+              child: BarraPesquisaEndereco(
+                onSelecionado: _selecionarEnderecoPesquisado,
+                latitudeReferencia: pontoReferencia?.latitude,
+                longitudeReferencia: pontoReferencia?.longitude,
+                cidadeReferencia: _cidadePontoEncontro,
+                estadoReferencia: _estadoPontoEncontro,
+              ),
+            ),
+            if (_localizacaoAtual != null)
+              Positioned(
+                right: 12,
+                bottom: 12,
+                child: FloatingActionButton.small(
+                  heroTag: null,
+                  tooltip: 'Usar minha localização',
+                  onPressed: _usarLocalizacaoAtual,
+                  child: const Icon(Icons.my_location),
+                ),
+              ),
+          ],
         ],
       ),
       bottomNavigationBar: Column(

@@ -89,10 +89,7 @@ class AuthService {
         },
       };
     } on AuthException catch (erro) {
-      return {
-        'sucesso': false,
-        'mensagem': _mensagemErroSupabase(erro),
-      };
+      return {'sucesso': false, 'mensagem': _mensagemErroSupabase(erro)};
     } catch (erro) {
       return {'sucesso': false, 'mensagem': 'Não foi possível fazer login'};
     }
@@ -120,10 +117,7 @@ class AuthService {
         },
       };
     } on AuthException catch (erro) {
-      return {
-        'sucesso': false,
-        'mensagem': _mensagemErroSupabase(erro),
-      };
+      return {'sucesso': false, 'mensagem': _mensagemErroSupabase(erro)};
     } catch (erro) {
       return {
         'sucesso': false,
@@ -316,6 +310,60 @@ class AuthService {
       };
     } catch (erro) {
       return {'sucesso': false, 'mensagem': 'Não foi possível enviar a foto'};
+    }
+  }
+
+  static Future<Map<String, dynamic>> salvarVeiculo(
+    String modelo,
+    String cor,
+    String placa,
+  ) async {
+    final token = tokenUsuarioLogado;
+
+    if (token == null) {
+      return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+    }
+
+    try {
+      final resposta = await http.put(
+        Uri.parse('${ApiConfig.baseUrl}/usuarios/perfil/veiculo'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'modelo': modelo, 'cor': cor, 'placa': placa}),
+      );
+      final Map<String, dynamic> respostaJson = resposta.body.isNotEmpty
+          ? jsonDecode(resposta.body)
+          : {};
+
+      if (resposta.statusCode == 200 && respostaJson['dados'] is Map) {
+        final veiculo = Map<String, dynamic>.from(respostaJson['dados']);
+
+        if (usuarioLogado != null) {
+          usuarioLogado = {...usuarioLogado!, 'veiculo': veiculo};
+          await SessaoService.salvar(token, usuarioLogado!);
+        }
+
+        return {
+          'sucesso': true,
+          'mensagem': respostaJson['mensagem'],
+          'dados': veiculo,
+        };
+      }
+
+      return {
+        'sucesso': false,
+        'mensagem':
+            respostaJson['mensagem'] ??
+            respostaJson['message'] ??
+            'Erro ao salvar veículo',
+      };
+    } catch (erro) {
+      return {
+        'sucesso': false,
+        'mensagem': 'Não foi possível conectar ao servidor',
+      };
     }
   }
 }

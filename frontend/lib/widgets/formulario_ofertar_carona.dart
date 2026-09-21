@@ -27,6 +27,7 @@ class FormularioOfertarCarona extends StatelessWidget {
   final bool caronaRecorrente;
   final bool enviandoCarona;
   final bool pontosEmbarqueEditaveis;
+  final bool possuiVeiculo;
 
   final List<String> diasSelecionados;
   final List<PontoEmbarque> pontosEmbarque;
@@ -38,6 +39,7 @@ class FormularioOfertarCarona extends StatelessWidget {
   final VoidCallback onSelecionarHorario;
   final VoidCallback onAdicionarPontoEmbarque;
   final VoidCallback onOfertarCarona;
+  final VoidCallback onCadastrarVeiculo;
 
   final ValueChanged<int> onRemoverPontoEmbarque;
   final ValueChanged<String> onDestinoChanged;
@@ -63,6 +65,7 @@ class FormularioOfertarCarona extends StatelessWidget {
     required this.pontosEmbarque,
     required this.origemSelecionada,
     required this.pontosEmbarqueEditaveis,
+    required this.possuiVeiculo,
     required this.onSelecionarOrigem,
     required this.onSelecionarDestino,
     required this.onSelecionarData,
@@ -70,6 +73,7 @@ class FormularioOfertarCarona extends StatelessWidget {
     required this.onAdicionarPontoEmbarque,
     required this.onRemoverPontoEmbarque,
     required this.onOfertarCarona,
+    required this.onCadastrarVeiculo,
     required this.onDestinoChanged,
     required this.onDestinoSelecionado,
     required this.onRecorrenciaChanged,
@@ -99,6 +103,41 @@ class FormularioOfertarCarona extends StatelessWidget {
         ),
 
         const SizedBox(height: 32),
+
+        if (!possuiVeiculo) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.directions_car_outlined, color: Colors.orange),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Cadastre seu veículo antes de oferecer uma carona.',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: onCadastrarVeiculo,
+                  child: const Text('CADASTRAR NO PERFIL'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
 
         // A origem pode ser ajustada no mapa.
         CampoTextoCarona(
@@ -253,7 +292,7 @@ class FormularioOfertarCarona extends StatelessWidget {
         BotaoAcaoHome(
           texto: enviandoCarona ? textoCarregando : textoBotao,
           icone: enviandoCarona ? Icons.hourglass_top : Icons.groups_outlined,
-          onPressed: enviandoCarona ? null : onOfertarCarona,
+          onPressed: enviandoCarona || !possuiVeiculo ? null : onOfertarCarona,
         ),
       ],
     );

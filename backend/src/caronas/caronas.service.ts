@@ -12,6 +12,7 @@ import { Carona } from './carona.entity';
 import { PontoEmbarque } from './ponto-embarque.entity';
 import { PosicaoAtualCarona } from './posicao-atual-carona.entity';
 import { Solicitacao } from '../solicitacoes/solicitacao.entity';
+import { UsersService } from '../users/users.service';
 
 export interface DadosPontoEmbarque {
   nome: string | null;
@@ -69,10 +70,19 @@ export class CaronasService {
     private readonly solicitacoesRepository: Repository<Solicitacao>,
 
     private readonly dataSource: DataSource,
+    private readonly usersService: UsersService,
   ) {}
 
   // Cria a carona e os pontos de embarque juntos.
   async criarCarona(dados: DadosCriacaoCarona): Promise<Carona> {
+    const veiculo = await this.usersService.buscarVeiculo(dados.idUsuario);
+
+    if (!veiculo) {
+      throw new BadRequestException(
+        'Cadastre seu veículo no perfil antes de oferecer uma carona',
+      );
+    }
+
     return this.dataSource.transaction(async (manager) => {
       const caronasRepository = manager.getRepository(Carona);
       const pontosRepository = manager.getRepository(PontoEmbarque);
@@ -113,7 +123,7 @@ export class CaronasService {
           idCarona: caronaSalva.idCarona,
         },
         relations: {
-          usuario: true,
+          usuario: { veiculo: true },
           pontosEmbarque: true,
         },
       });
@@ -324,9 +334,17 @@ export class CaronasService {
 
       .leftJoinAndSelect('carona.usuario', 'usuario')
 
+      .leftJoinAndSelect('usuario.veiculo', 'veiculo')
+
       .leftJoinAndSelect('carona.pontosEmbarque', 'pontoEmbarque')
 
-      .select(['carona', 'usuario.idUsuario', 'usuario.nome', 'pontoEmbarque'])
+      .select([
+        'carona',
+        'usuario.idUsuario',
+        'usuario.nome',
+        'veiculo',
+        'pontoEmbarque',
+      ])
 
       .where('carona.status = :status', {
         status: 'ATIVA',
@@ -384,9 +402,17 @@ export class CaronasService {
 
       .innerJoinAndSelect('carona.usuario', 'usuario')
 
+      .leftJoinAndSelect('usuario.veiculo', 'veiculo')
+
       .leftJoinAndSelect('carona.pontosEmbarque', 'pontoEmbarque')
 
-      .select(['carona', 'usuario.idUsuario', 'usuario.nome', 'pontoEmbarque'])
+      .select([
+        'carona',
+        'usuario.idUsuario',
+        'usuario.nome',
+        'veiculo',
+        'pontoEmbarque',
+      ])
 
       .where('usuario.idUsuario = :idUsuario', {
         idUsuario,
@@ -412,7 +438,7 @@ export class CaronasService {
         idCarona,
       },
       relations: {
-        usuario: true,
+        usuario: { veiculo: true },
         pontosEmbarque: true,
       },
     });

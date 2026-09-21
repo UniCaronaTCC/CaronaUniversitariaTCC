@@ -34,6 +34,7 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
   DateTime? _ultimoEnvioPosicao;
   bool _enviandoPosicao = false;
   bool _envioPosicaoAtivo = true;
+  final _filtroGps = FiltroLocalizacaoGps();
 
   static const _intervaloEnvioPosicao = Duration(seconds: 5);
 
@@ -82,62 +83,99 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
 
   Future<void> _acompanharMotorista() async {
     try {
-      final stream = await LocalizacaoService().acompanharLocalizacao();
+      final localizacaoService = LocalizacaoService();
+      final posicaoInicial = await localizacaoService.obterLocalizacaoAtual();
       if (!mounted) return;
-      _localizacaoSubscription = stream.listen((posicao) {
-        if (!mounted ||
-            posicao.accuracy > 100 ||
-            posicao.accuracy < 0 ||
-            !posicao.accuracy.isFinite ||
-            !posicao.latitude.isFinite ||
-            !posicao.longitude.isFinite) {
-          return;
-        }
-        final anterior = _localizacaoMotorista;
-        final embarqueAlcancado = _detectarEmbarqueAlcancado(posicao);
-        double? novaDirecao;
-        if (posicao.speed >= 1 &&
-            posicao.heading.isFinite &&
-            posicao.heading >= 0) {
-          novaDirecao = posicao.heading;
-        } else if (anterior != null) {
-          novaDirecao = Geolocator.bearingBetween(
-            anterior.latitude,
-            anterior.longitude,
-            posicao.latitude,
-            posicao.longitude,
-          );
-        }
-        setState(() {
-          _localizacaoMotorista = LatLng(posicao.latitude, posicao.longitude);
-          if (novaDirecao != null) _direcaoMotorista = novaDirecao;
-          if (embarqueAlcancado != null) {
-            _embarquesConcluidos = {
-              ..._embarquesConcluidos,
-              _chavePonto(embarqueAlcancado),
-            };
-          }
-        });
-        unawaited(_enviarPosicaoSeNecessario(posicao, novaDirecao));
-        if (embarqueAlcancado != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Embarque ${embarqueAlcancado.ordem} alcançado. Seguindo para o próximo ponto.',
-              ),
-            ),
-          );
-        }
-      }, onError: (Object erro) => _mostrarErroLocalizacao(erro.toString()));
+      _processarPosicao(posicaoInicial);
+
+      final stream = await localizacaoService.acompanharLocalizacao();
+      if (!mounted) return;
+      _localizacaoSubscription = stream.listen(
+        _processarPosicao,
+        onError: (Object erro) => _mostrarErroLocalizacao(erro.toString()),
+      );
     } catch (erro) {
       _mostrarErroLocalizacao(erro.toString());
     }
   }
 
-  Future<void> _enviarPosicaoSeNecessario(
-    Position posicao,
-    double? direcao,
-  ) async {
+  void _processarPosicao(Position posicao) {
+    if (!mounted ||
+        !_filtroGps.aceitar(
+          latitude: posicao.latitude,
+          longitude: posicao.longitude,
+          precisao: posicao.accuracy,
+        )) {
+      return;
+    }
+
+    final anterior = _localizacaoMotorista;
+    final recebida = LatLng(posicao.latitude, posicao.longitude);
+    final atual = _suavizarPosicao(anterior, recebida, posicao.accuracy);
+    final embarqueAlcancado = _detectarEmbarqueAlcancado(posicao);
+    double? novaDirecao;
+    if (posicao.speed >= 1 &&
+        posicao.heading.isFinite &&
+        posicao.heading >= 0) {
+      novaDirecao = posicao.heading;
+    } else if (anterior != null && anterior != atual) {
+      novaDirecao = Geolocator.bearingBetween(
+        anterior.latitude,
+        anterior.longitude,
+        atual.latitude,
+        atual.longitude,
+      );
+    }
+
+    setState(() {
+      _localizacaoMotorista = atual;
+      if (novaDirecao != null) _direcaoMotorista = novaDirecao;
+      if (embarqueAlcancado != null) {
+        _embarquesConcluidos = {
+          ..._embarquesConcluidos,
+          _chavePonto(embarqueAlcancado),
+        };
+      }
+    });
+    unawaited(
+      _enviarPosicaoSeNecessario(
+        ponto: atual,
+        precisao: posicao.accuracy,
+        direcao: novaDirecao,
+      ),
+    );
+
+    if (embarqueAlcancado != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Embarque ${embarqueAlcancado.ordem} alcançado. Seguindo para o próximo ponto.',
+          ),
+        ),
+      );
+    }
+  }
+
+  LatLng _suavizarPosicao(LatLng? anterior, LatLng recebida, double precisao) {
+    if (anterior == null) return recebida;
+
+    final distancia = const Distance().as(LengthUnit.Meter, anterior, recebida);
+    if (distancia < 2) return anterior;
+
+    final pesoNovaPosicao = precisao <= 15 ? 0.75 : 0.5;
+    return LatLng(
+      anterior.latitude +
+          (recebida.latitude - anterior.latitude) * pesoNovaPosicao,
+      anterior.longitude +
+          (recebida.longitude - anterior.longitude) * pesoNovaPosicao,
+    );
+  }
+
+  Future<void> _enviarPosicaoSeNecessario({
+    required LatLng ponto,
+    required double precisao,
+    required double? direcao,
+  }) async {
     if (!_envioPosicaoAtivo || _enviandoPosicao) return;
 
     final agora = DateTime.now();
@@ -156,10 +194,10 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
     try {
       await CaronaService.atualizarPosicaoAtual(
         idCarona: widget.carona.id,
-        latitude: posicao.latitude,
-        longitude: posicao.longitude,
+        latitude: ponto.latitude,
+        longitude: ponto.longitude,
         direcao: direcaoNormalizada,
-        precisao: posicao.accuracy,
+        precisao: precisao,
       );
     } finally {
       _enviandoPosicao = false;

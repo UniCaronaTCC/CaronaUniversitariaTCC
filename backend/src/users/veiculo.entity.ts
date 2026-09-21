@@ -23,7 +23,7 @@ export class Veiculo {
   @Column({ length: 10, unique: true })
   placa: string;
 
-  @OneToOne(() => User)
+  @OneToOne(() => User, (usuario) => usuario.veiculo)
   @JoinColumn({ name: 'id_usuario' })
   usuario: User;
 

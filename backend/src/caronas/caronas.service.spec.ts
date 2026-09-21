@@ -11,6 +11,7 @@ import { CaronasService, DadosCriacaoCarona } from './caronas.service';
 import { PontoEmbarque } from './ponto-embarque.entity';
 import { PosicaoAtualCarona } from './posicao-atual-carona.entity';
 import { Solicitacao } from '../solicitacoes/solicitacao.entity';
+import { UsersService } from '../users/users.service';
 
 describe('CaronasService', () => {
   let service: CaronasService;
@@ -35,6 +36,9 @@ describe('CaronasService', () => {
   };
   let solicitacoesRepository: {
     exists: jest.Mock;
+  };
+  let usersService: {
+    buscarVeiculo: jest.Mock;
   };
 
   const dados: DadosCriacaoCarona = {
@@ -82,6 +86,9 @@ describe('CaronasService', () => {
     solicitacoesRepository = {
       exists: jest.fn().mockResolvedValue(false),
     };
+    usersService = {
+      buscarVeiculo: jest.fn().mockResolvedValue({ idVeiculo: 1 }),
+    };
 
     service = new CaronasService(
       repository as unknown as Repository<Carona>,
@@ -89,6 +96,15 @@ describe('CaronasService', () => {
       posicoesRepository as unknown as Repository<PosicaoAtualCarona>,
       solicitacoesRepository as unknown as Repository<Solicitacao>,
       {} as DataSource,
+      usersService as unknown as UsersService,
+    );
+  });
+
+  it('não cria carona sem veículo cadastrado', async () => {
+    usersService.buscarVeiculo.mockResolvedValue(null);
+
+    await expect(service.criarCarona(dados)).rejects.toThrow(
+      'Cadastre seu veículo no perfil antes de oferecer uma carona',
     );
   });
 

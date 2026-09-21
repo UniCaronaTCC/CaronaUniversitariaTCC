@@ -34,6 +34,9 @@ class _MapaNavegacaoCaronaState extends State<MapaNavegacaoCarona> {
   String? _erro;
   bool _carregando = false;
   bool _recalculoPendente = false;
+  LatLng? _localizacaoUltimoCalculo;
+
+  static const _distanciaParaRecalcular = 50.0;
 
   @override
   void initState() {
@@ -52,12 +55,22 @@ class _MapaNavegacaoCaronaState extends State<MapaNavegacaoCarona> {
         oldWidget.embarquesConcluidos.length !=
             widget.embarquesConcluidos.length ||
         !oldWidget.embarquesConcluidos.containsAll(widget.embarquesConcluidos);
+    final motoristaSeMoveu = _motoristaSeMoveuParaRecalculo();
     if (oldWidget.carona != widget.carona ||
         recebeuPrimeiraLocalizacao ||
-        embarquesAlterados) {
+        embarquesAlterados ||
+        motoristaSeMoveu) {
       _atualizarParadas();
       _carregarRota();
     }
+  }
+
+  bool _motoristaSeMoveuParaRecalculo() {
+    final atual = widget.localizacaoMotorista;
+    final ultima = _localizacaoUltimoCalculo;
+    if (atual == null || ultima == null) return false;
+    return const Distance().as(LengthUnit.Meter, ultima, atual) >=
+        _distanciaParaRecalcular;
   }
 
   void _atualizarParadas() {
@@ -82,6 +95,7 @@ class _MapaNavegacaoCaronaState extends State<MapaNavegacaoCarona> {
       _carregando = paradas != null;
     });
     if (paradas == null) return;
+    _localizacaoUltimoCalculo = widget.localizacaoMotorista;
 
     try {
       final rota = await _service

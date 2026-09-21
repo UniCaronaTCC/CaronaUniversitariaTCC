@@ -8,6 +8,7 @@ import '../models/carona.dart';
 import '../models/ponto_embarque.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/carona_service.dart';
+import '../services/auth_service.dart';
 import '../utils/data_hora_utils.dart';
 import '../utils/formatador_moeda.dart';
 import '../widgets/barra_navegacao_home.dart';
@@ -52,6 +53,9 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   final List<PontoEmbarque> pontosEmbarque = [];
 
   bool get editando => widget.caronaParaEditar != null;
+
+  bool get possuiVeiculo =>
+      editando || AuthService.usuarioLogado?['veiculo'] is Map;
 
   @override
   void initState() {
@@ -308,6 +312,13 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
   // Valida e envia a oferta para o backend.
   Future<void> ofertarCarona() async {
+    if (!possuiVeiculo) {
+      mostrarMensagem(
+        'Cadastre seu veículo no perfil antes de oferecer uma carona',
+      );
+      return;
+    }
+
     final erro = validarFormulario();
 
     if (erro != null) {
@@ -439,6 +450,14 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     ).showSnackBar(SnackBar(content: Text(mensagem)));
   }
 
+  Future<void> abrirCadastroVeiculo() async {
+    await Navigator.pushNamed(context, NavegacaoPrincipal.rotaPerfil);
+
+    if (mounted) {
+      setState(() {});
+    }
+  }
+
   @override
   void dispose() {
     origemController.dispose();
@@ -493,6 +512,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
             pontosEmbarque: pontosEmbarque,
             origemSelecionada: origemSelecionada,
             pontosEmbarqueEditaveis: !editando,
+            possuiVeiculo: possuiVeiculo,
 
             onSelecionarOrigem: escolherOrigemNoMapa,
             onSelecionarDestino: escolherDestinoNoMapa,
@@ -505,6 +525,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
             onRecorrenciaChanged: alterarRecorrencia,
             onDiaSelecionado: alternarDiaSemana,
             onOfertarCarona: ofertarCarona,
+            onCadastrarVeiculo: abrirCadastroVeiculo,
           ),
         ),
       ),

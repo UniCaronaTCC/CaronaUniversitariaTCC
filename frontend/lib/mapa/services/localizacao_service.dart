@@ -1,4 +1,63 @@
 import 'package:geolocator/geolocator.dart';
+import 'package:latlong2/latlong.dart';
+
+class FiltroLocalizacaoGps {
+  final double precisaoMaxima;
+  final double distanciaSalto;
+  final double toleranciaConfirmacao;
+
+  LatLng? _ultimaAceita;
+  LatLng? _saltoPendente;
+
+  FiltroLocalizacaoGps({
+    this.precisaoMaxima = 40,
+    this.distanciaSalto = 60,
+    this.toleranciaConfirmacao = 45,
+  });
+
+  bool aceitar({
+    required double latitude,
+    required double longitude,
+    required double precisao,
+  }) {
+    if (!latitude.isFinite ||
+        !longitude.isFinite ||
+        !precisao.isFinite ||
+        latitude < -90 ||
+        latitude > 90 ||
+        longitude < -180 ||
+        longitude > 180 ||
+        precisao < 0 ||
+        precisao > precisaoMaxima) {
+      return false;
+    }
+
+    final atual = LatLng(latitude, longitude);
+    final ultima = _ultimaAceita;
+    if (ultima == null || _distancia(ultima, atual) <= distanciaSalto) {
+      _confirmar(atual);
+      return true;
+    }
+
+    final pendente = _saltoPendente;
+    if (pendente != null &&
+        _distancia(pendente, atual) <= toleranciaConfirmacao) {
+      _confirmar(atual);
+      return true;
+    }
+
+    _saltoPendente = atual;
+    return false;
+  }
+
+  double _distancia(LatLng inicio, LatLng fim) =>
+      const Distance().as(LengthUnit.Meter, inicio, fim);
+
+  void _confirmar(LatLng posicao) {
+    _ultimaAceita = posicao;
+    _saltoPendente = null;
+  }
+}
 
 /// aqui é onde pega/solicita a localizacao do usuario.
 class LocalizacaoService {

@@ -24,6 +24,9 @@ void main() {
       diasSemana: const ['SEG', 'QUA', 'SEX'],
       observacoes: 'Saída no horário combinado',
       motorista: 'João',
+      veiculoModelo: 'Onix',
+      veiculoCor: 'Branco',
+      veiculoPlaca: '***1D23',
     );
 
     await tester.pumpWidget(
@@ -37,6 +40,7 @@ void main() {
     expect(find.text('UniSalesiano, Araçatuba, SP'), findsOneWidget);
     expect(find.text('Araçatuba, SP'), findsNothing);
     expect(find.text('3 vagas'), findsOneWidget);
+    expect(find.text('Onix • Branco • ***1D23'), findsOneWidget);
     expect(find.text('SOLICITAR VAGA'), findsOneWidget);
   });
 

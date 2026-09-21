@@ -31,6 +31,9 @@ class Carona {
   final String status;
   final int idMotorista;
   final String motorista;
+  final String? veiculoModelo;
+  final String? veiculoCor;
+  final String? veiculoPlaca;
 
   const Carona({
     required this.id,
@@ -54,11 +57,15 @@ class Carona {
     this.status = 'ATIVA',
     this.idMotorista = 0,
     required this.motorista,
+    this.veiculoModelo,
+    this.veiculoCor,
+    this.veiculoPlaca,
   });
 
   // Converte a resposta JSON do backend em uma Carona.
   factory Carona.fromJson(Map<String, dynamic> json) {
     final usuario = json['usuario'];
+    final veiculo = usuario is Map ? usuario['veiculo'] : null;
 
     final pontosRecebidos = json['pontosEmbarque'];
 
@@ -68,9 +75,7 @@ class Carona {
       for (final item in pontosRecebidos) {
         if (item is Map) {
           pontosEmbarque.add(
-            PontoEmbarque.fromJson(
-              Map<String, dynamic>.from(item),
-            ),
+            PontoEmbarque.fromJson(Map<String, dynamic>.from(item)),
           );
         }
       }
@@ -81,79 +86,60 @@ class Carona {
 
       origem: json['origem']?.toString() ?? '',
       origemCidade: json['origemCidade']?.toString(),
-      origemLatitude: converterJsonParaDoubleOpcional(
-        json['origemLatitude'],
-      ),
-      origemLongitude: converterJsonParaDoubleOpcional(
-        json['origemLongitude'],
-      ),
+      origemLatitude: converterJsonParaDoubleOpcional(json['origemLatitude']),
+      origemLongitude: converterJsonParaDoubleOpcional(json['origemLongitude']),
 
       destino: json['destino']?.toString() ?? '',
       destinoCidade: json['destinoCidade']?.toString(),
-      destinoLatitude: converterJsonParaDoubleOpcional(
-        json['destinoLatitude'],
-      ),
+      destinoLatitude: converterJsonParaDoubleOpcional(json['destinoLatitude']),
       destinoLongitude: converterJsonParaDoubleOpcional(
         json['destinoLongitude'],
       ),
 
       pontosEmbarque: pontosEmbarque,
 
-      dataInicio: DateTime.parse(
-        json['dataInicio'].toString(),
-      ),
+      dataInicio: DateTime.parse(json['dataInicio'].toString()),
 
       dataFim: json['dataFim'] == null
           ? null
-          : DateTime.tryParse(
-        json['dataFim'].toString(),
-      ),
+          : DateTime.tryParse(json['dataFim'].toString()),
 
       horario: json['horario']?.toString() ?? '',
 
-      vagas: converterJsonParaInt(
-        json['vagas'],
-      ),
+      vagas: converterJsonParaInt(json['vagas']),
 
-      valor: converterJsonParaDouble(
-        json['valor'],
-      ),
+      valor: converterJsonParaDouble(json['valor']),
 
-      recorrente: converterJsonParaBool(
-        json['recorrente'],
-      ),
+      recorrente: converterJsonParaBool(json['recorrente']),
 
-      diasSemana: converterJsonParaListaString(
-        json['diasSemana'],
-      ),
+      diasSemana: converterJsonParaListaString(json['diasSemana']),
 
       observacoes: json['observacoes']?.toString(),
 
       status: json['status']?.toString() ?? 'ATIVA',
 
       idMotorista: usuario is Map
-          ? converterJsonParaInt(
-        usuario['idUsuario'] ?? usuario['id'],
-      )
+          ? converterJsonParaInt(usuario['idUsuario'] ?? usuario['id'])
           : 0,
 
       motorista: usuario is Map
           ? usuario['nome']?.toString() ?? 'Motorista'
           : 'Motorista',
+
+      veiculoModelo: veiculo is Map ? veiculo['modelo']?.toString() : null,
+      veiculoCor: veiculo is Map ? veiculo['cor']?.toString() : null,
+      veiculoPlaca: veiculo is Map ? veiculo['placa']?.toString() : null,
     );
   }
 
   // Formata a data para o padrao brasileiro.
-  String get dataFormatada =>
-      FormatadorData.relativa(dataInicio);
+  String get dataFormatada => FormatadorData.relativa(dataInicio);
 
   // Remove os segundos do horario retornado pelo MySQL.
-  String get horarioFormatado =>
-      DataHoraUtils.formatarHorarioTexto(horario);
+  String get horarioFormatado => DataHoraUtils.formatarHorarioTexto(horario);
 
   // Formata o valor no padrao brasileiro.
-  String get valorFormatado =>
-      formatarDoubleComoMoedaReal(valor);
+  String get valorFormatado => formatarDoubleComoMoedaReal(valor);
 
   bool get finalizada => status == 'FINALIZADA';
   bool get emAndamento => status == 'EM_ANDAMENTO';

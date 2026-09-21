@@ -2,8 +2,11 @@ import {
   Column,
   CreateDateColumn,
   Entity,
+  OneToOne,
   PrimaryGeneratedColumn,
 } from 'typeorm';
+
+import { Veiculo } from './veiculo.entity';
 
 @Entity('usuarios')
 export class User {
@@ -76,6 +79,9 @@ export class User {
     default: 'NAO_ENVIADO',
   })
   statusVerificacao: string = 'NAO_ENVIADO';
+
+  @OneToOne(() => Veiculo, (veiculo) => veiculo.usuario)
+  veiculo: Veiculo | null = null;
 
   @Column({
     name: 'documento_verificacao',

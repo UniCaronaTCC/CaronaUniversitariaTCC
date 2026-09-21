@@ -153,7 +153,7 @@ export class CaronasController {
 
     return {
       sucesso: true,
-      dados: caronas,
+      dados: caronas.map((carona) => this.formatarCarona(carona)),
     };
   }
 
@@ -165,7 +165,7 @@ export class CaronasController {
 
     return {
       sucesso: true,
-      dados: caronas,
+      dados: caronas.map((carona) => this.formatarCarona(carona)),
     };
   }
 
@@ -418,6 +418,13 @@ export class CaronasController {
       usuario: {
         idUsuario: carona.usuario.idUsuario,
         nome: carona.usuario.nome,
+        veiculo: carona.usuario.veiculo
+          ? {
+              modelo: carona.usuario.veiculo.modelo,
+              cor: carona.usuario.veiculo.cor,
+              placa: this.mascararPlaca(carona.usuario.veiculo.placa),
+            }
+          : null,
       },
     };
   }
@@ -436,5 +443,10 @@ export class CaronasController {
       precisao: posicao.precisao,
       atualizadoEm: posicao.atualizadoEm,
     };
+  }
+
+  private mascararPlaca(placa: string): string {
+    const placaNormalizada = placa.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return `***${placaNormalizada.slice(-4)}`;
   }
 }
