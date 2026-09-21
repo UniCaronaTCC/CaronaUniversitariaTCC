@@ -14,6 +14,7 @@ import 'supabase_auth_service.dart';
 class MensagemService {
   const MensagemService._();
 
+  static const Duration tempoLimiteEnvio = Duration(seconds: 10);
   static final ValueNotifier<int> totalMensagensNaoLidas = ValueNotifier(0);
   static RealtimeChannel? _canalMensagensNaoLidas;
   static int? _idUsuarioAcompanhado;
@@ -144,11 +145,13 @@ class MensagemService {
     String conteudo,
   ) async {
     return _requisicao(
-      () => http.post(
-        Uri.parse('${ApiConfig.baseUrl}/conversas/$idConversa/mensagens'),
-        headers: _cabecalhos(comJson: true),
-        body: jsonEncode({'conteudo': conteudo}),
-      ),
+      () => http
+          .post(
+            Uri.parse('${ApiConfig.baseUrl}/conversas/$idConversa/mensagens'),
+            headers: _cabecalhos(comJson: true),
+            body: jsonEncode({'conteudo': conteudo}),
+          )
+          .timeout(tempoLimiteEnvio),
       converterDados: (dados) =>
           Mensagem.fromJson(Map<String, dynamic>.from(dados as Map)),
     );

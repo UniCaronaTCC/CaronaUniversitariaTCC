@@ -40,6 +40,7 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
   bool enviando = false;
   String? mensagemErro;
   RealtimeChannel? canal;
+  int proximoIdTemporario = -1;
 
   int get idUsuarioAtual {
     if (widget.idUsuario != null) {
@@ -104,7 +105,15 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
 
     if (resultado['sucesso'] == true && resultado['dados'] is List) {
       setState(() {
-        mensagens = (resultado['dados'] as List).whereType<Mensagem>().toList();
+        final mensagensLocais = mensagens
+            .where(
+              (mensagem) => mensagem.estadoEnvio != EstadoEnvioMensagem.enviada,
+            )
+            .toList();
+        mensagens = [
+          ...(resultado['dados'] as List).whereType<Mensagem>(),
+          ...mensagensLocais,
+        ];
         carregando = false;
         mensagemErro = null;
       });
@@ -128,38 +137,82 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
       return;
     }
 
-    setState(() => enviando = true);
+    final mensagemTemporaria = Mensagem(
+      id: proximoIdTemporario--,
+      conteudo: texto,
+      criadoEm: DateTime.now(),
+      idRemetente: idUsuarioAtual,
+      estadoEnvio: EstadoEnvioMensagem.enviando,
+    );
 
+    setState(() {
+      enviando = true;
+      campoMensagem.clear();
+      mensagens.add(mensagemTemporaria);
+    });
+    rolarParaFinal();
+
+    await _enviarMensagem(mensagemTemporaria);
+  }
+
+  Future<void> _enviarMensagem(Mensagem mensagemLocal) async {
     final resultado =
-        await (widget.enviarMensagem?.call(texto) ??
-            MensagemService.enviarMensagem(widget.conversa.id, texto));
+        await (widget.enviarMensagem?.call(mensagemLocal.conteudo) ??
+            MensagemService.enviarMensagem(
+              widget.conversa.id,
+              mensagemLocal.conteudo,
+            ));
 
     if (!mounted) {
       return;
     }
 
-    setState(() => enviando = false);
-
     if (resultado['sucesso'] == true && resultado['dados'] is Mensagem) {
       final mensagem = resultado['dados'] as Mensagem;
 
       setState(() {
-        if (!mensagens.any((item) => item.id == mensagem.id)) {
-          mensagens.add(mensagem);
-        }
-        campoMensagem.clear();
+        enviando = false;
+        mensagens.removeWhere(
+          (item) => item.id == mensagemLocal.id || item.id == mensagem.id,
+        );
+        mensagens.add(mensagem);
       });
       rolarParaFinal();
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          resultado['mensagem']?.toString() ?? 'Erro ao enviar mensagem',
-        ),
-      ),
+    setState(() {
+      enviando = false;
+      final indice = mensagens.indexWhere(
+        (item) => item.id == mensagemLocal.id,
+      );
+      if (indice >= 0) {
+        mensagens[indice] = mensagens[indice].copyWith(
+          estadoEnvio: EstadoEnvioMensagem.erro,
+        );
+      }
+    });
+  }
+
+  Future<void> reenviar(Mensagem mensagem) async {
+    if (enviando || widget.conversa.encerrada) {
+      return;
+    }
+
+    final indice = mensagens.indexWhere((item) => item.id == mensagem.id);
+    if (indice < 0) {
+      return;
+    }
+
+    final mensagemEmReenvio = mensagem.copyWith(
+      estadoEnvio: EstadoEnvioMensagem.enviando,
     );
+    setState(() {
+      enviando = true;
+      mensagens[indice] = mensagemEmReenvio;
+    });
+
+    await _enviarMensagem(mensagemEmReenvio);
   }
 
   void rolarParaFinal() {
@@ -255,6 +308,17 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
 
   Widget _bolhaMensagem(Mensagem mensagem) {
     final enviada = mensagem.idRemetente == idUsuarioAtual;
+    final falhou = enviada && mensagem.estadoEnvio == EstadoEnvioMensagem.erro;
+    final corBolha = falhou
+        ? const Color(0xFFFFF1F1)
+        : enviada
+        ? AppColors.primary
+        : const Color(0xFFF0F0F0);
+    final corTexto = falhou
+        ? AppColors.text
+        : enviada
+        ? Colors.white
+        : AppColors.text;
 
     return Align(
       alignment: enviada ? Alignment.centerRight : Alignment.centerLeft,
@@ -264,7 +328,8 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
         ),
         padding: const EdgeInsets.fromLTRB(14, 10, 12, 7),
         decoration: BoxDecoration(
-          color: enviada ? AppColors.primary : const Color(0xFFF0F0F0),
+          color: corBolha,
+          border: falhou ? Border.all(color: const Color(0xFFD32F2F)) : null,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -272,24 +337,98 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
           children: [
             Text(
               mensagem.conteudo,
-              style: TextStyle(
-                color: enviada ? Colors.white : AppColors.text,
-                fontSize: 15,
-                height: 1.3,
-              ),
+              style: TextStyle(color: corTexto, fontSize: 15, height: 1.3),
             ),
             const SizedBox(height: 3),
-            Text(
-              _formatarHorario(mensagem.criadoEm),
-              style: TextStyle(
-                color: enviada ? Colors.white70 : Colors.black45,
-                fontSize: 10,
-              ),
-            ),
+            _rodapeMensagem(mensagem, enviada: enviada),
           ],
         ),
       ),
     );
+  }
+
+  Widget _rodapeMensagem(Mensagem mensagem, {required bool enviada}) {
+    if (!enviada) {
+      return Text(
+        _formatarHorario(mensagem.criadoEm),
+        style: const TextStyle(color: Colors.black45, fontSize: 10),
+      );
+    }
+
+    switch (mensagem.estadoEnvio) {
+      case EstadoEnvioMensagem.enviando:
+        return const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox.square(
+              dimension: 10,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                color: Colors.white70,
+              ),
+            ),
+            SizedBox(width: 5),
+            Text(
+              'Enviando',
+              style: TextStyle(color: Colors.white70, fontSize: 10),
+            ),
+          ],
+        );
+      case EstadoEnvioMensagem.erro:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline, size: 13, color: Color(0xFFD32F2F)),
+                SizedBox(width: 4),
+                Text(
+                  'Não enviada',
+                  style: TextStyle(
+                    color: Color(0xFFD32F2F),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            TextButton.icon(
+              key: ValueKey('reenviar-mensagem-${mensagem.id}'),
+              onPressed: enviando ? null : () => reenviar(mensagem),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFD32F2F),
+                minimumSize: Size.zero,
+                padding: const EdgeInsets.only(top: 4),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                textStyle: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              icon: const Icon(Icons.refresh_rounded, size: 15),
+              label: const Text('Tentar novamente'),
+            ),
+          ],
+        );
+      case EstadoEnvioMensagem.enviada:
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _formatarHorario(mensagem.criadoEm),
+              style: const TextStyle(color: Colors.white70, fontSize: 10),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.done_rounded, size: 13, color: Colors.white70),
+            const SizedBox(width: 2),
+            const Text(
+              'Enviada',
+              style: TextStyle(color: Colors.white70, fontSize: 10),
+            ),
+          ],
+        );
+    }
   }
 
   Widget _campoEnvio() {

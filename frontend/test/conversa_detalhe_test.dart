@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uni_carona/home/conversa_detalhe.dart';
@@ -66,6 +68,103 @@ void main() {
 
     expect(textoEnviado, 'Estou chegando');
     expect(find.text('Estou chegando'), findsOneWidget);
+    expect(find.text('Enviada'), findsOneWidget);
+  });
+
+  testWidgets('mostra envio em andamento na própria mensagem', (tester) async {
+    final resposta = Completer<Map<String, dynamic>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversaDetalheTela(
+          conversa: conversa,
+          idUsuario: 1,
+          usarRealtime: false,
+          carregarMensagens: () async => {
+            'sucesso': true,
+            'dados': <Mensagem>[],
+          },
+          enviarMensagem: (_) => resposta.future,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'Mensagem pendente');
+    await tester.tap(find.byTooltip('Enviar mensagem'));
+    await tester.pump();
+
+    expect(find.text('Mensagem pendente'), findsOneWidget);
+    expect(find.text('Enviando'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Mensagem pendente'), findsNothing);
+
+    resposta.complete({
+      'sucesso': true,
+      'dados': Mensagem(
+        id: 3,
+        conteudo: 'Mensagem pendente',
+        criadoEm: DateTime(2026, 9, 1, 18, 10),
+        idRemetente: 1,
+      ),
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enviando'), findsNothing);
+    expect(find.text('Enviada'), findsOneWidget);
+  });
+
+  testWidgets('mantém mensagem com erro e permite tentar novamente', (
+    tester,
+  ) async {
+    var tentativas = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversaDetalheTela(
+          conversa: conversa,
+          idUsuario: 1,
+          usarRealtime: false,
+          carregarMensagens: () async => {
+            'sucesso': true,
+            'dados': <Mensagem>[],
+          },
+          enviarMensagem: (texto) async {
+            tentativas++;
+            if (tentativas == 1) {
+              return {'sucesso': false, 'mensagem': 'Sem conexão'};
+            }
+
+            return {
+              'sucesso': true,
+              'dados': Mensagem(
+                id: 4,
+                conteudo: texto,
+                criadoEm: DateTime(2026, 9, 1, 18, 15),
+                idRemetente: 1,
+              ),
+            };
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'Tente de novo');
+    await tester.tap(find.byTooltip('Enviar mensagem'));
+    await tester.pumpAndSettle();
+
+    expect(tentativas, 1);
+    expect(find.text('Tente de novo'), findsOneWidget);
+    expect(find.text('Não enviada'), findsOneWidget);
+    expect(find.text('Tentar novamente'), findsOneWidget);
+
+    await tester.tap(find.text('Tentar novamente'));
+    await tester.pumpAndSettle();
+
+    expect(tentativas, 2);
+    expect(find.text('Não enviada'), findsNothing);
+    expect(find.text('Tentar novamente'), findsNothing);
+    expect(find.text('Enviada'), findsOneWidget);
   });
 
   testWidgets('conversa encerrada fica somente para leitura', (tester) async {
