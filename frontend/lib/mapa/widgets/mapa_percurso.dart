@@ -14,6 +14,7 @@ class MapaPercurso extends StatefulWidget {
   final List<LatLng> paradas;
   final bool interativo;
   final bool navegacao;
+  final bool mostrarMarcadorMotorista;
   final LatLng? localizacaoMotorista;
   final double? direcaoMotorista;
   final Set<int> embarquesConcluidos;
@@ -28,6 +29,7 @@ class MapaPercurso extends StatefulWidget {
     required this.paradas,
     this.interativo = false,
     this.navegacao = false,
+    this.mostrarMarcadorMotorista = false,
     this.localizacaoMotorista,
     this.direcaoMotorista,
     this.embarquesConcluidos = const {},
@@ -215,7 +217,13 @@ class _MapaPercursoState extends State<MapaPercurso>
 
   List<Marker> _marcadores() {
     if (!widget.navegacao) {
-      return List.generate(widget.paradas.length, _marcadorParada);
+      final marcadores = List.generate(widget.paradas.length, _marcadorParada);
+      if (widget.mostrarMarcadorMotorista &&
+          widget.localizacaoMotorista != null) {
+        marcadores.removeAt(0);
+        marcadores.add(_marcadorMotorista());
+      }
+      return marcadores;
     }
     return [
       ...widget.carona.pontosEmbarque.map(_marcadorEmbarque),
@@ -229,25 +237,29 @@ class _MapaPercursoState extends State<MapaPercurso>
         rotacionar: true,
         child: const Icon(Icons.flag, size: 18, color: Colors.white),
       ),
-      if (widget.localizacaoMotorista != null)
-        Marker(
-          point: widget.localizacaoMotorista!,
-          rotate: true,
-          width: 46,
-          height: 46,
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.blue.shade700,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 4),
-              boxShadow: const [
-                BoxShadow(color: Colors.black26, blurRadius: 6),
-              ],
-            ),
-            child: const Icon(Icons.navigation, color: Colors.white, size: 24),
-          ),
-        ),
+      if (widget.localizacaoMotorista != null) _marcadorMotorista(),
     ];
+  }
+
+  Marker _marcadorMotorista() {
+    return Marker(
+      point: widget.localizacaoMotorista!,
+      rotate: true,
+      width: 46,
+      height: 46,
+      child: Tooltip(
+        message: 'Motorista',
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.blue.shade700,
+            shape: BoxShape.circle,
+            border: Border.all(color: Colors.white, width: 4),
+            boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 6)],
+          ),
+          child: const Icon(Icons.navigation, color: Colors.white, size: 24),
+        ),
+      ),
+    );
   }
 
   @override

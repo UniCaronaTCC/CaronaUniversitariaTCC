@@ -15,6 +15,7 @@ import '../widgets/componentes_padrao.dart';
 import '../widgets/dialogo_avaliacao.dart';
 import '../widgets/dialogo_cancelamento.dart';
 import 'caronas_publicadas.dart';
+import 'acompanhar_corrida.dart';
 import 'pagamento_pix.dart';
 
 class MinhasCaronasTela extends StatefulWidget {
@@ -205,6 +206,16 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
     );
   }
 
+  Future<void> acompanharMotorista(SolicitacaoEnviada solicitacao) async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AcompanharCorridaTela(solicitacao: solicitacao),
+      ),
+    );
+    if (mounted) await carregarDados();
+  }
+
   Future<void> cancelar({
     required int idSolicitacao,
     required bool confirmada,
@@ -375,6 +386,7 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
                 processando: idProcessando == solicitacao.id,
                 onPagarPix: () => pagarComPix(solicitacao),
                 onAvaliar: () => avaliar(solicitacao.id, solicitacao.motorista),
+                onAcompanhar: () => acompanharMotorista(solicitacao),
                 onCancelar: () => cancelar(
                   idSolicitacao: solicitacao.id,
                   confirmada: solicitacao.status == 'ACEITA',

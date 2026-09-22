@@ -131,6 +131,17 @@ describe('SolicitacoesService', () => {
     expect(atualizarQueryBuilder.execute).toHaveBeenCalledTimes(1);
   });
 
+  it('inclui as coordenadas do destino nas solicitações enviadas', async () => {
+    await service.listarEnviadas(1);
+
+    expect(atualizarQueryBuilder.select).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        'carona.destinoLatitude',
+        'carona.destinoLongitude',
+      ]),
+    );
+  });
+
   it('impede solicitar vaga na própria carona', async () => {
     caronasRepository.findOne.mockResolvedValue({
       idCarona: 10,

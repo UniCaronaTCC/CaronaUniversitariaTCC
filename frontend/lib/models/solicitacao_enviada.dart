@@ -7,9 +7,13 @@ class SolicitacaoEnviada {
   final int id;
   final String status;
   final String localEmbarque;
+  final double? embarqueLatitude;
+  final double? embarqueLongitude;
   final String motorista;
   final int idCarona;
   final String destino;
+  final double? destinoLatitude;
+  final double? destinoLongitude;
   final DateTime dataInicio;
   final String horario;
   final double valor;
@@ -22,9 +26,13 @@ class SolicitacaoEnviada {
     required this.id,
     required this.status,
     required this.localEmbarque,
+    this.embarqueLatitude,
+    this.embarqueLongitude,
     required this.motorista,
     required this.idCarona,
     required this.destino,
+    this.destinoLatitude,
+    this.destinoLongitude,
     required this.dataInicio,
     required this.horario,
     required this.valor,
@@ -46,9 +54,21 @@ class SolicitacaoEnviada {
       id: converterJsonParaInt(json['id']),
       status: json['status']?.toString() ?? 'PENDENTE',
       localEmbarque: json['localEmbarque']?.toString() ?? '',
+      embarqueLatitude: converterJsonParaDoubleOpcional(
+        json['embarqueLatitude'],
+      ),
+      embarqueLongitude: converterJsonParaDoubleOpcional(
+        json['embarqueLongitude'],
+      ),
       motorista: motorista['nome']?.toString() ?? 'Motorista',
       idCarona: converterJsonParaInt(carona['id']),
       destino: carona['destino']?.toString() ?? '',
+      destinoLatitude: converterJsonParaDoubleOpcional(
+        carona['destinoLatitude'],
+      ),
+      destinoLongitude: converterJsonParaDoubleOpcional(
+        carona['destinoLongitude'],
+      ),
       dataInicio: DateTime.parse(carona['dataInicio'].toString()),
       horario: carona['horario']?.toString() ?? '',
       valor: converterJsonParaDouble(carona['valor']),
@@ -76,4 +96,20 @@ class SolicitacaoEnviada {
       !caronaFinalizada &&
       !cancelada &&
       (status == 'PENDENTE' || status == 'ACEITA');
+
+  bool get podeAcompanharCorrida =>
+      status == 'ACEITA' &&
+      statusCarona == 'EM_ANDAMENTO' &&
+      _coordenadaValida(embarqueLatitude, embarqueLongitude) &&
+      _coordenadaValida(destinoLatitude, destinoLongitude);
+
+  bool _coordenadaValida(double? latitude, double? longitude) =>
+      latitude != null &&
+      longitude != null &&
+      latitude.isFinite &&
+      longitude.isFinite &&
+      latitude >= -90 &&
+      latitude <= 90 &&
+      longitude >= -180 &&
+      longitude <= 180;
 }

@@ -234,6 +234,8 @@ export class SolicitacoesService {
         'pontoEmbarque',
         'carona.idCarona',
         'carona.destino',
+        'carona.destinoLatitude',
+        'carona.destinoLongitude',
         'carona.dataInicio',
         'carona.horario',
         'carona.valor',

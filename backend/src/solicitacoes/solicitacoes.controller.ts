@@ -180,6 +180,8 @@ export class SolicitacoesController {
         carona: {
           id: solicitacao.carona.idCarona,
           destino: solicitacao.carona.destino,
+          destinoLatitude: solicitacao.carona.destinoLatitude,
+          destinoLongitude: solicitacao.carona.destinoLongitude,
           dataInicio: solicitacao.carona.dataInicio,
           horario: solicitacao.carona.horario,
           valor: solicitacao.carona.valor,

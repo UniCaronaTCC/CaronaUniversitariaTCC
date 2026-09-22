@@ -23,6 +23,32 @@ void main() {
     expect(solicitacao.caronaFinalizada, isTrue);
   });
 
+  test(
+    'libera acompanhamento apenas para passageiro aceito em corrida ativa',
+    () {
+      final solicitacao = SolicitacaoEnviada.fromJson({
+        'id': 1,
+        'status': 'ACEITA',
+        'localEmbarque': 'Praça central',
+        'embarqueLatitude': -21.2,
+        'embarqueLongitude': -50.4,
+        'motorista': {'id': 2, 'nome': 'Henrique'},
+        'carona': {
+          'id': 3,
+          'destino': 'UniSalesiano',
+          'destinoLatitude': -21.19,
+          'destinoLongitude': -50.41,
+          'dataInicio': '2026-08-10',
+          'horario': '19:00:00',
+          'valor': 12.5,
+          'status': 'EM_ANDAMENTO',
+        },
+      });
+
+      expect(solicitacao.podeAcompanharCorrida, isTrue);
+    },
+  );
+
   testWidgets('mostra motorista, status e dados da carona solicitada', (
     tester,
   ) async {
@@ -149,6 +175,42 @@ void main() {
 
     await tester.tap(find.text('PAGAR COM PIX'));
     expect(pagou, isTrue);
+  });
+
+  testWidgets('oferece acompanhamento para a corrida em andamento', (
+    tester,
+  ) async {
+    var acompanhou = false;
+    final solicitacao = SolicitacaoEnviada(
+      id: 8,
+      status: 'ACEITA',
+      localEmbarque: 'Praça central',
+      embarqueLatitude: -21.2,
+      embarqueLongitude: -50.4,
+      motorista: 'Henrique',
+      idCarona: 9,
+      destino: 'UniSalesiano',
+      destinoLatitude: -21.19,
+      destinoLongitude: -50.41,
+      dataInicio: DateTime(2026, 9, 25),
+      horario: '19:00:00',
+      valor: 12.5,
+      statusCarona: 'EM_ANDAMENTO',
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CardSolicitacaoEnviada(
+            solicitacao: solicitacao,
+            onAcompanhar: () => acompanhou = true,
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.text('ACOMPANHAR MOTORISTA'));
+    expect(acompanhou, isTrue);
   });
 
   testWidgets('nao oferece Pix para carona recorrente', (tester) async {
