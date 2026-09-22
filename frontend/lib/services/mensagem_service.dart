@@ -198,12 +198,13 @@ class MensagemService {
     Future<http.Response> Function() enviar, {
     required dynamic Function(dynamic dados) converterDados,
   }) async {
-    if (AuthService.tokenUsuarioLogado == null) {
-      return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
-    }
-
     try {
-      final resposta = await enviar();
+      final resposta = await AuthService.enviarComToken((_) => enviar());
+
+      if (resposta == null) {
+        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+      }
+
       final corpo = resposta.body.isEmpty
           ? <String, dynamic>{}
           : Map<String, dynamic>.from(jsonDecode(resposta.body) as Map);

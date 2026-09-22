@@ -2,9 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 import '../models/carona.dart';
-import '../navigation/navegacao_principal.dart';
 import '../services/carona_service.dart';
-import '../widgets/barra_navegacao_home.dart';
 import '../widgets/card_carona_disponivel.dart';
 import '../widgets/componentes_padrao.dart';
 import 'detalhes_carona.dart';
@@ -56,7 +54,12 @@ class _CaronasPublicadasTelaState extends State<CaronasPublicadasTela> {
   Future<void> abrirDetalhes(Carona carona) async {
     final alterada = await Navigator.push<bool>(
       context,
-      MaterialPageRoute(builder: (_) => DetalhesCaronaTela(carona: carona)),
+      MaterialPageRoute(
+        builder: (_) => DetalhesCaronaTela(
+          carona: carona,
+          indiceNavegacaoOrigem: 0,
+        ),
+      ),
     );
 
     if (alterada == true) {
@@ -69,15 +72,10 @@ class _CaronasPublicadasTelaState extends State<CaronasPublicadasTela> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('Caronas publicadas'),
+        title: const Text('Suas caronas'),
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.text,
         elevation: 0,
-      ),
-      bottomNavigationBar: BarraNavegacaoHome(
-        currentIndex: 2,
-        onTap: (indice) =>
-            NavegacaoPrincipal.selecionar(context, indice, indiceAtual: 2),
       ),
       body: SafeArea(
         child: RefreshIndicator(
@@ -87,7 +85,7 @@ class _CaronasPublicadasTelaState extends State<CaronasPublicadasTela> {
             padding: const EdgeInsets.all(24),
             children: [
               const Text(
-                'Toque em uma carona para editar ou ver as solicitações.',
+                'Próximas caronas que você publicou.',
                 style: TextStyle(color: AppColors.text, fontSize: 15),
               ),
               const SizedBox(height: 16),

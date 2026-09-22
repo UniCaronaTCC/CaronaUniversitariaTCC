@@ -1,4 +1,5 @@
 import { ConfigService } from '@nestjs/config';
+import { ServiceUnavailableException } from '@nestjs/common';
 import { createClient } from '@supabase/supabase-js';
 
 import { SupabaseAuthService } from './supabase-auth.service';
@@ -60,6 +61,14 @@ describe('SupabaseAuthService', () => {
     await expect(
       criarService().buscarUsuario('token-invalido'),
     ).resolves.toBeNull();
+  });
+
+  it('não transforma falha de conexão em token inválido', async () => {
+    getUser.mockRejectedValue(new Error('falha de rede'));
+
+    await expect(
+      criarService().buscarUsuario('token-valido'),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 
   it('mantém o login antigo quando o Supabase não está configurado', async () => {

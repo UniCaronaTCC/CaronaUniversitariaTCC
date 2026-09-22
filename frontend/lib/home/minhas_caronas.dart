@@ -14,13 +14,21 @@ import '../widgets/card_solicitacao_recebida.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/dialogo_avaliacao.dart';
 import '../widgets/dialogo_cancelamento.dart';
-import 'caronas_publicadas.dart';
 import 'pagamento_pix.dart';
+
+typedef CarregarSolicitacoes = Future<Map<String, dynamic>> Function();
 
 class MinhasCaronasTela extends StatefulWidget {
   final PagamentoService? pagamentoService;
+  final CarregarSolicitacoes? carregarRecebidas;
+  final CarregarSolicitacoes? carregarEnviadas;
 
-  const MinhasCaronasTela({super.key, this.pagamentoService});
+  const MinhasCaronasTela({
+    super.key,
+    this.pagamentoService,
+    this.carregarRecebidas,
+    this.carregarEnviadas,
+  });
 
   @override
   State<MinhasCaronasTela> createState() => _MinhasCaronasTelaState();
@@ -48,8 +56,8 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
     });
 
     final resultados = await Future.wait([
-      SolicitacaoService.listarRecebidas(),
-      SolicitacaoService.listarEnviadas(),
+      widget.carregarRecebidas?.call() ?? SolicitacaoService.listarRecebidas(),
+      widget.carregarEnviadas?.call() ?? SolicitacaoService.listarEnviadas(),
     ]);
 
     if (!mounted) {
@@ -77,34 +85,29 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
       return;
     }
 
-    setState(() {
-      carregando = false;
-      solicitacoesRecebidas =
-          _listaTipada<SolicitacaoRecebida>(resultados[0]['dados'])
-              .where(
-                (solicitacao) =>
-                    !solicitacao.caronaFinalizada && !solicitacao.cancelada,
-              )
-              .toList();
-      solicitacoesEnviadas =
-          _listaTipada<SolicitacaoEnviada>(resultados[1]['dados'])
-              .where(
-                (solicitacao) =>
-                    !solicitacao.caronaFinalizada && !solicitacao.cancelada,
-              )
-              .toList();
-    });
-  }
+    final recebidas = _listaTipada<SolicitacaoRecebida>(resultados[0]['dados']);
+    final enviadas = _listaTipada<SolicitacaoEnviada>(resultados[1]['dados']);
 
-  Future<void> abrirPublicadas() async {
-    await Navigator.push<void>(
-      context,
-      MaterialPageRoute(builder: (_) => const CaronasPublicadasTela()),
+    SolicitacaoService.sincronizarTotalSolicitacoesPendentes(
+      recebidas,
+      enviadas: enviadas,
     );
 
-    if (mounted) {
-      await carregarDados();
-    }
+    setState(() {
+      carregando = false;
+      solicitacoesRecebidas = recebidas
+          .where(
+            (solicitacao) =>
+                !solicitacao.caronaFinalizada && !solicitacao.cancelada,
+          )
+          .toList();
+      solicitacoesEnviadas = enviadas
+          .where(
+            (solicitacao) =>
+                !solicitacao.caronaFinalizada && !solicitacao.cancelada,
+          )
+          .toList();
+    });
   }
 
   Future<void> responder(SolicitacaoRecebida solicitacao, String status) async {
@@ -247,6 +250,13 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
 
   @override
   Widget build(BuildContext context) {
+    final totalPendentes = solicitacoesRecebidas
+        .where((solicitacao) => solicitacao.status == 'PENDENTE')
+        .length;
+    final totalAceitas = solicitacoesEnviadas
+        .where((solicitacao) => solicitacao.aceiteAguardandoAcao)
+        .length;
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -256,18 +266,38 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
           backgroundColor: AppColors.background,
           foregroundColor: AppColors.text,
           elevation: 0,
-          actions: [
-            TextButton.icon(
-              onPressed: abrirPublicadas,
-              icon: const Icon(Icons.directions_car_outlined, size: 20),
-              label: const Text('Publicadas'),
-            ),
-            const SizedBox(width: 8),
-          ],
-          bottom: const TabBar(
+          bottom: TabBar(
             tabs: [
-              Tab(text: 'Pedidos'),
-              Tab(text: 'Solicitações'),
+              Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Recebidas'),
+                    if (totalPendentes > 0) ...[
+                      const SizedBox(width: 8),
+                      Badge.count(
+                        count: totalPendentes,
+                        backgroundColor: AppColors.primary,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              Tab(
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Text('Enviadas'),
+                    if (totalAceitas > 0) ...[
+                      const SizedBox(width: 8),
+                      Badge.count(
+                        count: totalAceitas,
+                        backgroundColor: AppColors.primary,
+                      ),
+                    ],
+                  ],
+                ),
+              ),
             ],
           ),
         ),
@@ -279,7 +309,7 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
         body: SafeArea(
           child: carregando || mensagemErro != null
               ? _estadoGeral()
-              : TabBarView(children: [_abaPedidos(), _abaSolicitacoes()]),
+              : TabBarView(children: [_abaRecebidas(), _abaEnviadas()]),
         ),
       ),
     );
@@ -309,7 +339,7 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
     );
   }
 
-  Widget _abaSolicitacoes() {
+  Widget _abaRecebidas() {
     return RefreshIndicator(
       onRefresh: carregarDados,
       child: ListView(
@@ -332,7 +362,7 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
 
     return [
       const Text(
-        'Pedidos de passageiros nas caronas que você publicou.',
+        'Solicitações de passageiros para suas caronas.',
         style: TextStyle(color: AppColors.text, fontSize: 15),
       ),
       const SizedBox(height: 16),
@@ -354,7 +384,7 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
     ];
   }
 
-  Widget _abaPedidos() {
+  Widget _abaEnviadas() {
     return RefreshIndicator(
       onRefresh: carregarDados,
       child: ListView(
@@ -362,7 +392,7 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
         padding: const EdgeInsets.all(24),
         children: [
           const Text(
-            'Pedidos de vaga que você enviou para outros motoristas.',
+            'Solicitações que você enviou como passageiro.',
             style: TextStyle(color: AppColors.text, fontSize: 15),
           ),
           const SizedBox(height: 16),

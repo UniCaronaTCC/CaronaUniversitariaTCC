@@ -86,6 +86,15 @@ class SolicitacaoEnviada {
       !caronaFinalizada &&
       !cancelada;
 
+  bool get aceiteAguardandoAcao =>
+      status == 'ACEITA' &&
+      !pagamentoConfirmado &&
+      !caronaFinalizada &&
+      !cancelada;
+
+  bool get pagamentoRecorrenteIndisponivel =>
+      aceiteAguardandoAcao && recorrente;
+
   bool get podeCancelar =>
       !caronaFinalizada &&
       !cancelada &&

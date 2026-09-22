@@ -17,10 +17,12 @@ import 'ofertar_carona.dart';
 
 class DetalhesCaronaTela extends StatefulWidget {
   final Carona carona;
+  final int? indiceNavegacaoOrigem;
 
   const DetalhesCaronaTela({
     super.key,
     required this.carona,
+    this.indiceNavegacaoOrigem,
   });
 
   @override
@@ -81,7 +83,8 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
     return idUsuario != null && idUsuario == caronaAtual.idMotorista;
   }
 
-  int get indiceNavegacao => usuarioEhMotorista ? 2 : 0;
+  int get indiceNavegacao =>
+      widget.indiceNavegacaoOrigem ?? (usuarioEhMotorista ? 2 : 0);
 
   Future<void> solicitarVaga() async {
     final escolha = await _selecionarPontoEmbarque();

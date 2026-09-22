@@ -13,7 +13,9 @@ import '../widgets/botao_acao_home.dart';
 import '../widgets/card_carona_disponivel.dart';
 import '../widgets/card_destino_home.dart';
 import '../widgets/componentes_padrao.dart';
+import '../widgets/secao_caronas_publicadas.dart';
 import 'buscar_carona.dart';
+import 'caronas_publicadas.dart';
 import 'detalhes_carona.dart';
 import 'minhas_caronas.dart';
 import 'ofertar_carona.dart';
@@ -33,16 +35,26 @@ class _TelaInicialState extends State<TelaInicial> {
   final EnderecoService enderecoService = EnderecoService();
 
   List<Carona> caronas = [];
+  List<Carona> minhasCaronas = [];
   bool carregando = true;
+  bool carregandoMinhasCaronas = true;
   String? mensagemErro;
+  String? mensagemErroMinhasCaronas;
   LocalizacaoSelecionada? destinoSelecionado;
   String? cidadeAtual;
 
   @override
   void initState() {
     super.initState();
-    carregarCaronas();
+    carregarConteudo();
     carregarCidadeAtual();
+  }
+
+  Future<void> carregarConteudo() async {
+    await Future.wait([
+      carregarCaronas(),
+      carregarMinhasCaronas(),
+    ]);
   }
 
   Future<void> carregarCidadeAtual() async {
@@ -95,6 +107,41 @@ class _TelaInicialState extends State<TelaInicial> {
     });
   }
 
+  Future<void> carregarMinhasCaronas() async {
+    setState(() {
+      carregandoMinhasCaronas = true;
+      mensagemErroMinhasCaronas = null;
+    });
+
+    final resultado = await CaronaService.listarMinhasCaronas();
+
+    if (!mounted) {
+      return;
+    }
+
+    final dados = resultado['dados'];
+
+    if (resultado['sucesso'] == true && dados is List<Carona>) {
+      final caronasAtivas = dados
+          .where((carona) => !carona.finalizada)
+          .toList()
+        ..sort((a, b) => a.dataInicio.compareTo(b.dataInicio));
+
+      setState(() {
+        minhasCaronas = caronasAtivas;
+        carregandoMinhasCaronas = false;
+      });
+      return;
+    }
+
+    setState(() {
+      carregandoMinhasCaronas = false;
+      mensagemErroMinhasCaronas =
+          resultado['mensagem']?.toString() ??
+          'Não foi possível carregar suas caronas';
+    });
+  }
+
   Future<void> abrirBusca() async {
     await Navigator.push(
       context,
@@ -121,7 +168,7 @@ class _TelaInicialState extends State<TelaInicial> {
 
     // Atualiza imediatamente depois de criar uma oferta.
     if (caronaCriada == true) {
-      await carregarCaronas();
+      await carregarConteudo();
     }
   }
 
@@ -152,6 +199,94 @@ class _TelaInicialState extends State<TelaInicial> {
     );
   }
 
+  Future<void> abrirCaronaPublicada(Carona carona) async {
+    final alterada = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DetalhesCaronaTela(
+          carona: carona,
+          indiceNavegacaoOrigem: 0,
+        ),
+      ),
+    );
+
+    if (alterada == true) {
+      await carregarConteudo();
+    }
+  }
+
+  Future<void> abrirTodasCaronasPublicadas() async {
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(builder: (_) => const CaronasPublicadasTela()),
+    );
+
+    if (mounted) {
+      await carregarMinhasCaronas();
+    }
+  }
+
+  Future<void> editarCaronaPublicada(Carona carona) async {
+    final alterada = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OfertarCaronaTela(
+          caronaParaEditar: carona,
+          indiceNavegacao: 0,
+        ),
+      ),
+    );
+
+    if (alterada == true) {
+      await carregarConteudo();
+    }
+  }
+
+  Future<void> cancelarCaronaPublicada(Carona carona) async {
+    final confirmou = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancelar carona?'),
+        content: const Text(
+          'A carona deixará de aparecer para os passageiros.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('VOLTAR'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('CANCELAR CARONA'),
+          ),
+        ],
+      ),
+    );
+
+    if (!mounted || confirmou != true) {
+      return;
+    }
+
+    final resultado = await CaronaService.excluirCarona(carona.id);
+
+    if (!mounted) {
+      return;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          resultado['mensagem']?.toString() ??
+              'Não foi possível cancelar a carona',
+        ),
+      ),
+    );
+
+    if (resultado['sucesso'] == true) {
+      await carregarConteudo();
+    }
+  }
+
   Future<void> navegarBarraInferior(int index) async {
     if (index != 2) {
       await NavegacaoPrincipal.selecionar(context, index, indiceAtual: 0);
@@ -164,7 +299,7 @@ class _TelaInicialState extends State<TelaInicial> {
     );
 
     // Atualiza a Home caso uma solicitação tenha sido respondida.
-    await carregarCaronas();
+    await carregarConteudo();
   }
 
   @override
@@ -183,7 +318,7 @@ class _TelaInicialState extends State<TelaInicial> {
       bottomNavigationBar: BarraNavegacaoHome(onTap: navegarBarraInferior),
       body: SafeArea(
         child: RefreshIndicator(
-          onRefresh: carregarCaronas,
+          onRefresh: carregarConteudo,
           child: SingleChildScrollView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(24),
@@ -240,6 +375,22 @@ class _TelaInicialState extends State<TelaInicial> {
                   onPressed: abrirOferta,
                 ),
                 const SizedBox(height: 36),
+
+                if (carregandoMinhasCaronas ||
+                    mensagemErroMinhasCaronas != null ||
+                    minhasCaronas.isNotEmpty) ...[
+                  SecaoCaronasPublicadas(
+                    caronas: minhasCaronas,
+                    carregando: carregandoMinhasCaronas,
+                    mensagemErro: mensagemErroMinhasCaronas,
+                    onTentarNovamente: carregarMinhasCaronas,
+                    onVerTodas: abrirTodasCaronasPublicadas,
+                    onAbrirCarona: abrirCaronaPublicada,
+                    onEditarCarona: editarCaronaPublicada,
+                    onCancelarCarona: cancelarCaronaPublicada,
+                  ),
+                  const SizedBox(height: 36),
+                ],
 
                 Row(
                   children: [
