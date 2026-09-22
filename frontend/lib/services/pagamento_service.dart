@@ -48,14 +48,13 @@ class PagamentoService {
     Future<http.Response> Function(String token) enviar, {
     required String mensagemPadrao,
   }) async {
-    final token = AuthService.tokenUsuarioLogado;
-
-    if (token == null) {
-      return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
-    }
-
     try {
-      final resposta = await enviar(token);
+      final resposta = await AuthService.enviarComToken(enviar);
+
+      if (resposta == null) {
+        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+      }
+
       final corpo = _decodificarResposta(resposta);
 
       if (resposta.statusCode >= 200 && resposta.statusCode < 300) {

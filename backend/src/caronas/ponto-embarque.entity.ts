@@ -49,13 +49,9 @@ export class PontoEmbarque {
   })
   ordem: number = 1;
 
-  @ManyToOne(
-    () => Carona,
-    (carona) => carona.pontosEmbarque,
-    {
-      onDelete: 'CASCADE',
-    },
-  )
+  @ManyToOne(() => Carona, (carona) => carona.pontosEmbarque, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'id_carona' })
   carona!: Carona;
 }

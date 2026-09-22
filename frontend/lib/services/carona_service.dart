@@ -21,18 +21,17 @@ class CaronaService {
 
   static Future<Map<String, dynamic>> _listarCaronas(String rota) async {
     try {
-      final token = AuthService.tokenUsuarioLogado;
+      final url = Uri.parse('${ApiConfig.baseUrl}/$rota');
+      final resposta = await AuthService.enviarComToken(
+        (token) => http.get(
+          url,
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
 
-      if (token == null) {
+      if (resposta == null) {
         return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
       }
-
-      final url = Uri.parse('${ApiConfig.baseUrl}/$rota');
-
-      final resposta = await http.get(
-        url,
-        headers: {'Authorization': 'Bearer $token'},
-      );
 
       final corpo = _decodificarResposta(resposta);
 
@@ -58,7 +57,7 @@ class CaronaService {
       }
 
       if (resposta.statusCode == 401) {
-        AuthService.sair();
+        await AuthService.sair();
 
         return {
           'sucesso': false,
@@ -104,20 +103,9 @@ class CaronaService {
     String? observacoes,
   }) async {
     try {
-      final token = AuthService.tokenUsuarioLogado;
-
-      if (token == null) {
-        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
-      }
-
       final url = Uri.parse(
         '${ApiConfig.baseUrl}/caronas${idCarona == null ? '' : '/$idCarona'}',
       );
-
-      final headers = {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $token',
-      };
 
       final corpoRequisicao = jsonEncode({
         'origem': origem,
@@ -145,9 +133,20 @@ class CaronaService {
         'observacoes': observacoes,
       });
 
-      final resposta = idCarona == null
-          ? await http.post(url, headers: headers, body: corpoRequisicao)
-          : await http.patch(url, headers: headers, body: corpoRequisicao);
+      final resposta = await AuthService.enviarComToken((token) {
+        final headers = {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        };
+
+        return idCarona == null
+            ? http.post(url, headers: headers, body: corpoRequisicao)
+            : http.patch(url, headers: headers, body: corpoRequisicao);
+      });
+
+      if (resposta == null) {
+        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+      }
 
       final corpo = _decodificarResposta(resposta);
 
@@ -156,7 +155,7 @@ class CaronaService {
       }
 
       if (resposta.statusCode == 401) {
-        AuthService.sair();
+        await AuthService.sair();
 
         return {
           'sucesso': false,
@@ -178,16 +177,16 @@ class CaronaService {
 
   static Future<Map<String, dynamic>> excluirCarona(int idCarona) async {
     try {
-      final token = AuthService.tokenUsuarioLogado;
+      final resposta = await AuthService.enviarComToken(
+        (token) => http.delete(
+          Uri.parse('${ApiConfig.baseUrl}/caronas/$idCarona'),
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
 
-      if (token == null) {
+      if (resposta == null) {
         return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
       }
-
-      final resposta = await http.delete(
-        Uri.parse('${ApiConfig.baseUrl}/caronas/$idCarona'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
 
       final corpo = _decodificarResposta(resposta);
 
@@ -199,7 +198,7 @@ class CaronaService {
       }
 
       if (resposta.statusCode == 401) {
-        AuthService.sair();
+        await AuthService.sair();
       }
 
       return {

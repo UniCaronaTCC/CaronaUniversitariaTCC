@@ -119,6 +119,35 @@ class CardSolicitacaoEnviada extends StatelessWidget {
                 ),
               ),
             ],
+            if (solicitacao.pagamentoRecorrenteIndisponivel) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF7F3F8),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: const Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: AppColors.primary,
+                      size: 20,
+                    ),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Pagamento Pix ainda não está disponível para '
+                        'caronas recorrentes.',
+                        style: TextStyle(color: AppColors.text, height: 1.35),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             if (solicitacao.podeCancelar && onCancelar != null) ...[
               const Divider(height: 30),
               SizedBox(

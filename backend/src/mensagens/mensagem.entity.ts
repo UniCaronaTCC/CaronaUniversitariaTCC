@@ -32,4 +32,7 @@ export class Mensagem {
 
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm!: Date;
+
+  @Column({ name: 'lida_em', type: 'timestamptz', nullable: true })
+  lidaEm!: Date | null;
 }

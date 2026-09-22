@@ -53,6 +53,47 @@ class AuthService {
     }
   }
 
+  static Future<String?> renovarSessao() async {
+    final novoToken = await SupabaseAuthService.renovarSessao();
+
+    if (novoToken == null) {
+      return null;
+    }
+
+    tokenUsuarioLogado = novoToken;
+
+    final usuario = usuarioLogado;
+    if (usuario != null) {
+      await SessaoService.salvar(novoToken, usuario);
+    }
+
+    return novoToken;
+  }
+
+  static Future<http.Response?> enviarComToken(
+    Future<http.Response> Function(String token) enviar,
+  ) async {
+    final token = tokenUsuarioLogado;
+
+    if (token == null) {
+      return null;
+    }
+
+    var resposta = await enviar(token);
+
+    if (resposta.statusCode != 401) {
+      return resposta;
+    }
+
+    final novoToken = await renovarSessao();
+    if (novoToken == null) {
+      return resposta;
+    }
+
+    resposta = await enviar(novoToken);
+    return resposta;
+  }
+
   static Future<Map<String, dynamic>> fazerLogin(
     String email,
     String senha,
@@ -167,18 +208,18 @@ class AuthService {
   }
 
   static Future<Map<String, dynamic>> buscarPerfil() async {
-    final token = tokenUsuarioLogado;
-
-    if (token == null) {
-      return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
-    }
-
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/usuarios/perfil');
-      final resposta = await http.get(
-        url,
-        headers: {'Authorization': 'Bearer $token'},
+      final resposta = await enviarComToken(
+        (token) => http.get(
+          url,
+          headers: {'Authorization': 'Bearer $token'},
+        ),
       );
+
+      if (resposta == null) {
+        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+      }
 
       final Map<String, dynamic> respostaJson = resposta.body.isNotEmpty
           ? jsonDecode(resposta.body)
@@ -187,7 +228,7 @@ class AuthService {
       if (resposta.statusCode == 200 &&
           respostaJson['dados'] is Map<String, dynamic>) {
         usuarioLogado = Map<String, dynamic>.from(respostaJson['dados']);
-        await SessaoService.salvar(token, usuarioLogado!);
+        await SessaoService.salvar(tokenUsuarioLogado!, usuarioLogado!);
 
         return {'sucesso': true, 'dados': usuarioLogado};
       }

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uni_carona/home/conversa_detalhe.dart';
@@ -19,6 +21,25 @@ void main() {
     horario: '19:00:00',
     criadoEm: DateTime(2026, 9, 1),
   );
+
+  List<Mensagem> criarHistorico(int quantidade) {
+    return List.generate(
+      quantidade,
+      (indice) => Mensagem(
+        id: indice + 1,
+        conteudo: 'Mensagem ${indice + 1}',
+        criadoEm: DateTime(2026, 9, 1, 18, indice),
+        idRemetente: indice.isEven ? 1 : 2,
+      ),
+    );
+  }
+
+  ScrollPosition posicaoLista(WidgetTester tester) {
+    final lista = tester.widget<ListView>(
+      find.byKey(const ValueKey('lista-mensagens')),
+    );
+    return lista.controller!.position;
+  }
 
   testWidgets('mostra histórico e envia nova mensagem', (tester) async {
     var textoEnviado = '';
@@ -66,6 +87,268 @@ void main() {
 
     expect(textoEnviado, 'Estou chegando');
     expect(find.text('Estou chegando'), findsOneWidget);
+    expect(find.text('Enviada'), findsOneWidget);
+  });
+
+  testWidgets('mostra envio em andamento na própria mensagem', (tester) async {
+    final resposta = Completer<Map<String, dynamic>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversaDetalheTela(
+          conversa: conversa,
+          idUsuario: 1,
+          usarRealtime: false,
+          carregarMensagens: () async => {
+            'sucesso': true,
+            'dados': <Mensagem>[],
+          },
+          enviarMensagem: (_) => resposta.future,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'Mensagem pendente');
+    await tester.tap(find.byTooltip('Enviar mensagem'));
+    await tester.pump();
+
+    expect(find.text('Mensagem pendente'), findsOneWidget);
+    expect(find.text('Enviando'), findsOneWidget);
+    expect(find.widgetWithText(TextField, 'Mensagem pendente'), findsNothing);
+
+    resposta.complete({
+      'sucesso': true,
+      'dados': Mensagem(
+        id: 3,
+        conteudo: 'Mensagem pendente',
+        criadoEm: DateTime(2026, 9, 1, 18, 10),
+        idRemetente: 1,
+      ),
+    });
+    await tester.pumpAndSettle();
+
+    expect(find.text('Enviando'), findsNothing);
+    expect(find.text('Enviada'), findsOneWidget);
+  });
+
+  testWidgets('mantém mensagem com erro e permite tentar novamente', (
+    tester,
+  ) async {
+    var tentativas = 0;
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversaDetalheTela(
+          conversa: conversa,
+          idUsuario: 1,
+          usarRealtime: false,
+          carregarMensagens: () async => {
+            'sucesso': true,
+            'dados': <Mensagem>[],
+          },
+          enviarMensagem: (texto) async {
+            tentativas++;
+            if (tentativas == 1) {
+              return {'sucesso': false, 'mensagem': 'Sem conexão'};
+            }
+
+            return {
+              'sucesso': true,
+              'dados': Mensagem(
+                id: 4,
+                conteudo: texto,
+                criadoEm: DateTime(2026, 9, 1, 18, 15),
+                idRemetente: 1,
+              ),
+            };
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.enterText(find.byType(TextField), 'Tente de novo');
+    await tester.tap(find.byTooltip('Enviar mensagem'));
+    await tester.pumpAndSettle();
+
+    expect(tentativas, 1);
+    expect(find.text('Tente de novo'), findsOneWidget);
+    expect(find.text('Não enviada'), findsOneWidget);
+    expect(find.text('Tentar novamente'), findsOneWidget);
+
+    await tester.tap(find.text('Tentar novamente'));
+    await tester.pumpAndSettle();
+
+    expect(tentativas, 2);
+    expect(find.text('Não enviada'), findsNothing);
+    expect(find.text('Tentar novamente'), findsNothing);
+    expect(find.text('Enviada'), findsOneWidget);
+  });
+
+  testWidgets('abre uma conversa longa na mensagem mais recente', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversaDetalheTela(
+          conversa: conversa,
+          idUsuario: 1,
+          usarRealtime: false,
+          carregarMensagens: () async => {
+            'sucesso': true,
+            'dados': criarHistorico(30),
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final posicao = posicaoLista(tester);
+    expect(posicao.pixels, closeTo(posicao.maxScrollExtent, 0.1));
+    expect(find.text('Mensagem 30'), findsOneWidget);
+  });
+
+  testWidgets('volta ao final ao enviar uma nova mensagem', (tester) async {
+    final resposta = Completer<Map<String, dynamic>>();
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversaDetalheTela(
+          conversa: conversa,
+          idUsuario: 1,
+          usarRealtime: false,
+          carregarMensagens: () async => {
+            'sucesso': true,
+            'dados': criarHistorico(30),
+          },
+          enviarMensagem: (_) => resposta.future,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    posicaoLista(tester).jumpTo(0);
+    await tester.enterText(find.byType(TextField), 'Nova mensagem');
+    await tester.tap(find.byTooltip('Enviar mensagem'));
+    await tester.pump();
+
+    resposta.complete({
+      'sucesso': true,
+      'dados': Mensagem(
+        id: 31,
+        conteudo: 'Nova mensagem',
+        criadoEm: DateTime(2026, 9, 1, 18, 30),
+        idRemetente: 1,
+      ),
+    });
+    await tester.pumpAndSettle();
+
+    final posicao = posicaoLista(tester);
+    expect(posicao.pixels, closeTo(posicao.maxScrollExtent, 0.1));
+    expect(find.text('Nova mensagem'), findsOneWidget);
+  });
+
+  testWidgets('separa mensagens por data e formata os horários', (
+    tester,
+  ) async {
+    final agora = DateTime.now();
+    final ontem = DateTime(agora.year, agora.month, agora.day - 1, 23, 8);
+    final hojeDeManha = DateTime(agora.year, agora.month, agora.day, 8, 5);
+    final hojeMaisTarde = DateTime(agora.year, agora.month, agora.day, 9, 7);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversaDetalheTela(
+          conversa: conversa,
+          idUsuario: 1,
+          usarRealtime: false,
+          carregarMensagens: () async => {
+            'sucesso': true,
+            'dados': [
+              Mensagem(
+                id: 1,
+                conteudo: 'Mensagem antiga',
+                criadoEm: DateTime(2024, 5, 2, 7, 4),
+                idRemetente: 2,
+              ),
+              Mensagem(
+                id: 2,
+                conteudo: 'Mensagem de ontem',
+                criadoEm: ontem,
+                idRemetente: 2,
+              ),
+              Mensagem(
+                id: 3,
+                conteudo: 'Bom dia',
+                criadoEm: hojeDeManha,
+                idRemetente: 2,
+              ),
+              Mensagem(
+                id: 4,
+                conteudo: 'Tudo certo',
+                criadoEm: hojeMaisTarde,
+                idRemetente: 1,
+              ),
+            ],
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('2 de maio de 2024'), findsOneWidget);
+    expect(find.text('Ontem'), findsOneWidget);
+    expect(find.text('Hoje'), findsOneWidget);
+    expect(find.text('07:04'), findsOneWidget);
+    expect(find.text('23:08'), findsOneWidget);
+    expect(find.text('08:05'), findsOneWidget);
+    expect(find.text('09:07'), findsOneWidget);
+  });
+
+  testWidgets('orienta como iniciar uma conversa vazia', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversaDetalheTela(
+          conversa: conversa,
+          idUsuario: 1,
+          usarRealtime: false,
+          carregarMensagens: () async => {
+            'sucesso': true,
+            'dados': <Mensagem>[],
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Comece a conversa'), findsOneWidget);
+    expect(
+      find.text('Envie uma mensagem para combinar os detalhes da carona.'),
+      findsOneWidget,
+    );
+    expect(find.byType(TextField), findsOneWidget);
+  });
+
+  testWidgets('explica falha ao carregar mensagens', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversaDetalheTela(
+          conversa: conversa,
+          idUsuario: 1,
+          usarRealtime: false,
+          carregarMensagens: () async => {
+            'sucesso': false,
+            'mensagem': 'Sem conexão',
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Não foi possível carregar as mensagens'), findsOneWidget);
+    expect(find.text('Sem conexão'), findsOneWidget);
+    expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
   });
 
   testWidgets('conversa encerrada fica somente para leitura', (tester) async {
@@ -99,7 +382,17 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Esta conversa foi encerrada'), findsOneWidget);
+    expect(find.text('Conversa encerrada'), findsNWidgets(2));
+    expect(
+      find.text('Esta conversa foi encerrada antes do envio de mensagens.'),
+      findsOneWidget,
+    );
+    expect(
+      find.text(
+        'O histórico continua disponível, mas novas mensagens não podem ser enviadas.',
+      ),
+      findsOneWidget,
+    );
     expect(find.byType(TextField), findsNothing);
     expect(find.byTooltip('Enviar mensagem'), findsNothing);
   });

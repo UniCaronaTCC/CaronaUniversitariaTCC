@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
@@ -9,6 +8,7 @@ import '../utils/formatador_moeda.dart';
 import 'botao_acao_home.dart';
 import 'campo_recorrencia_carona.dart';
 import 'campo_texto_carona.dart';
+import 'seletor_quantidade_passageiros.dart';
 
 class FormularioOfertarCarona extends StatelessWidget {
   final String titulo;
@@ -251,13 +251,7 @@ class FormularioOfertarCarona extends StatelessWidget {
 
         const SizedBox(height: 16),
 
-        CampoTextoCarona(
-          label: 'Quantidade de vagas',
-          icone: Icons.people_outline,
-          controller: vagasController,
-          keyboardType: TextInputType.number,
-          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-        ),
+        SeletorQuantidadePassageiros(controller: vagasController),
 
         const SizedBox(height: 16),
 

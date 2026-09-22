@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { LessThan, Repository } from 'typeorm';
+import { IsNull, LessThan, Not, Repository } from 'typeorm';
 
 import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 import { Conversa } from './conversa.entity';
@@ -84,14 +84,28 @@ export class MensagensService {
       .getMany();
 
     const itens = await Promise.all(
-      conversas.map(async (conversa) => ({
-        conversa,
-        ultimaMensagem: await this.mensagensRepository.findOne({
-          where: { conversa: { idConversa: conversa.idConversa } },
-          relations: { remetente: true },
-          order: { criadoEm: 'DESC' },
-        }),
-      })),
+      conversas.map(async (conversa) => {
+        const [ultimaMensagem, mensagensNaoLidas] = await Promise.all([
+          this.mensagensRepository.findOne({
+            where: { conversa: { idConversa: conversa.idConversa } },
+            relations: { remetente: true },
+            order: { criadoEm: 'DESC' },
+          }),
+          this.mensagensRepository.count({
+            where: {
+              conversa: { idConversa: conversa.idConversa },
+              remetente: { idUsuario: Not(idUsuario) },
+              lidaEm: IsNull(),
+            },
+          }),
+        ]);
+
+        return {
+          conversa,
+          ultimaMensagem,
+          mensagensNaoLidas,
+        };
+      }),
     );
 
     return itens.sort((itemA, itemB) => {
@@ -109,6 +123,15 @@ export class MensagensService {
   ): Promise<Mensagem[]> {
     await this.buscarConversaPermitida(idConversa, idUsuario);
 
+    await this.mensagensRepository
+      .createQueryBuilder()
+      .update(Mensagem)
+      .set({ lidaEm: () => 'CURRENT_TIMESTAMP' })
+      .where('id_conversa = :idConversa', { idConversa })
+      .andWhere('id_remetente <> :idUsuario', { idUsuario })
+      .andWhere('lida_em IS NULL')
+      .execute();
+
     const mensagens = await this.mensagensRepository.find({
       where: {
         conversa: { idConversa },
@@ -120,6 +143,23 @@ export class MensagensService {
     });
 
     return mensagens.reverse();
+  }
+
+  contarMensagensNaoLidas(idUsuario: number): Promise<number> {
+    return this.mensagensRepository
+      .createQueryBuilder('mensagem')
+      .innerJoin('mensagem.conversa', 'conversa')
+      .innerJoin('conversa.solicitacao', 'solicitacao')
+      .innerJoin('solicitacao.carona', 'carona')
+      .innerJoin('carona.usuario', 'motorista')
+      .innerJoin('solicitacao.passageiro', 'passageiro')
+      .where(
+        '(motorista.idUsuario = :idUsuario OR passageiro.idUsuario = :idUsuario)',
+        { idUsuario },
+      )
+      .andWhere('mensagem.remetente <> :idUsuario', { idUsuario })
+      .andWhere('mensagem.lidaEm IS NULL')
+      .getCount();
   }
 
   async enviarMensagem(

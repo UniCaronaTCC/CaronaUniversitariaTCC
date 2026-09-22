@@ -215,7 +215,9 @@ void main() {
     expect(acompanhou, isTrue);
   });
 
-  testWidgets('nao oferece Pix para carona recorrente', (tester) async {
+  testWidgets('explica indisponibilidade do Pix em carona recorrente', (
+    tester,
+  ) async {
     final solicitacao = SolicitacaoEnviada(
       id: 9,
       status: 'ACEITA',
@@ -241,6 +243,12 @@ void main() {
     );
 
     expect(find.text('PAGAR COM PIX'), findsNothing);
+    expect(
+      find.text(
+        'Pagamento Pix ainda não está disponível para caronas recorrentes.',
+      ),
+      findsOneWidget,
+    );
   });
 
   test('mostra o prazo UTC no horário de Brasília', () {

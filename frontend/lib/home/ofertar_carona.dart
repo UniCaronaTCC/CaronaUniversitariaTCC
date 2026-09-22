@@ -60,6 +60,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   @override
   void initState() {
     super.initState();
+    vagasController.text = '1';
 
     final carona = widget.caronaParaEditar;
 

@@ -24,8 +24,10 @@ void main() {
       MaterialApp(
         home: EstadoConteudoPadrao(
           icone: Icons.cloud_off_outlined,
+          titulo: 'Falha no carregamento',
           mensagem: 'Erro ao carregar',
           textoBotao: 'Tentar novamente',
+          iconeBotao: Icons.refresh_rounded,
           onPressed: () {
             pressionado = true;
           },
@@ -34,7 +36,9 @@ void main() {
     );
 
     expect(find.byIcon(Icons.cloud_off_outlined), findsOneWidget);
+    expect(find.text('Falha no carregamento'), findsOneWidget);
     expect(find.text('Erro ao carregar'), findsOneWidget);
+    expect(find.byIcon(Icons.refresh_rounded), findsOneWidget);
 
     await tester.tap(find.text('Tentar novamente'));
 

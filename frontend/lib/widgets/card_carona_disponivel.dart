@@ -6,8 +6,14 @@ import '../models/carona.dart';
 class CardCaronaDisponivel extends StatelessWidget {
   final Carona carona;
   final VoidCallback? onTap;
+  final Widget? acaoCabecalho;
 
-  const CardCaronaDisponivel({super.key, required this.carona, this.onTap});
+  const CardCaronaDisponivel({
+    super.key,
+    required this.carona,
+    this.onTap,
+    this.acaoCabecalho,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -51,6 +57,10 @@ class CardCaronaDisponivel extends StatelessWidget {
                       fontWeight: FontWeight.bold,
                     ),
                   ),
+                  if (acaoCabecalho != null) ...[
+                    const SizedBox(width: 4),
+                    acaoCabecalho!,
+                  ],
                 ],
               ),
 

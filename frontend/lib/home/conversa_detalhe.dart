@@ -6,6 +6,7 @@ import '../models/conversa.dart';
 import '../models/mensagem.dart';
 import '../services/auth_service.dart';
 import '../services/mensagem_service.dart';
+import '../widgets/avatar_usuario.dart';
 import '../widgets/componentes_padrao.dart';
 
 typedef CarregarMensagens = Future<Map<String, dynamic>> Function();
@@ -31,7 +32,8 @@ class ConversaDetalheTela extends StatefulWidget {
   State<ConversaDetalheTela> createState() => _ConversaDetalheTelaState();
 }
 
-class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
+class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
+    with WidgetsBindingObserver {
   final TextEditingController campoMensagem = TextEditingController();
   final ScrollController scrollController = ScrollController();
 
@@ -40,6 +42,7 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
   bool enviando = false;
   String? mensagemErro;
   RealtimeChannel? canal;
+  int proximoIdTemporario = -1;
 
   int get idUsuarioAtual {
     if (widget.idUsuario != null) {
@@ -53,6 +56,7 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     carregarDados();
 
     if (widget.usarRealtime) {
@@ -62,10 +66,16 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     MensagemService.pararAcompanhamento(canal);
     campoMensagem.dispose();
     scrollController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeMetrics() {
+    rolarParaFinal();
   }
 
   Future<void> iniciarRealtime() async {
@@ -104,11 +114,19 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
 
     if (resultado['sucesso'] == true && resultado['dados'] is List) {
       setState(() {
-        mensagens = (resultado['dados'] as List).whereType<Mensagem>().toList();
+        final mensagensLocais = mensagens
+            .where(
+              (mensagem) => mensagem.estadoEnvio != EstadoEnvioMensagem.enviada,
+            )
+            .toList();
+        mensagens = [
+          ...(resultado['dados'] as List).whereType<Mensagem>(),
+          ...mensagensLocais,
+        ];
         carregando = false;
         mensagemErro = null;
       });
-      rolarParaFinal();
+      rolarParaFinal(animar: silencioso);
       return;
     }
 
@@ -128,57 +146,124 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
       return;
     }
 
-    setState(() => enviando = true);
+    final mensagemTemporaria = Mensagem(
+      id: proximoIdTemporario--,
+      conteudo: texto,
+      criadoEm: DateTime.now(),
+      idRemetente: idUsuarioAtual,
+      estadoEnvio: EstadoEnvioMensagem.enviando,
+    );
 
+    setState(() {
+      enviando = true;
+      campoMensagem.clear();
+      mensagens.add(mensagemTemporaria);
+    });
+    rolarParaFinal();
+
+    await _enviarMensagem(mensagemTemporaria);
+  }
+
+  Future<void> _enviarMensagem(Mensagem mensagemLocal) async {
     final resultado =
-        await (widget.enviarMensagem?.call(texto) ??
-            MensagemService.enviarMensagem(widget.conversa.id, texto));
+        await (widget.enviarMensagem?.call(mensagemLocal.conteudo) ??
+            MensagemService.enviarMensagem(
+              widget.conversa.id,
+              mensagemLocal.conteudo,
+            ));
 
     if (!mounted) {
       return;
     }
 
-    setState(() => enviando = false);
-
     if (resultado['sucesso'] == true && resultado['dados'] is Mensagem) {
       final mensagem = resultado['dados'] as Mensagem;
 
       setState(() {
-        if (!mensagens.any((item) => item.id == mensagem.id)) {
-          mensagens.add(mensagem);
-        }
-        campoMensagem.clear();
+        enviando = false;
+        mensagens.removeWhere(
+          (item) => item.id == mensagemLocal.id || item.id == mensagem.id,
+        );
+        mensagens.add(mensagem);
       });
       rolarParaFinal();
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          resultado['mensagem']?.toString() ?? 'Erro ao enviar mensagem',
-        ),
-      ),
-    );
+    setState(() {
+      enviando = false;
+      final indice = mensagens.indexWhere(
+        (item) => item.id == mensagemLocal.id,
+      );
+      if (indice >= 0) {
+        mensagens[indice] = mensagens[indice].copyWith(
+          estadoEnvio: EstadoEnvioMensagem.erro,
+        );
+      }
+    });
+    rolarParaFinal();
   }
 
-  void rolarParaFinal() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+  Future<void> reenviar(Mensagem mensagem) async {
+    if (enviando || widget.conversa.encerrada) {
+      return;
+    }
+
+    final indice = mensagens.indexWhere((item) => item.id == mensagem.id);
+    if (indice < 0) {
+      return;
+    }
+
+    final mensagemEmReenvio = mensagem.copyWith(
+      estadoEnvio: EstadoEnvioMensagem.enviando,
+    );
+    setState(() {
+      enviando = true;
+      mensagens[indice] = mensagemEmReenvio;
+    });
+    rolarParaFinal();
+
+    await _enviarMensagem(mensagemEmReenvio);
+  }
+
+  void rolarParaFinal({bool animar = true}) {
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted || !scrollController.hasClients) {
         return;
       }
 
-      scrollController.animateTo(
-        scrollController.position.maxScrollExtent,
+      final posicao = scrollController.position;
+      if (!posicao.hasContentDimensions) {
+        return;
+      }
+
+      if (!animar) {
+        scrollController.jumpTo(posicao.maxScrollExtent);
+        return;
+      }
+
+      await scrollController.animateTo(
+        posicao.maxScrollExtent,
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOut,
       );
+      await WidgetsBinding.instance.endOfFrame;
+
+      if (!mounted || !scrollController.hasClients) {
+        return;
+      }
+
+      final posicaoAtualizada = scrollController.position;
+      if (posicaoAtualizada.pixels != posicaoAtualizada.maxScrollExtent) {
+        scrollController.jumpTo(posicaoAtualizada.maxScrollExtent);
+      }
     });
   }
 
   @override
   Widget build(BuildContext context) {
     final nome = widget.conversa.nomeOutroParticipante(idUsuarioAtual);
+    final foto = widget.conversa.fotoOutroParticipante(idUsuarioAtual);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -187,23 +272,40 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
         foregroundColor: AppColors.text,
         elevation: 0,
         titleSpacing: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text(
-              nome,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+            AvatarUsuario(
+              key: const ValueKey('avatar-cabecalho-conversa'),
+              nome: nome,
+              urlFoto: foto,
+              raio: 18,
+              desativado: widget.conversa.encerrada,
             ),
-            Text(
-              widget.conversa.destino,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.black54,
-                fontSize: 12,
-                fontWeight: FontWeight.normal,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    nome,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    widget.conversa.destino,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 12,
+                      fontWeight: FontWeight.normal,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
@@ -224,37 +326,102 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
     if (carregando) {
       return const EstadoConteudoPadrao(
         carregando: true,
-        mensagem: 'Carregando mensagens...',
+        titulo: 'Carregando mensagens',
+        mensagem: 'Buscando o histórico desta conversa.',
       );
     }
 
     if (mensagemErro != null) {
       return EstadoConteudoPadrao(
         icone: Icons.cloud_off_outlined,
+        corIcone: const Color(0xFFB3261E),
+        titulo: 'Não foi possível carregar as mensagens',
         mensagem: mensagemErro!,
         textoBotao: 'Tentar novamente',
+        iconeBotao: Icons.refresh_rounded,
         onPressed: carregarDados,
       );
     }
 
     if (mensagens.isEmpty) {
-      return const EstadoConteudoPadrao(
-        icone: Icons.forum_outlined,
-        mensagem: 'Nenhuma mensagem ainda',
+      return EstadoConteudoPadrao(
+        icone: widget.conversa.encerrada
+            ? Icons.lock_outline
+            : Icons.forum_outlined,
+        corIcone: widget.conversa.encerrada
+            ? Colors.black45
+            : AppColors.primary,
+        titulo: widget.conversa.encerrada
+            ? 'Conversa encerrada'
+            : 'Comece a conversa',
+        mensagem: widget.conversa.encerrada
+            ? 'Esta conversa foi encerrada antes do envio de mensagens.'
+            : 'Envie uma mensagem para combinar os detalhes da carona.',
       );
     }
 
     return ListView.separated(
+      key: const ValueKey('lista-mensagens'),
       controller: scrollController,
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
       itemCount: mensagens.length,
       separatorBuilder: (_, _) => const SizedBox(height: 8),
-      itemBuilder: (context, index) => _bolhaMensagem(mensagens[index]),
+      itemBuilder: (context, index) => _itemMensagem(index),
+    );
+  }
+
+  Widget _itemMensagem(int index) {
+    final mensagem = mensagens[index];
+    final mostrarData =
+        index == 0 ||
+        !_mesmoDia(mensagens[index - 1].criadoEm, mensagem.criadoEm);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (mostrarData) _separadorData(mensagem.criadoEm),
+        _bolhaMensagem(mensagem),
+      ],
+    );
+  }
+
+  Widget _separadorData(DateTime data) {
+    return Padding(
+      key: ValueKey('separador-data-${data.year}-${data.month}-${data.day}'),
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          const Expanded(child: Divider(color: Color(0xFFE1E1E1))),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            child: Text(
+              _formatarData(data),
+              style: const TextStyle(
+                color: Colors.black54,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          const Expanded(child: Divider(color: Color(0xFFE1E1E1))),
+        ],
+      ),
     );
   }
 
   Widget _bolhaMensagem(Mensagem mensagem) {
     final enviada = mensagem.idRemetente == idUsuarioAtual;
+    final falhou = enviada && mensagem.estadoEnvio == EstadoEnvioMensagem.erro;
+    final corBolha = falhou
+        ? const Color(0xFFFFF1F1)
+        : enviada
+        ? AppColors.primary
+        : const Color(0xFFF0F0F0);
+    final corTexto = falhou
+        ? AppColors.text
+        : enviada
+        ? Colors.white
+        : AppColors.text;
 
     return Align(
       alignment: enviada ? Alignment.centerRight : Alignment.centerLeft,
@@ -264,7 +431,8 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
         ),
         padding: const EdgeInsets.fromLTRB(14, 10, 12, 7),
         decoration: BoxDecoration(
-          color: enviada ? AppColors.primary : const Color(0xFFF0F0F0),
+          color: corBolha,
+          border: falhou ? Border.all(color: const Color(0xFFD32F2F)) : null,
           borderRadius: BorderRadius.circular(16),
         ),
         child: Column(
@@ -272,24 +440,98 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
           children: [
             Text(
               mensagem.conteudo,
-              style: TextStyle(
-                color: enviada ? Colors.white : AppColors.text,
-                fontSize: 15,
-                height: 1.3,
-              ),
+              style: TextStyle(color: corTexto, fontSize: 15, height: 1.3),
             ),
             const SizedBox(height: 3),
-            Text(
-              _formatarHorario(mensagem.criadoEm),
-              style: TextStyle(
-                color: enviada ? Colors.white70 : Colors.black45,
-                fontSize: 10,
-              ),
-            ),
+            _rodapeMensagem(mensagem, enviada: enviada),
           ],
         ),
       ),
     );
+  }
+
+  Widget _rodapeMensagem(Mensagem mensagem, {required bool enviada}) {
+    if (!enviada) {
+      return Text(
+        _formatarHorario(mensagem.criadoEm),
+        style: const TextStyle(color: Colors.black45, fontSize: 10),
+      );
+    }
+
+    switch (mensagem.estadoEnvio) {
+      case EstadoEnvioMensagem.enviando:
+        return const Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox.square(
+              dimension: 10,
+              child: CircularProgressIndicator(
+                strokeWidth: 1.5,
+                color: Colors.white70,
+              ),
+            ),
+            SizedBox(width: 5),
+            Text(
+              'Enviando',
+              style: TextStyle(color: Colors.white70, fontSize: 10),
+            ),
+          ],
+        );
+      case EstadoEnvioMensagem.erro:
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          children: [
+            const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.error_outline, size: 13, color: Color(0xFFD32F2F)),
+                SizedBox(width: 4),
+                Text(
+                  'Não enviada',
+                  style: TextStyle(
+                    color: Color(0xFFD32F2F),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+            TextButton.icon(
+              key: ValueKey('reenviar-mensagem-${mensagem.id}'),
+              onPressed: enviando ? null : () => reenviar(mensagem),
+              style: TextButton.styleFrom(
+                foregroundColor: const Color(0xFFD32F2F),
+                minimumSize: Size.zero,
+                padding: const EdgeInsets.only(top: 4),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                textStyle: const TextStyle(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              icon: const Icon(Icons.refresh_rounded, size: 15),
+              label: const Text('Tentar novamente'),
+            ),
+          ],
+        );
+      case EstadoEnvioMensagem.enviada:
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              _formatarHorario(mensagem.criadoEm),
+              style: const TextStyle(color: Colors.white70, fontSize: 10),
+            ),
+            const SizedBox(width: 4),
+            const Icon(Icons.done_rounded, size: 13, color: Colors.white70),
+            const SizedBox(width: 2),
+            const Text(
+              'Enviada',
+              style: TextStyle(color: Colors.white70, fontSize: 10),
+            ),
+          ],
+        );
+    }
   }
 
   Widget _campoEnvio() {
@@ -348,19 +590,38 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
   Widget _avisoEncerrada() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.fromLTRB(20, 14, 20, 14),
       decoration: const BoxDecoration(
         color: Color(0xFFF3F3F3),
         border: Border(top: BorderSide(color: Color(0xFFE1E1E1))),
       ),
       child: const Row(
-        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(Icons.lock_outline, size: 18, color: Colors.black54),
-          SizedBox(width: 8),
-          Text(
-            'Esta conversa foi encerrada',
-            style: TextStyle(color: Colors.black54),
+          Icon(Icons.lock_outline, size: 20, color: Colors.black54),
+          SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Conversa encerrada',
+                  style: TextStyle(
+                    color: AppColors.text,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'O histórico continua disponível, mas novas mensagens não podem ser enviadas.',
+                  style: TextStyle(
+                    color: Colors.black54,
+                    fontSize: 12,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
@@ -370,5 +631,46 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela> {
   String _formatarHorario(DateTime data) {
     return '${data.hour.toString().padLeft(2, '0')}:'
         '${data.minute.toString().padLeft(2, '0')}';
+  }
+
+  bool _mesmoDia(DateTime primeira, DateTime segunda) {
+    return primeira.year == segunda.year &&
+        primeira.month == segunda.month &&
+        primeira.day == segunda.day;
+  }
+
+  String _formatarData(DateTime data) {
+    final agora = DateTime.now();
+    final hoje = DateTime(agora.year, agora.month, agora.day);
+    final diaDaMensagem = DateTime(data.year, data.month, data.day);
+    final diferenca = hoje.difference(diaDaMensagem).inDays;
+
+    if (diferenca == 0) {
+      return 'Hoje';
+    }
+    if (diferenca == 1) {
+      return 'Ontem';
+    }
+
+    const meses = [
+      'janeiro',
+      'fevereiro',
+      'março',
+      'abril',
+      'maio',
+      'junho',
+      'julho',
+      'agosto',
+      'setembro',
+      'outubro',
+      'novembro',
+      'dezembro',
+    ];
+    final dataFormatada = '${data.day} de ${meses[data.month - 1]}';
+
+    if (data.year == agora.year) {
+      return dataFormatada;
+    }
+    return '$dataFormatada de ${data.year}';
   }
 }

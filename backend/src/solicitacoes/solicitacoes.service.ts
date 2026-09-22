@@ -123,9 +123,7 @@ export class SolicitacoesService {
   ): Promise<DadosEmbarquePreparados> {
     if (dados.tipoPontoEmbarque === 'EXISTENTE') {
       if (!dados.idPontoEmbarque || !Number.isInteger(dados.idPontoEmbarque)) {
-        throw new BadRequestException(
-          'Selecione um ponto de embarque válido',
-        );
+        throw new BadRequestException('Selecione um ponto de embarque válido');
       }
 
       // Além de existir, o ponto precisa pertencer à carona solicitada.
@@ -338,8 +336,7 @@ export class SolicitacoesService {
             carona: { idCarona: solicitacao.carona.idCarona },
           });
 
-          solicitacao.pontoEmbarque =
-              await pontosRepository.save(novoPonto);
+          solicitacao.pontoEmbarque = await pontosRepository.save(novoPonto);
 
           /*
            * Mantém NOVO_SOLICITADO no histórico.
@@ -426,16 +423,11 @@ export class SolicitacoesService {
         solicitacao.status !== 'PENDENTE' &&
         solicitacao.status !== 'ACEITA'
       ) {
-        throw new ConflictException(
-          'Esta solicitação não pode ser cancelada',
-        );
+        throw new ConflictException('Esta solicitação não pode ser cancelada');
       }
 
       if (solicitacao.status === 'ACEITA') {
-        solicitacao.carona.vagas = Math.min(
-          solicitacao.carona.vagas + 1,
-          4,
-        );
+        solicitacao.carona.vagas = Math.min(solicitacao.carona.vagas + 1, 4);
 
         if (solicitacao.carona.status === 'LOTADA') {
           solicitacao.carona.status = 'ATIVA';

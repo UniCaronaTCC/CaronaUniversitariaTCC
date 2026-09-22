@@ -43,13 +43,23 @@ export class MensagensController {
 
     return {
       sucesso: true,
-      dados: itens.map(({ conversa, ultimaMensagem }) => ({
+      dados: itens.map(({ conversa, ultimaMensagem, mensagensNaoLidas }) => ({
         ...this.formatarConversa(conversa),
+        mensagensNaoLidas,
         ultimaMensagem: ultimaMensagem
           ? this.formatarMensagem(ultimaMensagem)
           : null,
       })),
     };
+  }
+
+  @Get('conversas/nao-lidas')
+  async contarMensagensNaoLidas(@Req() request: RequisicaoComUsuario) {
+    const total = await this.mensagensService.contarMensagensNaoLidas(
+      request.usuario.sub,
+    );
+
+    return { sucesso: true, dados: { total } };
   }
 
   @Get('conversas/:idConversa/mensagens')
@@ -107,10 +117,12 @@ export class MensagensController {
         passageiro: {
           id: solicitacao.passageiro.idUsuario,
           nome: solicitacao.passageiro.nome,
+          fotoPerfil: solicitacao.passageiro.fotoPerfil,
         },
         motorista: {
           id: solicitacao.carona.usuario.idUsuario,
           nome: solicitacao.carona.usuario.nome,
+          fotoPerfil: solicitacao.carona.usuario.fotoPerfil,
         },
         carona: {
           id: solicitacao.carona.idCarona,

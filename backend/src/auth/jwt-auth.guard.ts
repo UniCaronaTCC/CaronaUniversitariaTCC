@@ -5,9 +5,7 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { UsersService } from '../users/users.service';
-import type {
-  RequisicaoComUsuario,
-} from './requisicao-com-usuario';
+import type { RequisicaoComUsuario } from './requisicao-com-usuario';
 import { SupabaseAuthService } from './supabase-auth.service';
 
 @Injectable()
@@ -31,8 +29,7 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('Token em formato inválido');
     }
 
-    const usuarioSupabase =
-      await this.supabaseAuthService.buscarUsuario(token);
+    const usuarioSupabase = await this.supabaseAuthService.buscarUsuario(token);
 
     if (!usuarioSupabase) {
       throw new UnauthorizedException('Token inválido ou expirado');

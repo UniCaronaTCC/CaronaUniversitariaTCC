@@ -6,6 +6,16 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
 
+interface BancoSupabase {
+  public: {
+    Tables: Record<string, never>;
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+}
+
 @Injectable()
 export class FotoPerfilService {
   private readonly url: string | undefined;
@@ -48,7 +58,7 @@ export class FotoPerfilService {
     return `${data.publicUrl}?v=${Date.now()}`;
   }
 
-  private criarCliente(): SupabaseClient {
+  private criarCliente(): SupabaseClient<BancoSupabase> {
     if (!this.url || !this.chave) {
       throw new ServiceUnavailableException(
         'Armazenamento de fotos não configurado',
@@ -56,12 +66,14 @@ export class FotoPerfilService {
     }
 
     try {
-      return createClient(this.url, this.chave, {
+      const cliente = createClient<BancoSupabase>(this.url, this.chave, {
         auth: {
           autoRefreshToken: false,
           persistSession: false,
         },
       });
+
+      return cliente;
     } catch {
       throw new ServiceUnavailableException(
         'Configuração do armazenamento de fotos inválida',

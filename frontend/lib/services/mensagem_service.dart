@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -7,9 +9,15 @@ import '../config/api_config.dart';
 import '../models/conversa.dart';
 import '../models/mensagem.dart';
 import 'auth_service.dart';
+import 'supabase_auth_service.dart';
 
 class MensagemService {
   const MensagemService._();
+
+  static const Duration tempoLimiteEnvio = Duration(seconds: 10);
+  static final ValueNotifier<int> totalMensagensNaoLidas = ValueNotifier(0);
+  static RealtimeChannel? _canalMensagensNaoLidas;
+  static int? _idUsuarioAcompanhado;
 
   static Future<Map<String, dynamic>> listarConversas() async {
     return _requisicao(
@@ -21,19 +29,14 @@ class MensagemService {
     );
   }
 
-  static Future<Map<String, dynamic>> obterConversa(
-    int idSolicitacao,
-  ) async {
+  static Future<Map<String, dynamic>> obterConversa(int idSolicitacao) async {
     return _requisicao(
       () => http.post(
-        Uri.parse(
-          '${ApiConfig.baseUrl}/solicitacoes/$idSolicitacao/conversa',
-        ),
+        Uri.parse('${ApiConfig.baseUrl}/solicitacoes/$idSolicitacao/conversa'),
         headers: _cabecalhos(),
       ),
-      converterDados: (dados) => Conversa.fromJson(
-        Map<String, dynamic>.from(dados as Map),
-      ),
+      converterDados: (dados) =>
+          Conversa.fromJson(Map<String, dynamic>.from(dados as Map)),
     );
   }
 
@@ -43,7 +46,7 @@ class MensagemService {
   }) async {
     final parametros = antesDe == null ? '' : '?antesDe=$antesDe';
 
-    return _requisicao(
+    final resultado = await _requisicao(
       () => http.get(
         Uri.parse(
           '${ApiConfig.baseUrl}/conversas/$idConversa/mensagens$parametros',
@@ -52,6 +55,89 @@ class MensagemService {
       ),
       converterDados: (dados) => _converterLista(dados, Mensagem.fromJson),
     );
+
+    if (resultado['sucesso'] == true) {
+      unawaited(atualizarTotalMensagensNaoLidas());
+    }
+
+    return resultado;
+  }
+
+  static Future<Map<String, dynamic>> obterTotalMensagensNaoLidas() async {
+    return _requisicao(
+      () => http.get(
+        Uri.parse('${ApiConfig.baseUrl}/conversas/nao-lidas'),
+        headers: _cabecalhos(),
+      ),
+      converterDados: (dados) {
+        if (dados is! Map) {
+          return 0;
+        }
+
+        return int.tryParse(dados['total']?.toString() ?? '') ?? 0;
+      },
+    );
+  }
+
+  static Future<void> iniciarContadorMensagensNaoLidas() async {
+    final token = AuthService.tokenUsuarioLogado;
+    final idUsuario = int.tryParse(
+      AuthService.usuarioLogado?['id']?.toString() ?? '',
+    );
+
+    if (!SupabaseAuthService.inicializado ||
+        token == null ||
+        idUsuario == null ||
+        idUsuario <= 0) {
+      totalMensagensNaoLidas.value = 0;
+      return;
+    }
+
+    await atualizarTotalMensagensNaoLidas();
+
+    if (_canalMensagensNaoLidas != null && _idUsuarioAcompanhado == idUsuario) {
+      return;
+    }
+
+    await pararContadorMensagensNaoLidas(limparTotal: false);
+
+    final cliente = Supabase.instance.client;
+    await cliente.realtime.setAuth(token);
+    _idUsuarioAcompanhado = idUsuario;
+    _canalMensagensNaoLidas = cliente
+        .channel(
+          'usuario:$idUsuario',
+          opts: const RealtimeChannelConfig(private: true),
+        )
+        .onBroadcast(
+          event: 'INSERT',
+          callback: (_) => unawaited(atualizarTotalMensagensNaoLidas()),
+        )
+        .subscribe();
+  }
+
+  static Future<void> atualizarTotalMensagensNaoLidas() async {
+    final resultado = await obterTotalMensagensNaoLidas();
+
+    if (resultado['sucesso'] == true && resultado['dados'] is int) {
+      totalMensagensNaoLidas.value = resultado['dados'] as int;
+    }
+  }
+
+  static Future<void> pararContadorMensagensNaoLidas({
+    bool limparTotal = true,
+  }) async {
+    final canal = _canalMensagensNaoLidas;
+    _canalMensagensNaoLidas = null;
+    _idUsuarioAcompanhado = null;
+
+    if (canal != null) {
+      await Supabase.instance.client.removeChannel(canal);
+    }
+
+    if (limparTotal) {
+      totalMensagensNaoLidas.value = 0;
+    }
   }
 
   static Future<Map<String, dynamic>> enviarMensagem(
@@ -59,16 +145,15 @@ class MensagemService {
     String conteudo,
   ) async {
     return _requisicao(
-      () => http.post(
-        Uri.parse(
-          '${ApiConfig.baseUrl}/conversas/$idConversa/mensagens',
-        ),
-        headers: _cabecalhos(comJson: true),
-        body: jsonEncode({'conteudo': conteudo}),
-      ),
-      converterDados: (dados) => Mensagem.fromJson(
-        Map<String, dynamic>.from(dados as Map),
-      ),
+      () => http
+          .post(
+            Uri.parse('${ApiConfig.baseUrl}/conversas/$idConversa/mensagens'),
+            headers: _cabecalhos(comJson: true),
+            body: jsonEncode({'conteudo': conteudo}),
+          )
+          .timeout(tempoLimiteEnvio),
+      converterDados: (dados) =>
+          Mensagem.fromJson(Map<String, dynamic>.from(dados as Map)),
     );
   }
 
@@ -113,12 +198,13 @@ class MensagemService {
     Future<http.Response> Function() enviar, {
     required dynamic Function(dynamic dados) converterDados,
   }) async {
-    if (AuthService.tokenUsuarioLogado == null) {
-      return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
-    }
-
     try {
-      final resposta = await enviar();
+      final resposta = await AuthService.enviarComToken((_) => enviar());
+
+      if (resposta == null) {
+        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+      }
+
       final corpo = resposta.body.isEmpty
           ? <String, dynamic>{}
           : Map<String, dynamic>.from(jsonDecode(resposta.body) as Map);
@@ -132,6 +218,7 @@ class MensagemService {
       }
 
       if (resposta.statusCode == 401) {
+        await pararContadorMensagensNaoLidas();
         await AuthService.sair();
       }
 

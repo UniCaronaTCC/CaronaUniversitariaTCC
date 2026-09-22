@@ -21,9 +21,7 @@ type DadosSolicitacaoRecebidos = Record<string, unknown> | undefined;
 @UseGuards(JwtAuthGuard)
 @Controller()
 export class SolicitacoesController {
-  constructor(
-    private readonly solicitacoesService: SolicitacoesService,
-  ) {}
+  constructor(private readonly solicitacoesService: SolicitacoesService) {}
 
   @Post('caronas/:idCarona/solicitacoes')
   async criarSolicitacao(
@@ -43,38 +41,30 @@ export class SolicitacoesController {
       tipoPontoEmbarque !== 'EXISTENTE' &&
       tipoPontoEmbarque !== 'NOVO_SOLICITADO'
     ) {
-      throw new BadRequestException(
-        'Tipo de ponto de embarque inválido',
-      );
+      throw new BadRequestException('Tipo de ponto de embarque inválido');
     }
 
     if (tipoPontoEmbarque === 'EXISTENTE') {
       const idPontoEmbarque = Number(dados.idPontoEmbarque);
 
       if (!Number.isInteger(idPontoEmbarque) || idPontoEmbarque <= 0) {
-        throw new BadRequestException(
-          'Selecione um ponto de embarque válido',
-        );
+        throw new BadRequestException('Selecione um ponto de embarque válido');
       }
 
-      const solicitacao =
-        await this.solicitacoesService.criarSolicitacao({
-          idCarona,
-          idPassageiro: request.usuario.sub,
-          tipoPontoEmbarque: 'EXISTENTE',
-          idPontoEmbarque,
-        });
+      const solicitacao = await this.solicitacoesService.criarSolicitacao({
+        idCarona,
+        idPassageiro: request.usuario.sub,
+        tipoPontoEmbarque: 'EXISTENTE',
+        idPontoEmbarque,
+      });
 
       return this.respostaCriacao(solicitacao);
     }
 
-    const localEmbarque =
-      dados.localEmbarque?.toString().trim() ?? '';
+    const localEmbarque = dados.localEmbarque?.toString().trim() ?? '';
 
     if (!localEmbarque || localEmbarque.length > 255) {
-      throw new BadRequestException(
-        'Local de embarque inválido',
-      );
+      throw new BadRequestException('Local de embarque inválido');
     }
 
     const embarqueLatitude = this.validarCoordenada(
@@ -91,27 +81,23 @@ export class SolicitacoesController {
       'Longitude do embarque',
     );
 
-    const solicitacao =
-      await this.solicitacoesService.criarSolicitacao({
-        idCarona,
-        idPassageiro: request.usuario.sub,
-        tipoPontoEmbarque: 'NOVO_SOLICITADO',
-        localEmbarque,
-        embarqueLatitude,
-        embarqueLongitude,
-      });
+    const solicitacao = await this.solicitacoesService.criarSolicitacao({
+      idCarona,
+      idPassageiro: request.usuario.sub,
+      tipoPontoEmbarque: 'NOVO_SOLICITADO',
+      localEmbarque,
+      embarqueLatitude,
+      embarqueLongitude,
+    });
 
     return this.respostaCriacao(solicitacao);
   }
 
   @Get('solicitacoes/recebidas')
-  async listarRecebidas(
-    @Req() request: RequisicaoComUsuario,
-  ) {
-    const solicitacoes =
-      await this.solicitacoesService.listarRecebidas(
-        request.usuario.sub,
-      );
+  async listarRecebidas(@Req() request: RequisicaoComUsuario) {
+    const solicitacoes = await this.solicitacoesService.listarRecebidas(
+      request.usuario.sub,
+    );
 
     return {
       sucesso: true,
@@ -126,16 +112,12 @@ export class SolicitacoesController {
     @Param('idCarona') idRecebido: string,
     @Req() request: RequisicaoComUsuario,
   ) {
-    const idCarona = this.validarId(
-      idRecebido,
-      'Carona inválida',
-    );
+    const idCarona = this.validarId(idRecebido, 'Carona inválida');
 
-    const solicitacoes =
-      await this.solicitacoesService.listarRecebidasDaCarona(
-        request.usuario.sub,
-        idCarona,
-      );
+    const solicitacoes = await this.solicitacoesService.listarRecebidasDaCarona(
+      request.usuario.sub,
+      idCarona,
+    );
 
     return {
       sucesso: true,
@@ -146,13 +128,10 @@ export class SolicitacoesController {
   }
 
   @Get('solicitacoes/enviadas')
-  async listarEnviadas(
-    @Req() request: RequisicaoComUsuario,
-  ) {
-    const solicitacoes =
-      await this.solicitacoesService.listarEnviadas(
-        request.usuario.sub,
-      );
+  async listarEnviadas(@Req() request: RequisicaoComUsuario) {
+    const solicitacoes = await this.solicitacoesService.listarEnviadas(
+      request.usuario.sub,
+    );
 
     return {
       sucesso: true,
@@ -164,8 +143,7 @@ export class SolicitacoesController {
         podeAvaliar: solicitacao.podeAvaliar,
 
         tipoPontoEmbarque: solicitacao.tipoPontoEmbarque,
-        idPontoEmbarque:
-          solicitacao.pontoEmbarque?.idPontoEmbarque ?? null,
+        idPontoEmbarque: solicitacao.pontoEmbarque?.idPontoEmbarque ?? null,
 
         localEmbarque: solicitacao.localEmbarque,
         embarqueLatitude: solicitacao.embarqueLatitude,
@@ -200,26 +178,19 @@ export class SolicitacoesController {
     @Body() body: DadosSolicitacaoRecebidos,
     @Req() request: RequisicaoComUsuario,
   ) {
-    const idSolicitacao = this.validarId(
-      idRecebido,
-      'Solicitação inválida',
-    );
+    const idSolicitacao = this.validarId(idRecebido, 'Solicitação inválida');
 
-    const status = body?.status
-      ?.toString()
-      .trim()
-      .toUpperCase();
+    const status = body?.status?.toString().trim().toUpperCase();
 
     if (status !== 'ACEITA' && status !== 'RECUSADA') {
       throw new BadRequestException('Resposta inválida');
     }
 
-    const solicitacao =
-      await this.solicitacoesService.responderSolicitacao(
-        idSolicitacao,
-        request.usuario.sub,
-        status,
-      );
+    const solicitacao = await this.solicitacoesService.responderSolicitacao(
+      idSolicitacao,
+      request.usuario.sub,
+      status,
+    );
 
     return {
       sucesso: true,
@@ -240,16 +211,12 @@ export class SolicitacoesController {
     @Param('idSolicitacao') idRecebido: string,
     @Req() request: RequisicaoComUsuario,
   ) {
-    const idSolicitacao = this.validarId(
-      idRecebido,
-      'Solicitação inválida',
-    );
+    const idSolicitacao = this.validarId(idRecebido, 'Solicitação inválida');
 
-    const solicitacao =
-      await this.solicitacoesService.cancelarSolicitacao(
-        idSolicitacao,
-        request.usuario.sub,
-      );
+    const solicitacao = await this.solicitacoesService.cancelarSolicitacao(
+      idSolicitacao,
+      request.usuario.sub,
+    );
 
     return {
       sucesso: true,
@@ -269,15 +236,12 @@ export class SolicitacoesController {
         id: solicitacao.idSolicitacao,
         status: solicitacao.status,
         tipoPontoEmbarque: solicitacao.tipoPontoEmbarque,
-        idPontoEmbarque:
-          solicitacao.pontoEmbarque?.idPontoEmbarque ?? null,
+        idPontoEmbarque: solicitacao.pontoEmbarque?.idPontoEmbarque ?? null,
       },
     };
   }
 
-  private formatarSolicitacaoRecebida(
-    solicitacao: Solicitacao,
-  ) {
+  private formatarSolicitacaoRecebida(solicitacao: Solicitacao) {
     return {
       id: solicitacao.idSolicitacao,
       status: solicitacao.status,
@@ -286,8 +250,7 @@ export class SolicitacoesController {
       podeAvaliar: solicitacao.podeAvaliar,
 
       tipoPontoEmbarque: solicitacao.tipoPontoEmbarque,
-      idPontoEmbarque:
-        solicitacao.pontoEmbarque?.idPontoEmbarque ?? null,
+      idPontoEmbarque: solicitacao.pontoEmbarque?.idPontoEmbarque ?? null,
 
       localEmbarque: solicitacao.localEmbarque,
       embarqueLatitude: solicitacao.embarqueLatitude,
@@ -311,10 +274,7 @@ export class SolicitacoesController {
     };
   }
 
-  private validarId(
-    valorRecebido: string,
-    mensagem: string,
-  ): number {
+  private validarId(valorRecebido: string, mensagem: string): number {
     const valor = Number(valorRecebido);
 
     if (!Number.isInteger(valor) || valor <= 0) {
@@ -332,11 +292,7 @@ export class SolicitacoesController {
   ): number {
     const valor = Number(valorRecebido);
 
-    if (
-      !Number.isFinite(valor) ||
-      valor < minimo ||
-      valor > maximo
-    ) {
+    if (!Number.isFinite(valor) || valor < minimo || valor > maximo) {
       throw new BadRequestException(`${nome} inválida`);
     }
 

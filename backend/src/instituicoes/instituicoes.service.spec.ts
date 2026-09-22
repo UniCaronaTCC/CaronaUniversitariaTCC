@@ -35,7 +35,7 @@ describe('InstituicoesService', () => {
       {
         find: jest.fn().mockResolvedValue([campusAracatuba]),
         findOne: jest.fn(),
-        create: jest.fn((dados) => dados),
+        create: jest.fn((dados: Partial<InstituicaoCampus>) => dados),
         ...campiRepository,
       } as unknown as Repository<InstituicaoCampus>,
     );

@@ -43,9 +43,12 @@ class CampoTextoPadrao extends StatelessWidget {
 
 class EstadoConteudoPadrao extends StatelessWidget {
   final bool carregando;
+  final String? titulo;
   final String? mensagem;
   final IconData? icone;
+  final Color? corIcone;
   final String? textoBotao;
+  final IconData? iconeBotao;
   final VoidCallback? onPressed;
   final double espacamentoVertical;
   final double tamanhoIcone;
@@ -54,9 +57,12 @@ class EstadoConteudoPadrao extends StatelessWidget {
   const EstadoConteudoPadrao({
     super.key,
     this.carregando = false,
+    this.titulo,
     this.mensagem,
     this.icone,
+    this.corIcone,
     this.textoBotao,
+    this.iconeBotao,
     this.onPressed,
     this.espacamentoVertical = 28,
     this.tamanhoIcone = 42,
@@ -74,17 +80,45 @@ class EstadoConteudoPadrao extends StatelessWidget {
             if (carregando)
               const CircularProgressIndicator()
             else
-              Icon(icone, size: tamanhoIcone, color: Colors.black38),
-            if (mensagem != null) ...[
-              SizedBox(height: espacamentoMensagem),
+              Icon(
+                icone,
+                size: tamanhoIcone,
+                color: corIcone ?? Colors.black38,
+              ),
+            if (titulo != null) ...[
+              const SizedBox(height: 16),
               Text(
-                mensagem!,
+                titulo!,
                 textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.black54),
+                style: const TextStyle(
+                  color: AppColors.text,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
-            if (textoBotao != null && onPressed != null)
-              TextButton(onPressed: onPressed, child: Text(textoBotao!)),
+            if (mensagem != null) ...[
+              SizedBox(height: titulo == null ? espacamentoMensagem : 6),
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 320),
+                child: Text(
+                  mensagem!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.black54, height: 1.4),
+                ),
+              ),
+            ],
+            if (textoBotao != null && onPressed != null) ...[
+              const SizedBox(height: 8),
+              if (iconeBotao != null)
+                TextButton.icon(
+                  onPressed: onPressed,
+                  icon: Icon(iconeBotao, size: 18),
+                  label: Text(textoBotao!),
+                )
+              else
+                TextButton(onPressed: onPressed, child: Text(textoBotao!)),
+            ],
           ],
         ),
       ),

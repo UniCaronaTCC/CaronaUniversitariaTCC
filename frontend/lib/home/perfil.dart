@@ -8,6 +8,8 @@ import '../models/instituicao.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/avaliacao_service.dart';
 import '../services/auth_service.dart';
+import '../services/mensagem_service.dart';
+import '../services/solicitacao_service.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/campo_busca_instituicao.dart';
 import '../widgets/componentes_padrao.dart';
@@ -308,6 +310,8 @@ class _PerfilTelaState extends State<PerfilTela> {
   }
 
   Future<void> sair() async {
+    await MensagemService.pararContadorMensagensNaoLidas();
+    SolicitacaoService.pararContadorSolicitacoesPendentes();
     await AuthService.sair();
 
     if (!mounted) {

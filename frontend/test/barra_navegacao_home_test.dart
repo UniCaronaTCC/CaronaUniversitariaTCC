@@ -10,6 +10,8 @@ void main() {
       MaterialApp(
         home: Scaffold(
           bottomNavigationBar: BarraNavegacaoHome(
+            totalMensagensNaoLidas: 0,
+            totalSolicitacoesPendentes: 0,
             onTap: (index) {
               itemSelecionado = index;
             },
@@ -33,7 +35,11 @@ void main() {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(
-          bottomNavigationBar: BarraNavegacaoHome(currentIndex: 2),
+          bottomNavigationBar: BarraNavegacaoHome(
+            currentIndex: 2,
+            totalMensagensNaoLidas: 0,
+            totalSolicitacoesPendentes: 0,
+          ),
         ),
       ),
     );
@@ -43,5 +49,54 @@ void main() {
     );
 
     expect(barra.currentIndex, 2);
+  });
+
+  testWidgets('mostra o total de mensagens não lidas no Chat', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: BarraNavegacaoHome(
+            totalMensagensNaoLidas: 3,
+            totalSolicitacoesPendentes: 0,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('3'), findsOneWidget);
+    expect(find.byType(Badge), findsOneWidget);
+  });
+
+  testWidgets('oculta o contador quando não existem mensagens não lidas', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: BarraNavegacaoHome(
+            totalMensagensNaoLidas: 0,
+            totalSolicitacoesPendentes: 0,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('0'), findsNothing);
+  });
+
+  testWidgets('mostra solicitações pendentes no item Caronas', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: Scaffold(
+          bottomNavigationBar: BarraNavegacaoHome(
+            totalMensagensNaoLidas: 0,
+            totalSolicitacoesPendentes: 4,
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('4'), findsOneWidget);
+    expect(find.byType(Badge), findsOneWidget);
   });
 }

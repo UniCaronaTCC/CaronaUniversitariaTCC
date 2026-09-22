@@ -31,7 +31,7 @@ describe('RotasService', () => {
       .mockResolvedValueOnce({
         ok: true,
         status: 200,
-        json: async () => respostaValida,
+        json: () => Promise.resolve(respostaValida),
       } as Response);
 
     const resultado = await new RotasService().calcularRota([

@@ -11,25 +11,26 @@ class AvaliacaoService {
     required int nota,
     String? comentario,
   }) async {
-    final token = AuthService.tokenUsuarioLogado;
-
-    if (token == null) {
-      return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
-    }
-
     try {
-      final resposta = await http.post(
-        Uri.parse('${ApiConfig.baseUrl}/avaliacoes'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'idSolicitacao': idSolicitacao,
-          'nota': nota,
-          'comentario': comentario,
-        }),
+      final resposta = await AuthService.enviarComToken(
+        (token) => http.post(
+          Uri.parse('${ApiConfig.baseUrl}/avaliacoes'),
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode({
+            'idSolicitacao': idSolicitacao,
+            'nota': nota,
+            'comentario': comentario,
+          }),
+        ),
       );
+
+      if (resposta == null) {
+        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+      }
+
       final corpo = _decodificarResposta(resposta.body);
 
       if (resposta.statusCode == 200 || resposta.statusCode == 201) {
@@ -61,20 +62,21 @@ class AvaliacaoService {
     int idUsuario, {
     int pagina = 1,
   }) async {
-    final token = AuthService.tokenUsuarioLogado;
-
-    if (token == null) {
-      return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
-    }
-
     try {
       final url = Uri.parse(
         '${ApiConfig.baseUrl}/usuarios/$idUsuario/avaliacoes?pagina=$pagina',
       );
-      final resposta = await http.get(
-        url,
-        headers: {'Authorization': 'Bearer $token'},
+      final resposta = await AuthService.enviarComToken(
+        (token) => http.get(
+          url,
+          headers: {'Authorization': 'Bearer $token'},
+        ),
       );
+
+      if (resposta == null) {
+        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+      }
+
       final corpo = _decodificarResposta(resposta.body);
 
       if (resposta.statusCode == 200 && corpo['dados'] is Map) {

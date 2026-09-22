@@ -6,8 +6,10 @@ class SupabaseAuthService {
   const SupabaseAuthService._();
 
   static bool _inicializado = false;
+  static Future<String?>? _renovacaoEmAndamento;
 
   static bool get configurado => SupabaseConfig.configurado;
+  static bool get inicializado => _inicializado;
 
   static SupabaseClient get _cliente => Supabase.instance.client;
 
@@ -26,6 +28,37 @@ class SupabaseAuthService {
 
   static Future<AuthResponse> entrar(String email, String senha) {
     return _cliente.auth.signInWithPassword(email: email, password: senha);
+  }
+
+  static Future<String?> renovarSessao() async {
+    if (!_inicializado) {
+      return null;
+    }
+
+    final renovacaoAtual = _renovacaoEmAndamento;
+    if (renovacaoAtual != null) {
+      return renovacaoAtual;
+    }
+
+    final renovacao = _executarRenovacao();
+    _renovacaoEmAndamento = renovacao;
+
+    try {
+      return await renovacao;
+    } finally {
+      if (identical(_renovacaoEmAndamento, renovacao)) {
+        _renovacaoEmAndamento = null;
+      }
+    }
+  }
+
+  static Future<String?> _executarRenovacao() async {
+    try {
+      final resposta = await _cliente.auth.refreshSession();
+      return resposta.session?.accessToken;
+    } catch (_) {
+      return null;
+    }
   }
 
   static Future<AuthResponse> cadastrar(

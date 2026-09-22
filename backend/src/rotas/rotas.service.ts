@@ -52,17 +52,18 @@ export class RotasService {
           throw new Error(`OpenRouteService: ${resposta.status}`);
         }
 
-        const dados: any = await resposta.json();
-        const rota = dados.features?.[0];
+        const dados: unknown = await resposta.json();
+        const rota = this.extrairRota(dados);
         if (!rota) throw new Error('Rota não encontrada');
 
-        const pontos = rota.geometry.coordinates.map(
-          ([longitude, latitude]: number[]) => [latitude, longitude],
-        );
+        const pontos = rota.coordenadas.map(([longitude, latitude]) => [
+          latitude,
+          longitude,
+        ]);
         return {
           pontos,
-          distanciaMetros: rota.properties.summary.distance,
-          duracaoSegundos: rota.properties.summary.duration,
+          distanciaMetros: rota.distanciaMetros,
+          duracaoSegundos: rota.duracaoSegundos,
         };
       } catch (erro) {
         ultimoErro = erro;
@@ -76,6 +77,66 @@ export class RotasService {
     console.error('Erro ao calcular rota:', ultimoErro);
     throw new BadGatewayException('Não foi possível calcular a rota');
   }
+
+  private extrairRota(dados: unknown): RotaOpenRouteService | null {
+    if (!this.ehRegistro(dados) || !this.ehLista(dados.features)) {
+      return null;
+    }
+
+    const rota = dados.features[0];
+    if (!this.ehRegistro(rota)) {
+      return null;
+    }
+
+    const geometria = rota.geometry;
+    const propriedades = rota.properties;
+    if (!this.ehRegistro(geometria) || !this.ehRegistro(propriedades)) {
+      return null;
+    }
+
+    const resumo = propriedades.summary;
+    const coordenadas = geometria.coordinates;
+    if (
+      !this.ehRegistro(resumo) ||
+      !this.ehLista(coordenadas) ||
+      !coordenadas.every((coordenada) => this.coordenadaValida(coordenada)) ||
+      typeof resumo.distance !== 'number' ||
+      typeof resumo.duration !== 'number'
+    ) {
+      return null;
+    }
+
+    return {
+      coordenadas,
+      distanciaMetros: resumo.distance,
+      duracaoSegundos: resumo.duration,
+    };
+  }
+
+  private coordenadaValida(valor: unknown): valor is [number, number] {
+    return (
+      Array.isArray(valor) &&
+      valor.length >= 2 &&
+      typeof valor[0] === 'number' &&
+      Number.isFinite(valor[0]) &&
+      typeof valor[1] === 'number' &&
+      Number.isFinite(valor[1])
+    );
+  }
+
+  private ehRegistro(valor: unknown): valor is Record<string, unknown> {
+    return typeof valor === 'object' && valor !== null;
+  }
+
+  private ehLista(valor: unknown): valor is unknown[] {
+    return Array.isArray(valor);
+  }
+}
+
+interface RotaOpenRouteService {
+  coordenadas: [number, number][];
+  distanciaMetros: number;
+  duracaoSegundos: number;
 }
 
 class ErroRotaPermanente extends Error {
