@@ -6,6 +6,7 @@ import 'package:uni_carona/config/app_colors.dart';
 import 'package:uni_carona/home/conversas.dart';
 import 'package:uni_carona/models/conversa.dart';
 import 'package:uni_carona/models/mensagem.dart';
+import 'package:uni_carona/widgets/avatar_usuario.dart';
 
 void main() {
   testWidgets('lista conversas e destaca conversa encerrada', (tester) async {
@@ -18,6 +19,7 @@ void main() {
         passageiro: 'João',
         idMotorista: 2,
         motorista: 'Maria',
+        fotoMotorista: 'https://exemplo.com/maria.jpg',
         idCarona: 20,
         destino: 'UniSalesiano',
         dataInicio: DateTime(2026, 9, 2),
@@ -64,6 +66,11 @@ void main() {
     expect(find.text('Carlos'), findsOneWidget);
     expect(find.text('Encerrada'), findsOneWidget);
     expect(find.text('UNESP'), findsOneWidget);
+
+    final avatar = tester.widget<AvatarUsuario>(
+      find.byKey(const ValueKey('avatar-conversa-1')),
+    );
+    expect(avatar.urlFoto, 'https://exemplo.com/maria.jpg');
 
     final cardComMensagemNova = tester.widget<Material>(
       find

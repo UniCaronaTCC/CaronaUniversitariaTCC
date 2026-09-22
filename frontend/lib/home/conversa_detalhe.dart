@@ -6,6 +6,7 @@ import '../models/conversa.dart';
 import '../models/mensagem.dart';
 import '../services/auth_service.dart';
 import '../services/mensagem_service.dart';
+import '../widgets/avatar_usuario.dart';
 import '../widgets/componentes_padrao.dart';
 
 typedef CarregarMensagens = Future<Map<String, dynamic>> Function();
@@ -262,6 +263,7 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
   @override
   Widget build(BuildContext context) {
     final nome = widget.conversa.nomeOutroParticipante(idUsuarioAtual);
+    final foto = widget.conversa.fotoOutroParticipante(idUsuarioAtual);
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -270,23 +272,40 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
         foregroundColor: AppColors.text,
         elevation: 0,
         titleSpacing: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text(
-              nome,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
+            AvatarUsuario(
+              key: const ValueKey('avatar-cabecalho-conversa'),
+              nome: nome,
+              urlFoto: foto,
+              raio: 18,
+              desativado: widget.conversa.encerrada,
             ),
-            Text(
-              widget.conversa.destino,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.black54,
-                fontSize: 12,
-                fontWeight: FontWeight.normal,
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    nome,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    widget.conversa.destino,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 12,
+                      fontWeight: FontWeight.normal,
+                    ),
+                  ),
+                ],
               ),
             ),
           ],

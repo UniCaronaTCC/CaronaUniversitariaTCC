@@ -117,10 +117,12 @@ export class MensagensController {
         passageiro: {
           id: solicitacao.passageiro.idUsuario,
           nome: solicitacao.passageiro.nome,
+          fotoPerfil: solicitacao.passageiro.fotoPerfil,
         },
         motorista: {
           id: solicitacao.carona.usuario.idUsuario,
           nome: solicitacao.carona.usuario.nome,
+          fotoPerfil: solicitacao.carona.usuario.fotoPerfil,
         },
         carona: {
           id: solicitacao.carona.idCarona,

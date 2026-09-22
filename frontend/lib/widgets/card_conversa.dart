@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 import '../models/conversa.dart';
+import 'avatar_usuario.dart';
 
 class CardConversa extends StatelessWidget {
   final Conversa conversa;
@@ -18,6 +19,7 @@ class CardConversa extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final nome = conversa.nomeOutroParticipante(idUsuarioAtual);
+    final foto = conversa.fotoOutroParticipante(idUsuarioAtual);
     final ultimaMensagem = conversa.ultimaMensagem;
     final temMensagensNaoLidas = conversa.mensagensNaoLidas > 0;
     final corFundo = temMensagensNaoLidas
@@ -47,21 +49,11 @@ class CardConversa extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CircleAvatar(
-                radius: 24,
-                backgroundColor: conversa.encerrada
-                    ? Colors.black12
-                    : const Color(0xFFF0DEFA),
-                child: Text(
-                  _inicial(nome),
-                  style: TextStyle(
-                    color: conversa.encerrada
-                        ? Colors.black54
-                        : AppColors.primary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
+              AvatarUsuario(
+                key: ValueKey('avatar-conversa-${conversa.id}'),
+                nome: nome,
+                urlFoto: foto,
+                desativado: conversa.encerrada,
               ),
               const SizedBox(width: 14),
               Expanded(
@@ -170,11 +162,6 @@ class CardConversa extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  String _inicial(String nome) {
-    final texto = nome.trim();
-    return texto.isEmpty ? '?' : texto[0].toUpperCase();
   }
 
   String _formatarData(DateTime data) {

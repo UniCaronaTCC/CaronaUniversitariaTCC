@@ -10,8 +10,16 @@ void main() {
       'criadoEm': '2026-09-01T12:00:00.000Z',
       'solicitacao': {
         'id': 10,
-        'passageiro': {'id': 1, 'nome': 'João'},
-        'motorista': {'id': 2, 'nome': 'Maria'},
+        'passageiro': {
+          'id': 1,
+          'nome': 'João',
+          'fotoPerfil': 'https://exemplo.com/joao.jpg',
+        },
+        'motorista': {
+          'id': 2,
+          'nome': 'Maria',
+          'fotoPerfil': 'https://exemplo.com/maria.jpg',
+        },
         'carona': {
           'id': 20,
           'destino': 'UniSalesiano',
@@ -29,6 +37,8 @@ void main() {
 
     expect(conversa.nomeOutroParticipante(1), 'Maria');
     expect(conversa.nomeOutroParticipante(2), 'João');
+    expect(conversa.fotoOutroParticipante(1), 'https://exemplo.com/maria.jpg');
+    expect(conversa.fotoOutroParticipante(2), 'https://exemplo.com/joao.jpg');
     expect(conversa.ultimaMensagem?.conteudo, 'Até amanhã!');
     expect(conversa.mensagensNaoLidas, 2);
     expect(conversa.encerrada, isFalse);
