@@ -14,6 +14,7 @@ import '../widgets/componentes_padrao.dart';
 import '../widgets/conteudo_detalhes_carona.dart';
 import '../widgets/painel_solicitacoes_carona.dart';
 import 'ofertar_carona.dart';
+import 'corrida_em_andamento.dart';
 
 class DetalhesCaronaTela extends StatefulWidget {
   final Carona carona;
@@ -72,6 +73,36 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
   bool enviandoSolicitacao = false;
   bool solicitacaoEnviada = false;
   bool excluindoCarona = false;
+  bool processandoCorrida = false;
+
+  Future<void> abrirCorrida({bool iniciar = false}) async {
+    Carona carona = caronaAtual;
+    if (iniciar) {
+      setState(() => processandoCorrida = true);
+      final resultado = await CaronaService.iniciarCorrida(carona.id);
+      if (!mounted) return;
+      setState(() => processandoCorrida = false);
+
+      if (resultado['sucesso'] != true || resultado['dados'] is! Carona) {
+        _mostrarMensagem(
+          resultado['mensagem']?.toString() ??
+              'Não foi possível iniciar a corrida',
+        );
+        return;
+      }
+      carona = resultado['dados'] as Carona;
+      setState(() => _caronaAtualizada = carona);
+    }
+
+    final finalizada = await Navigator.push<Carona>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CorridaEmAndamentoTela(carona: carona),
+      ),
+    );
+    if (!mounted || finalizada == null) return;
+    setState(() => _caronaAtualizada = finalizada);
+  }
 
   bool get usuarioEhMotorista {
     final idRecebido = AuthService.usuarioLogado?['id'];
@@ -355,11 +386,45 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
       bottom: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 10, 24, 10),
-        child: Row(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
+            if (!caronaAtual.recorrente) ...[
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: ElevatedButton.icon(
+                  onPressed: processandoCorrida || excluindoCarona
+                      ? null
+                      : () => abrirCorrida(iniciar: !caronaAtual.emAndamento),
+                  icon: processandoCorrida
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Icon(
+                          caronaAtual.emAndamento
+                              ? Icons.navigation_outlined
+                              : Icons.play_arrow,
+                        ),
+                  label: Text(
+                    processandoCorrida
+                        ? 'INICIANDO...'
+                        : caronaAtual.emAndamento
+                        ? 'CONTINUAR CORRIDA'
+                        : 'INICIAR CORRIDA',
+                  ),
+                ),
+              ),
+              const SizedBox(height: 10),
+            ],
+            Row(
+              children: [
             Expanded(
               child: OutlinedButton.icon(
                 onPressed: excluindoCarona
+                        || caronaAtual.emAndamento
                     ? null
                     : confirmarExclusao,
                 icon: const Icon(Icons.delete_outline),
@@ -370,11 +435,14 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
             Expanded(
               child: ElevatedButton.icon(
                 onPressed: excluindoCarona
+                        || caronaAtual.emAndamento
                     ? null
                     : editarCarona,
                 icon: const Icon(Icons.edit_outlined),
                 label: const Text('EDITAR'),
               ),
+            ),
+              ],
             ),
           ],
         ),

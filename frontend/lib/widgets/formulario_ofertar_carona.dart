@@ -27,9 +27,11 @@ class FormularioOfertarCarona extends StatelessWidget {
   final bool caronaRecorrente;
   final bool enviandoCarona;
   final bool pontosEmbarqueEditaveis;
+  final bool possuiVeiculo;
 
   final List<String> diasSelecionados;
   final List<PontoEmbarque> pontosEmbarque;
+  final LocalizacaoSelecionada? origemSelecionada;
 
   final VoidCallback onSelecionarOrigem;
   final VoidCallback onSelecionarDestino;
@@ -37,6 +39,7 @@ class FormularioOfertarCarona extends StatelessWidget {
   final VoidCallback onSelecionarHorario;
   final VoidCallback onAdicionarPontoEmbarque;
   final VoidCallback onOfertarCarona;
+  final VoidCallback onCadastrarVeiculo;
 
   final ValueChanged<int> onRemoverPontoEmbarque;
   final ValueChanged<String> onDestinoChanged;
@@ -60,7 +63,9 @@ class FormularioOfertarCarona extends StatelessWidget {
     required this.caronaRecorrente,
     required this.diasSelecionados,
     required this.pontosEmbarque,
+    required this.origemSelecionada,
     required this.pontosEmbarqueEditaveis,
+    required this.possuiVeiculo,
     required this.onSelecionarOrigem,
     required this.onSelecionarDestino,
     required this.onSelecionarData,
@@ -68,6 +73,7 @@ class FormularioOfertarCarona extends StatelessWidget {
     required this.onAdicionarPontoEmbarque,
     required this.onRemoverPontoEmbarque,
     required this.onOfertarCarona,
+    required this.onCadastrarVeiculo,
     required this.onDestinoChanged,
     required this.onDestinoSelecionado,
     required this.onRecorrenciaChanged,
@@ -93,13 +99,45 @@ class FormularioOfertarCarona extends StatelessWidget {
 
         Text(
           descricao,
-          style: const TextStyle(
-            color: AppColors.text,
-            fontSize: 18,
-          ),
+          style: const TextStyle(color: AppColors.text, fontSize: 18),
         ),
 
         const SizedBox(height: 32),
+
+        if (!possuiVeiculo) ...[
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.withValues(alpha: 0.35)),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.directions_car_outlined, color: Colors.orange),
+                    SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'Cadastre seu veículo antes de oferecer uma carona.',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                TextButton(
+                  onPressed: onCadastrarVeiculo,
+                  child: const Text('CADASTRAR NO PERFIL'),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
 
         // A origem pode ser ajustada no mapa.
         CampoTextoCarona(
@@ -108,11 +146,53 @@ class FormularioOfertarCarona extends StatelessWidget {
           controller: origemController,
           somenteLeitura: true,
           onTap: onSelecionarOrigem,
-          suffixIcon: const Icon(
-            Icons.map_outlined,
-            color: AppColors.primary,
-          ),
+          suffixIcon: const Icon(Icons.map_outlined, color: AppColors.primary),
         ),
+
+        const SizedBox(height: 8),
+
+        if (origemSelecionada == null)
+          OutlinedButton.icon(
+            onPressed: onSelecionarOrigem,
+            icon: const Icon(Icons.gps_fixed),
+            label: const Text('ESCOLHER NO MAPA OU USAR GPS'),
+          )
+        else
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.green.withValues(alpha: 0.25)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.check_circle, color: Colors.green),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Origem confirmada',
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        origemSelecionada!.descricaoCompleta,
+                        style: const TextStyle(fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
+                IconButton(
+                  tooltip: 'Alterar origem',
+                  onPressed: onSelecionarOrigem,
+                  icon: const Icon(Icons.edit_location_alt_outlined),
+                ),
+              ],
+            ),
+          ),
 
         const SizedBox(height: 16),
 
@@ -138,10 +218,7 @@ class FormularioOfertarCarona extends StatelessWidget {
 
             IconButton(
               onPressed: onSelecionarDestino,
-              icon: const Icon(
-                Icons.map_outlined,
-                color: AppColors.primary,
-              ),
+              icon: const Icon(Icons.map_outlined, color: AppColors.primary),
             ),
           ],
         ),
@@ -183,9 +260,7 @@ class FormularioOfertarCarona extends StatelessWidget {
           icone: Icons.payments_outlined,
           controller: valorController,
           keyboardType: TextInputType.number,
-          inputFormatters: [
-            FormatadorMoedaReal(),
-          ],
+          inputFormatters: [FormatadorMoedaReal()],
         ),
 
         const SizedBox(height: 16),
@@ -209,15 +284,9 @@ class FormularioOfertarCarona extends StatelessWidget {
         const SizedBox(height: 32),
 
         BotaoAcaoHome(
-          texto: enviandoCarona
-              ? textoCarregando
-              : textoBotao,
-          icone: enviandoCarona
-              ? Icons.hourglass_top
-              : Icons.groups_outlined,
-          onPressed: enviandoCarona
-              ? null
-              : onOfertarCarona,
+          texto: enviandoCarona ? textoCarregando : textoBotao,
+          icone: enviandoCarona ? Icons.hourglass_top : Icons.groups_outlined,
+          onPressed: enviandoCarona || !possuiVeiculo ? null : onOfertarCarona,
         ),
       ],
     );
@@ -240,10 +309,7 @@ class FormularioOfertarCarona extends StatelessWidget {
 
         const Text(
           'Adicione os locais onde os passageiros poderão embarcar.',
-          style: TextStyle(
-            color: Colors.black54,
-            fontSize: 14,
-          ),
+          style: TextStyle(color: Colors.black54, fontSize: 14),
         ),
 
         const SizedBox(height: 14),
@@ -253,140 +319,108 @@ class FormularioOfertarCarona extends StatelessWidget {
             width: double.infinity,
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppColors.primary.withValues(
-                alpha: 0.06,
-              ),
+              color: AppColors.primary.withValues(alpha: 0.06),
               borderRadius: BorderRadius.circular(12),
               border: Border.all(
-                color: AppColors.primary.withValues(
-                  alpha: 0.20,
-                ),
+                color: AppColors.primary.withValues(alpha: 0.20),
               ),
             ),
             child: const Row(
               children: [
-                Icon(
-                  Icons.location_off_outlined,
-                  color: Colors.black45,
-                ),
+                Icon(Icons.location_off_outlined, color: Colors.black45),
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
                     'Nenhum ponto de embarque adicionado.',
-                    style: TextStyle(
-                      color: Colors.black54,
-                    ),
+                    style: TextStyle(color: Colors.black54),
                   ),
                 ),
               ],
             ),
           )
         else
-          ...List.generate(
-            pontosEmbarque.length,
-                (indice) {
-              final ponto = pontosEmbarque[indice];
+          ...List.generate(pontosEmbarque.length, (indice) {
+            final ponto = pontosEmbarque[indice];
 
-              final nome = ponto.nome?.trim();
+            final nome = ponto.nome?.trim();
 
-              return Padding(
-                padding: const EdgeInsets.only(
-                  bottom: 10,
-                ),
-                child: Container(
-                  width: double.infinity,
-                  padding: const EdgeInsets.fromLTRB(
-                    14,
-                    12,
-                    8,
-                    12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.primary.withValues(
-                      alpha: 0.06,
-                    ),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: AppColors.primary.withValues(
-                        alpha: 0.18,
-                      ),
-                    ),
-                  ),
-                  child: Row(
-                    crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 36,
-                        height: 36,
-                        alignment: Alignment.center,
-                        decoration: BoxDecoration(
-                          color: AppColors.primary.withValues(
-                            alpha: 0.12,
-                          ),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Text(
-                          '${indice + 1}',
-                          style: const TextStyle(
-                            color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(width: 12),
-
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment:
-                          CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              nome != null &&
-                                  nome.isNotEmpty
-                                  ? nome
-                                  : 'Ponto de embarque ${indice + 1}',
-                              style: const TextStyle(
-                                color: AppColors.text,
-                                fontSize: 15,
-                                fontWeight:
-                                FontWeight.w600,
-                              ),
-                            ),
-
-                            const SizedBox(height: 4),
-
-                            Text(
-                              ponto.endereco,
-                              style: const TextStyle(
-                                color: Colors.black54,
-                                fontSize: 13,
-                                height: 1.3,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      if (pontosEmbarqueEditaveis)
-                        IconButton(
-                          tooltip: 'Remover ponto',
-                          onPressed: () =>
-                              onRemoverPontoEmbarque(
-                                indice,
-                              ),
-                          icon: const Icon(
-                            Icons.delete_outline,
-                            color: Colors.redAccent,
-                          ),
-                        ),
-                    ],
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 10),
+              child: Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+                decoration: BoxDecoration(
+                  color: AppColors.primary.withValues(alpha: 0.06),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: AppColors.primary.withValues(alpha: 0.18),
                   ),
                 ),
-              );
-            },
-          ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Container(
+                      width: 36,
+                      height: 36,
+                      alignment: Alignment.center,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.12),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '${indice + 1}',
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(width: 12),
+
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nome != null && nome.isNotEmpty
+                                ? nome
+                                : 'Ponto de embarque ${indice + 1}',
+                            style: const TextStyle(
+                              color: AppColors.text,
+                              fontSize: 15,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+
+                          const SizedBox(height: 4),
+
+                          Text(
+                            ponto.endereco,
+                            style: const TextStyle(
+                              color: Colors.black54,
+                              fontSize: 13,
+                              height: 1.3,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    if (pontosEmbarqueEditaveis)
+                      IconButton(
+                        tooltip: 'Remover ponto',
+                        onPressed: () => onRemoverPontoEmbarque(indice),
+                        icon: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.redAccent,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          }),
 
         const SizedBox(height: 4),
 
@@ -396,12 +430,8 @@ class FormularioOfertarCarona extends StatelessWidget {
             onPressed: pontosEmbarqueEditaveis
                 ? onAdicionarPontoEmbarque
                 : null,
-            icon: const Icon(
-              Icons.add_location_alt_outlined,
-            ),
-            label: const Text(
-              'ADICIONAR PONTO DE EMBARQUE',
-            ),
+            icon: const Icon(Icons.add_location_alt_outlined),
+            label: const Text('ADICIONAR PONTO DE EMBARQUE'),
           ),
         ),
 
@@ -409,10 +439,7 @@ class FormularioOfertarCarona extends StatelessWidget {
           const SizedBox(height: 8),
           const Text(
             'A edição dos pontos de embarque será adicionada depois.',
-            style: TextStyle(
-              color: Colors.black45,
-              fontSize: 12,
-            ),
+            style: TextStyle(color: Colors.black45, fontSize: 12),
           ),
         ],
       ],

@@ -9,10 +9,6 @@ import { SupabaseAuthService } from './supabase-auth.service';
   imports: [UsersModule],
   controllers: [UsersController],
   providers: [JwtAuthGuard, SupabaseAuthService],
-  exports: [
-    JwtAuthGuard,
-    SupabaseAuthService,
-    UsersModule,
-  ],
+  exports: [JwtAuthGuard, SupabaseAuthService, UsersModule],
 })
 export class AuthModule {}

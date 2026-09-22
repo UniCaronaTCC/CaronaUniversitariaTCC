@@ -11,6 +11,8 @@ describe('UsersController', () => {
     buscarPorId: jest.Mock;
     atualizarPerfil: jest.Mock;
     atualizarFotoPerfil: jest.Mock;
+    buscarVeiculo: jest.Mock;
+    salvarVeiculo: jest.Mock;
   };
   let fotoPerfilService: { enviar: jest.Mock };
 
@@ -19,6 +21,8 @@ describe('UsersController', () => {
       buscarPorId: jest.fn(),
       atualizarPerfil: jest.fn(),
       atualizarFotoPerfil: jest.fn(),
+      buscarVeiculo: jest.fn().mockResolvedValue(null),
+      salvarVeiculo: jest.fn(),
     };
     fotoPerfilService = { enviar: jest.fn() };
 
@@ -42,6 +46,12 @@ describe('UsersController', () => {
       statusVerificacao: 'APROVADO',
       senha: 'hash-que-nao-deve-sair',
     });
+    usersService.buscarVeiculo.mockResolvedValue({
+      idVeiculo: 1,
+      modelo: 'Onix',
+      cor: 'Branco',
+      placa: 'ABC1D23',
+    });
 
     const request = {
       usuario: { sub: 1, nome: 'João', email: 'joao@email.com' },
@@ -62,6 +72,12 @@ describe('UsersController', () => {
       tipoPerfil: 'AMBOS',
       tipoPerfilSolicitado: null,
       statusVerificacao: 'APROVADO',
+      veiculo: {
+        id: 1,
+        modelo: 'Onix',
+        cor: 'Branco',
+        placa: 'ABC1D23',
+      },
     });
     expect(resultado.dados).not.toHaveProperty('senha');
   });
@@ -136,5 +152,33 @@ describe('UsersController', () => {
     ).rejects.toThrow('Envie uma imagem JPG, PNG ou WebP');
 
     expect(fotoPerfilService.enviar).not.toHaveBeenCalled();
+  });
+
+  it('normaliza e salva os dados do veículo', async () => {
+    usersService.buscarPorId.mockResolvedValue({ idUsuario: 1 });
+    usersService.salvarVeiculo.mockResolvedValue({
+      idVeiculo: 3,
+      modelo: 'Onix',
+      cor: 'Branco',
+      placa: 'ABC1D23',
+    });
+    const request = {
+      usuario: { sub: 1, nome: 'João', email: 'joao@email.com' },
+    } as unknown as Request & {
+      usuario: { sub: number; nome: string; email: string };
+    };
+
+    const resultado = await controller.salvarVeiculo(
+      { modelo: ' Onix ', cor: ' Branco ', placa: 'abc-1d23' },
+      request,
+    );
+
+    expect(usersService.salvarVeiculo).toHaveBeenCalledWith(
+      1,
+      'Onix',
+      'Branco',
+      'ABC1D23',
+    );
+    expect(resultado.dados.placa).toBe('ABC1D23');
   });
 });

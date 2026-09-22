@@ -10,6 +10,7 @@ class CardSolicitacaoEnviada extends StatelessWidget {
   final VoidCallback? onAvaliar;
   final VoidCallback? onCancelar;
   final VoidCallback? onPagarPix;
+  final VoidCallback? onAcompanhar;
 
   const CardSolicitacaoEnviada({
     super.key,
@@ -18,6 +19,7 @@ class CardSolicitacaoEnviada extends StatelessWidget {
     this.onAvaliar,
     this.onCancelar,
     this.onPagarPix,
+    this.onAcompanhar,
   });
 
   @override
@@ -93,6 +95,17 @@ class CardSolicitacaoEnviada extends StatelessWidget {
                 icone: Icons.hourglass_bottom,
                 texto: 'Pague até ${solicitacao.prazoPagamentoFormatado}',
                 destaque: true,
+              ),
+            ],
+            if (solicitacao.podeAcompanharCorrida && onAcompanhar != null) ...[
+              const Divider(height: 30),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: processando ? null : onAcompanhar,
+                  icon: const Icon(Icons.location_searching_outlined),
+                  label: const Text('ACOMPANHAR MOTORISTA'),
+                ),
               ),
             ],
             if (solicitacao.podePagarPix && onPagarPix != null) ...[

@@ -11,14 +11,11 @@ import '../models/localizacao_selecionada.dart';
 
 class EnderecoService {
   Future<LocalizacaoSelecionada?> buscarLocalizacaoPorCoordenadas(
-      double latitude,
-      double longitude,
-      ) async {
+    double latitude,
+    double longitude,
+  ) async {
     try {
-      final locais = await placemarkFromCoordinates(
-        latitude,
-        longitude,
-      );
+      final locais = await placemarkFromCoordinates(latitude, longitude);
 
       if (locais.isEmpty) {
         return null;
@@ -32,6 +29,7 @@ class EnderecoService {
 
       final endereco = _montarEndereco([
         local.street,
+        local.subThoroughfare,
         local.subLocality,
         cidade,
         local.administrativeArea,
@@ -48,6 +46,7 @@ class EnderecoService {
         cidade: cidade,
         estado: local.administrativeArea?.trim(),
         pais: local.country?.trim(),
+        pontoEspecifico: true,
       );
     } catch (erro) {
       debugPrint('Erro ao identificar localização: $erro');
@@ -56,12 +55,12 @@ class EnderecoService {
   }
 
   Future<List<LocalizacaoSelecionada>> buscarLocalizacoesPorEndereco(
-      String enderecoDigitado, {
-        double? latitudeReferencia,
-        double? longitudeReferencia,
-        String? cidadeReferencia,
-        String? estadoReferencia,
-      }) async {
+    String enderecoDigitado, {
+    double? latitudeReferencia,
+    double? longitudeReferencia,
+    String? cidadeReferencia,
+    String? estadoReferencia,
+  }) async {
     final textoBusca = enderecoDigitado.trim();
 
     if (textoBusca.length < 3) {
@@ -87,30 +86,28 @@ class EnderecoService {
           longitudeReferencia: longitudeReferencia,
         );
 
-        resultados = _juntarSemDuplicar(
-          resultados,
-          alternativos,
-        );
+        resultados = _juntarSemDuplicar(resultados, alternativos);
       }
 
       resultados.sort(
-            (a, b) => _calcularPrioridade(
-          local: b,
-          textoBusca: textoBusca,
-          cidadeReferencia: cidadeReferencia,
-          estadoReferencia: estadoReferencia,
-          latitudeReferencia: latitudeReferencia,
-          longitudeReferencia: longitudeReferencia,
-        ).compareTo(
-          _calcularPrioridade(
-            local: a,
-            textoBusca: textoBusca,
-            cidadeReferencia: cidadeReferencia,
-            estadoReferencia: estadoReferencia,
-            latitudeReferencia: latitudeReferencia,
-            longitudeReferencia: longitudeReferencia,
-          ),
-        ),
+        (a, b) =>
+            _calcularPrioridade(
+              local: b,
+              textoBusca: textoBusca,
+              cidadeReferencia: cidadeReferencia,
+              estadoReferencia: estadoReferencia,
+              latitudeReferencia: latitudeReferencia,
+              longitudeReferencia: longitudeReferencia,
+            ).compareTo(
+              _calcularPrioridade(
+                local: a,
+                textoBusca: textoBusca,
+                cidadeReferencia: cidadeReferencia,
+                estadoReferencia: estadoReferencia,
+                latitudeReferencia: latitudeReferencia,
+                longitudeReferencia: longitudeReferencia,
+              ),
+            ),
       );
 
       return resultados.take(5).toList();
@@ -124,40 +121,26 @@ class EnderecoService {
   }
 
   Future<List<LocalizacaoSelecionada>> _buscarNoPhoton(
-      String textoBusca, {
-        double? latitudeReferencia,
-        double? longitudeReferencia,
-      }) async {
-    final parametros = <String, String>{
-      'q': textoBusca,
-      'limit': '15',
-    };
+    String textoBusca, {
+    double? latitudeReferencia,
+    double? longitudeReferencia,
+  }) async {
+    final parametros = <String, String>{'q': textoBusca, 'limit': '15'};
 
-    if (latitudeReferencia != null &&
-        longitudeReferencia != null) {
+    if (latitudeReferencia != null && longitudeReferencia != null) {
       parametros['lat'] = latitudeReferencia.toString();
       parametros['lon'] = longitudeReferencia.toString();
     }
 
     final resposta = await http
         .get(
-      Uri.https(
-        'photon.komoot.io',
-        '/api',
-        parametros,
-      ),
-      headers: {
-        'User-Agent': 'UniCarona/1.0',
-      },
-    )
-        .timeout(
-      const Duration(seconds: 8),
-    );
+          Uri.https('photon.komoot.io', '/api', parametros),
+          headers: {'User-Agent': 'UniCarona/1.0'},
+        )
+        .timeout(const Duration(seconds: 8));
 
     if (resposta.statusCode != 200) {
-      debugPrint(
-        'Erro Photon: ${resposta.statusCode}',
-      );
+      debugPrint('Erro Photon: ${resposta.statusCode}');
       return [];
     }
 
@@ -174,9 +157,7 @@ class EnderecoService {
         .toList();
   }
 
-  LocalizacaoSelecionada? _converterFeaturePhoton(
-      dynamic feature,
-      ) {
+  LocalizacaoSelecionada? _converterFeaturePhoton(dynamic feature) {
     if (feature is! Map) {
       return null;
     }
@@ -201,36 +182,47 @@ class EnderecoService {
       return null;
     }
 
-    final longitude = double.tryParse(
-      coordinates[0].toString(),
-    );
+    final longitude = double.tryParse(coordinates[0].toString());
 
-    final latitude = double.tryParse(
-      coordinates[1].toString(),
-    );
+    final latitude = double.tryParse(coordinates[1].toString());
 
     if (latitude == null || longitude == null) {
       return null;
     }
 
-    final nome =
-        properties['name']?.toString().trim() ?? '';
+    final nome = properties['name']?.toString().trim() ?? '';
 
-    final cidade = (
-        properties['city'] ??
-            properties['locality'] ??
-            properties['county'] ??
-            ''
-    ).toString().trim();
+    final rua = properties['street']?.toString().trim() ?? '';
+    final numero = properties['housenumber']?.toString().trim() ?? '';
+    final tipo = properties['type']?.toString().toLowerCase().trim() ?? '';
+    const tiposGenericos = {
+      'city',
+      'town',
+      'village',
+      'municipality',
+      'county',
+      'state',
+      'country',
+      'locality',
+    };
+    final pontoEspecifico =
+        rua.isNotEmpty || (nome.isNotEmpty && !tiposGenericos.contains(tipo));
 
-    final estado =
-    properties['state']?.toString().trim();
+    final cidade =
+        (properties['city'] ??
+                properties['locality'] ??
+                properties['county'] ??
+                '')
+            .toString()
+            .trim();
 
-    final pais =
-    properties['country']?.toString().trim();
+    final estado = properties['state']?.toString().trim();
+
+    final pais = properties['country']?.toString().trim();
 
     final endereco = _montarEndereco([
-      properties['street']?.toString(),
+      rua,
+      numero,
       properties['district']?.toString(),
       cidade,
       estado,
@@ -238,31 +230,27 @@ class EnderecoService {
     ]);
 
     return LocalizacaoSelecionada(
-      ponto: LatLng(
-        latitude,
-        longitude,
-      ),
+      ponto: LatLng(latitude, longitude),
       nome: nome.isEmpty ? null : nome,
       endereco: endereco.isEmpty ? nome : endereco,
       cidade: cidade.isEmpty ? null : cidade,
       estado: estado,
       pais: pais,
+      pontoEspecifico: pontoEspecifico,
     );
   }
 
   List<LocalizacaoSelecionada> _juntarSemDuplicar(
-      List<LocalizacaoSelecionada> primeiraLista,
-      List<LocalizacaoSelecionada> segundaLista,
-      ) {
+    List<LocalizacaoSelecionada> primeiraLista,
+    List<LocalizacaoSelecionada> segundaLista,
+  ) {
     final resultado = [...primeiraLista];
 
     for (final local in segundaLista) {
       final jaExiste = resultado.any(
-            (existente) =>
-        existente.ponto.latitude ==
-            local.ponto.latitude &&
-            existente.ponto.longitude ==
-                local.ponto.longitude,
+        (existente) =>
+            existente.ponto.latitude == local.ponto.latitude &&
+            existente.ponto.longitude == local.ponto.longitude,
       );
 
       if (!jaExiste) {
@@ -287,9 +275,7 @@ class EnderecoService {
     final buscaCompacta = _normalizarCompacto(textoBusca);
 
     final nome = _normalizar(local.nome ?? '');
-    final nomeCompacto = _normalizarCompacto(
-      local.nome ?? '',
-    );
+    final nomeCompacto = _normalizarCompacto(local.nome ?? '');
 
     final endereco = _normalizar(local.endereco);
     final cidade = _normalizar(local.cidade ?? '');
@@ -300,8 +286,7 @@ class EnderecoService {
         .where((palavra) => palavra.length >= 3);
 
     // McDonald's, mc donalds e mcdonalds ficam equivalentes.
-    if (buscaCompacta.isNotEmpty &&
-        nomeCompacto.isNotEmpty) {
+    if (buscaCompacta.isNotEmpty && nomeCompacto.isNotEmpty) {
       if (nomeCompacto == buscaCompacta) {
         prioridade += 2000;
       } else if (nomeCompacto.contains(buscaCompacta) ||
@@ -333,34 +318,24 @@ class EnderecoService {
       }
     }
 
-    final cidadeEsperada = _normalizar(
-      cidadeReferencia ?? '',
-    );
+    final cidadeEsperada = _normalizar(cidadeReferencia ?? '');
 
-    if (cidadeEsperada.isNotEmpty &&
-        cidade == cidadeEsperada) {
+    if (cidadeEsperada.isNotEmpty && cidade == cidadeEsperada) {
       prioridade += 1000;
     }
 
-    final estadoEsperado = _normalizar(
-      estadoReferencia ?? '',
-    );
+    final estadoEsperado = _normalizar(estadoReferencia ?? '');
 
-    if (estadoEsperado.isNotEmpty &&
-        estado == estadoEsperado) {
+    if (estadoEsperado.isNotEmpty && estado == estadoEsperado) {
       prioridade += 300;
     }
 
-    if (latitudeReferencia != null &&
-        longitudeReferencia != null) {
+    if (latitudeReferencia != null && longitudeReferencia != null) {
       const distancia = Distance();
 
       final distanciaKm = distancia.as(
         LengthUnit.Kilometer,
-        LatLng(
-          latitudeReferencia,
-          longitudeReferencia,
-        ),
+        LatLng(latitudeReferencia, longitudeReferencia),
         local.ponto,
       );
 
@@ -371,9 +346,7 @@ class EnderecoService {
     return prioridade;
   }
 
-  String _montarEndereco(
-      Iterable<String?> partesRecebidas,
-      ) {
+  String _montarEndereco(Iterable<String?> partesRecebidas) {
     final partes = <String>[];
 
     for (final parteRecebida in partesRecebidas) {
@@ -386,8 +359,7 @@ class EnderecoService {
       final normalizada = _normalizar(parte);
 
       final jaExiste = partes.any(
-            (existente) =>
-        _normalizar(existente) == normalizada,
+        (existente) => _normalizar(existente) == normalizada,
       );
 
       if (!jaExiste) {
@@ -398,28 +370,17 @@ class EnderecoService {
     return partes.join(', ');
   }
 
-  String _prepararBuscaAlternativa(
-      String texto,
-      ) {
+  String _prepararBuscaAlternativa(String texto) {
     return _normalizarCompacto(texto);
   }
 
-  String _normalizar(
-      String texto,
-      ) {
-    return removeDiacritics(texto)
-        .toLowerCase()
-        .trim();
+  String _normalizar(String texto) {
+    return removeDiacritics(texto).toLowerCase().trim();
   }
 
-  String _normalizarCompacto(
-      String texto,
-      ) {
-    return removeDiacritics(texto)
-        .toLowerCase()
-        .replaceAll(
-      RegExp(r'[^a-z0-9]'),
-      '',
-    );
+  String _normalizarCompacto(String texto) {
+    return removeDiacritics(
+      texto,
+    ).toLowerCase().replaceAll(RegExp(r'[^a-z0-9]'), '');
   }
 }

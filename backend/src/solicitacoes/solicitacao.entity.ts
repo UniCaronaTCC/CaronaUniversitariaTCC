@@ -15,13 +15,9 @@ import { numeroDecimalTransformer } from '../database/numero-decimal.transformer
 import { User } from '../users/user.entity';
 
 @Entity('solicitacoes')
-@Index(
-  'uq_solicitacao_carona_passageiro',
-  ['carona', 'passageiro'],
-  {
-    unique: true,
-  },
-)
+@Index('uq_solicitacao_carona_passageiro', ['carona', 'passageiro'], {
+  unique: true,
+})
 export class Solicitacao {
   avaliada = false;
   podeAvaliar = false;

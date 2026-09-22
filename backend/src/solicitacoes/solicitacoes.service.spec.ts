@@ -163,6 +163,17 @@ describe('SolicitacoesService', () => {
     expect(atualizarQueryBuilder.execute).toHaveBeenCalledTimes(1);
   });
 
+  it('inclui as coordenadas do destino nas solicitações enviadas', async () => {
+    await service.listarEnviadas(1);
+
+    expect(atualizarQueryBuilder.select).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        'carona.destinoLatitude',
+        'carona.destinoLongitude',
+      ]),
+    );
+  });
+
   it('marca como confirmado o pagamento PAID ao listar solicitações', async () => {
     const solicitacao = {
       idSolicitacao: 12,

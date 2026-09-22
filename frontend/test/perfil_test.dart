@@ -19,6 +19,7 @@ void main() {
     tester,
   ) async {
     String? fotoEnviada;
+    List<String>? veiculoEnviado;
 
     AuthService.tokenUsuarioLogado = 'token-teste';
     AuthService.usuarioLogado = {
@@ -71,6 +72,14 @@ void main() {
               'dados': AuthService.usuarioLogado,
             };
           },
+          salvarVeiculo: (modelo, cor, placa) async {
+            veiculoEnviado = [modelo, cor, placa];
+            return {
+              'sucesso': true,
+              'mensagem': 'Veículo salvo com sucesso',
+              'dados': {'id': 1, 'modelo': modelo, 'cor': cor, 'placa': placa},
+            };
+          },
           carregarAvaliacoes: (idUsuario, pagina) async => {
             'sucesso': true,
             'dados': {
@@ -95,13 +104,30 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('João'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('joao@email.com'), 200);
-    expect(find.text('joao@email.com'), findsOneWidget);
     expect(find.text('UniSalesiano - Campus Araçatuba'), findsOneWidget);
     expect(find.text('Motorista e passageiro'), findsOneWidget);
     expect(find.text('Perfil verificado'), findsOneWidget);
+    await tester.scrollUntilVisible(find.text('joao@email.com'), 200);
+    expect(find.text('joao@email.com'), findsOneWidget);
 
-    await tester.ensureVisible(find.byTooltip('Alterar foto de perfil'));
+    await tester.scrollUntilVisible(find.text('Cadastrar veículo'), -200);
+    await tester.tap(find.text('Cadastrar veículo'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).at(0), 'Onix');
+    await tester.enterText(find.byType(TextField).at(1), 'Branco');
+    await tester.enterText(find.byType(TextField).at(2), 'abc1d23');
+    await tester.tap(find.text('Salvar'));
+    await tester.pumpAndSettle();
+
+    expect(veiculoEnviado, ['Onix', 'Branco', 'ABC1D23']);
+    expect(find.text('Veículo salvo com sucesso'), findsOneWidget);
+    await tester.pump(const Duration(seconds: 4));
+    await tester.pumpAndSettle();
+
+    await tester.scrollUntilVisible(
+      find.byTooltip('Alterar foto de perfil'),
+      -200,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Alterar foto de perfil'));
     await tester.pumpAndSettle();

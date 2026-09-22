@@ -45,5 +45,7 @@
 	<true/>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>O UniCarona usa sua localização durante a corrida para acompanhar o trajeto.</string>
 </dict>
 </plist>

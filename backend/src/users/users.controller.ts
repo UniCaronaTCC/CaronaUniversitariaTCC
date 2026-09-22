@@ -5,6 +5,7 @@ import {
   Get,
   NotFoundException,
   Patch,
+  Put,
   Req,
   UploadedFile,
   UseGuards,
@@ -16,6 +17,7 @@ import type { RequisicaoComUsuario } from '../auth/requisicao-com-usuario';
 import { FotoPerfilService } from './foto-perfil.service';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
+import { Veiculo } from './veiculo.entity';
 
 type DadosPerfilRecebidos = Record<string, unknown> | undefined;
 
@@ -39,9 +41,55 @@ export class UsersController {
       throw new NotFoundException('Usuário não encontrado');
     }
 
+    const veiculo = await this.usersService.buscarVeiculo(usuario.idUsuario);
+
     return {
       sucesso: true,
-      dados: this.formatarPerfil(usuario),
+      dados: this.formatarPerfil(usuario, veiculo),
+    };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Put('perfil/veiculo')
+  async salvarVeiculo(
+    @Body() body: DadosPerfilRecebidos,
+    @Req() request: RequisicaoComUsuario,
+  ) {
+    const modelo = body?.modelo?.toString().trim() ?? '';
+    const cor = body?.cor?.toString().trim() ?? '';
+    const placa = (body?.placa?.toString() ?? '')
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, '');
+
+    if (modelo.length < 2 || modelo.length > 100) {
+      throw new BadRequestException('Informe um modelo válido');
+    }
+
+    if (cor.length < 2 || cor.length > 50) {
+      throw new BadRequestException('Informe uma cor válida');
+    }
+
+    if (!/^[A-Z]{3}(?:\d{4}|\d[A-Z]\d{2})$/.test(placa)) {
+      throw new BadRequestException('Informe uma placa válida');
+    }
+
+    const usuario = await this.usersService.buscarPorId(request.usuario.sub);
+
+    if (!usuario) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
+
+    const veiculo = await this.usersService.salvarVeiculo(
+      usuario.idUsuario,
+      modelo,
+      cor,
+      placa,
+    );
+
+    return {
+      sucesso: true,
+      mensagem: 'Veículo salvo com sucesso',
+      dados: this.formatarVeiculo(veiculo),
     };
   }
 
@@ -72,10 +120,12 @@ export class UsersController {
       throw new NotFoundException('Usuário não encontrado');
     }
 
+    const veiculo = await this.usersService.buscarVeiculo(usuario.idUsuario);
+
     return {
       sucesso: true,
       mensagem: 'Perfil atualizado com sucesso',
-      dados: this.formatarPerfil(usuario),
+      dados: this.formatarPerfil(usuario, veiculo),
     };
   }
 
@@ -118,15 +168,16 @@ export class UsersController {
       usuario,
       url,
     );
+    const veiculo = await this.usersService.buscarVeiculo(usuario.idUsuario);
 
     return {
       sucesso: true,
       mensagem: 'Foto de perfil atualizada',
-      dados: this.formatarPerfil(usuarioAtualizado),
+      dados: this.formatarPerfil(usuarioAtualizado, veiculo),
     };
   }
 
-  private formatarPerfil(usuario: User) {
+  private formatarPerfil(usuario: User, veiculo: Veiculo | null = null) {
     return {
       id: usuario.idUsuario,
       nome: usuario.nome,
@@ -138,6 +189,16 @@ export class UsersController {
       tipoPerfil: usuario.tipoPerfil,
       tipoPerfilSolicitado: usuario.tipoPerfilSolicitado,
       statusVerificacao: usuario.statusVerificacao,
+      veiculo: veiculo ? this.formatarVeiculo(veiculo) : null,
+    };
+  }
+
+  private formatarVeiculo(veiculo: Veiculo) {
+    return {
+      id: veiculo.idVeiculo,
+      modelo: veiculo.modelo,
+      cor: veiculo.cor,
+      placa: veiculo.placa,
     };
   }
 

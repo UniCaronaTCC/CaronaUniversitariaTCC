@@ -3,6 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { InstituicoesService } from '../instituicoes/instituicoes.service';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
+import { Veiculo } from './veiculo.entity';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -14,6 +15,11 @@ describe('UsersService', () => {
     buscarPorId: jest.Mock;
     campusValido: jest.Mock;
   };
+  let veiculosRepository: {
+    findOne: jest.Mock;
+    create: jest.Mock;
+    save: jest.Mock;
+  };
 
   beforeEach(async () => {
     repository = {
@@ -24,6 +30,11 @@ describe('UsersService', () => {
       buscarPorId: jest.fn(),
       campusValido: jest.fn().mockResolvedValue(true),
     };
+    veiculosRepository = {
+      findOne: jest.fn(),
+      create: jest.fn().mockReturnValue({}),
+      save: jest.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -31,6 +42,10 @@ describe('UsersService', () => {
         {
           provide: getRepositoryToken(User),
           useValue: repository,
+        },
+        {
+          provide: getRepositoryToken(Veiculo),
+          useValue: veiculosRepository,
         },
         {
           provide: InstituicoesService,
@@ -105,5 +120,27 @@ describe('UsersService', () => {
 
     expect(resultado.fotoPerfil).toBe('https://exemplo.com/foto');
     expect(repository.save).toHaveBeenCalledWith(usuario);
+  });
+
+  it('cadastra um veículo para o usuário', async () => {
+    veiculosRepository.findOne.mockResolvedValue(null);
+    veiculosRepository.save.mockImplementation((dados: Veiculo) =>
+      Promise.resolve({ ...dados, idVeiculo: 1 }),
+    );
+
+    const resultado = await service.salvarVeiculo(
+      7,
+      'Honda Civic',
+      'Prata',
+      'ABC1D23',
+    );
+
+    expect(resultado).toMatchObject({
+      idVeiculo: 1,
+      modelo: 'Honda Civic',
+      cor: 'Prata',
+      placa: 'ABC1D23',
+      usuario: { idUsuario: 7 },
+    });
   });
 });

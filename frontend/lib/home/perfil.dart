@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../auth/login.dart';
@@ -22,6 +23,12 @@ typedef AtualizarPerfil =
 typedef SelecionarFotoPerfil = Future<XFile?> Function();
 typedef EnviarFotoPerfil =
     Future<Map<String, dynamic>> Function(String caminho);
+typedef SalvarVeiculo =
+    Future<Map<String, dynamic>> Function(
+      String modelo,
+      String cor,
+      String placa,
+    );
 
 class _DadosPerfilEditado {
   final int idInstituicao;
@@ -37,6 +44,7 @@ class PerfilTela extends StatefulWidget {
   final BuscarInstituicoes? buscarInstituicoes;
   final SelecionarFotoPerfil? selecionarFoto;
   final EnviarFotoPerfil? enviarFoto;
+  final SalvarVeiculo? salvarVeiculo;
 
   const PerfilTela({
     super.key,
@@ -46,6 +54,7 @@ class PerfilTela extends StatefulWidget {
     this.buscarInstituicoes,
     this.selecionarFoto,
     this.enviarFoto,
+    this.salvarVeiculo,
   });
 
   @override
@@ -315,6 +324,144 @@ class _PerfilTelaState extends State<PerfilTela> {
     );
   }
 
+  Future<void> editarVeiculo() async {
+    final veiculoAtual = usuario['veiculo'] is Map
+        ? Map<String, dynamic>.from(usuario['veiculo'])
+        : <String, dynamic>{};
+    final modeloController = TextEditingController(
+      text: veiculoAtual['modelo']?.toString() ?? '',
+    );
+    final corController = TextEditingController(
+      text: veiculoAtual['cor']?.toString() ?? '',
+    );
+    final placaController = TextEditingController(
+      text: veiculoAtual['placa']?.toString() ?? '',
+    );
+    String? erroFormulario;
+
+    final dados = await showDialog<List<String>>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, atualizarDialogo) => AlertDialog(
+          title: Text(
+            veiculoAtual.isEmpty ? 'Cadastrar veículo' : 'Editar veículo',
+          ),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: modeloController,
+                  textCapitalization: TextCapitalization.words,
+                  maxLength: 100,
+                  decoration: const InputDecoration(
+                    labelText: 'Modelo',
+                    hintText: 'Ex.: Honda Civic',
+                  ),
+                ),
+                TextField(
+                  controller: corController,
+                  textCapitalization: TextCapitalization.words,
+                  maxLength: 50,
+                  decoration: const InputDecoration(
+                    labelText: 'Cor',
+                    hintText: 'Ex.: Prata',
+                  ),
+                ),
+                TextField(
+                  controller: placaController,
+                  textCapitalization: TextCapitalization.characters,
+                  maxLength: 7,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.allow(RegExp('[a-zA-Z0-9]')),
+                    TextInputFormatter.withFunction((antigo, novo) {
+                      return novo.copyWith(text: novo.text.toUpperCase());
+                    }),
+                  ],
+                  decoration: const InputDecoration(
+                    labelText: 'Placa',
+                    hintText: 'ABC1D23',
+                  ),
+                ),
+                if (erroFormulario != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      erroFormulario!,
+                      style: const TextStyle(color: Colors.red, fontSize: 13),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancelar'),
+            ),
+            FilledButton(
+              onPressed: () {
+                final modelo = modeloController.text.trim();
+                final cor = corController.text.trim();
+                final placa = placaController.text.trim().toUpperCase();
+
+                if (modelo.length < 2 || cor.length < 2) {
+                  atualizarDialogo(
+                    () => erroFormulario = 'Informe o modelo e a cor',
+                  );
+                  return;
+                }
+
+                if (!RegExp(
+                  r'^[A-Z]{3}(?:\d{4}|\d[A-Z]\d{2})$',
+                ).hasMatch(placa)) {
+                  atualizarDialogo(
+                    () => erroFormulario = 'Informe uma placa válida',
+                  );
+                  return;
+                }
+
+                Navigator.pop(context, [modelo, cor, placa]);
+              },
+              child: const Text('Salvar'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (!mounted || dados == null) {
+      return;
+    }
+
+    setState(() => carregando = true);
+    final resultado =
+        await (widget.salvarVeiculo?.call(dados[0], dados[1], dados[2]) ??
+            AuthService.salvarVeiculo(dados[0], dados[1], dados[2]));
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {
+      carregando = false;
+      if (resultado['sucesso'] == true && resultado['dados'] is Map) {
+        usuario = {
+          ...usuario,
+          'veiculo': Map<String, dynamic>.from(resultado['dados']),
+        };
+      }
+    });
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          resultado['mensagem']?.toString() ?? 'Erro ao salvar veículo',
+        ),
+      ),
+    );
+  }
+
   Widget itemPerfil({
     required IconData icone,
     required String titulo,
@@ -409,6 +556,9 @@ class _PerfilTelaState extends State<PerfilTela> {
       instituicao,
       if (campus.isNotEmpty) 'Campus $campus',
     ].where((texto) => texto.isNotEmpty).join(' - ');
+    final veiculo = usuario['veiculo'] is Map
+        ? Map<String, dynamic>.from(usuario['veiculo'])
+        : null;
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -573,6 +723,41 @@ class _PerfilTelaState extends State<PerfilTela> {
               subtitle: const Text('Como motorista e passageiro'),
               trailing: const Icon(Icons.chevron_right),
               onTap: abrirHistorico,
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Meu veículo',
+              style: TextStyle(
+                color: AppColors.text,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: const Color(0xFFF8F5FA),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.black12),
+              ),
+              child: ListTile(
+                leading: const Icon(
+                  Icons.directions_car_outlined,
+                  color: AppColors.primary,
+                ),
+                title: Text(
+                  veiculo?['modelo']?.toString() ?? 'Cadastrar veículo',
+                ),
+                subtitle: Text(
+                  veiculo == null
+                      ? 'Necessário para oferecer caronas'
+                      : '${veiculo['cor']} • ${veiculo['placa']}',
+                ),
+                trailing: Icon(
+                  veiculo == null ? Icons.add : Icons.edit_outlined,
+                ),
+                onTap: carregando ? null : editarVeiculo,
+              ),
             ),
             const SizedBox(height: 24),
             const Text(

@@ -1,6 +1,6 @@
 # UniCarona
 
-[![CI](https://github.com/UniCaronaTCC/CaronaUniversitariaTCC/actions/workflows/ci.yml/badge.svg?branch=desenvolvimento)](https://github.com/UniCaronaTCC/CaronaUniversitariaTCC/actions/workflows/ci.yml)
+[![CI Backend e Flutter](https://github.com/UniCaronaTCC/CaronaUniversitariaTCC/actions/workflows/ci.yml/badge.svg?branch=desenvolvimento)](https://github.com/UniCaronaTCC/CaronaUniversitariaTCC/actions/workflows/ci.yml)
 
 Aplicativo de caronas universitárias desenvolvido como Trabalho de Conclusão
 de Curso. O projeto permite publicar e buscar caronas, solicitar vagas,
@@ -40,10 +40,12 @@ npm test -- --runInBand
 npm run build
 ```
 
-Para verificar o aplicativo Flutter localmente:
+## Testes do aplicativo
 
 ```bash
 cd frontend
+flutter pub get
 flutter test
+flutter analyze
 flutter build apk --debug
 ```

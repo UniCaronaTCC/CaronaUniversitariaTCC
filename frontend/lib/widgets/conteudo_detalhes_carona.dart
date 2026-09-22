@@ -10,11 +10,7 @@ class ConteudoDetalhesCarona extends StatelessWidget {
   final Carona carona;
   final Widget? rodape;
 
-  const ConteudoDetalhesCarona({
-    super.key,
-    required this.carona,
-    this.rodape,
-  });
+  const ConteudoDetalhesCarona({super.key, required this.carona, this.rodape});
 
   @override
   Widget build(BuildContext context) {
@@ -127,11 +123,24 @@ class ConteudoDetalhesCarona extends StatelessWidget {
             ),
           ],
 
+          if (carona.veiculoModelo?.trim().isNotEmpty == true) ...[
+            const SizedBox(height: 22),
+            _SecaoDetalhe(
+              titulo: 'Veículo',
+              icone: Icons.directions_car_outlined,
+              conteudo: [
+                carona.veiculoModelo!.trim(),
+                if (carona.veiculoCor?.trim().isNotEmpty == true)
+                  carona.veiculoCor!.trim(),
+                if (carona.veiculoPlaca?.trim().isNotEmpty == true)
+                  carona.veiculoPlaca!.trim(),
+              ].join(' • '),
+            ),
+          ],
+
           const SizedBox(height: 22),
 
-          _SecaoPontosEmbarque(
-            pontos: carona.pontosEmbarque,
-          ),
+          _SecaoPontosEmbarque(pontos: carona.pontosEmbarque),
 
           const SizedBox(height: 22),
 
@@ -162,10 +171,7 @@ class ConteudoDetalhesCarona extends StatelessWidget {
           const SizedBox(height: 30),
           MapaRotaCarona(carona: carona),
 
-          if (rodape != null) ...[
-            const SizedBox(height: 30),
-            rodape!,
-          ],
+          if (rodape != null) ...[const SizedBox(height: 30), rodape!],
         ],
       ),
     );
@@ -199,9 +205,7 @@ class ConteudoDetalhesCarona extends StatelessWidget {
 class _SecaoPontosEmbarque extends StatelessWidget {
   final List<PontoEmbarque> pontos;
 
-  const _SecaoPontosEmbarque({
-    required this.pontos,
-  });
+  const _SecaoPontosEmbarque({required this.pontos});
 
   @override
   Widget build(BuildContext context) {
@@ -210,10 +214,7 @@ class _SecaoPontosEmbarque extends StatelessWidget {
       children: [
         const Text(
           'Pontos de embarque',
-          style: TextStyle(
-            color: Colors.black54,
-            fontSize: 13,
-          ),
+          style: TextStyle(color: Colors.black54, fontSize: 13),
         ),
 
         const SizedBox(height: 8),
@@ -242,11 +243,9 @@ class _SecaoPontosEmbarque extends StatelessWidget {
           )
         else
           ...pontos.map(
-                (ponto) => Padding(
+            (ponto) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
-              child: _ItemPontoEmbarque(
-                ponto: ponto,
-              ),
+              child: _ItemPontoEmbarque(ponto: ponto),
             ),
           ),
       ],
@@ -257,9 +256,7 @@ class _SecaoPontosEmbarque extends StatelessWidget {
 class _ItemPontoEmbarque extends StatelessWidget {
   final PontoEmbarque ponto;
 
-  const _ItemPontoEmbarque({
-    required this.ponto,
-  });
+  const _ItemPontoEmbarque({required this.ponto});
 
   @override
   Widget build(BuildContext context) {
@@ -295,9 +292,7 @@ class _ItemPontoEmbarque extends StatelessWidget {
                   color: nome != null && nome.isNotEmpty
                       ? Colors.black54
                       : AppColors.text,
-                  fontSize: nome != null && nome.isNotEmpty
-                      ? 14
-                      : 16,
+                  fontSize: nome != null && nome.isNotEmpty ? 14 : 16,
                   fontWeight: nome != null && nome.isNotEmpty
                       ? FontWeight.normal
                       : FontWeight.w600,
@@ -330,20 +325,13 @@ class _SecaoDetalhe extends StatelessWidget {
       children: [
         Text(
           titulo,
-          style: const TextStyle(
-            color: Colors.black54,
-            fontSize: 13,
-          ),
+          style: const TextStyle(color: Colors.black54, fontSize: 13),
         ),
         const SizedBox(height: 7),
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              icone,
-              color: AppColors.primary,
-              size: 22,
-            ),
+            Icon(icone, color: AppColors.primary, size: 22),
             const SizedBox(width: 10),
             Expanded(
               child: Text(

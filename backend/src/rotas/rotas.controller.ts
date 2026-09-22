@@ -6,9 +6,7 @@ export class RotasController {
   constructor(private readonly rotasService: RotasService) {}
 
   @Post('calcular')
-  calcularRota(
-    @Body() body: { coordenadas: number[][] },
-  ) {
+  calcularRota(@Body() body: { coordenadas: number[][] }) {
     return this.rotasService.calcularRota(body.coordenadas);
   }
 }

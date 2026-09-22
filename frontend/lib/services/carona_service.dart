@@ -5,6 +5,7 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/carona.dart';
 import '../models/ponto_embarque.dart';
+import '../models/posicao_atual_carona.dart';
 import 'auth_service.dart';
 
 class CaronaService {
@@ -205,6 +206,162 @@ class CaronaService {
         'mensagem': _obterMensagem(corpo, 'Erro ao excluir carona'),
       };
     } catch (erro) {
+      return {
+        'sucesso': false,
+        'mensagem': 'Não foi possível conectar ao servidor',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> iniciarCorrida(int idCarona) {
+    return _alterarStatusCorrida(idCarona, 'iniciar');
+  }
+
+  static Future<Map<String, dynamic>> finalizarCorrida(int idCarona) {
+    return _alterarStatusCorrida(idCarona, 'finalizar');
+  }
+
+  static Future<bool> atualizarPosicaoAtual({
+    required int idCarona,
+    required double latitude,
+    required double longitude,
+    required double precisao,
+    double? direcao,
+  }) async {
+    try {
+      final token = AuthService.tokenUsuarioLogado;
+      if (token == null) return false;
+
+      final resposta = await http
+          .put(
+            Uri.parse('${ApiConfig.baseUrl}/caronas/$idCarona/posicao'),
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': 'Bearer $token',
+            },
+            body: jsonEncode({
+              'latitude': latitude,
+              'longitude': longitude,
+              'direcao': direcao,
+              'precisao': precisao,
+            }),
+          )
+          .timeout(const Duration(seconds: 4));
+
+      if (resposta.statusCode == 401) {
+        await AuthService.sair();
+      }
+
+      return resposta.statusCode == 200 || resposta.statusCode == 201;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static Future<Map<String, dynamic>> buscarPosicaoAtual(int idCarona) async {
+    try {
+      final token = AuthService.tokenUsuarioLogado;
+      if (token == null) {
+        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+      }
+
+      final resposta = await http
+          .get(
+            Uri.parse('${ApiConfig.baseUrl}/caronas/$idCarona/posicao'),
+            headers: {'Authorization': 'Bearer $token'},
+          )
+          .timeout(const Duration(seconds: 4));
+      final corpo = _decodificarResposta(resposta);
+
+      if (resposta.statusCode == 200) {
+        final dados = corpo['dados'];
+        if (dados == null) return {'sucesso': true, 'dados': null};
+        if (dados is Map) {
+          try {
+            return {
+              'sucesso': true,
+              'dados': PosicaoAtualCarona.fromJson(
+                Map<String, dynamic>.from(dados),
+              ),
+            };
+          } catch (_) {
+            return {
+              'sucesso': false,
+              'mensagem': 'Localização do motorista inválida',
+            };
+          }
+        }
+      }
+
+      if (resposta.statusCode == 401) {
+        await AuthService.sair();
+        return {
+          'sucesso': false,
+          'mensagem': 'Sua sessão expirou. Entre novamente.',
+        };
+      }
+
+      return {
+        'sucesso': false,
+        'mensagem': _obterMensagem(
+          corpo,
+          'Não foi possível atualizar a localização do motorista',
+        ),
+        'corridaEncerrada': resposta.statusCode == 409,
+      };
+    } catch (_) {
+      return {
+        'sucesso': false,
+        'mensagem': 'Não foi possível conectar ao servidor',
+      };
+    }
+  }
+
+  static Future<Map<String, dynamic>> _alterarStatusCorrida(
+    int idCarona,
+    String acao,
+  ) async {
+    try {
+      final token = AuthService.tokenUsuarioLogado;
+      if (token == null) {
+        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+      }
+
+      final resposta = await http.patch(
+        Uri.parse('${ApiConfig.baseUrl}/caronas/$idCarona/$acao'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      final corpo = _decodificarResposta(resposta);
+
+      if (resposta.statusCode == 200 || resposta.statusCode == 201) {
+        final dados = corpo['dados'];
+        if (dados is Map) {
+          return {
+            'sucesso': true,
+            'mensagem': corpo['mensagem']?.toString(),
+            'dados': Carona.fromJson(Map<String, dynamic>.from(dados)),
+          };
+        }
+      }
+
+      if (resposta.statusCode == 401) {
+        await AuthService.sair();
+        return {
+          'sucesso': false,
+          'mensagem': 'Sua sessão expirou. Entre novamente.',
+        };
+      }
+
+      return {
+        'sucesso': false,
+        'mensagem': _obterMensagem(
+          corpo,
+          acao == 'iniciar'
+              ? 'Não foi possível iniciar a corrida'
+              : 'Não foi possível finalizar a corrida',
+        ),
+      };
+    } catch (_) {
       return {
         'sucesso': false,
         'mensagem': 'Não foi possível conectar ao servidor',
