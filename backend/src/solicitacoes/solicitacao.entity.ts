@@ -25,6 +25,7 @@ import { User } from '../users/user.entity';
 export class Solicitacao {
   avaliada = false;
   podeAvaliar = false;
+  pagamentoConfirmado = false;
 
   @PrimaryGeneratedColumn({ name: 'id_solicitacao' })
   idSolicitacao!: number;
@@ -78,6 +79,13 @@ export class Solicitacao {
 
   @Column({ length: 30, default: 'PENDENTE' })
   status: string = 'PENDENTE';
+
+  @Column({
+    name: 'pagamento_limite_em',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  pagamentoLimiteEm: Date | null = null;
 
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm!: Date;

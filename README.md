@@ -24,13 +24,14 @@ organizar pontos de embarque e avaliar os participantes.
 ## Testes e integração contínua
 
 Os testes unitários do backend utilizam Jest e ficam junto aos arquivos
-testados, dentro de `backend/src`.
+testados, dentro de `backend/src`. Os testes do aplicativo Flutter ficam em
+`frontend/test`.
 
 O workflow de integração contínua é executado em pushes e pull requests para
 as branches `master` e `desenvolvimento`. Ele instala as dependências, executa
-os testes unitários e faz o build do backend.
+os testes unitários, faz o build do backend e gera um APK de teste.
 
-Para executar as mesmas verificações localmente:
+Para verificar o backend localmente:
 
 ```bash
 cd backend

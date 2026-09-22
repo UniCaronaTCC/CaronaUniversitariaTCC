@@ -1,8 +1,7 @@
 # Pagamentos: cliente da API e estrutura SQL
 
-O cliente da API v2 da AbacatePay, a entidade TypeORM e a rota autenticada para
-criar ou reutilizar um Pix estao implementados. Ainda nao existe webhook nem tela
-de pagamento no Flutter.
+O cliente da API v2 da AbacatePay, a persistencia, as rotas autenticadas, o
+webhook e a tela de pagamento no Flutter estao implementados para o sandbox.
 
 ## Arquivos
 
@@ -41,9 +40,16 @@ A rota nao recebe valor no corpo. Ela usa o usuario autenticado pelo Supabase e
 busca o valor da carona no banco. Somente o passageiro de uma solicitacao ACEITA
 e nao recorrente pode usa-la nesta primeira versao.
 
+Ao aceitar uma solicitacao avulsa, o backend reserva a vaga e define
+`pagamento_limite_em` como o menor valor entre uma hora apos o aceite e quinze
+minutos antes do inicio da carona. O Pix e criado somente quando o passageiro
+solicita e expira junto com esse prazo, evitando dois vencimentos diferentes.
+O arquivo `FLUXO.md` registra as decisoes de negocio simplificadas para o TCC.
+
 Antes da chamada externa, o backend bloqueia brevemente a solicitacao e salva uma
 tentativa PREPARADA com uma referencia UUID. Tentativas PREPARADA, CONFIRMADA ou
-INCERTA sao reutilizadas; isso impede que repeticoes da rota criem novos Pix.
+INCERTA sao verificadas antes de criar outro Pix; isso impede que repeticoes da
+rota criem cobrancas duplicadas.
 FALHOU permite uma nova tentativa porque representa uma falha definitiva antes
 da criacao. Essa classificacao e conservadora: timeout e respostas duvidosas ficam
 INCERTA e exigem conciliacao futura.
@@ -51,6 +57,32 @@ INCERTA e exigem conciliacao futura.
 O bloqueio do banco termina antes da chamada HTTP. Ao receber a cobranca, o
 backend salva identificador, status, QR Code, codigo copia e cola e vencimento.
 CONFIRMADA quer dizer que a cobranca foi criada, nao que o Pix foi pago.
+Antes de reutilizar uma cobranca CONFIRMADA, o backend consulta seu estado. Pix
+EXPIRED, CANCELLED ou FAILED e atualizado no banco e pode ser substituido por
+outro, desde que ainda reste tempo no prazo da solicitacao.
+
+`GET /pagamentos/:idPagamento`
+
+Retorna o estado atual da cobranca somente quando ela pertence ao passageiro
+autenticado. Enquanto o Pix estiver PENDING, a tela Flutter consulta essa rota a
+cada tres segundos. Ao receber PAID, interrompe as consultas, esconde QR Code e
+codigo copia e cola e mostra a confirmacao. Tambem existe atualizacao manual pelo
+botao na barra superior.
+
+`POST /pagamentos/:idPagamento/simular`
+
+Disponivel somente para o passageiro autenticado dono de uma cobranca PENDING
+criada no sandbox. A rota pede a simulacao de pagamento a AbacatePay, mas nao
+altera o status local para PAID. O webhook continua sendo a unica fonte que
+confirma o pagamento no banco, permitindo que o teste exercite o fluxo real.
+
+No Flutter, a tela Pix mostra **Simular pagamento** enquanto a cobranca de teste
+estiver pendente. Depois do clique, a atualizacao normal da tela aguarda o
+webhook, mostra a confirmacao e remove o botao.
+
+As listagens de solicitacoes tambem consultam os pagamentos confirmados. Quando
+existe um pagamento `PAID`, retornam `pagamentoConfirmado: true`; o aplicativo
+mostra `CONFIRMADA` e nao oferece a criacao de outro Pix.
 
 ## Webhook
 
@@ -120,9 +152,10 @@ A tabela `unicarona.pagamentos` guarda uma tentativa de cobranca por registro:
 
 Uma solicitacao pode ter tentativas antigas: nao ha UNIQUE em `id_solicitacao`.
 Os identificadores unicos nao impedem duas referencias diferentes de cobrarem a
-mesma solicitacao. O controle de concorrencia, a reutilizacao da tentativa ativa
-e a conciliacao de resultados incertos ainda serao implementados no backend.
-Uma tentativa INCERTA nao deve provocar automaticamente outra cobranca.
+mesma solicitacao. O backend usa bloqueio pessimista e reutiliza tentativas
+PREPARADA, CONFIRMADA ou INCERTA para evitar duplicacao. A conciliacao manual de
+resultados incertos ainda nao foi implementada. Uma tentativa INCERTA nao deve
+provocar automaticamente outra cobranca.
 
 RLS esta habilitado sem politicas para clientes e as permissoes de tabelas e
 sequencias foram revogadas de PUBLIC, anon e authenticated. O backend continua
@@ -130,7 +163,7 @@ usando a conexao PostgreSQL atual com o proprietario da tabela. Uma futura role
 restrita exigira permissoes/politicas proprias. Nao conceder acesso ao Flutter.
 `modo_teste` e apenas um registro local; nao transforma a chave em sandbox.
 Nao sao guardadas chaves da API, dados de cartao ou payloads brutos de clientes.
-Ainda nao ha tabela de eventos de webhook, carteira, saldo ou repasse.
+Ainda nao ha carteira, saldo ou repasse.
 
 ## Referencias
 

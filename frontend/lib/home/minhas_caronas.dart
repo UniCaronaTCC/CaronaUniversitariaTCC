@@ -204,6 +204,10 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
       context,
       MaterialPageRoute(builder: (_) => PagamentoPixTela(pagamento: pagamento)),
     );
+
+    if (mounted) {
+      await carregarDados();
+    }
   }
 
   Future<void> acompanharMotorista(SolicitacaoEnviada solicitacao) async {

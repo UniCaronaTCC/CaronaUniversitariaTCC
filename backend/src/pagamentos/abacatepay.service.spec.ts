@@ -368,4 +368,31 @@ describe('AbacatePayService', () => {
       BadGatewayException,
     );
   });
+
+  it('simula o pagamento somente pelo endpoint de sandbox', async () => {
+    fetchMock.mockResolvedValue(
+      resposta({ ...cobranca, status: 'PAID', devMode: true }),
+    );
+
+    await expect(
+      service.simularPagamento(cobranca.id),
+    ).resolves.toBeUndefined();
+
+    const [url, opcoes] = fetchMock.mock.calls[0];
+    expect((url as URL).href).toBe(
+      'https://api.abacatepay.com/v2/transparents/simulate-payment?id=pix_char_teste',
+    );
+    expect(opcoes?.method).toBe('POST');
+    expect(opcoes?.body).toBeUndefined();
+  });
+
+  it('recusa simulacao que nao confirma pagamento em sandbox', async () => {
+    fetchMock.mockResolvedValue(
+      resposta({ ...cobranca, status: 'PENDING', devMode: true }),
+    );
+
+    await expect(service.simularPagamento(cobranca.id)).rejects.toBeInstanceOf(
+      BadGatewayException,
+    );
+  });
 });

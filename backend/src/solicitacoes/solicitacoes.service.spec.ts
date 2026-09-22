@@ -6,6 +6,7 @@ import { CaronasService } from '../caronas/caronas.service';
 import { PontoEmbarque } from '../caronas/ponto-embarque.entity';
 import { AvaliacoesService } from '../avaliacoes/avaliacoes.service';
 import { Conversa } from '../mensagens/conversa.entity';
+import { Pagamento } from '../pagamentos/pagamento.entity';
 import { Solicitacao } from './solicitacao.entity';
 import { SolicitacoesService } from './solicitacoes.service';
 
@@ -23,13 +24,19 @@ describe('SolicitacoesService', () => {
   let pontosEmbarqueRepository: {
     findOne: jest.Mock;
   };
+  let pagamentosRepository: {
+    createQueryBuilder: jest.Mock;
+  };
   let dataSource: {
     transaction: jest.Mock;
   };
   let caronasService: {
     finalizarCaronasVencidas: jest.Mock;
   };
-  let avaliacoesService: { buscarSolicitacoesAvaliadas: jest.Mock };
+  let avaliacoesService: {
+    buscarSolicitacoesAvaliadas: jest.Mock;
+    podeAvaliarSolicitacao: jest.Mock;
+  };
   let atualizarQueryBuilder: {
     update: jest.Mock;
     set: jest.Mock;
@@ -44,8 +51,17 @@ describe('SolicitacoesService', () => {
     addOrderBy: jest.Mock;
     getMany: jest.Mock;
   };
+  let pagamentosQueryBuilder: {
+    innerJoin: jest.Mock;
+    select: jest.Mock;
+    where: jest.Mock;
+    andWhere: jest.Mock;
+    getRawMany: jest.Mock;
+  };
 
   beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-09-15T12:00:00.000Z'));
     atualizarQueryBuilder = {
       update: jest.fn().mockReturnThis(),
       set: jest.fn().mockReturnThis(),
@@ -75,6 +91,16 @@ describe('SolicitacoesService', () => {
     pontosEmbarqueRepository = {
       findOne: jest.fn(),
     };
+    pagamentosQueryBuilder = {
+      innerJoin: jest.fn().mockReturnThis(),
+      select: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      getRawMany: jest.fn().mockResolvedValue([]),
+    };
+    pagamentosRepository = {
+      createQueryBuilder: jest.fn(() => pagamentosQueryBuilder),
+    };
     dataSource = {
       transaction: jest.fn(),
     };
@@ -83,16 +109,22 @@ describe('SolicitacoesService', () => {
     };
     avaliacoesService = {
       buscarSolicitacoesAvaliadas: jest.fn().mockResolvedValue(new Set()),
+      podeAvaliarSolicitacao: jest.fn().mockReturnValue(false),
     };
 
     service = new SolicitacoesService(
       solicitacoesRepository as unknown as Repository<Solicitacao>,
       caronasRepository as unknown as Repository<Carona>,
       pontosEmbarqueRepository as unknown as Repository<PontoEmbarque>,
+      pagamentosRepository as unknown as Repository<Pagamento>,
       dataSource as unknown as DataSource,
       caronasService as unknown as CaronasService,
       avaliacoesService as unknown as AvaliacoesService,
     );
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
   });
 
   it('cria uma solicitação pendente para outro motorista', async () => {
@@ -139,6 +171,26 @@ describe('SolicitacoesService', () => {
         'carona.destinoLatitude',
         'carona.destinoLongitude',
       ]),
+    );
+  });
+
+  it('marca como confirmado o pagamento PAID ao listar solicitações', async () => {
+    const solicitacao = {
+      idSolicitacao: 12,
+      status: 'ACEITA',
+      carona: { recorrente: false },
+    } as Solicitacao;
+    atualizarQueryBuilder.getMany.mockResolvedValue([solicitacao]);
+    pagamentosQueryBuilder.getRawMany.mockResolvedValue([
+      { idSolicitacao: '12' },
+    ]);
+
+    const resultado = await service.listarEnviadas(1);
+
+    expect(resultado[0].pagamentoConfirmado).toBe(true);
+    expect(pagamentosQueryBuilder.andWhere).toHaveBeenCalledWith(
+      'pagamento.statusProvedor = :statusPago',
+      { statusPago: 'PAID' },
     );
   });
 
@@ -209,17 +261,46 @@ describe('SolicitacoesService', () => {
   });
 
   it.each([
-    { tipo: 'EXISTENTE', vagas: 2, resposta: 'ACEITA' as const },
-    { tipo: 'NOVO_SOLICITADO', vagas: 2, resposta: 'ACEITA' as const },
-    { tipo: 'EXISTENTE', vagas: 1, resposta: 'ACEITA' as const },
-    { tipo: 'NOVO_SOLICITADO', vagas: 2, resposta: 'RECUSADA' as const },
+    {
+      tipo: 'EXISTENTE',
+      vagas: 2,
+      resposta: 'ACEITA' as const,
+      recorrente: false,
+    },
+    {
+      tipo: 'NOVO_SOLICITADO',
+      vagas: 2,
+      resposta: 'ACEITA' as const,
+      recorrente: false,
+    },
+    {
+      tipo: 'EXISTENTE',
+      vagas: 1,
+      resposta: 'ACEITA' as const,
+      recorrente: false,
+    },
+    {
+      tipo: 'NOVO_SOLICITADO',
+      vagas: 2,
+      resposta: 'RECUSADA' as const,
+      recorrente: false,
+    },
+    {
+      tipo: 'EXISTENTE',
+      vagas: 2,
+      resposta: 'ACEITA' as const,
+      recorrente: true,
+    },
   ])(
-    '$resposta com ponto $tipo e $vagas vaga(s)',
-    async ({ tipo, vagas, resposta }) => {
+    '$resposta com ponto $tipo, recorrente $recorrente e $vagas vaga(s)',
+    async ({ tipo, vagas, resposta, recorrente }) => {
       const carona = {
         idCarona: 10,
         status: 'ATIVA',
         vagas,
+        dataInicio: '2026-09-15',
+        horario: '14:00:00',
+        recorrente,
         usuario: { idUsuario: 2 },
       };
       const pontoExistente = { idPontoEmbarque: 5 };
@@ -307,11 +388,15 @@ describe('SolicitacoesService', () => {
           solicitacao: { idSolicitacao: 1 },
         });
         expect(salvarConversa).toHaveBeenCalledTimes(1);
+        expect(resultado.pagamentoLimiteEm).toEqual(
+          recorrente ? null : new Date('2026-09-15T13:00:00.000Z'),
+        );
       } else {
         expect(carona.vagas).toBe(vagas);
         expect(salvarCarona).not.toHaveBeenCalled();
         expect(criarConversa).not.toHaveBeenCalled();
         expect(salvarConversa).not.toHaveBeenCalled();
+        expect(resultado.pagamentoLimiteEm).toBeUndefined();
       }
 
       if (resposta === 'ACEITA' && tipo === 'NOVO_SOLICITADO') {

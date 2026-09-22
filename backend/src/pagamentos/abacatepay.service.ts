@@ -85,6 +85,27 @@ export class AbacatePayService {
     return consulta;
   }
 
+  async simularPagamento(id: string): Promise<void> {
+    if (!this.textoPreenchido(id)) {
+      throw new BadRequestException('Informe o identificador da cobranca Pix');
+    }
+
+    const idNormalizado = id.trim();
+    const url = new URL(`${this.apiUrl}/transparents/simulate-payment`);
+    url.searchParams.set('id', idNormalizado);
+    const dados = await this.requisicao(url, 'POST');
+
+    if (
+      dados.id !== idNormalizado ||
+      dados.status !== 'PAID' ||
+      dados.devMode !== true
+    ) {
+      throw new BadGatewayException(
+        'A AbacatePay nao confirmou a simulacao do pagamento',
+      );
+    }
+  }
+
   private async requisicao(
     url: URL,
     metodo: 'GET' | 'POST',

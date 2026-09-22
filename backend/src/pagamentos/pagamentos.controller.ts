@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Controller,
+  Get,
   Param,
   Post,
   Req,
@@ -17,14 +18,48 @@ import { PagamentosService } from './pagamentos.service';
 export class PagamentosController {
   constructor(private readonly pagamentosService: PagamentosService) {}
 
+  @Get(':idPagamento')
+  async obterPagamento(
+    @Param('idPagamento') idRecebido: string,
+    @Req() request: RequisicaoComUsuario,
+  ) {
+    const idPagamento = this.validarId(idRecebido, 'Pagamento invalido');
+    const pagamento = await this.pagamentosService.obterPagamento(
+      idPagamento,
+      request.usuario.sub,
+    );
+
+    return {
+      sucesso: true,
+      dados: this.formatarPagamento(pagamento),
+    };
+  }
+
   @Post('solicitacoes/:idSolicitacao/pix')
   async criarOuObterPix(
     @Param('idSolicitacao') idRecebido: string,
     @Req() request: RequisicaoComUsuario,
   ) {
-    const idSolicitacao = this.validarId(idRecebido);
+    const idSolicitacao = this.validarId(idRecebido, 'Solicitacao invalida');
     const pagamento = await this.pagamentosService.criarOuObterPix(
       idSolicitacao,
+      request.usuario.sub,
+    );
+
+    return {
+      sucesso: true,
+      dados: this.formatarPagamento(pagamento),
+    };
+  }
+
+  @Post(':idPagamento/simular')
+  async simularPagamento(
+    @Param('idPagamento') idRecebido: string,
+    @Req() request: RequisicaoComUsuario,
+  ) {
+    const idPagamento = this.validarId(idRecebido, 'Pagamento invalido');
+    const pagamento = await this.pagamentosService.simularPagamento(
+      idPagamento,
       request.usuario.sub,
     );
 
@@ -49,11 +84,11 @@ export class PagamentosController {
     };
   }
 
-  private validarId(valorRecebido: string): number {
+  private validarId(valorRecebido: string, mensagem: string): number {
     const valor = Number(valorRecebido);
 
     if (!Number.isInteger(valor) || valor <= 0) {
-      throw new BadRequestException('Solicitacao invalida');
+      throw new BadRequestException(mensagem);
     }
 
     return valor;

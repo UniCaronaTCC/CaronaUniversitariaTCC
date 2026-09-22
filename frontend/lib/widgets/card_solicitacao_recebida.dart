@@ -66,7 +66,7 @@ class CardSolicitacaoRecebida extends StatelessWidget {
                 StatusSolicitacao(
                   status: finalizada
                       ? 'FINALIZADA'
-                      : solicitacao.status,
+                      : solicitacao.statusExibicao,
                 ),
               ],
             ),

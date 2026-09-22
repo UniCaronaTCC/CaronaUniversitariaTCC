@@ -14,6 +14,7 @@ import { PagamentosService } from './pagamentos.service';
 describe('PagamentosService', () => {
   let service: PagamentosService;
   let pagamentosRepository: {
+    findOne: jest.Mock;
     save: jest.Mock;
     update: jest.Mock;
   };
@@ -22,7 +23,11 @@ describe('PagamentosService', () => {
     create: jest.Mock;
     save: jest.Mock;
   };
-  let abacatePayService: { criarPix: jest.Mock };
+  let abacatePayService: {
+    criarPix: jest.Mock;
+    consultarPix: jest.Mock;
+    simularPagamento: jest.Mock;
+  };
   let dataSource: { transaction: jest.Mock };
   let consultaSolicitacao: {
     innerJoinAndSelect: jest.Mock;
@@ -34,15 +39,20 @@ describe('PagamentosService', () => {
   const solicitacaoAceita = {
     idSolicitacao: 10,
     status: 'ACEITA',
+    pagamentoLimiteEm: new Date('2026-09-03T13:00:00.000Z'),
     passageiro: { idUsuario: 1 },
     carona: {
       idCarona: 20,
       recorrente: false,
       valor: 12.5,
+      dataInicio: '2026-09-03',
+      horario: '14:00:00',
     },
   } as Solicitacao;
 
   beforeEach(() => {
+    jest.useFakeTimers();
+    jest.setSystemTime(new Date('2026-09-03T12:00:00.000Z'));
     consultaSolicitacao = {
       innerJoinAndSelect: jest.fn().mockReturnThis(),
       where: jest.fn().mockReturnThis(),
@@ -51,6 +61,7 @@ describe('PagamentosService', () => {
     };
 
     pagamentosRepository = {
+      findOne: jest.fn(),
       save: jest.fn((pagamento: Pagamento) => Promise.resolve(pagamento)),
       update: jest.fn().mockResolvedValue({ affected: 1 }),
     };
@@ -75,6 +86,8 @@ describe('PagamentosService', () => {
         qrCodeBase64: 'qr-base64',
         modoTeste: true,
       }),
+      consultarPix: jest.fn(),
+      simularPagamento: jest.fn().mockResolvedValue(undefined),
     };
     dataSource = {
       transaction: jest.fn((executar: (manager: unknown) => Promise<unknown>) =>
@@ -92,6 +105,70 @@ describe('PagamentosService', () => {
       dataSource as unknown as DataSource,
       abacatePayService as unknown as AbacatePayService,
     );
+  });
+
+  afterEach(() => {
+    jest.useRealTimers();
+  });
+
+  it('consulta o pagamento somente para o passageiro vinculado', async () => {
+    const pagamento = {
+      idPagamento: 30,
+      solicitacao: solicitacaoAceita,
+      statusProvedor: 'PAID',
+    } as Pagamento;
+    pagamentosRepository.findOne.mockResolvedValue(pagamento);
+
+    await expect(service.obterPagamento(30, 1)).resolves.toBe(pagamento);
+    expect(pagamentosRepository.findOne).toHaveBeenCalledWith({
+      where: {
+        idPagamento: 30,
+        solicitacao: { passageiro: { idUsuario: 1 } },
+      },
+      relations: { solicitacao: true },
+    });
+  });
+
+  it('nao revela pagamento ausente ou pertencente a outro passageiro', async () => {
+    pagamentosRepository.findOne.mockResolvedValue(null);
+
+    await expect(service.obterPagamento(30, 2)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('simula um Pix pendente sem confirmar o pagamento diretamente no banco', async () => {
+    const pagamento = {
+      idPagamento: 30,
+      solicitacao: solicitacaoAceita,
+      idProvedor: 'pix_123',
+      statusCriacao: 'CONFIRMADA',
+      statusProvedor: 'PENDING',
+      modoTeste: true,
+    } as Pagamento;
+    pagamentosRepository.findOne.mockResolvedValue(pagamento);
+
+    await expect(service.simularPagamento(30, 1)).resolves.toBe(pagamento);
+
+    expect(abacatePayService.simularPagamento).toHaveBeenCalledWith('pix_123');
+    expect(pagamento.statusProvedor).toBe('PENDING');
+    expect(pagamentosRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('recusa simulacao para cobranca fora do sandbox', async () => {
+    pagamentosRepository.findOne.mockResolvedValue({
+      idPagamento: 30,
+      solicitacao: solicitacaoAceita,
+      idProvedor: 'pix_123',
+      statusCriacao: 'CONFIRMADA',
+      statusProvedor: 'PENDING',
+      modoTeste: false,
+    });
+
+    await expect(service.simularPagamento(30, 1)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(abacatePayService.simularPagamento).not.toHaveBeenCalled();
   });
 
   it('calcula o valor no servidor, cria o Pix e salva sua confirmacao', async () => {
@@ -113,6 +190,7 @@ describe('PagamentosService', () => {
       expect.objectContaining({
         valorCentavos: 1250,
         descricao: 'Carona 20 - solicitacao 10',
+        expiraEmSegundos: 3600,
       }),
     );
     expect(resultado).toEqual(
@@ -125,6 +203,87 @@ describe('PagamentosService', () => {
         modoTeste: true,
       }),
     );
+  });
+
+  it('reduz a validade do Pix ao tempo restante da solicitacao', async () => {
+    consultaSolicitacao.getOne.mockResolvedValue({
+      ...solicitacaoAceita,
+      pagamentoLimiteEm: new Date('2026-09-03T12:10:00.000Z'),
+    });
+
+    await service.criarOuObterPix(10, 1);
+
+    expect(abacatePayService.criarPix).toHaveBeenCalledWith(
+      expect.objectContaining({ expiraEmSegundos: 600 }),
+    );
+  });
+
+  it('nao salva nem cria Pix depois do prazo da solicitacao', async () => {
+    consultaSolicitacao.getOne.mockResolvedValue({
+      ...solicitacaoAceita,
+      pagamentoLimiteEm: new Date('2026-09-03T11:59:00.000Z'),
+    });
+
+    await expect(service.criarOuObterPix(10, 1)).rejects.toThrow(
+      'O prazo para pagamento expirou',
+    );
+    expect(pagamentosTransacaoRepository.create).not.toHaveBeenCalled();
+    expect(pagamentosTransacaoRepository.save).not.toHaveBeenCalled();
+    expect(abacatePayService.criarPix).not.toHaveBeenCalled();
+    expect(abacatePayService.consultarPix).not.toHaveBeenCalled();
+  });
+
+  it('consulta e reutiliza um Pix que continua pendente', async () => {
+    const existente = {
+      idPagamento: 8,
+      idProvedor: 'pix_antigo',
+      statusCriacao: 'CONFIRMADA',
+      statusProvedor: 'PENDING',
+      expiraEm: new Date('2026-09-03T12:30:00.000Z'),
+      solicitacao: solicitacaoAceita,
+    } as Pagamento;
+    pagamentosTransacaoRepository.findOne.mockResolvedValue(existente);
+    abacatePayService.consultarPix.mockResolvedValue({
+      id: 'pix_antigo',
+      status: 'PENDING',
+      expiraEm: '2026-09-03T12:30:00.000Z',
+    });
+
+    await expect(service.criarOuObterPix(10, 1)).resolves.toBe(existente);
+
+    expect(abacatePayService.consultarPix).toHaveBeenCalledWith('pix_antigo');
+    expect(abacatePayService.criarPix).not.toHaveBeenCalled();
+  });
+
+  it('substitui Pix expirado usando somente o prazo restante', async () => {
+    const existente = {
+      idPagamento: 8,
+      idProvedor: 'pix_expirado',
+      statusCriacao: 'CONFIRMADA',
+      statusProvedor: 'PENDING',
+      expiraEm: new Date('2026-09-03T11:55:00.000Z'),
+      solicitacao: solicitacaoAceita,
+    } as Pagamento;
+    consultaSolicitacao.getOne.mockResolvedValue({
+      ...solicitacaoAceita,
+      pagamentoLimiteEm: new Date('2026-09-03T12:10:00.000Z'),
+    });
+    pagamentosTransacaoRepository.findOne.mockResolvedValue(existente);
+    abacatePayService.consultarPix.mockResolvedValue({
+      id: 'pix_expirado',
+      status: 'EXPIRED',
+      expiraEm: '2026-09-03T11:55:00.000Z',
+    });
+
+    const resultado = await service.criarOuObterPix(10, 1);
+
+    expect(existente.statusProvedor).toBe('EXPIRED');
+    expect(pagamentosRepository.save).toHaveBeenCalledWith(existente);
+    expect(pagamentosTransacaoRepository.create).toHaveBeenCalled();
+    expect(abacatePayService.criarPix).toHaveBeenCalledWith(
+      expect.objectContaining({ expiraEmSegundos: 600 }),
+    );
+    expect(resultado.idProvedor).toBe('pix_123');
   });
 
   it('reutiliza uma tentativa existente sem chamar a AbacatePay', async () => {

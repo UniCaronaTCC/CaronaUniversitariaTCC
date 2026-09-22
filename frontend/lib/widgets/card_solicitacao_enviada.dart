@@ -68,7 +68,7 @@ class CardSolicitacaoEnviada extends StatelessWidget {
               child: StatusSolicitacao(
                 status: solicitacao.caronaFinalizada
                     ? 'FINALIZADA'
-                    : solicitacao.status,
+                    : solicitacao.statusExibicao,
               ),
             ),
             const SizedBox(height: 16),
@@ -88,6 +88,15 @@ class CardSolicitacaoEnviada extends StatelessWidget {
               icone: Icons.person_pin_circle_outlined,
               texto: solicitacao.localEmbarque,
             ),
+            if (solicitacao.podePagarPix &&
+                solicitacao.prazoPagamentoFormatado != null) ...[
+              const SizedBox(height: 12),
+              _LinhaSolicitacao(
+                icone: Icons.hourglass_bottom,
+                texto: 'Pague até ${solicitacao.prazoPagamentoFormatado}',
+                destaque: true,
+              ),
+            ],
             if (solicitacao.podeAcompanharCorrida && onAcompanhar != null) ...[
               const Divider(height: 30),
               SizedBox(

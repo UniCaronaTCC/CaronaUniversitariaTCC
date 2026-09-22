@@ -11,14 +11,29 @@ import { DataSource, In, Repository } from 'typeorm';
 
 import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 import { AbacatePayService } from './abacatepay.service';
-import type { CobrancaPix } from './abacatepay.types';
+import type { CobrancaPix, StatusPix } from './abacatepay.types';
 import { Pagamento, StatusCriacaoPagamento } from './pagamento.entity';
+import { calcularDuracaoPixSegundos } from './prazo-pagamento';
 
 const STATUS_QUE_BLOQUEIAM_NOVA_TENTATIVA: StatusCriacaoPagamento[] = [
   'PREPARADA',
   'CONFIRMADA',
   'INCERTA',
 ];
+
+const STATUS_PIX_QUE_PERMITEM_NOVA_TENTATIVA: ReadonlySet<StatusPix> = new Set([
+  'EXPIRED',
+  'CANCELLED',
+  'FAILED',
+]);
+
+type PreparacaoPagamento =
+  | { pagamento: Pagamento; criadoAgora: false }
+  | {
+      pagamento: Pagamento;
+      criadoAgora: true;
+      expiraEmSegundos: number;
+    };
 
 @Injectable()
 export class PagamentosService {
@@ -29,25 +44,55 @@ export class PagamentosService {
     private readonly abacatePayService: AbacatePayService,
   ) {}
 
+  async obterPagamento(
+    idPagamento: number,
+    idPassageiro: number,
+  ): Promise<Pagamento> {
+    const pagamento = await this.pagamentosRepository.findOne({
+      where: {
+        idPagamento,
+        solicitacao: { passageiro: { idUsuario: idPassageiro } },
+      },
+      relations: { solicitacao: true },
+    });
+
+    if (!pagamento) {
+      throw new NotFoundException('Pagamento nao encontrado');
+    }
+
+    return pagamento;
+  }
+
   async criarOuObterPix(
     idSolicitacao: number,
     idPassageiro: number,
   ): Promise<Pagamento> {
-    const { pagamento, criadoAgora } = await this.prepararPagamento(
-      idSolicitacao,
-      idPassageiro,
-    );
+    let preparacao = await this.prepararPagamento(idSolicitacao, idPassageiro);
 
-    if (!criadoAgora) {
-      return pagamento;
+    if (!preparacao.criadoAgora) {
+      const deveReutilizar = await this.reconciliarPagamentoExistente(
+        preparacao.pagamento,
+      );
+
+      if (deveReutilizar) {
+        return preparacao.pagamento;
+      }
+
+      preparacao = await this.prepararPagamento(idSolicitacao, idPassageiro);
+
+      if (!preparacao.criadoAgora) {
+        return preparacao.pagamento;
+      }
     }
 
+    const { pagamento, expiraEmSegundos } = preparacao;
     let cobranca: CobrancaPix;
     try {
       cobranca = await this.abacatePayService.criarPix({
         valorCentavos: pagamento.valorCentavos,
         referencia: pagamento.referencia,
         descricao: `Carona ${pagamento.solicitacao.carona.idCarona} - solicitacao ${idSolicitacao}`,
+        expiraEmSegundos,
       });
     } catch (erro) {
       const status =
@@ -78,10 +123,42 @@ export class PagamentosService {
     }
   }
 
+  async simularPagamento(
+    idPagamento: number,
+    idPassageiro: number,
+  ): Promise<Pagamento> {
+    const pagamento = await this.obterPagamento(idPagamento, idPassageiro);
+
+    if (!pagamento.modoTeste) {
+      throw new ConflictException(
+        'A simulacao esta disponivel apenas no ambiente de testes',
+      );
+    }
+
+    if (pagamento.statusProvedor === 'PAID') {
+      return pagamento;
+    }
+
+    if (
+      pagamento.statusCriacao !== 'CONFIRMADA' ||
+      pagamento.statusProvedor !== 'PENDING' ||
+      !pagamento.idProvedor
+    ) {
+      throw new ConflictException(
+        'Este pagamento nao esta disponivel para simulacao',
+      );
+    }
+
+    await this.abacatePayService.simularPagamento(pagamento.idProvedor);
+
+    // O webhook continua sendo a unica fonte que confirma PAID no banco.
+    return pagamento;
+  }
+
   private async prepararPagamento(
     idSolicitacao: number,
     idPassageiro: number,
-  ): Promise<{ pagamento: Pagamento; criadoAgora: boolean }> {
+  ): Promise<PreparacaoPagamento> {
     return this.dataSource.transaction(async (manager) => {
       const solicitacoesRepository = manager.getRepository(Solicitacao);
       const pagamentosRepository = manager.getRepository(Pagamento);
@@ -121,9 +198,16 @@ export class PagamentosService {
         order: { criadoEm: 'DESC' },
       });
 
-      if (existente) {
+      if (
+        existente &&
+        !this.statusPermiteNovaTentativa(existente.statusProvedor)
+      ) {
         return { pagamento: existente, criadoAgora: false };
       }
+
+      const expiraEmSegundos = this.calcularExpiracaoPix(
+        solicitacao.pagamentoLimiteEm,
+      );
 
       const valorCentavos = this.converterValorParaCentavos(
         solicitacao.carona.valor,
@@ -141,6 +225,7 @@ export class PagamentosService {
       return {
         pagamento: await pagamentosRepository.save(pagamento),
         criadoAgora: true,
+        expiraEmSegundos,
       };
     });
   }
@@ -160,6 +245,49 @@ export class PagamentosService {
     }
 
     return valorArredondado;
+  }
+
+  private calcularExpiracaoPix(limitePagamento: Date | null): number {
+    if (!limitePagamento) {
+      throw new ConflictException(
+        'O prazo de pagamento desta solicitação não foi definido',
+      );
+    }
+
+    const segundos = calcularDuracaoPixSegundos(limitePagamento);
+
+    if (segundos <= 0) {
+      throw new ConflictException('O prazo para pagamento expirou');
+    }
+
+    return segundos;
+  }
+
+  private async reconciliarPagamentoExistente(
+    pagamento: Pagamento,
+  ): Promise<boolean> {
+    if (this.statusPermiteNovaTentativa(pagamento.statusProvedor)) {
+      return false;
+    }
+
+    if (pagamento.statusCriacao !== 'CONFIRMADA' || !pagamento.idProvedor) {
+      return true;
+    }
+
+    const consulta = await this.abacatePayService.consultarPix(
+      pagamento.idProvedor,
+    );
+    pagamento.statusProvedor = consulta.status;
+    pagamento.expiraEm = new Date(consulta.expiraEm);
+    await this.pagamentosRepository.save(pagamento);
+
+    return !this.statusPermiteNovaTentativa(consulta.status);
+  }
+
+  private statusPermiteNovaTentativa(status: StatusPix | null): boolean {
+    return (
+      status !== null && STATUS_PIX_QUE_PERMITEM_NOVA_TENTATIVA.has(status)
+    );
   }
 
   private async registrarStatusComTolerancia(
