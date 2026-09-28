@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -11,12 +13,14 @@ class MapaAcompanhamentoPassageiro extends StatefulWidget {
   final SolicitacaoEnviada solicitacao;
   final LatLng? localizacaoMotorista;
   final double? direcaoMotorista;
+  final RotaService? rotaService;
 
   const MapaAcompanhamentoPassageiro({
     super.key,
     required this.solicitacao,
     required this.localizacaoMotorista,
     this.direcaoMotorista,
+    this.rotaService,
   });
 
   @override
@@ -26,11 +30,12 @@ class MapaAcompanhamentoPassageiro extends StatefulWidget {
 
 class _MapaAcompanhamentoPassageiroState
     extends State<MapaAcompanhamentoPassageiro> {
-  final _service = RotaService();
+  late final _service = widget.rotaService ?? RotaService();
   RotaResultado? _rota;
   String? _erro;
   bool _carregando = false;
   bool _recalculoPendente = false;
+  Timer? _recalculoAgendado;
   LatLng? _localizacaoUltimoCalculo;
 
   static const _distanciaParaRecalcular = 50.0;
@@ -47,7 +52,9 @@ class _MapaAcompanhamentoPassageiroState
     final recebeuPrimeiraLocalizacao =
         oldWidget.localizacaoMotorista == null &&
         widget.localizacaoMotorista != null;
-    if (recebeuPrimeiraLocalizacao || _motoristaSeMoveuParaRecalculo()) {
+    if (oldWidget.solicitacao != widget.solicitacao ||
+        recebeuPrimeiraLocalizacao ||
+        _motoristaSeMoveuParaRecalculo()) {
       _carregarRota();
     }
   }
@@ -80,13 +87,14 @@ class _MapaAcompanhamentoPassageiroState
   }
 
   Future<void> _carregarRota() async {
-    if (_carregando) {
+    if (_carregando || _recalculoAgendado != null) {
       _recalculoPendente = true;
       return;
     }
 
     final paradas = _paradas;
-    if (paradas == null || paradas.length < 2) return;
+    if (paradas == null || paradas.isEmpty) return;
+    _iniciarIntervalo();
     _localizacaoUltimoCalculo = widget.localizacaoMotorista;
     setState(() {
       _erro = null;
@@ -94,41 +102,42 @@ class _MapaAcompanhamentoPassageiroState
     });
 
     try {
-      final rota = await _service
-          .calcularRota(paradas)
-          .timeout(const Duration(seconds: 40));
-      if (!_rotaValida(rota)) throw const FormatException('Rota inválida');
+      final rota = await _service.calcularRota(paradas);
       if (!mounted) return;
       setState(() {
         _rota = rota;
         _carregando = false;
       });
-      _executarRecalculoPendente();
+      if (_recalculoPendente || _motoristaSeMoveuParaRecalculo()) {
+        _recalculoPendente = false;
+        _carregarRota();
+      }
     } catch (_) {
       if (!mounted) return;
+      _iniciarIntervalo();
+      _recalculoPendente = false;
       setState(() {
         _carregando = false;
         _erro = 'Não foi possível atualizar o percurso.';
       });
-      _executarRecalculoPendente();
     }
   }
 
-  bool _rotaValida(RotaResultado rota) {
-    return rota.pontos.length >= 2 &&
-        rota.pontos.every(
-          (ponto) => coordenadaValida(ponto.latitude, ponto.longitude),
-        ) &&
-        rota.distanciaMetros.isFinite &&
-        rota.distanciaMetros >= 0 &&
-        rota.duracaoSegundos.isFinite &&
-        rota.duracaoSegundos >= 0;
+  void _iniciarIntervalo() {
+    _recalculoAgendado?.cancel();
+    _recalculoAgendado = Timer(const Duration(seconds: 15), () {
+      _recalculoAgendado = null;
+      if (mounted && _recalculoPendente && !_carregando) {
+        _recalculoPendente = false;
+        _carregarRota();
+      }
+    });
   }
 
-  void _executarRecalculoPendente() {
-    if (!_recalculoPendente || !mounted) return;
-    _recalculoPendente = false;
-    _carregarRota();
+  @override
+  void dispose() {
+    _recalculoAgendado?.cancel();
+    super.dispose();
   }
 
   Carona get _caronaMapa => Carona(

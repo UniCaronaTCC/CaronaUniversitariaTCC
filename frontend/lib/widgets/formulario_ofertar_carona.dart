@@ -28,6 +28,7 @@ class FormularioOfertarCarona extends StatelessWidget {
   final bool enviandoCarona;
   final bool pontosEmbarqueEditaveis;
   final bool possuiVeiculo;
+  final bool mostrarRecorrencia;
 
   final List<String> diasSelecionados;
   final List<PontoEmbarque> pontosEmbarque;
@@ -53,6 +54,7 @@ class FormularioOfertarCarona extends StatelessWidget {
     this.descricao = 'Informe os dados da viagem',
     this.textoBotao = 'OFERTAR CARONA',
     this.textoCarregando = 'ENVIANDO...',
+    this.mostrarRecorrencia = true,
     required this.origemController,
     required this.destinoController,
     required this.dataController,
@@ -230,7 +232,7 @@ class FormularioOfertarCarona extends StatelessWidget {
         const SizedBox(height: 24),
 
         CampoTextoCarona(
-          label: 'Data',
+          label: caronaRecorrente ? 'Repetir a partir de' : 'Data',
           icone: Icons.calendar_today_outlined,
           controller: dataController,
           somenteLeitura: true,
@@ -265,12 +267,13 @@ class FormularioOfertarCarona extends StatelessWidget {
 
         const SizedBox(height: 16),
 
-        CampoRecorrenciaCarona(
-          caronaRecorrente: caronaRecorrente,
-          diasSelecionados: diasSelecionados,
-          onRecorrenciaChanged: onRecorrenciaChanged,
-          onDiaSelecionado: onDiaSelecionado,
-        ),
+        if (mostrarRecorrencia)
+          CampoRecorrenciaCarona(
+            caronaRecorrente: caronaRecorrente,
+            diasSelecionados: diasSelecionados,
+            onRecorrenciaChanged: onRecorrenciaChanged,
+            onDiaSelecionado: onDiaSelecionado,
+          ),
 
         const SizedBox(height: 16),
 

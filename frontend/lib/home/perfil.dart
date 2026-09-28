@@ -16,6 +16,7 @@ import '../widgets/componentes_padrao.dart';
 import '../widgets/foto_perfil.dart';
 import 'avaliacoes_recebidas.dart';
 import 'historico_caronas.dart';
+import 'recorrencias.dart';
 
 typedef CarregarPerfil = Future<Map<String, dynamic>> Function();
 typedef AtualizarPerfil =
@@ -723,6 +724,19 @@ class _PerfilTelaState extends State<PerfilTela> {
               subtitle: const Text('Como motorista e passageiro'),
               trailing: const Icon(Icons.chevron_right),
               onTap: abrirHistorico,
+            ),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: const Icon(Icons.repeat, color: AppColors.primary),
+              title: const Text('Recorrências de caronas'),
+              subtitle: const Text(
+                'Editar, pausar ou retomar suas programações',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RecorrenciasTela()),
+              ),
             ),
             const SizedBox(height: 24),
             const Text(

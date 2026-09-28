@@ -7,7 +7,8 @@ import 'package:latlong2/latlong.dart';
 import '../config/app_colors.dart';
 import '../mapa/widgets/mapa_navegacao_carona.dart';
 import '../mapa/services/rota_service.dart';
-import '../mapa/services/localizacao_service.dart';
+import '../mapa/services/rastreamento_gps.dart';
+import '../mapa/widgets/status_gps_corrida.dart';
 import '../models/carona.dart';
 import '../models/ponto_embarque.dart';
 import '../services/carona_service.dart';
@@ -25,7 +26,7 @@ class CorridaEmAndamentoTela extends StatefulWidget {
 class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
   bool finalizando = false;
   RotaResultado? rota;
-  StreamSubscription<Position>? _localizacaoSubscription;
+  late final RastreamentoGps _gps;
   LatLng? _localizacaoMotorista;
   double? _direcaoMotorista;
   Set<int> _embarquesConcluidos = {};
@@ -34,7 +35,6 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
   DateTime? _ultimoEnvioPosicao;
   bool _enviandoPosicao = false;
   bool _envioPosicaoAtivo = true;
-  final _filtroGps = FiltroLocalizacaoGps();
 
   static const _intervaloEnvioPosicao = Duration(seconds: 5);
 
@@ -78,36 +78,12 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
   @override
   void initState() {
     super.initState();
-    _acompanharMotorista();
-  }
-
-  Future<void> _acompanharMotorista() async {
-    try {
-      final localizacaoService = LocalizacaoService();
-      final posicaoInicial = await localizacaoService.obterLocalizacaoAtual();
-      if (!mounted) return;
-      _processarPosicao(posicaoInicial);
-
-      final stream = await localizacaoService.acompanharLocalizacao();
-      if (!mounted) return;
-      _localizacaoSubscription = stream.listen(
-        _processarPosicao,
-        onError: (Object erro) => _mostrarErroLocalizacao(erro.toString()),
-      );
-    } catch (erro) {
-      _mostrarErroLocalizacao(erro.toString());
-    }
+    _gps = RastreamentoGps(onPosicao: _processarPosicao);
+    _gps.iniciar();
   }
 
   void _processarPosicao(Position posicao) {
-    if (!mounted ||
-        !_filtroGps.aceitar(
-          latitude: posicao.latitude,
-          longitude: posicao.longitude,
-          precisao: posicao.accuracy,
-        )) {
-      return;
-    }
+    if (!mounted) return;
 
     final anterior = _localizacaoMotorista;
     final recebida = LatLng(posicao.latitude, posicao.longitude);
@@ -118,7 +94,9 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
         posicao.heading.isFinite &&
         posicao.heading >= 0) {
       novaDirecao = posicao.heading;
-    } else if (anterior != null && anterior != atual) {
+    } else if (posicao.speed >= 1 &&
+        anterior != null &&
+        const Distance().as(LengthUnit.Meter, anterior, atual) >= 10) {
       novaDirecao = Geolocator.bearingBetween(
         anterior.latitude,
         anterior.longitude,
@@ -129,7 +107,9 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
 
     setState(() {
       _localizacaoMotorista = atual;
-      if (novaDirecao != null) _direcaoMotorista = novaDirecao;
+      if (novaDirecao != null) {
+        _direcaoMotorista = (novaDirecao % 360 + 360) % 360;
+      }
       if (embarqueAlcancado != null) {
         _embarquesConcluidos = {
           ..._embarquesConcluidos,
@@ -141,7 +121,7 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
       _enviarPosicaoSeNecessario(
         ponto: atual,
         precisao: posicao.accuracy,
-        direcao: novaDirecao,
+        direcao: _direcaoMotorista,
       ),
     );
 
@@ -204,16 +184,10 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
     }
   }
 
-  void _mostrarErroLocalizacao(String mensagem) {
-    if (!mounted) return;
-    final texto = mensagem.replaceFirst('Exception: ', '');
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(texto)));
-  }
-
   @override
   void dispose() {
     _envioPosicaoAtivo = false;
-    _localizacaoSubscription?.cancel();
+    _gps.dispose();
     super.dispose();
   }
 
@@ -278,47 +252,21 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
           child: Column(
             children: [
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 9,
-                ),
-                decoration: BoxDecoration(
-                  color: Colors.green.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.directions_car, color: Colors.green, size: 24),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'CORRIDA INICIADA',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            'Siga o percurso até o destino.',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
+              StatusGpsCorrida(gps: _gps),
               const SizedBox(height: 10),
               Expanded(
-                child: MapaNavegacaoCarona(
-                  carona: widget.carona,
-                  localizacaoMotorista: _localizacaoMotorista,
-                  direcaoMotorista: _direcaoMotorista,
-                  embarquesConcluidos: _embarquesConcluidos,
-                  onRotaCarregada: (resultado) {
-                    if (mounted) setState(() => rota = resultado);
-                  },
+                child: ListenableBuilder(
+                  listenable: _gps,
+                  builder: (_, _) => MapaNavegacaoCarona(
+                    carona: widget.carona,
+                    erroLocalizacao: _gps.precisaAtencao ? _gps.mensagem : null,
+                    localizacaoMotorista: _localizacaoMotorista,
+                    direcaoMotorista: _direcaoMotorista,
+                    embarquesConcluidos: _embarquesConcluidos,
+                    onRotaCarregada: (resultado) {
+                      if (mounted) setState(() => rota = resultado);
+                    },
+                  ),
                 ),
               ),
             ],
