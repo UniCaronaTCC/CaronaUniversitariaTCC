@@ -39,7 +39,7 @@ describe('PagamentosService', () => {
   const solicitacaoAceita = {
     idSolicitacao: 10,
     status: 'ACEITA',
-    pagamentoLimiteEm: new Date('2026-09-03T13:00:00.000Z'),
+    pagamentoLimiteEm: new Date('2026-09-03T14:00:00.000Z'),
     passageiro: { idUsuario: 1 },
     carona: {
       idCarona: 20,
@@ -171,6 +171,25 @@ describe('PagamentosService', () => {
     expect(abacatePayService.simularPagamento).not.toHaveBeenCalled();
   });
 
+  it('recusa simular Pix quando o prazo da solicitacao terminou', async () => {
+    pagamentosRepository.findOne.mockResolvedValue({
+      idPagamento: 30,
+      solicitacao: {
+        ...solicitacaoAceita,
+        pagamentoLimiteEm: new Date('2026-09-03T11:59:00.000Z'),
+      },
+      idProvedor: 'pix_123',
+      statusCriacao: 'CONFIRMADA',
+      statusProvedor: 'PENDING',
+      modoTeste: true,
+    });
+
+    await expect(service.simularPagamento(30, 1)).rejects.toThrow(
+      'O prazo para pagamento expirou',
+    );
+    expect(abacatePayService.simularPagamento).not.toHaveBeenCalled();
+  });
+
   it('calcula o valor no servidor, cria o Pix e salva sua confirmacao', async () => {
     const resultado = await service.criarOuObterPix(10, 1);
 
@@ -190,7 +209,7 @@ describe('PagamentosService', () => {
       expect.objectContaining({
         valorCentavos: 1250,
         descricao: 'Carona 20 - solicitacao 10',
-        expiraEmSegundos: 3600,
+        expiraEmSegundos: 7200,
       }),
     );
     expect(resultado).toEqual(
@@ -231,6 +250,25 @@ describe('PagamentosService', () => {
     expect(pagamentosTransacaoRepository.save).not.toHaveBeenCalled();
     expect(abacatePayService.criarPix).not.toHaveBeenCalled();
     expect(abacatePayService.consultarPix).not.toHaveBeenCalled();
+  });
+
+  it('nao reutiliza um Pix pendente depois do prazo da solicitacao', async () => {
+    consultaSolicitacao.getOne.mockResolvedValue({
+      ...solicitacaoAceita,
+      pagamentoLimiteEm: new Date('2026-09-03T11:59:00.000Z'),
+    });
+    pagamentosTransacaoRepository.findOne.mockResolvedValue({
+      idPagamento: 8,
+      statusCriacao: 'CONFIRMADA',
+      statusProvedor: 'PENDING',
+      idProvedor: 'pix_antigo',
+    });
+
+    await expect(service.criarOuObterPix(10, 1)).rejects.toThrow(
+      'O prazo para pagamento expirou',
+    );
+    expect(abacatePayService.consultarPix).not.toHaveBeenCalled();
+    expect(abacatePayService.criarPix).not.toHaveBeenCalled();
   });
 
   it('consulta e reutiliza um Pix que continua pendente', async () => {

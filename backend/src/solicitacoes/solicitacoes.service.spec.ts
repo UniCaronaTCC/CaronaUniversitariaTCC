@@ -389,7 +389,7 @@ describe('SolicitacoesService', () => {
         });
         expect(salvarConversa).toHaveBeenCalledTimes(1);
         expect(resultado.pagamentoLimiteEm).toEqual(
-          recorrente ? null : new Date('2026-09-15T13:00:00.000Z'),
+          recorrente ? null : new Date('2026-09-15T14:00:00.000Z'),
         );
       } else {
         expect(carona.vagas).toBe(vagas);

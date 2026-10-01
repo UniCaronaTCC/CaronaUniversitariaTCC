@@ -139,6 +139,11 @@ export class PagamentosService {
       return pagamento;
     }
 
+    if (pagamento.solicitacao.status !== 'ACEITA') {
+      throw new ConflictException('A solicitacao nao esta mais ativa');
+    }
+    this.calcularExpiracaoPix(pagamento.solicitacao.pagamentoLimiteEm);
+
     if (
       pagamento.statusCriacao !== 'CONFIRMADA' ||
       pagamento.statusProvedor !== 'PENDING' ||
@@ -189,6 +194,10 @@ export class PagamentosService {
         );
       }
 
+      const expiraEmSegundos = this.calcularExpiracaoPix(
+        solicitacao.pagamentoLimiteEm,
+      );
+
       const existente = await pagamentosRepository.findOne({
         where: {
           solicitacao: { idSolicitacao },
@@ -204,10 +213,6 @@ export class PagamentosService {
       ) {
         return { pagamento: existente, criadoAgora: false };
       }
-
-      const expiraEmSegundos = this.calcularExpiracaoPix(
-        solicitacao.pagamentoLimiteEm,
-      );
 
       const valorCentavos = this.converterValorParaCentavos(
         solicitacao.carona.valor,

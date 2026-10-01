@@ -179,6 +179,40 @@ void main() {
     expect(find.text('Pague até 25/09 às 18:00'), findsOneWidget);
   });
 
+  testWidgets('mostra solicitacao expirada sem oferecer Pix ou cancelamento', (
+    tester,
+  ) async {
+    final solicitacao = SolicitacaoEnviada(
+      id: 15,
+      status: 'EXPIRADA',
+      localEmbarque: 'Praça central',
+      motorista: 'Henrique',
+      idCarona: 16,
+      destino: 'UniSalesiano',
+      dataInicio: DateTime(2026, 9, 25),
+      horario: '19:00:00',
+      valor: 12.5,
+      pagamentoLimiteEm: DateTime(2026, 9, 25, 18),
+    );
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: CardSolicitacaoEnviada(
+            solicitacao: solicitacao,
+            onPagarPix: () {},
+            onCancelar: () {},
+          ),
+        ),
+      ),
+    );
+
+    expect(find.text('EXPIRADA'), findsOneWidget);
+    expect(find.text('PAGAR COM PIX'), findsNothing);
+    expect(find.textContaining('Pague até'), findsNothing);
+    expect(find.text('CANCELAR PARTICIPAÇÃO'), findsNothing);
+  });
+
   testWidgets('oferece acompanhamento para a corrida em andamento', (
     tester,
   ) async {

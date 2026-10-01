@@ -17,6 +17,8 @@ webhook e a tela de pagamento no Flutter estao implementados para o sandbox.
 - `abacatepay-webhook.controller.ts`: recebe notificacoes da AbacatePay sem JWT.
 - `abacatepay-webhook.service.ts`: valida o webhook e confirma o Pix no provedor.
 - `pagamento-evento-webhook.entity.ts`: impede processar o mesmo evento duas vezes.
+- `../solicitacoes/expiracao-solicitacoes.service.ts`: verifica periodicamente
+  reservas vencidas e devolve vagas sem pagamento confirmado.
 
 ## Como funciona
 
@@ -41,7 +43,7 @@ busca o valor da carona no banco. Somente o passageiro de uma solicitacao ACEITA
 e nao recorrente pode usa-la nesta primeira versao.
 
 Ao aceitar uma solicitacao avulsa, o backend reserva a vaga e define
-`pagamento_limite_em` como o menor valor entre uma hora apos o aceite e quinze
+`pagamento_limite_em` como o menor valor entre duas horas apos o aceite e quinze
 minutos antes do inicio da carona. O Pix e criado somente quando o passageiro
 solicita e expira junto com esse prazo, evitando dois vencimentos diferentes.
 O arquivo `FLUXO.md` registra as decisoes de negocio simplificadas para o TCC.
@@ -174,5 +176,5 @@ Ainda nao ha carteira, saldo ou repasse.
 - https://docs.abacatepay.com/pages/webhooks/events/transparent
 - https://docs.nestjs.com/faq/raw-body
 
-As regras de quando cobrar, reservar vaga, expirar reserva e reembolsar ainda
-serao discutidas. Esta etapa nao define nem altera essas regras.
+O prazo e a liberacao de reservas vencidas estao em `FLUXO.md`. O reembolso e
+o tratamento de uma confirmacao tardia ainda nao foram implementados.

@@ -1,4 +1,4 @@
-const UMA_HORA_EM_MILISSEGUNDOS = 60 * 60 * 1000;
+const DUAS_HORAS_EM_MILISSEGUNDOS = 2 * 60 * 60 * 1000;
 const QUINZE_MINUTOS_EM_MILISSEGUNDOS = 15 * 60 * 1000;
 
 export function calcularLimitePagamento(
@@ -15,7 +15,7 @@ export function calcularLimitePagamento(
     throw new RangeError('Data ou horario da carona invalido');
   }
 
-  const limiteAceite = agora.getTime() + UMA_HORA_EM_MILISSEGUNDOS;
+  const limiteAceite = agora.getTime() + DUAS_HORAS_EM_MILISSEGUNDOS;
   const limiteCarona = inicioCarona.getTime() - QUINZE_MINUTOS_EM_MILISSEGUNDOS;
 
   return new Date(Math.min(limiteAceite, limiteCarona));

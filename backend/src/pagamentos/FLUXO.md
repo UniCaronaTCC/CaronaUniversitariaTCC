@@ -2,11 +2,11 @@
 
 ## Aceite e prazo
 
-O motorista aceita a solicitação, a vaga fica reservada provisoriamente e o passageiro tem até 1 hora para pagar, respeitando o horário de início da carona.
+O motorista aceita a solicitação, a vaga fica reservada provisoriamente e o passageiro tem até 2 horas para pagar, respeitando o limite de 15 minutos antes do início da carona.
 
 ## Pix
 
-O Pix é gerado apenas quando o passageiro toca em **Pagar com Pix** e expira junto com o prazo da solicitação. Assim, existe um único prazo de pagamento, de no máximo 1 hora após o aceite e sempre respeitando o início da carona.
+O Pix é gerado apenas quando o passageiro toca em **Pagar com Pix** e expira junto com o prazo da solicitação. Assim, existe um único prazo de pagamento, de no máximo 2 horas após o aceite e sempre respeitando o início da carona.
 
 ## Confirmação
 
@@ -14,7 +14,7 @@ O webhook confirma o pagamento. A vaga e a participação passam a ser definitiv
 
 ## Expiração
 
-Se o prazo terminar sem pagamento, a solicitação expira e a vaga é liberada. Confirmações recebidas após a expiração também deverão ser tratadas, evitando que alguém pague sem possuir uma vaga.
+Se o prazo terminar sem pagamento, o backend verifica as cobranças pendentes com a AbacatePay, expira a solicitação e libera a vaga. Se o provedor ainda indicar pagamento pendente ou a criação for incerta, a vaga permanece reservada até haver certeza. Confirmações recebidas após a expiração ainda deverão ser tratadas, evitando que alguém pague sem possuir uma vaga.
 
 ## Início do percurso
 

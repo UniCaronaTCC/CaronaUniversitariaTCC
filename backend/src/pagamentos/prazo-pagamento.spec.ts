@@ -6,9 +6,9 @@ import {
 describe('prazos de pagamento', () => {
   const agora = new Date('2026-09-15T12:00:00.000Z');
 
-  it('limita o pagamento a uma hora depois do aceite', () => {
+  it('limita o pagamento a duas horas depois do aceite', () => {
     expect(calcularLimitePagamento('2026-09-15', '14:00:00', agora)).toEqual(
-      new Date('2026-09-15T13:00:00.000Z'),
+      new Date('2026-09-15T14:00:00.000Z'),
     );
   });
 
