@@ -17,6 +17,9 @@ export class Carona {
   @PrimaryGeneratedColumn({ name: 'id_carona' })
   idCarona!: number;
 
+  // Informação do modelo, carregada somente na listagem do motorista.
+  programacao?: { diasSemana: number[] };
+
   @Column({ name: 'id_recorrencia', type: 'int', nullable: true })
   idRecorrencia: number | null = null;
 

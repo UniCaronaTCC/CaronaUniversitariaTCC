@@ -1,3 +1,4 @@
+import { DIAS_SEMANA } from './datas-recorrencia';
 import { ValidacaoCarona } from './validacao-carona';
 import {
   BadRequestException,
@@ -150,7 +151,12 @@ export class CaronasController {
 
     return {
       sucesso: true,
-      dados: caronas.map((carona) => this.formatarCarona(carona)),
+      dados: caronas.map((carona) => ({
+        ...this.formatarCarona(carona),
+        diasRecorrencia:
+          carona.programacao?.diasSemana.map((dia) => DIAS_SEMANA[dia % 7]) ??
+          [],
+      })),
     };
   }
 

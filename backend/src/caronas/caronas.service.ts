@@ -1,3 +1,4 @@
+import { RecorrenciaCarona } from './recorrencia.entity';
 import {
   aplicarDadosCarona,
   DadosCriacaoCarona,
@@ -384,6 +385,12 @@ export class CaronasService {
 
     return this.caronasRepository
       .createQueryBuilder('carona')
+      .leftJoinAndMapOne(
+        'carona.programacao',
+        RecorrenciaCarona,
+        'programacao',
+        'programacao.idRecorrencia = carona.idRecorrencia',
+      )
 
       .innerJoinAndSelect('carona.usuario', 'usuario')
 
@@ -393,6 +400,8 @@ export class CaronasService {
 
       .select([
         'carona',
+        'programacao.idRecorrencia',
+        'programacao.diasSemana',
         'usuario.idUsuario',
         'usuario.nome',
         'veiculo',

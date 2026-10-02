@@ -132,6 +132,7 @@ class _CaronasPublicadasTelaState extends State<CaronasPublicadasTela> {
                     final carona = caronas[index];
 
                     return CardCaronaDisponivel(
+                      mostrarRecorrencia: true,
                       carona: carona,
                       onTap: () => abrirDetalhes(carona),
                     );

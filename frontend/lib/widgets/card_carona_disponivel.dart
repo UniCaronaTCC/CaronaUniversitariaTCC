@@ -7,12 +7,14 @@ class CardCaronaDisponivel extends StatelessWidget {
   final Carona carona;
   final VoidCallback? onTap;
   final Widget? acaoCabecalho;
+  final bool mostrarRecorrencia;
 
   const CardCaronaDisponivel({
     super.key,
     required this.carona,
     this.onTap,
     this.acaoCabecalho,
+    this.mostrarRecorrencia = false,
   });
 
   @override
@@ -99,6 +101,16 @@ class CardCaronaDisponivel extends StatelessWidget {
                 ],
               ),
 
+              if (mostrarRecorrencia && _diasRecorrencia.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Recorrência: ${_diasRecorrencia.join(', ').toLowerCase()}',
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    fontSize: 13,
+                  ),
+                ),
+              ],
               const SizedBox(height: 18),
 
               // Destino principal da carona.
@@ -193,6 +205,23 @@ class CardCaronaDisponivel extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  List<String> get _diasRecorrencia {
+    final dias = carona.idRecorrencia != null
+        ? carona.diasRecorrencia
+        : carona.recorrente
+        ? carona.diasSemana
+        : <String>[];
+    return [
+      'SEG',
+      'TER',
+      'QUA',
+      'QUI',
+      'SEX',
+      'SAB',
+      'DOM',
+    ].where(dias.contains).toList();
   }
 
   String _textoData() {
