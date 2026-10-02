@@ -18,12 +18,14 @@ import '../widgets/formulario_ofertar_carona.dart';
 class OfertarCaronaTela extends StatefulWidget {
   final LocalizacaoSelecionada? destinoInicial;
   final Carona? caronaParaEditar;
+  final int? idRecorrencia;
   final int indiceNavegacao;
 
   const OfertarCaronaTela({
     super.key,
     this.destinoInicial,
     this.caronaParaEditar,
+    this.idRecorrencia,
     this.indiceNavegacao = 0,
   });
 
@@ -184,7 +186,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
   // Usa o mesmo mapa para cadastrar um ponto de embarque.
   Future<void> adicionarPontoEmbarque() async {
-    if (editando) {
+    if (editando && widget.idRecorrencia == null) {
       return;
     }
 
@@ -229,7 +231,9 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   }
 
   void removerPontoEmbarque(int indice) {
-    if (editando || indice < 0 || indice >= pontosEmbarque.length) {
+    if ((editando && widget.idRecorrencia == null) ||
+        indice < 0 ||
+        indice >= pontosEmbarque.length) {
       return;
     }
 
@@ -239,6 +243,13 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   }
 
   Future<void> escolherData() async {
+    if (widget.idRecorrencia == null &&
+        widget.caronaParaEditar?.idRecorrencia != null) {
+      mostrarMensagem(
+        'Esta data pertence à programação. Para outra data, publique uma carona avulsa.',
+      );
+      return;
+    }
     final resultado = await DataHoraUtils.selecionarData(
       context,
       dataInicial: dataSelecionada,
@@ -292,6 +303,12 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   }
 
   void alterarRecorrencia(bool valor) {
+    if (widget.idRecorrencia != null && !valor) {
+      mostrarMensagem(
+        'Para interromper a programação, use Pausar em Recorrências',
+      );
+      return;
+    }
     setState(() {
       caronaRecorrente = valor;
 
@@ -337,6 +354,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
     final resultado = await CaronaService.salvarCarona(
       idCarona: widget.caronaParaEditar?.id,
+      idRecorrencia: widget.idRecorrencia,
 
       origem: origem.endereco,
       origemCidade: origem.cidade ?? widget.caronaParaEditar?.origemCidade,
@@ -424,7 +442,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       return 'Busque e selecione o destino';
     }
 
-    if (!editando && pontosEmbarque.isEmpty) {
+    if ((!editando || widget.idRecorrencia != null) && pontosEmbarque.isEmpty) {
       return 'Adicione pelo menos um ponto de embarque';
     }
 
@@ -477,7 +495,11 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: BarraSuperiorPadrao(
-        titulo: editando ? 'Editar carona' : 'Ofertar carona',
+        titulo: widget.idRecorrencia != null
+            ? 'Editar recorrência'
+            : editando
+            ? 'Editar carona'
+            : 'Ofertar carona',
       ),
       bottomNavigationBar: BarraNavegacaoHome(
         currentIndex: widget.indiceNavegacao,
@@ -491,8 +513,14 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: FormularioOfertarCarona(
-            titulo: editando ? 'Editar carona' : 'Ofertar carona',
-            descricao: editando
+            titulo: widget.idRecorrencia != null
+                ? 'Editar recorrência'
+                : editando
+                ? 'Editar carona'
+                : 'Ofertar carona',
+            descricao: widget.idRecorrencia != null
+                ? 'Alterações valem para novas datas. Caronas já publicadas são mantidas.'
+                : editando
                 ? 'Atualize os dados da viagem'
                 : 'Informe os dados da viagem',
             textoBotao: editando ? 'SALVAR ALTERAÇÕES' : 'OFERTAR CARONA',
@@ -512,7 +540,8 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
             pontosEmbarque: pontosEmbarque,
             origemSelecionada: origemSelecionada,
-            pontosEmbarqueEditaveis: !editando,
+            pontosEmbarqueEditaveis: !editando || widget.idRecorrencia != null,
+            mostrarRecorrencia: !editando || widget.idRecorrencia != null,
             possuiVeiculo: possuiVeiculo,
 
             onSelecionarOrigem: escolherOrigemNoMapa,

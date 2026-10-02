@@ -1,3 +1,14 @@
+import { RecorrenciaCarona } from './recorrencia.entity';
+import {
+  aplicarDadosCarona,
+  DadosCriacaoCarona,
+  DadosPosicaoAtualCarona,
+} from './dados-carona';
+export type {
+  DadosCriacaoCarona,
+  DadosPontoEmbarque,
+  DadosPosicaoAtualCarona,
+} from './dados-carona';
 import {
   BadRequestException,
   ConflictException,
@@ -13,46 +24,7 @@ import { PontoEmbarque } from './ponto-embarque.entity';
 import { PosicaoAtualCarona } from './posicao-atual-carona.entity';
 import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 import { UsersService } from '../users/users.service';
-
-export interface DadosPontoEmbarque {
-  nome: string | null;
-  endereco: string;
-  latitude: number;
-  longitude: number;
-  ordem: number;
-}
-
-export interface DadosCriacaoCarona {
-  idUsuario: number;
-
-  origem: string;
-  origemCidade: string | null;
-  origemLatitude: number;
-  origemLongitude: number;
-
-  destino: string;
-  destinoCidade: string | null;
-  destinoLatitude: number;
-  destinoLongitude: number;
-
-  dataInicio: string;
-  dataFim: string | null;
-  horario: string;
-  vagas: number;
-  valor: number;
-  recorrente: boolean;
-  diasSemana: string[] | null;
-  observacoes?: string;
-
-  pontosEmbarque: DadosPontoEmbarque[];
-}
-
-export interface DadosPosicaoAtualCarona {
-  latitude: number;
-  longitude: number;
-  direcao: number | null;
-  precisao: number;
-}
+import { RecorrenciasService } from './recorrencias.service';
 
 @Injectable()
 export class CaronasService {
@@ -71,6 +43,7 @@ export class CaronasService {
 
     private readonly dataSource: DataSource,
     private readonly usersService: UsersService,
+    private readonly recorrenciasService: RecorrenciasService,
   ) {}
 
   // Cria a carona e os pontos de embarque juntos.
@@ -83,6 +56,8 @@ export class CaronasService {
       );
     }
 
+    if (dados.recorrente) return this.recorrenciasService.criar(dados);
+
     return this.dataSource.transaction(async (manager) => {
       const caronasRepository = manager.getRepository(Carona);
       const pontosRepository = manager.getRepository(PontoEmbarque);
@@ -94,7 +69,7 @@ export class CaronasService {
         },
       });
 
-      this.aplicarDados(novaCarona, dados);
+      aplicarDadosCarona(novaCarona, dados);
 
       // Primeiro salva a carona para gerar o id_carona.
       const caronaSalva = await caronasRepository.save(novaCarona);
@@ -144,13 +119,24 @@ export class CaronasService {
   ): Promise<Carona> {
     const carona = await this.buscarCaronaDoUsuario(idCarona, dados.idUsuario);
 
+    if (dados.recorrente || carona.recorrente) {
+      throw new BadRequestException(
+        'Gerencie a programação em Recorrências. Para uma carona antiga, cadastre uma nova programação.',
+      );
+    }
+    if (carona.idRecorrencia && dados.dataInicio !== carona.dataInicio) {
+      throw new BadRequestException(
+        'A data desta carona pertence à programação. Cancele este dia e publique uma carona avulsa para outra data.',
+      );
+    }
+
     if (carona.status === 'EM_ANDAMENTO') {
       throw new ConflictException(
         'Não é possível editar uma corrida em andamento',
       );
     }
 
-    this.aplicarDados(carona, dados);
+    aplicarDadosCarona(carona, dados);
 
     if (carona.status === 'LOTADA' && carona.vagas > 0) {
       carona.status = 'ATIVA';
@@ -399,6 +385,12 @@ export class CaronasService {
 
     return this.caronasRepository
       .createQueryBuilder('carona')
+      .leftJoinAndMapOne(
+        'carona.programacao',
+        RecorrenciaCarona,
+        'programacao',
+        'programacao.idRecorrencia = carona.idRecorrencia',
+      )
 
       .innerJoinAndSelect('carona.usuario', 'usuario')
 
@@ -408,6 +400,8 @@ export class CaronasService {
 
       .select([
         'carona',
+        'programacao.idRecorrencia',
+        'programacao.diasSemana',
         'usuario.idUsuario',
         'usuario.nome',
         'veiculo',
@@ -481,33 +475,5 @@ export class CaronasService {
       valor('minute'),
       valor('second'),
     );
-  }
-
-  private aplicarDados(carona: Carona, dados: DadosCriacaoCarona): void {
-    const possuiRecorrencia = dados.recorrente === true;
-
-    carona.origem = dados.origem;
-    carona.origemCidade = dados.origemCidade;
-    carona.origemLatitude = dados.origemLatitude;
-    carona.origemLongitude = dados.origemLongitude;
-
-    carona.destino = dados.destino;
-    carona.destinoCidade = dados.destinoCidade;
-    carona.destinoLatitude = dados.destinoLatitude;
-    carona.destinoLongitude = dados.destinoLongitude;
-
-    carona.dataInicio = dados.dataInicio;
-
-    carona.dataFim = possuiRecorrencia ? dados.dataFim : null;
-
-    carona.horario = dados.horario;
-    carona.vagas = dados.vagas;
-    carona.valor = dados.valor;
-
-    carona.recorrente = possuiRecorrencia;
-
-    carona.diasSemana = possuiRecorrencia ? dados.diasSemana : null;
-
-    carona.observacoes = dados.observacoes?.trim() || null;
   }
 }

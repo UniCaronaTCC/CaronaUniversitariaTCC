@@ -23,10 +23,7 @@ class CaronaService {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/$rota');
       final resposta = await AuthService.enviarComToken(
-        (token) => http.get(
-          url,
-          headers: {'Authorization': 'Bearer $token'},
-        ),
+        (token) => http.get(url, headers: {'Authorization': 'Bearer $token'}),
       );
 
       if (resposta == null) {
@@ -80,6 +77,7 @@ class CaronaService {
   // Cria ou atualiza uma oferta com endereço e coordenadas.
   static Future<Map<String, dynamic>> salvarCarona({
     int? idCarona,
+    int? idRecorrencia,
 
     required String origem,
     String? origemCidade,
@@ -104,7 +102,9 @@ class CaronaService {
   }) async {
     try {
       final url = Uri.parse(
-        '${ApiConfig.baseUrl}/caronas${idCarona == null ? '' : '/$idCarona'}',
+        idRecorrencia != null
+            ? '${ApiConfig.baseUrl}/recorrencias/$idRecorrencia'
+            : '${ApiConfig.baseUrl}/caronas${idCarona == null ? '' : '/$idCarona'}',
       );
 
       final corpoRequisicao = jsonEncode({
@@ -139,7 +139,7 @@ class CaronaService {
           'Authorization': 'Bearer $token',
         };
 
-        return idCarona == null
+        return idCarona == null && idRecorrencia == null
             ? http.post(url, headers: headers, body: corpoRequisicao)
             : http.patch(url, headers: headers, body: corpoRequisicao);
       });

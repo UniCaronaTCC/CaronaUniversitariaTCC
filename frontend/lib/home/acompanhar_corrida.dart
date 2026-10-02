@@ -41,7 +41,7 @@ class _AcompanharCorridaTelaState extends State<AcompanharCorridaTela> {
 
   Future<void> _atualizarPosicao() async {
     if (_consultando || _corridaEncerrada) return;
-    _consultando = true;
+    setState(() => _consultando = true);
     try {
       final resultado = await CaronaService.buscarPosicaoAtual(
         widget.solicitacao.idCarona,
@@ -50,7 +50,7 @@ class _AcompanharCorridaTelaState extends State<AcompanharCorridaTela> {
 
       if (resultado['sucesso'] == true) {
         setState(() {
-          _posicao = resultado['dados'] as PosicaoAtualCarona?;
+          _posicao = resultado['dados'] as PosicaoAtualCarona? ?? _posicao;
           _erro = null;
         });
         return;
@@ -66,8 +66,12 @@ class _AcompanharCorridaTelaState extends State<AcompanharCorridaTela> {
       if (encerrada) {
         _temporizador?.cancel();
       }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _erro = 'Não foi possível atualizar a localização.');
+      }
     } finally {
-      _consultando = false;
+      if (mounted) setState(() => _consultando = false);
     }
   }
 
@@ -80,6 +84,7 @@ class _AcompanharCorridaTelaState extends State<AcompanharCorridaTela> {
 
   String get _textoStatus {
     if (_corridaEncerrada) return 'Esta corrida foi encerrada.';
+    if (_erro != null) return 'Sem atualização. Aguardando conexão.';
     if (_posicao == null) {
       return 'Aguardando o motorista compartilhar a localização.';
     }
@@ -90,7 +95,9 @@ class _AcompanharCorridaTelaState extends State<AcompanharCorridaTela> {
   }
 
   Color get _corStatus {
-    if (_corridaEncerrada || _localizacaoAntiga) return Colors.orange.shade800;
+    if (_erro != null || _corridaEncerrada || _localizacaoAntiga) {
+      return Colors.orange.shade800;
+    }
     if (_posicao == null) return Colors.black54;
     return Colors.green.shade700;
   }

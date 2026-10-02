@@ -170,6 +170,12 @@ void main() {
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(find.text('Sair'), 200);
+    await tester.pumpAndSettle();
+    await Scrollable.ensureVisible(
+      tester.element(find.text('Sair')),
+      alignment: 0.5,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Sair'));
     await tester.pumpAndSettle();
 

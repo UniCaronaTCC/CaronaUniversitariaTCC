@@ -12,6 +12,7 @@ import { PontoEmbarque } from './ponto-embarque.entity';
 import { PosicaoAtualCarona } from './posicao-atual-carona.entity';
 import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 import { UsersService } from '../users/users.service';
+import { RecorrenciasService } from './recorrencias.service';
 
 describe('CaronasService', () => {
   let service: CaronasService;
@@ -97,6 +98,7 @@ describe('CaronasService', () => {
       solicitacoesRepository as unknown as Repository<Solicitacao>,
       {} as DataSource,
       usersService as unknown as UsersService,
+      {} as RecorrenciasService,
     );
   });
 

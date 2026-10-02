@@ -1,3 +1,5 @@
+import { DIAS_SEMANA } from './datas-recorrencia';
+import { ValidacaoCarona } from './validacao-carona';
 import {
   BadRequestException,
   Body,
@@ -16,11 +18,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { RequisicaoComUsuario } from '../auth/requisicao-com-usuario';
 
 import { Carona } from './carona.entity';
-import {
-  CaronasService,
-  DadosCriacaoCarona,
-  DadosPosicaoAtualCarona,
-} from './caronas.service';
+import { CaronasService, DadosPosicaoAtualCarona } from './caronas.service';
 
 type DadosCaronaRecebidos = Record<string, unknown> | undefined;
 
@@ -35,7 +33,7 @@ export class CaronasController {
     @Req() request: RequisicaoComUsuario,
   ) {
     const carona = await this.caronasService.criarCarona(
-      this.validarDadosCarona(body, request.usuario.sub),
+      new ValidacaoCarona().validarDadosCarona(body, request.usuario.sub),
     );
 
     return {
@@ -53,7 +51,7 @@ export class CaronasController {
   ) {
     const carona = await this.caronasService.atualizarCarona(
       this.validarIdCarona(idRecebido),
-      this.validarDadosCarona(body, request.usuario.sub),
+      new ValidacaoCarona().validarDadosCarona(body, request.usuario.sub),
     );
 
     return {
@@ -153,7 +151,12 @@ export class CaronasController {
 
     return {
       sucesso: true,
-      dados: caronas.map((carona) => this.formatarCarona(carona)),
+      dados: caronas.map((carona) => ({
+        ...this.formatarCarona(carona),
+        diasRecorrencia:
+          carona.programacao?.diasSemana.map((dia) => DIAS_SEMANA[dia % 7]) ??
+          [],
+      })),
     };
   }
 
@@ -167,161 +170,6 @@ export class CaronasController {
       sucesso: true,
       dados: caronas.map((carona) => this.formatarCarona(carona)),
     };
-  }
-
-  private validarDadosCarona(
-    body: DadosCaronaRecebidos,
-    idUsuario: number,
-  ): DadosCriacaoCarona {
-    const dados = body ?? {};
-
-    const origem = dados.origem?.toString().trim() ?? '';
-    const destino = dados.destino?.toString().trim() ?? '';
-    const dataInicio = dados.dataInicio?.toString().trim() ?? '';
-    const horario = dados.horario?.toString().trim() ?? '';
-
-    if (!origem || !destino || !dataInicio || !horario) {
-      throw new BadRequestException(
-        'Origem, destino, data e horário são obrigatórios',
-      );
-    }
-
-    if (origem.length > 255 || destino.length > 255) {
-      throw new BadRequestException('Origem ou destino muito longo');
-    }
-
-    const vagas = Number(dados.vagas);
-    const valor = Number(dados.valor);
-
-    if (!Number.isInteger(vagas) || vagas <= 0 || vagas > 4) {
-      throw new BadRequestException('Quantidade de vagas inválida');
-    }
-
-    if (!Number.isFinite(valor) || valor < 0) {
-      throw new BadRequestException('Valor da carona inválido');
-    }
-
-    const recorrente = dados.recorrente === true;
-
-    const diasSemana = Array.isArray(dados.diasSemana)
-      ? dados.diasSemana.map((dia: unknown) => dia?.toString() ?? '')
-      : null;
-
-    if (recorrente && (!Array.isArray(diasSemana) || diasSemana.length === 0)) {
-      throw new BadRequestException('Selecione pelo menos um dia da semana');
-    }
-
-    const pontosEmbarque = this.validarPontosEmbarque(dados.pontosEmbarque);
-
-    return {
-      idUsuario,
-
-      origem,
-
-      origemCidade: this.textoOpcional(dados.origemCidade, 100),
-
-      origemLatitude: this.validarCoordenada(
-        dados.origemLatitude,
-        -90,
-        90,
-        'Latitude da origem',
-      ),
-
-      origemLongitude: this.validarCoordenada(
-        dados.origemLongitude,
-        -180,
-        180,
-        'Longitude da origem',
-      ),
-
-      destino,
-
-      destinoCidade: this.textoOpcional(dados.destinoCidade, 100),
-
-      destinoLatitude: this.validarCoordenada(
-        dados.destinoLatitude,
-        -90,
-        90,
-        'Latitude do destino',
-      ),
-
-      destinoLongitude: this.validarCoordenada(
-        dados.destinoLongitude,
-        -180,
-        180,
-        'Longitude do destino',
-      ),
-
-      dataInicio,
-
-      dataFim: this.textoOpcional(dados.dataFim),
-
-      horario,
-      vagas,
-      valor,
-      recorrente,
-      diasSemana,
-
-      observacoes: this.textoOpcional(dados.observacoes) ?? undefined,
-
-      pontosEmbarque,
-    };
-  }
-
-  private validarPontosEmbarque(valor: unknown) {
-    if (valor == null) {
-      return [];
-    }
-
-    if (!Array.isArray(valor)) {
-      throw new BadRequestException('Pontos de embarque inválidos');
-    }
-
-    return valor.map((item, indice) => {
-      if (typeof item !== 'object' || item === null) {
-        throw new BadRequestException(
-          `Ponto de embarque ${indice + 1} inválido`,
-        );
-      }
-
-      const ponto = item as Record<string, unknown>;
-
-      const endereco = ponto.endereco?.toString().trim() ?? '';
-
-      if (!endereco) {
-        throw new BadRequestException(
-          `Endereço do ponto de embarque ${indice + 1} é obrigatório`,
-        );
-      }
-
-      if (endereco.length > 255) {
-        throw new BadRequestException(
-          `Endereço do ponto de embarque ${indice + 1} muito longo`,
-        );
-      }
-
-      return {
-        nome: this.textoOpcional(ponto.nome, 100),
-
-        endereco,
-
-        latitude: this.validarCoordenada(
-          ponto.latitude,
-          -90,
-          90,
-          `Latitude do ponto de embarque ${indice + 1}`,
-        ),
-
-        longitude: this.validarCoordenada(
-          ponto.longitude,
-          -180,
-          180,
-          `Longitude do ponto de embarque ${indice + 1}`,
-        ),
-
-        ordem: indice + 1,
-      };
-    });
   }
 
   private validarPosicaoAtual(
@@ -384,6 +232,7 @@ export class CaronasController {
   private formatarCarona(carona: Carona) {
     return {
       idCarona: carona.idCarona,
+      idRecorrencia: carona.idRecorrencia,
 
       origem: carona.origem,
       origemCidade: carona.origemCidade,

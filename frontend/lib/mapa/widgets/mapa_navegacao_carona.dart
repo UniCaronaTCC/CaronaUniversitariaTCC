@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
@@ -11,6 +13,8 @@ class MapaNavegacaoCarona extends StatefulWidget {
   final Carona carona;
   final LatLng? localizacaoMotorista;
   final double? direcaoMotorista;
+  final RotaService? rotaService;
+  final String? erroLocalizacao;
   final Set<int> embarquesConcluidos;
   final ValueChanged<RotaResultado>? onRotaCarregada;
 
@@ -19,6 +23,8 @@ class MapaNavegacaoCarona extends StatefulWidget {
     required this.carona,
     required this.localizacaoMotorista,
     this.direcaoMotorista,
+    this.rotaService,
+    this.erroLocalizacao,
     this.embarquesConcluidos = const {},
     this.onRotaCarregada,
   });
@@ -28,12 +34,13 @@ class MapaNavegacaoCarona extends StatefulWidget {
 }
 
 class _MapaNavegacaoCaronaState extends State<MapaNavegacaoCarona> {
-  final _service = RotaService();
+  late final _service = widget.rotaService ?? RotaService();
   List<LatLng>? _paradas;
   RotaResultado? _rota;
   String? _erro;
   bool _carregando = false;
   bool _recalculoPendente = false;
+  Timer? _recalculoAgendado;
   LatLng? _localizacaoUltimoCalculo;
 
   static const _distanciaParaRecalcular = 50.0;
@@ -85,53 +92,59 @@ class _MapaNavegacaoCaronaState extends State<MapaNavegacaoCarona> {
   }
 
   Future<void> _carregarRota() async {
-    if (_carregando) {
+    if (_carregando || _recalculoAgendado != null) {
       _recalculoPendente = true;
       return;
     }
+
+    _atualizarParadas();
     final paradas = _paradas;
     setState(() {
       _erro = null;
       _carregando = paradas != null;
     });
     if (paradas == null) return;
+    _iniciarIntervalo();
     _localizacaoUltimoCalculo = widget.localizacaoMotorista;
 
     try {
-      final rota = await _service
-          .calcularRota(paradas)
-          .timeout(const Duration(seconds: 40));
-      if (!_rotaValida(rota)) throw const FormatException('Rota inválida');
+      final rota = await _service.calcularRota(paradas);
       if (!mounted) return;
       setState(() {
         _rota = rota;
         _carregando = false;
       });
       widget.onRotaCarregada?.call(rota);
-      _executarRecalculoPendente();
+      if (_recalculoPendente || _motoristaSeMoveuParaRecalculo()) {
+        _recalculoPendente = false;
+        _carregarRota();
+      }
     } catch (_) {
       if (!mounted) return;
+      _iniciarIntervalo();
+      _recalculoPendente = false;
       setState(() {
         _carregando = false;
         _erro = 'Não foi possível carregar a rota. Tente novamente.';
       });
-      _executarRecalculoPendente();
     }
   }
 
-  bool _rotaValida(RotaResultado rota) {
-    return rota.pontos.length >= 2 &&
-        rota.pontos.every((p) => coordenadaValida(p.latitude, p.longitude)) &&
-        rota.distanciaMetros.isFinite &&
-        rota.distanciaMetros >= 0 &&
-        rota.duracaoSegundos.isFinite &&
-        rota.duracaoSegundos >= 0;
+  void _iniciarIntervalo() {
+    _recalculoAgendado?.cancel();
+    _recalculoAgendado = Timer(const Duration(seconds: 15), () {
+      _recalculoAgendado = null;
+      if (mounted && _recalculoPendente && !_carregando) {
+        _recalculoPendente = false;
+        _carregarRota();
+      }
+    });
   }
 
-  void _executarRecalculoPendente() {
-    if (!_recalculoPendente || !mounted) return;
-    _recalculoPendente = false;
-    _carregarRota();
+  @override
+  void dispose() {
+    _recalculoAgendado?.cancel();
+    super.dispose();
   }
 
   @override
@@ -149,6 +162,9 @@ class _MapaNavegacaoCaronaState extends State<MapaNavegacaoCarona> {
 
   Widget _conteudo() {
     if (widget.localizacaoMotorista == null) {
+      if (widget.erroLocalizacao != null) {
+        return _EstadoErro(mensagem: widget.erroLocalizacao!);
+      }
       return const _EstadoCarregando(mensagem: 'Obtendo sua localização...');
     }
     if (_carregando && _rota == null) {
@@ -156,7 +172,7 @@ class _MapaNavegacaoCaronaState extends State<MapaNavegacaoCarona> {
         mensagem: 'Calculando o percurso pelas ruas...',
       );
     }
-    if (_paradas == null || (_erro != null && _rota == null)) {
+    if (_paradas == null || _rota == null) {
       return _EstadoErro(
         mensagem:
             _erro ??

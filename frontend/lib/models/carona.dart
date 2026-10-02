@@ -7,6 +7,8 @@ import '../utils/formatador_moeda.dart';
 
 class Carona {
   final int id;
+  final int? idRecorrencia;
+  final List<String> diasRecorrencia;
 
   final String origem;
   final String? origemCidade;
@@ -37,6 +39,8 @@ class Carona {
 
   const Carona({
     required this.id,
+    this.idRecorrencia,
+    this.diasRecorrencia = const [],
     required this.origem,
     this.origemCidade,
     this.origemLatitude,
@@ -83,7 +87,11 @@ class Carona {
 
     return Carona(
       id: converterJsonParaInt(json['idCarona']),
+      idRecorrencia: json['idRecorrencia'] == null
+          ? null
+          : converterJsonParaInt(json['idRecorrencia']),
 
+      diasRecorrencia: converterJsonParaListaString(json['diasRecorrencia']),
       origem: json['origem']?.toString() ?? '',
       origemCidade: json['origemCidade']?.toString(),
       origemLatitude: converterJsonParaDoubleOpcional(json['origemLatitude']),

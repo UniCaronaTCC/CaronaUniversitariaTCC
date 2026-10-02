@@ -6,6 +6,7 @@ import '../services/carona_service.dart';
 import '../widgets/card_carona_disponivel.dart';
 import '../widgets/componentes_padrao.dart';
 import 'detalhes_carona.dart';
+import 'recorrencias.dart';
 
 class CaronasPublicadasTela extends StatefulWidget {
   const CaronasPublicadasTela({super.key});
@@ -43,7 +44,11 @@ class _CaronasPublicadasTelaState extends State<CaronasPublicadasTela> {
       carregando = false;
 
       if (resultado['sucesso'] == true && dados is List<Carona>) {
-        caronas = dados.where((carona) => !carona.finalizada).toList();
+        caronas = dados.where((carona) => !carona.finalizada).toList()
+          ..sort((a, b) {
+            final data = a.dataInicio.compareTo(b.dataInicio);
+            return data != 0 ? data : a.horario.compareTo(b.horario);
+          });
       } else {
         mensagemErro =
             resultado['mensagem']?.toString() ?? 'Erro ao carregar caronas';
@@ -55,10 +60,8 @@ class _CaronasPublicadasTelaState extends State<CaronasPublicadasTela> {
     final alterada = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => DetalhesCaronaTela(
-          carona: carona,
-          indiceNavegacaoOrigem: 0,
-        ),
+        builder: (_) =>
+            DetalhesCaronaTela(carona: carona, indiceNavegacaoOrigem: 0),
       ),
     );
 
@@ -76,6 +79,19 @@ class _CaronasPublicadasTelaState extends State<CaronasPublicadasTela> {
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.text,
         elevation: 0,
+        actions: [
+          IconButton(
+            tooltip: 'Recorrências',
+            icon: const Icon(Icons.repeat),
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const RecorrenciasTela()),
+              );
+              if (mounted) await carregarCaronas();
+            },
+          ),
+        ],
       ),
       body: SafeArea(
         child: RefreshIndicator(
@@ -116,6 +132,7 @@ class _CaronasPublicadasTelaState extends State<CaronasPublicadasTela> {
                     final carona = caronas[index];
 
                     return CardCaronaDisponivel(
+                      mostrarRecorrencia: true,
                       carona: carona,
                       onTap: () => abrirDetalhes(carona),
                     );

@@ -46,7 +46,9 @@ class CampoRecorrenciaCarona extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               ),
             ),
-            subtitle: const Text('Repetir esta carona em dias da semana'),
+            subtitle: const Text(
+              'Publicar uma carona independente por dia, nas próximas duas semanas. A programação continua até você pausar.',
+            ),
             value: caronaRecorrente,
             activeThumbColor: AppColors.primary,
             onChanged: onRecorrenciaChanged,
