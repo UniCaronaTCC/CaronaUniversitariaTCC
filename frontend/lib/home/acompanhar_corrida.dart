@@ -1,3 +1,5 @@
+import '../services/progresso_carona_service.dart';
+import '../models/ponto_embarque.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -25,6 +27,8 @@ class _AcompanharCorridaTelaState extends State<AcompanharCorridaTela> {
 
   Timer? _temporizador;
   PosicaoAtualCarona? _posicao;
+  List<PontoEmbarque>? _pontos;
+  final _progressoService = ProgressoCaronaService();
   String? _erro;
   bool _consultando = false;
   bool _corridaEncerrada = false;
@@ -49,9 +53,19 @@ class _AcompanharCorridaTelaState extends State<AcompanharCorridaTela> {
       if (!mounted) return;
 
       if (resultado['sucesso'] == true) {
+        List<PontoEmbarque>? pontos;
+        try {
+          pontos = await _progressoService.consultar(
+            widget.solicitacao.idCarona,
+          );
+        } catch (_) {}
+        if (!mounted) return;
         setState(() {
           _posicao = resultado['dados'] as PosicaoAtualCarona? ?? _posicao;
-          _erro = null;
+          _erro = pontos == null
+              ? 'Não foi possível sincronizar os pontos do percurso.'
+              : null;
+          _pontos = pontos ?? _pontos;
         });
         return;
       }
@@ -140,6 +154,7 @@ class _AcompanharCorridaTelaState extends State<AcompanharCorridaTela> {
                       ? const _CorridaEncerrada()
                       : MapaAcompanhamentoPassageiro(
                           solicitacao: widget.solicitacao,
+                          pontosPercurso: _pontos,
                           localizacaoMotorista: posicao == null
                               ? null
                               : LatLng(posicao.latitude, posicao.longitude),

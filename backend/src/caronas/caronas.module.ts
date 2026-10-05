@@ -1,3 +1,5 @@
+import { ProgressoCaronaService } from './progresso-carona.service';
+import { ProgressoCaronaController } from './progresso-carona.controller';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
@@ -31,9 +33,13 @@ import { RecorrenciasController } from './recorrencias.controller';
     // Permite proteger rotas de caronas com JWT
   ],
 
-  controllers: [CaronasController, RecorrenciasController],
+  controllers: [
+    CaronasController,
+    RecorrenciasController,
+    ProgressoCaronaController,
+  ],
 
-  providers: [CaronasService, RecorrenciasService],
+  providers: [CaronasService, RecorrenciasService, ProgressoCaronaService],
 
   exports: [CaronasService],
 })

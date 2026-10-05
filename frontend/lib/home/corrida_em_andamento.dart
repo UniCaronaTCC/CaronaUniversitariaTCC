@@ -10,7 +10,8 @@ import '../mapa/services/rota_service.dart';
 import '../mapa/services/rastreamento_gps.dart';
 import '../mapa/widgets/status_gps_corrida.dart';
 import '../models/carona.dart';
-import '../models/ponto_embarque.dart';
+import '../mapa/services/progresso_corrida.dart';
+import '../mapa/widgets/status_progresso_corrida.dart';
 import '../services/carona_service.dart';
 import '../widgets/componentes_padrao.dart';
 
@@ -29,55 +30,18 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
   late final RastreamentoGps _gps;
   LatLng? _localizacaoMotorista;
   double? _direcaoMotorista;
-  Set<int> _embarquesConcluidos = {};
-  int? _pontoEmObservacao;
-  int _leiturasProximas = 0;
+  late final ProgressoCorrida _progresso;
   DateTime? _ultimoEnvioPosicao;
   bool _enviandoPosicao = false;
   bool _envioPosicaoAtivo = true;
 
   static const _intervaloEnvioPosicao = Duration(seconds: 5);
 
-  int _chavePonto(PontoEmbarque ponto) => ponto.id ?? -ponto.ordem;
-
-  PontoEmbarque? _detectarEmbarqueAlcancado(Position posicao) {
-    final pontos = [...widget.carona.pontosEmbarque]
-      ..sort((a, b) => a.ordem.compareTo(b.ordem));
-    final pendentes = pontos.where(
-      (ponto) => !_embarquesConcluidos.contains(_chavePonto(ponto)),
-    );
-    if (pendentes.isEmpty) return null;
-
-    final proximo = pendentes.first;
-    final chave = _chavePonto(proximo);
-    final distancia = Geolocator.distanceBetween(
-      posicao.latitude,
-      posicao.longitude,
-      proximo.latitude,
-      proximo.longitude,
-    );
-    if (distancia > 30) {
-      _pontoEmObservacao = null;
-      _leiturasProximas = 0;
-      return null;
-    }
-
-    if (_pontoEmObservacao == chave) {
-      _leiturasProximas++;
-    } else {
-      _pontoEmObservacao = chave;
-      _leiturasProximas = 1;
-    }
-    if (_leiturasProximas < 2) return null;
-
-    _pontoEmObservacao = null;
-    _leiturasProximas = 0;
-    return proximo;
-  }
-
   @override
   void initState() {
     super.initState();
+    _progresso = ProgressoCorrida(widget.carona.id);
+    _progresso.sincronizar();
     _gps = RastreamentoGps(onPosicao: _processarPosicao);
     _gps.iniciar();
   }
@@ -88,7 +52,7 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
     final anterior = _localizacaoMotorista;
     final recebida = LatLng(posicao.latitude, posicao.longitude);
     final atual = _suavizarPosicao(anterior, recebida, posicao.accuracy);
-    final embarqueAlcancado = _detectarEmbarqueAlcancado(posicao);
+    _progresso.observar(posicao);
     double? novaDirecao;
     if (posicao.speed >= 1 &&
         posicao.heading.isFinite &&
@@ -110,12 +74,6 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
       if (novaDirecao != null) {
         _direcaoMotorista = (novaDirecao % 360 + 360) % 360;
       }
-      if (embarqueAlcancado != null) {
-        _embarquesConcluidos = {
-          ..._embarquesConcluidos,
-          _chavePonto(embarqueAlcancado),
-        };
-      }
     });
     unawaited(
       _enviarPosicaoSeNecessario(
@@ -124,16 +82,6 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
         direcao: _direcaoMotorista,
       ),
     );
-
-    if (embarqueAlcancado != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Embarque ${embarqueAlcancado.ordem} alcançado. Seguindo para o próximo ponto.',
-          ),
-        ),
-      );
-    }
   }
 
   LatLng _suavizarPosicao(LatLng? anterior, LatLng recebida, double precisao) {
@@ -188,6 +136,7 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
   void dispose() {
     _envioPosicaoAtivo = false;
     _gps.dispose();
+    _progresso.dispose();
     super.dispose();
   }
 
@@ -253,20 +202,27 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
           child: Column(
             children: [
               StatusGpsCorrida(gps: _gps),
+              StatusProgressoCorrida(progresso: _progresso),
               const SizedBox(height: 10),
               Expanded(
                 child: ListenableBuilder(
-                  listenable: _gps,
-                  builder: (_, _) => MapaNavegacaoCarona(
-                    carona: widget.carona,
-                    erroLocalizacao: _gps.precisaAtencao ? _gps.mensagem : null,
-                    localizacaoMotorista: _localizacaoMotorista,
-                    direcaoMotorista: _direcaoMotorista,
-                    embarquesConcluidos: _embarquesConcluidos,
-                    onRotaCarregada: (resultado) {
-                      if (mounted) setState(() => rota = resultado);
-                    },
-                  ),
+                  listenable: Listenable.merge([_gps, _progresso]),
+                  builder: (_, _) => !_progresso.carregado
+                      ? const Center(
+                          child: Text('Aguardando sincronização dos pontos...'),
+                        )
+                      : MapaNavegacaoCarona(
+                          carona: widget.carona,
+                          erroLocalizacao: _gps.precisaAtencao
+                              ? _gps.mensagem
+                              : null,
+                          localizacaoMotorista: _localizacaoMotorista,
+                          direcaoMotorista: _direcaoMotorista,
+                          embarquesConcluidos: _progresso.concluidos,
+                          onRotaCarregada: (resultado) {
+                            if (mounted) setState(() => rota = resultado);
+                          },
+                        ),
                 ),
               ),
             ],

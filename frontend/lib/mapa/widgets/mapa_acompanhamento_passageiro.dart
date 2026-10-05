@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../models/carona.dart';
+import '../../models/ponto_embarque.dart';
 import '../../models/solicitacao_enviada.dart';
 import '../services/rota_service.dart';
 import '../utils/rota_mapa_utils.dart';
@@ -14,6 +15,7 @@ class MapaAcompanhamentoPassageiro extends StatefulWidget {
   final LatLng? localizacaoMotorista;
   final double? direcaoMotorista;
   final RotaService? rotaService;
+  final List<PontoEmbarque>? pontosPercurso;
 
   const MapaAcompanhamentoPassageiro({
     super.key,
@@ -21,6 +23,7 @@ class MapaAcompanhamentoPassageiro extends StatefulWidget {
     required this.localizacaoMotorista,
     this.direcaoMotorista,
     this.rotaService,
+    this.pontosPercurso,
   });
 
   @override
@@ -53,6 +56,8 @@ class _MapaAcompanhamentoPassageiroState
         oldWidget.localizacaoMotorista == null &&
         widget.localizacaoMotorista != null;
     if (oldWidget.solicitacao != widget.solicitacao ||
+        _assinatura(oldWidget.pontosPercurso) !=
+            _assinatura(widget.pontosPercurso) ||
         recebeuPrimeiraLocalizacao ||
         _motoristaSeMoveuParaRecalculo()) {
       _carregarRota();
@@ -61,22 +66,36 @@ class _MapaAcompanhamentoPassageiroState
 
   List<LatLng>? get _paradas {
     final motorista = widget.localizacaoMotorista;
-    final embarqueLatitude = widget.solicitacao.embarqueLatitude;
-    final embarqueLongitude = widget.solicitacao.embarqueLongitude;
+    final pontos = widget.pontosPercurso;
     final destinoLatitude = widget.solicitacao.destinoLatitude;
     final destinoLongitude = widget.solicitacao.destinoLongitude;
     if (motorista == null ||
-        !coordenadaValida(embarqueLatitude, embarqueLongitude) ||
+        pontos == null ||
         !coordenadaValida(destinoLatitude, destinoLongitude)) {
       return null;
     }
-
     return removerPontosConsecutivosProximos([
       motorista,
-      LatLng(embarqueLatitude!, embarqueLongitude!),
+      ...pontos
+          .where((p) => p.percorridoEm == null)
+          .map((p) => LatLng(p.latitude, p.longitude)),
       LatLng(destinoLatitude!, destinoLongitude!),
     ]);
   }
+
+  String _assinatura(List<PontoEmbarque>? pontos) => pontos == null
+      ? 'aguardando'
+      : pontos
+            .map(
+              (p) => [
+                p.id,
+                p.ordem,
+                p.latitude,
+                p.longitude,
+                p.percorridoEm,
+              ].join(':'),
+            )
+            .join('|');
 
   bool _motoristaSeMoveuParaRecalculo() {
     final atual = widget.localizacaoMotorista;
@@ -143,6 +162,7 @@ class _MapaAcompanhamentoPassageiroState
   Carona get _caronaMapa => Carona(
     id: widget.solicitacao.idCarona,
     origem: '',
+    pontosEmbarque: widget.pontosPercurso ?? [],
     destino: widget.solicitacao.destino,
     destinoLatitude: widget.solicitacao.destinoLatitude,
     destinoLongitude: widget.solicitacao.destinoLongitude,
@@ -175,7 +195,11 @@ class _MapaAcompanhamentoPassageiroState
     if (paradas == null || _rota == null) {
       return _EstadoMapa(
         icone: Icons.map_outlined,
-        mensagem: _erro ?? 'Não foi possível mostrar o percurso.',
+        mensagem:
+            _erro ??
+            (widget.pontosPercurso == null
+                ? 'Aguardando os pontos do percurso...'
+                : 'Não foi possível mostrar o percurso.'),
         onTentarNovamente: _erro == null ? null : _carregarRota,
       );
     }
@@ -188,6 +212,10 @@ class _MapaAcompanhamentoPassageiroState
       localizacaoMotorista: widget.localizacaoMotorista,
       direcaoMotorista: widget.direcaoMotorista,
       mostrarMarcadorMotorista: true,
+      embarquesConcluidos: (widget.pontosPercurso ?? [])
+          .where((p) => p.percorridoEm != null)
+          .map((p) => p.id!)
+          .toSet(),
       atualizando: _carregando,
       erroAtualizacao: _erro,
       onTentarNovamente: _carregarRota,

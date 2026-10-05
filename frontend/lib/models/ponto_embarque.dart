@@ -5,9 +5,11 @@ class PontoEmbarque {
   final double latitude;
   final double longitude;
   final int ordem;
+  final DateTime? percorridoEm;
 
   const PontoEmbarque({
     this.id,
+    this.percorridoEm,
     this.nome,
     required this.endereco,
     required this.latitude,
@@ -20,6 +22,7 @@ class PontoEmbarque {
       id: json['idPontoEmbarque'] == null
           ? null
           : int.tryParse(json['idPontoEmbarque'].toString()),
+      percorridoEm: DateTime.tryParse(json['percorridoEm']?.toString() ?? ''),
       nome: json['nome']?.toString(),
       endereco: json['endereco']?.toString() ?? '',
       latitude: double.tryParse(json['latitude'].toString()) ?? 0,
