@@ -2,12 +2,13 @@ import { Module } from '@nestjs/common';
 
 import { UsersModule } from '../users/users.module';
 import { UsersController } from '../users/users.controller';
+import { VerificacaoCnhController } from '../users/verificacao-cnh.controller';
 import { JwtAuthGuard } from './jwt-auth.guard';
 import { SupabaseAuthService } from './supabase-auth.service';
 
 @Module({
   imports: [UsersModule],
-  controllers: [UsersController],
+  controllers: [UsersController, VerificacaoCnhController],
   providers: [JwtAuthGuard, SupabaseAuthService],
   exports: [JwtAuthGuard, SupabaseAuthService, UsersModule],
 })

@@ -189,6 +189,9 @@ export class UsersController {
       tipoPerfil: usuario.tipoPerfil,
       tipoPerfilSolicitado: usuario.tipoPerfilSolicitado,
       statusVerificacao: usuario.statusVerificacao,
+      statusVerificacaoCnh: usuario.statusVerificacaoCnh,
+      cnhCategoria: usuario.cnhCategoria,
+      cnhValidade: usuario.cnhValidade,
       veiculo: veiculo ? this.formatarVeiculo(veiculo) : null,
     };
   }

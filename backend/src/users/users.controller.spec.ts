@@ -44,6 +44,11 @@ describe('UsersController', () => {
       tipoPerfil: 'AMBOS',
       tipoPerfilSolicitado: null,
       statusVerificacao: 'APROVADO',
+      statusVerificacaoCnh: 'NAO_ENVIADA',
+      cnhCategoria: null,
+      cnhValidade: null,
+      cpf: '52998224725',
+      cnhRegistroFinal: '8901',
       senha: 'hash-que-nao-deve-sair',
     });
     usersService.buscarVeiculo.mockResolvedValue({
@@ -72,6 +77,9 @@ describe('UsersController', () => {
       tipoPerfil: 'AMBOS',
       tipoPerfilSolicitado: null,
       statusVerificacao: 'APROVADO',
+      statusVerificacaoCnh: 'NAO_ENVIADA',
+      cnhCategoria: null,
+      cnhValidade: null,
       veiculo: {
         id: 1,
         modelo: 'Onix',
@@ -80,6 +88,8 @@ describe('UsersController', () => {
       },
     });
     expect(resultado.dados).not.toHaveProperty('senha');
+    expect(resultado.dados).not.toHaveProperty('cpf');
+    expect(resultado.dados).not.toHaveProperty('cnhRegistroFinal');
   });
 
   it('informa quando o usuário não existe', async () => {
