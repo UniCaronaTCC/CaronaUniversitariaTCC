@@ -8,6 +8,12 @@ import {
 
 import { Veiculo } from './veiculo.entity';
 
+export type StatusVerificacaoCnh =
+  | 'NAO_ENVIADA'
+  | 'EM_ANALISE'
+  | 'APROVADA'
+  | 'RECUSADA';
+
 @Entity('usuarios')
 export class User {
   @PrimaryGeneratedColumn({ name: 'id_usuario' })
@@ -79,6 +85,42 @@ export class User {
     default: 'NAO_ENVIADO',
   })
   statusVerificacao: string = 'NAO_ENVIADO';
+
+  @Column({ type: 'varchar', length: 11, nullable: true, select: false })
+  cpf: string | null;
+
+  @Column({
+    name: 'status_verificacao_cnh',
+    type: 'varchar',
+    length: 20,
+    default: 'NAO_ENVIADA',
+  })
+  statusVerificacaoCnh: StatusVerificacaoCnh = 'NAO_ENVIADA';
+
+  @Column({ name: 'cnh_categoria', type: 'varchar', length: 5, nullable: true })
+  cnhCategoria: string | null = null;
+
+  @Column({ name: 'cnh_validade', type: 'date', nullable: true })
+  cnhValidade: string | null = null;
+
+  @Column({
+    name: 'cnh_registro_final',
+    type: 'varchar',
+    length: 4,
+    nullable: true,
+    select: false,
+  })
+  cnhRegistroFinal: string | null;
+
+  @Column({ name: 'cnh_verificada_em', type: 'timestamptz', nullable: true })
+  cnhVerificadaEm: Date | null = null;
+
+  @Column({
+    name: 'privacidade_aceita_em',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  privacidadeAceitaEm: Date | null = null;
 
   @OneToOne(() => Veiculo, (veiculo) => veiculo.usuario)
   veiculo: Veiculo | null = null;

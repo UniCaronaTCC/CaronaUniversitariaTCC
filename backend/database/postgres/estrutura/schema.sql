@@ -54,6 +54,13 @@ CREATE TABLE IF NOT EXISTS unicarona.usuarios (
   tipo_perfil_solicitado VARCHAR(20),
   status_verificacao VARCHAR(20) NOT NULL DEFAULT 'NAO_ENVIADO',
   documento_verificacao VARCHAR(255),
+  cpf VARCHAR(11),
+  status_verificacao_cnh VARCHAR(20) NOT NULL DEFAULT 'NAO_ENVIADA',
+  cnh_categoria VARCHAR(5),
+  cnh_validade DATE,
+  cnh_registro_final VARCHAR(4),
+  cnh_verificada_em TIMESTAMPTZ,
+  privacidade_aceita_em TIMESTAMPTZ,
   criado_em TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
   CONSTRAINT usuarios_pkey PRIMARY KEY (id_usuario),
@@ -66,11 +73,34 @@ CREATE TABLE IF NOT EXISTS unicarona.usuarios (
     FOREIGN KEY (id_instituicao)
     REFERENCES unicarona.instituicoes(id_instituicao)
     ON UPDATE CASCADE
-    ON DELETE SET NULL
+    ON DELETE SET NULL,
+  CONSTRAINT chk_usuarios_cpf
+    CHECK (cpf IS NULL OR cpf ~ '^[0-9]{11}$'),
+  CONSTRAINT chk_usuarios_cnh_registro_final
+    CHECK (cnh_registro_final IS NULL OR cnh_registro_final ~ '^[0-9]{4}$'),
+  CONSTRAINT chk_usuarios_status_verificacao_cnh
+    CHECK (status_verificacao_cnh IN (
+      'NAO_ENVIADA', 'EM_ANALISE', 'APROVADA', 'RECUSADA'
+    )),
+  CONSTRAINT chk_usuarios_cnh_verificacao_coerente
+    CHECK (
+      status_verificacao_cnh <> 'APROVADA'
+      OR (
+        cpf IS NOT NULL
+        AND cnh_categoria IS NOT NULL
+        AND cnh_validade IS NOT NULL
+        AND cnh_verificada_em IS NOT NULL
+        AND privacidade_aceita_em IS NOT NULL
+      )
+    )
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS uq_usuarios_email_normalizado
   ON unicarona.usuarios (LOWER(email));
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_usuarios_cpf
+  ON unicarona.usuarios (cpf)
+  WHERE cpf IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_usuarios_instituicao
   ON unicarona.usuarios (id_instituicao);
