@@ -5,6 +5,18 @@ type DadosCnhParaOferta = Pick<
   'statusVerificacaoCnh' | 'cnhCategoria' | 'cnhValidade'
 >;
 
+export function hojeEmSaoPaulo(agora = new Date()): string {
+  const partes = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Sao_Paulo',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(agora);
+  const obter = (tipo: string) =>
+    partes.find((parte) => parte.type === tipo)!.value;
+  return `${obter('year')}-${obter('month')}-${obter('day')}`;
+}
+
 export function cnhPermiteOferecerCarona(
   dados: DadosCnhParaOferta,
   hoje: string,

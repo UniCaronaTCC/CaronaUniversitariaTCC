@@ -3,10 +3,8 @@ import { QueryFailedError, Repository } from 'typeorm';
 
 import { LeituraCnhService } from './leitura-cnh.service';
 import { User } from './user.entity';
-import {
-  VerificacaoCnhService,
-  hojeEmSaoPaulo,
-} from './verificacao-cnh.service';
+import { VerificacaoCnhService } from './verificacao-cnh.service';
+import { hojeEmSaoPaulo } from './verificacao-cnh';
 
 describe('VerificacaoCnhService', () => {
   const texto = [

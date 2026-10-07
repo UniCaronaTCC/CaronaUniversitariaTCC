@@ -4,6 +4,7 @@ import { InstituicoesService } from '../instituicoes/instituicoes.service';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
 import { Veiculo } from './veiculo.entity';
+import { ForbiddenException } from '@nestjs/common';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -79,6 +80,40 @@ describe('UsersService', () => {
     expect(repository.findOne).toHaveBeenCalledWith({
       where: { authId: 'uuid-do-supabase' },
     });
+  });
+
+  it('libera ofertas com CNH aprovada, categoria adequada e validade vigente', async () => {
+    repository.findOne.mockResolvedValue({
+      statusVerificacaoCnh: 'APROVADA',
+      cnhCategoria: 'AB',
+      cnhValidade: '2099-10-07',
+    });
+    await expect(
+      service.exigirCnhParaOferecerCarona(1),
+    ).resolves.toBeUndefined();
+  });
+
+  it.each([
+    null,
+    { statusVerificacaoCnh: 'NAO_ENVIADA' },
+    { statusVerificacaoCnh: 'RECUSADA' },
+    { statusVerificacaoCnh: 'EM_ANALISE' },
+    {
+      statusVerificacaoCnh: 'APROVADA',
+      cnhCategoria: 'A',
+      cnhValidade: '2099-10-07',
+    },
+    {
+      statusVerificacaoCnh: 'APROVADA',
+      cnhCategoria: 'B',
+      cnhValidade: '2000-10-07',
+    },
+  ])('bloqueia oferta com habilitação insuficiente: %j', async (usuario) => {
+    repository.findOne.mockResolvedValue(usuario);
+    await expect(service.exigirCnhParaOferecerCarona(1)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(repository.save).not.toHaveBeenCalled();
   });
 
   it('atualiza instituição e campus sem mudar o tipo do perfil', async () => {

@@ -166,6 +166,7 @@ class CaronaService {
       return {
         'sucesso': false,
         'mensagem': _obterMensagem(corpo, 'Erro ao salvar carona'),
+        'codigo': corpo['codigo'],
       };
     } catch (erro) {
       return {

@@ -12,6 +12,12 @@ import { RecorrenciaCarona } from './recorrencia.entity';
 import { PontoEmbarqueRecorrencia } from './ponto-embarque-recorrencia.entity';
 import type { DadosCriacaoCarona } from './caronas.service';
 import { datasRecorrencia } from './datas-recorrencia';
+import { UsersService } from '../users/users.service';
+import { User } from '../users/user.entity';
+import {
+  cnhPermiteOferecerCarona,
+  hojeEmSaoPaulo,
+} from '../users/verificacao-cnh';
 
 @Injectable()
 export class RecorrenciasService
@@ -21,7 +27,10 @@ export class RecorrenciasService
   private temporizador?: ReturnType<typeof setInterval>;
   private gerando = false;
 
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly usersService: UsersService,
+  ) {}
 
   onApplicationBootstrap() {
     void this.completarProgramacoes();
@@ -38,6 +47,7 @@ export class RecorrenciasService
   }
 
   async criar(dados: DadosCriacaoCarona): Promise<Carona> {
+    await this.usersService.exigirCnhParaOferecerCarona(dados.idUsuario);
     return this.dataSource.transaction(async (manager) => {
       const { idUsuario, ...configuracao } = dados;
       const repository = manager.getRepository(RecorrenciaCarona);
@@ -77,6 +87,9 @@ export class RecorrenciasService
         lock: { mode: 'pessimistic_write' },
       });
       if (!modelo) throw new NotFoundException('Recorrência não encontrada');
+      if (ativa ?? modelo.ativa) {
+        await this.usersService.exigirCnhParaOferecerCarona(idUsuario);
+      }
       const pontosRepository = manager.getRepository(PontoEmbarqueRecorrencia);
       if (dados) {
         const { idUsuario: motorista, ...configuracao } = dados;
@@ -144,6 +157,11 @@ export class RecorrenciasService
     modelo: RecorrenciaCarona,
   ): Promise<Carona[]> {
     if (!modelo.ativa) return [];
+    const usuario = await manager.getRepository(User).findOne({
+      where: { idUsuario: modelo.idUsuario },
+    });
+    if (!usuario || !cnhPermiteOferecerCarona(usuario, hojeEmSaoPaulo()))
+      return [];
     const repository = manager.getRepository(Carona);
     const criadas: Carona[] = [];
     for (const data of datasRecorrencia(modelo.dados)) {

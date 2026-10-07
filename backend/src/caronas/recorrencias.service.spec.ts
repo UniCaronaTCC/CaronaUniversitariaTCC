@@ -5,6 +5,9 @@ import { RecorrenciaCarona } from './recorrencia.entity';
 import { PontoEmbarqueRecorrencia } from './ponto-embarque-recorrencia.entity';
 import { Carona } from './carona.entity';
 import type { DadosCriacaoCarona } from './caronas.service';
+import { User } from '../users/user.entity';
+import { UsersService } from '../users/users.service';
+import { ForbiddenException } from '@nestjs/common';
 
 describe('Recorrências', () => {
   const dados: DadosCriacaoCarona = {
@@ -37,6 +40,8 @@ describe('Recorrências', () => {
   let service: RecorrenciasService;
   let modelo: RecorrenciaCarona;
   let caronas: Carona[];
+  let usuario: Partial<User>;
+  let usersService: { exigirCnhParaOferecerCarona: jest.Mock };
   let modelosRepository: {
     find: jest.Mock;
     findOne: jest.Mock;
@@ -47,6 +52,14 @@ describe('Recorrências', () => {
   beforeEach(() => {
     jest.useFakeTimers().setSystemTime(new Date('2026-09-26T15:00:00Z'));
     caronas = [];
+    usuario = {
+      statusVerificacaoCnh: 'APROVADA',
+      cnhCategoria: 'B',
+      cnhValidade: '2099-10-07',
+    };
+    usersService = {
+      exigirCnhParaOferecerCarona: jest.fn().mockResolvedValue(undefined),
+    };
     const { idUsuario, ...configuracao } = structuredClone(dados);
     modelo = Object.assign(new RecorrenciaCarona(), {
       idRecorrencia: 7,
@@ -90,17 +103,22 @@ describe('Recorrências', () => {
       delete: jest.fn(() => Promise.resolve({ affected: 1 })),
     };
     const getRepository = (tipo: unknown) =>
-      tipo === RecorrenciaCarona
-        ? modelosRepository
-        : tipo === PontoEmbarqueRecorrencia
-          ? pontosRepository
-          : repository;
+      tipo === User
+        ? { findOne: () => Promise.resolve(usuario) }
+        : tipo === RecorrenciaCarona
+          ? modelosRepository
+          : tipo === PontoEmbarqueRecorrencia
+            ? pontosRepository
+            : repository;
     const manager = { getRepository } as unknown as EntityManager;
-    service = new RecorrenciasService({
-      getRepository,
-      transaction: (executar: (m: EntityManager) => Promise<unknown>) =>
-        executar(manager),
-    } as unknown as DataSource);
+    service = new RecorrenciasService(
+      {
+        getRepository,
+        transaction: (executar: (m: EntityManager) => Promise<unknown>) =>
+          executar(manager),
+      } as unknown as DataSource,
+      usersService as unknown as UsersService,
+    );
   });
   afterEach(() => {
     service.onModuleDestroy();
@@ -119,6 +137,40 @@ describe('Recorrências', () => {
     expect(caronas[0].pontosEmbarque).not.toBe(caronas[1].pontosEmbarque);
     expect(caronas[0].pontosEmbarque[0]).not.toHaveProperty('idPontoEmbarque');
     expect(caronas[0]).not.toHaveProperty('solicitacoes');
+  });
+
+  it('não cria programação sem CNH aprovada', async () => {
+    usersService.exigirCnhParaOferecerCarona.mockRejectedValue(
+      new ForbiddenException(),
+    );
+    await expect(service.criar(dados)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(modelosRepository.save).not.toHaveBeenCalled();
+    expect(caronas).toHaveLength(0);
+  });
+
+  it('não gera novas datas automaticamente após a CNH vencer', async () => {
+    await service.criar(dados);
+    usuario.cnhValidade = '2026-09-30';
+    jest.setSystemTime(new Date('2026-10-05T12:00:00Z'));
+    await service.completarProgramacoes();
+    expect(caronas).toHaveLength(4);
+  });
+
+  it('permite pausar mas impede retomar uma programação sem CNH', async () => {
+    await service.criar(dados);
+    usersService.exigirCnhParaOferecerCarona.mockClear();
+    usersService.exigirCnhParaOferecerCarona.mockRejectedValue(
+      new ForbiddenException(),
+    );
+    await service.atualizar(7, 1, undefined, false);
+    expect(modelo.ativa).toBe(false);
+    expect(usersService.exigirCnhParaOferecerCarona).not.toHaveBeenCalled();
+    await expect(
+      service.atualizar(7, 1, undefined, true),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    expect(modelo.ativa).toBe(false);
   });
   it('mantém o contrato do aplicativo ao carregar colunas e pontos separados', async () => {
     const resposta = await new RecorrenciasController(service).listar({

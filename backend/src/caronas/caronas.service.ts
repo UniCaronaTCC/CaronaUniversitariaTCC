@@ -58,6 +58,8 @@ export class CaronasService {
 
     if (dados.recorrente) return this.recorrenciasService.criar(dados);
 
+    await this.usersService.exigirCnhParaOferecerCarona(dados.idUsuario);
+
     return this.dataSource.transaction(async (manager) => {
       const caronasRepository = manager.getRepository(Carona);
       const pontosRepository = manager.getRepository(PontoEmbarque);

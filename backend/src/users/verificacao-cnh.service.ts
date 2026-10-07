@@ -9,19 +9,7 @@ import { QueryFailedError, Repository } from 'typeorm';
 import { extrairDadosCnh } from './dados-cnh';
 import { LeituraCnhService } from './leitura-cnh.service';
 import { User } from './user.entity';
-import { cnhPermiteOferecerCarona } from './verificacao-cnh';
-
-export function hojeEmSaoPaulo(agora = new Date()): string {
-  const partes = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'America/Sao_Paulo',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-  }).formatToParts(agora);
-  const obter = (tipo: string) =>
-    partes.find((parte) => parte.type === tipo)!.value;
-  return `${obter('year')}-${obter('month')}-${obter('day')}`;
-}
+import { cnhPermiteOferecerCarona, hojeEmSaoPaulo } from './verificacao-cnh';
 
 @Injectable()
 export class VerificacaoCnhService {
