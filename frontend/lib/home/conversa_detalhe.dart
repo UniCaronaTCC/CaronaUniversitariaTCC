@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -43,6 +45,10 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
   String? mensagemErro;
   RealtimeChannel? canal;
   int proximoIdTemporario = -1;
+  late bool encerrada;
+  Timer? atualizacaoEstado;
+  bool consultando = false;
+  bool emPrimeiroPlano = true;
 
   int get idUsuarioAtual {
     if (widget.idUsuario != null) {
@@ -56,17 +62,26 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
   @override
   void initState() {
     super.initState();
+    encerrada = widget.conversa.encerrada;
     WidgetsBinding.instance.addObserver(this);
     carregarDados();
 
     if (widget.usarRealtime) {
       iniciarRealtime();
+      if (!encerrada) {
+        atualizacaoEstado = Timer.periodic(const Duration(seconds: 15), (_) {
+          if (emPrimeiroPlano && !encerrada) {
+            unawaited(carregarDados(silencioso: true));
+          }
+        });
+      }
     }
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    atualizacaoEstado?.cancel();
     MensagemService.pararAcompanhamento(canal);
     campoMensagem.dispose();
     scrollController.dispose();
@@ -76,6 +91,12 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
   @override
   void didChangeMetrics() {
     rolarParaFinal();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    emPrimeiroPlano = state == AppLifecycleState.resumed;
+    if (emPrimeiroPlano) unawaited(carregarDados(silencioso: true));
   }
 
   Future<void> iniciarRealtime() async {
@@ -97,6 +118,8 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
   }
 
   Future<void> carregarDados({bool silencioso = false}) async {
+    if (consultando) return;
+    consultando = true;
     if (!silencioso) {
       setState(() {
         carregando = true;
@@ -104,29 +127,56 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
       });
     }
 
-    final resultado =
-        await (widget.carregarMensagens?.call() ??
-            MensagemService.listarMensagens(widget.conversa.id));
+    Map<String, dynamic> resultado;
+    try {
+      resultado =
+          await (widget.carregarMensagens?.call() ??
+              MensagemService.listarMensagens(widget.conversa.id));
+    } catch (_) {
+      resultado = {
+        'sucesso': false,
+        'mensagem': 'Não foi possível carregar as mensagens',
+      };
+    } finally {
+      consultando = false;
+    }
 
     if (!mounted) {
       return;
     }
 
     if (resultado['sucesso'] == true && resultado['dados'] is List) {
+      final novasMensagens = (resultado['dados'] as List)
+          .whereType<Mensagem>()
+          .toList();
+      final idsAnteriores = mensagens
+          .where((item) => item.id > 0)
+          .map((item) => item.id)
+          .toList();
+      final mudouHistorico =
+          idsAnteriores.length != novasMensagens.length ||
+          novasMensagens.asMap().entries.any(
+            (item) =>
+                item.key >= idsAnteriores.length ||
+                idsAnteriores[item.key] != item.value.id,
+          );
       setState(() {
+        final atualizada = resultado['conversa'];
+        if (atualizada is Conversa && atualizada.encerrada) {
+          encerrada = true;
+          atualizacaoEstado?.cancel();
+          campoMensagem.clear();
+        }
         final mensagensLocais = mensagens
             .where(
               (mensagem) => mensagem.estadoEnvio != EstadoEnvioMensagem.enviada,
             )
             .toList();
-        mensagens = [
-          ...(resultado['dados'] as List).whereType<Mensagem>(),
-          ...mensagensLocais,
-        ];
+        mensagens = [...novasMensagens, ...mensagensLocais];
         carregando = false;
         mensagemErro = null;
       });
-      rolarParaFinal(animar: silencioso);
+      if (!silencioso || mudouHistorico) rolarParaFinal(animar: silencioso);
       return;
     }
 
@@ -142,7 +192,7 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
   Future<void> enviar() async {
     final texto = campoMensagem.text.trim();
 
-    if (texto.isEmpty || enviando || widget.conversa.encerrada) {
+    if (texto.isEmpty || enviando || encerrada) {
       return;
     }
 
@@ -192,6 +242,11 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
 
     setState(() {
       enviando = false;
+      if (resultado['codigo'] == 'CONVERSA_ENCERRADA') {
+        encerrada = true;
+        atualizacaoEstado?.cancel();
+        campoMensagem.clear();
+      }
       final indice = mensagens.indexWhere(
         (item) => item.id == mensagemLocal.id,
       );
@@ -205,7 +260,7 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
   }
 
   Future<void> reenviar(Mensagem mensagem) async {
-    if (enviando || widget.conversa.encerrada) {
+    if (enviando || encerrada) {
       return;
     }
 
@@ -279,7 +334,7 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
               nome: nome,
               urlFoto: foto,
               raio: 18,
-              desativado: widget.conversa.encerrada,
+              desativado: encerrada,
             ),
             const SizedBox(width: 10),
             Expanded(
@@ -315,7 +370,7 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
         child: Column(
           children: [
             Expanded(child: _conteudo()),
-            if (widget.conversa.encerrada) _avisoEncerrada() else _campoEnvio(),
+            if (encerrada) _avisoEncerrada() else _campoEnvio(),
           ],
         ),
       ),
@@ -345,16 +400,10 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
 
     if (mensagens.isEmpty) {
       return EstadoConteudoPadrao(
-        icone: widget.conversa.encerrada
-            ? Icons.lock_outline
-            : Icons.forum_outlined,
-        corIcone: widget.conversa.encerrada
-            ? Colors.black45
-            : AppColors.primary,
-        titulo: widget.conversa.encerrada
-            ? 'Conversa encerrada'
-            : 'Comece a conversa',
-        mensagem: widget.conversa.encerrada
+        icone: encerrada ? Icons.lock_outline : Icons.forum_outlined,
+        corIcone: encerrada ? Colors.black45 : AppColors.primary,
+        titulo: encerrada ? 'Conversa encerrada' : 'Comece a conversa',
+        mensagem: encerrada
             ? 'Esta conversa foi encerrada antes do envio de mensagens.'
             : 'Envie uma mensagem para combinar os detalhes da carona.',
       );
@@ -498,7 +547,9 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
             ),
             TextButton.icon(
               key: ValueKey('reenviar-mensagem-${mensagem.id}'),
-              onPressed: enviando ? null : () => reenviar(mensagem),
+              onPressed: enviando || encerrada
+                  ? null
+                  : () => reenviar(mensagem),
               style: TextButton.styleFrom(
                 foregroundColor: const Color(0xFFD32F2F),
                 minimumSize: Size.zero,

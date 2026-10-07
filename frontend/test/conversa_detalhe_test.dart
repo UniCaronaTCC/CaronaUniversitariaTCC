@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:uni_carona/home/conversa_detalhe.dart';
 import 'package:uni_carona/models/conversa.dart';
 import 'package:uni_carona/models/mensagem.dart';
+import 'conversa_estado_test.dart' show conversaJson;
 
 void main() {
   final conversa = Conversa(
@@ -40,6 +41,96 @@ void main() {
     );
     return lista.controller!.position;
   }
+
+  testWidgets('atualiza chat aberto ao retornar depois da finalizacao', (
+    tester,
+  ) async {
+    var finalizada = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversaDetalheTela(
+          conversa: conversa,
+          idUsuario: 1,
+          usarRealtime: false,
+          carregarMensagens: () async => {
+            'sucesso': true,
+            'dados': criarHistorico(1),
+            'conversa': Conversa.fromJson(
+              conversaJson(finalizada ? 'FINALIZADA' : 'ATIVA'),
+            ),
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsOneWidget);
+    tester.binding.handleAppLifecycleStateChanged(
+      AppLifecycleState.inactive,
+    );
+    finalizada = true;
+    tester.binding.handleAppLifecycleStateChanged(
+      AppLifecycleState.resumed,
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('Mensagem 1'), findsOneWidget);
+    expect(find.text('Conversa encerrada'), findsOneWidget);
+  });
+
+  testWidgets(
+    'historico de carona finalizada fecha mesmo com card desatualizado',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ConversaDetalheTela(
+            conversa: conversa,
+            idUsuario: 1,
+            usarRealtime: false,
+            carregarMensagens: () async => {
+              'sucesso': true,
+              'dados': criarHistorico(1),
+              'conversa': Conversa.fromJson(conversaJson('FINALIZADA')),
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.byType(TextField), findsNothing);
+      expect(find.text('Mensagem 1'), findsOneWidget);
+    },
+  );
+
+  testWidgets('recusa do backend encerra chat e impede reenvio', (
+    tester,
+  ) async {
+    var tentativas = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversaDetalheTela(
+          conversa: conversa,
+          idUsuario: 1,
+          usarRealtime: false,
+          carregarMensagens: () async => {
+            'sucesso': true,
+            'dados': <Mensagem>[],
+          },
+          enviarMensagem: (_) async {
+            tentativas++;
+            return {'sucesso': false, 'codigo': 'CONVERSA_ENCERRADA'};
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'Nao deve enviar');
+    await tester.tap(find.byTooltip('Enviar mensagem'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsNothing);
+    await tester.tap(find.text('Tentar novamente'), warnIfMissed: false);
+    await tester.pumpAndSettle();
+    expect(tentativas, 1);
+    expect(find.text('Não enviada'), findsOneWidget);
+  });
 
   testWidgets('mostra histórico e envia nova mensagem', (tester) async {
     var textoEnviado = '';

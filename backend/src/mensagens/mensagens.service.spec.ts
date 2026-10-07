@@ -6,6 +6,7 @@ import {
 import { Repository } from 'typeorm';
 
 import { Solicitacao } from '../solicitacoes/solicitacao.entity';
+import { CaronasService } from '../caronas/caronas.service';
 import { Conversa } from './conversa.entity';
 import { Mensagem } from './mensagem.entity';
 import { MensagensService } from './mensagens.service';
@@ -27,6 +28,7 @@ describe('MensagensService', () => {
     createQueryBuilder: jest.Mock;
   };
   let solicitacoesRepository: { findOne: jest.Mock };
+  let caronasService: { finalizarCaronasVencidas: jest.Mock };
 
   const solicitacaoAceita = {
     idSolicitacao: 10,
@@ -34,6 +36,7 @@ describe('MensagensService', () => {
     passageiro: { idUsuario: 1, nome: 'Passageiro' },
     carona: {
       idCarona: 20,
+      status: 'ATIVA',
       usuario: { idUsuario: 2, nome: 'Motorista' },
     },
   } as Solicitacao;
@@ -60,12 +63,36 @@ describe('MensagensService', () => {
     };
 
     solicitacoesRepository = { findOne: jest.fn() };
+    caronasService = {
+      finalizarCaronasVencidas: jest.fn().mockResolvedValue(undefined),
+    };
 
     service = new MensagensService(
       conversasRepository as unknown as Repository<Conversa>,
       mensagensRepository as unknown as Repository<Mensagem>,
       solicitacoesRepository as unknown as Repository<Solicitacao>,
+      caronasService as unknown as CaronasService,
     );
+  });
+
+  it('encerra carona vencida antes de consultar a conversa e enviar', async () => {
+    const solicitacao = {
+      ...solicitacaoAceita,
+      carona: { ...solicitacaoAceita.carona, status: 'ATIVA' },
+    };
+    caronasService.finalizarCaronasVencidas.mockImplementation(() => {
+      solicitacao.carona.status = 'FINALIZADA';
+      return Promise.resolve();
+    });
+    conversasRepository.findOne.mockResolvedValue({
+      idConversa: 30,
+      solicitacao,
+    });
+    await expect(
+      service.enviarMensagem(30, 1, 'Nao deve enviar'),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(caronasService.finalizarCaronasVencidas).toHaveBeenCalledTimes(1);
+    expect(mensagensRepository.save).not.toHaveBeenCalled();
   });
 
   it('cria conversa para uma solicitação aceita', async () => {
@@ -227,5 +254,77 @@ describe('MensagensService', () => {
       service.enviarMensagem(30, 1, 'Ainda está aí?'),
     ).rejects.toBeInstanceOf(ConflictException);
     expect(mensagensRepository.save).not.toHaveBeenCalled();
+  });
+
+  it.each(['FINALIZADA', 'CANCELADA'])(
+    'não envia mensagem quando a carona está %s, mesmo com solicitação ACEITA',
+    async (status) => {
+      conversasRepository.findOne.mockResolvedValue({
+        idConversa: 30,
+        solicitacao: {
+          ...solicitacaoAceita,
+          carona: { ...solicitacaoAceita.carona, status },
+        },
+      });
+      await expect(
+        service.enviarMensagem(30, 1, 'Nova mensagem'),
+      ).rejects.toMatchObject({
+        response: { codigo: 'CONVERSA_ENCERRADA' },
+      });
+      expect(mensagensRepository.save).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(['ATIVA', 'LOTADA', 'EM_ANDAMENTO'])(
+    'permite conversar durante uma carona %s',
+    async (status) => {
+      conversasRepository.findOne.mockResolvedValue({
+        idConversa: 30,
+        solicitacao: {
+          ...solicitacaoAceita,
+          carona: { ...solicitacaoAceita.carona, status },
+        },
+      });
+      await service.enviarMensagem(30, 2, 'Nova mensagem');
+      expect(mensagensRepository.save).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it('não cria conversa nova após finalizar a carona', async () => {
+    conversasRepository.findOne.mockResolvedValue(null);
+    solicitacoesRepository.findOne.mockResolvedValue({
+      ...solicitacaoAceita,
+      carona: { ...solicitacaoAceita.carona, status: 'FINALIZADA' },
+    });
+    await expect(service.obterOuCriarConversa(10, 1)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(conversasRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('devolve o histórico e a carona finalizada sem mudar a solicitação aceita', async () => {
+    const conversa = {
+      idConversa: 30,
+      solicitacao: {
+        ...solicitacaoAceita,
+        carona: { ...solicitacaoAceita.carona, status: 'FINALIZADA' },
+      },
+    };
+    conversasRepository.findOne.mockResolvedValue(conversa);
+    const historico = [{ idMensagem: 40, conteudo: 'Mensagem antiga' }];
+    mensagensRepository.find.mockResolvedValue(historico);
+    const queryBuilder = {
+      update: jest.fn().mockReturnThis(),
+      set: jest.fn().mockReturnThis(),
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      execute: jest.fn().mockResolvedValue({ affected: 0 }),
+    };
+    mensagensRepository.createQueryBuilder.mockReturnValue(queryBuilder);
+    const resultado = await service.listarMensagens(30, 1);
+    expect(resultado.mensagens).toEqual(historico);
+    expect(resultado.conversa.solicitacao.status).toBe('ACEITA');
+    expect(resultado.conversa.solicitacao.carona.status).toBe('FINALIZADA');
+    expect(conversasRepository.save).not.toHaveBeenCalled();
   });
 });

@@ -16,6 +16,7 @@ class MensagemService {
 
   static const Duration tempoLimiteEnvio = Duration(seconds: 10);
   static final ValueNotifier<int> totalMensagensNaoLidas = ValueNotifier(0);
+  static final ValueNotifier<int> versaoConversas = ValueNotifier(0);
   static RealtimeChannel? _canalMensagensNaoLidas;
   static int? _idUsuarioAcompanhado;
 
@@ -47,12 +48,14 @@ class MensagemService {
     final parametros = antesDe == null ? '' : '?antesDe=$antesDe';
 
     final resultado = await _requisicao(
-      () => http.get(
-        Uri.parse(
-          '${ApiConfig.baseUrl}/conversas/$idConversa/mensagens$parametros',
-        ),
-        headers: _cabecalhos(),
-      ),
+      () => http
+          .get(
+            Uri.parse(
+              '${ApiConfig.baseUrl}/conversas/$idConversa/mensagens$parametros',
+            ),
+            headers: _cabecalhos(),
+          )
+          .timeout(const Duration(seconds: 15)),
       converterDados: (dados) => _converterLista(dados, Mensagem.fromJson),
     );
 
@@ -112,6 +115,10 @@ class MensagemService {
         .onBroadcast(
           event: 'INSERT',
           callback: (_) => unawaited(atualizarTotalMensagensNaoLidas()),
+        )
+        .onBroadcast(
+          event: 'CONVERSA_ATUALIZADA',
+          callback: (_) => versaoConversas.value++,
         )
         .subscribe();
   }
@@ -176,6 +183,10 @@ class MensagemService {
           opts: const RealtimeChannelConfig(private: true),
         )
         .onBroadcast(event: 'INSERT', callback: (_) => aoReceberMensagem())
+        .onBroadcast(
+          event: 'CONVERSA_ATUALIZADA',
+          callback: (_) => aoReceberMensagem(),
+        )
         .subscribe();
   }
 
@@ -214,6 +225,10 @@ class MensagemService {
           'sucesso': true,
           'mensagem': corpo['mensagem'],
           'dados': converterDados(corpo['dados']),
+          if (corpo['conversa'] is Map)
+            'conversa': Conversa.fromJson(
+              Map<String, dynamic>.from(corpo['conversa']),
+            ),
         };
       }
 
@@ -224,6 +239,7 @@ class MensagemService {
 
       return {
         'sucesso': false,
+        'codigo': corpo['codigo'],
         'mensagem':
             corpo['mensagem']?.toString() ??
             corpo['message']?.toString() ??

@@ -6,6 +6,7 @@ import '../models/solicitacao_enviada.dart';
 import '../models/solicitacao_recebida.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/avaliacao_service.dart';
+import '../services/mensagem_service.dart';
 import '../services/pagamento_service.dart';
 import '../services/solicitacao_service.dart';
 import '../widgets/barra_navegacao_home.dart';
@@ -35,10 +36,12 @@ class MinhasCaronasTela extends StatefulWidget {
   State<MinhasCaronasTela> createState() => _MinhasCaronasTelaState();
 }
 
-class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
+class _MinhasCaronasTelaState extends State<MinhasCaronasTela>
+    with WidgetsBindingObserver {
   List<SolicitacaoRecebida> solicitacoesRecebidas = [];
   List<SolicitacaoEnviada> solicitacoesEnviadas = [];
   bool carregando = true;
+  bool consultando = false;
   String? mensagemErro;
   int? idProcessando;
   late final PagamentoService _pagamentoService;
@@ -46,20 +49,45 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    MensagemService.versaoConversas.addListener(atualizarEstadoCaronas);
     _pagamentoService = widget.pagamentoService ?? PagamentoService();
     carregarDados();
   }
 
-  Future<void> carregarDados() async {
-    setState(() {
-      carregando = true;
-      mensagemErro = null;
-    });
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    MensagemService.versaoConversas.removeListener(atualizarEstadoCaronas);
+    super.dispose();
+  }
 
-    final resultados = await Future.wait([
-      widget.carregarRecebidas?.call() ?? SolicitacaoService.listarRecebidas(),
-      widget.carregarEnviadas?.call() ?? SolicitacaoService.listarEnviadas(),
-    ]);
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) atualizarEstadoCaronas();
+  }
+
+  void atualizarEstadoCaronas() => carregarDados(silencioso: true);
+
+  Future<void> carregarDados({bool silencioso = false}) async {
+    if (consultando) return;
+    consultando = true;
+    if (!silencioso) {
+      setState(() {
+        carregando = true;
+        mensagemErro = null;
+      });
+    }
+
+    final resultados =
+        await Future.wait([
+          widget.carregarRecebidas?.call() ??
+              SolicitacaoService.listarRecebidas(),
+          widget.carregarEnviadas?.call() ??
+              SolicitacaoService.listarEnviadas(),
+        ]).whenComplete(() {
+          consultando = false;
+        });
 
     if (!mounted) {
       return;

@@ -6,9 +6,45 @@ import 'package:uni_carona/config/app_colors.dart';
 import 'package:uni_carona/home/conversas.dart';
 import 'package:uni_carona/models/conversa.dart';
 import 'package:uni_carona/models/mensagem.dart';
+import 'package:uni_carona/services/mensagem_service.dart';
 import 'package:uni_carona/widgets/avatar_usuario.dart';
+import 'conversa_estado_test.dart' show conversaJson;
 
 void main() {
+  testWidgets(
+    'aviso de estado atualiza lista sem mudar contador de nao lidas',
+    (tester) async {
+      var finalizada = false;
+      var consultas = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ConversasTela(
+            idUsuario: 1,
+            carregarConversas: () async {
+              consultas++;
+              return {
+                'sucesso': true,
+                'dados': [
+                  Conversa.fromJson(
+                    conversaJson(finalizada ? 'FINALIZADA' : 'ATIVA'),
+                  ),
+                ],
+              };
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Encerrada'), findsNothing);
+      final totalAnterior = MensagemService.totalMensagensNaoLidas.value;
+      finalizada = true;
+      MensagemService.versaoConversas.value++;
+      await tester.pumpAndSettle();
+      expect(find.text('Encerrada'), findsOneWidget);
+      expect(consultas, 2);
+      expect(MensagemService.totalMensagensNaoLidas.value, totalAnterior);
+    },
+  );
   testWidgets('lista conversas e destaca conversa encerrada', (tester) async {
     final conversas = [
       Conversa(

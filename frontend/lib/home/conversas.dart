@@ -28,7 +28,8 @@ class ConversasTela extends StatefulWidget {
   State<ConversasTela> createState() => _ConversasTelaState();
 }
 
-class _ConversasTelaState extends State<ConversasTela> {
+class _ConversasTelaState extends State<ConversasTela>
+    with WidgetsBindingObserver {
   List<Conversa> conversas = [];
   bool carregando = true;
   String? mensagemErro;
@@ -45,22 +46,33 @@ class _ConversasTelaState extends State<ConversasTela> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
 
     if (widget.carregarConversas == null) {
       MensagemService.totalMensagensNaoLidas.addListener(
         atualizarConversasEmTempoReal,
       );
     }
+    MensagemService.versaoConversas.addListener(atualizarConversasEmTempoReal);
 
     carregarDados();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     MensagemService.totalMensagensNaoLidas.removeListener(
       atualizarConversasEmTempoReal,
     );
+    MensagemService.versaoConversas.removeListener(
+      atualizarConversasEmTempoReal,
+    );
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) carregarDados(silencioso: true);
   }
 
   void atualizarConversasEmTempoReal() {

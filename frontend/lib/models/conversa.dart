@@ -4,6 +4,8 @@ import 'mensagem.dart';
 class Conversa {
   final int id;
   final String status;
+  final String statusCarona;
+  final bool encerradaPeloServidor;
   final int idSolicitacao;
   final int idPassageiro;
   final String passageiro;
@@ -22,6 +24,8 @@ class Conversa {
   const Conversa({
     required this.id,
     required this.status,
+    this.statusCarona = 'ATIVA',
+    this.encerradaPeloServidor = false,
     required this.idSolicitacao,
     required this.idPassageiro,
     required this.passageiro,
@@ -58,6 +62,8 @@ class Conversa {
     return Conversa(
       id: converterJsonParaInt(json['id']),
       status: json['status']?.toString() ?? 'ACEITA',
+      statusCarona: carona['status']?.toString() ?? 'ATIVA',
+      encerradaPeloServidor: json['encerrada'] == true,
       idSolicitacao: converterJsonParaInt(solicitacao['id']),
       idPassageiro: converterJsonParaInt(passageiro['id']),
       passageiro: passageiro['nome']?.toString() ?? 'Passageiro',
@@ -77,7 +83,10 @@ class Conversa {
     );
   }
 
-  bool get encerrada => status != 'ACEITA';
+  bool get encerrada =>
+      encerradaPeloServidor ||
+      status != 'ACEITA' ||
+      !['ATIVA', 'LOTADA', 'EM_ANDAMENTO'].contains(statusCarona);
 
   String nomeOutroParticipante(int idUsuarioAtual) {
     return idUsuarioAtual == idPassageiro ? motorista : passageiro;

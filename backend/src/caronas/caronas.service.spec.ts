@@ -176,6 +176,17 @@ describe('CaronasService', () => {
     expect(queryBuilder.update).toHaveBeenCalledWith(Carona);
     expect(queryBuilder.set).toHaveBeenCalledWith({ status: 'FINALIZADA' });
     expect(queryBuilder.execute).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.where).toHaveBeenCalledWith('status IN (:...status)', {
+      status: ['ATIVA', 'LOTADA'],
+    });
+    const [condicaoRecebida] = queryBuilder.andWhere.mock.calls[0] as [string];
+    const condicao = condicaoRecebida.trim();
+    expect(condicao).toContain(
+      '(recorrente = false OR id_recorrencia IS NULL)',
+    );
+    // O OR precisa ficar dentro do AND para preservar caronas canceladas.
+    expect(condicao.startsWith('(\n')).toBe(true);
+    expect(condicao.endsWith(')')).toBe(true);
   });
 
   it('inicia uma carona dentro da janela permitida', async () => {
