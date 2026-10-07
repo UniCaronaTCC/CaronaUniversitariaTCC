@@ -18,6 +18,7 @@ class Conversa {
   final DateTime dataInicio;
   final String horario;
   final DateTime criadoEm;
+  final DateTime? encerradaEm;
   final Mensagem? ultimaMensagem;
   final int mensagensNaoLidas;
 
@@ -38,6 +39,7 @@ class Conversa {
     required this.dataInicio,
     required this.horario,
     required this.criadoEm,
+    this.encerradaEm,
     this.ultimaMensagem,
     this.mensagensNaoLidas = 0,
   });
@@ -76,6 +78,9 @@ class Conversa {
       dataInicio: DateTime.parse(carona['dataInicio'].toString()),
       horario: carona['horario']?.toString() ?? '',
       criadoEm: DateTime.parse(json['criadoEm'].toString()).toLocal(),
+      encerradaEm: DateTime.tryParse(
+        json['encerradaEm']?.toString() ?? '',
+      )?.toLocal(),
       mensagensNaoLidas: converterJsonParaInt(json['mensagensNaoLidas']),
       ultimaMensagem: ultimaMensagem is Map
           ? Mensagem.fromJson(Map<String, dynamic>.from(ultimaMensagem))
@@ -87,6 +92,11 @@ class Conversa {
       encerradaPeloServidor ||
       status != 'ACEITA' ||
       !['ATIVA', 'LOTADA', 'EM_ANDAMENTO'].contains(statusCarona);
+
+  DateTime? get arquivarEm => encerradaEm?.add(const Duration(hours: 24));
+
+  bool deveArquivar(DateTime agora) =>
+      encerrada && arquivarEm != null && !arquivarEm!.isAfter(agora);
 
   String nomeOutroParticipante(int idUsuarioAtual) {
     return idUsuarioAtual == idPassageiro ? motorista : passageiro;

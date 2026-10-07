@@ -115,6 +115,7 @@ export class MensagensController {
       id: conversa.idConversa,
       status: solicitacao.status,
       encerrada: conversaEncerrada(solicitacao),
+      encerradaEm: conversa.encerradaEm ?? null,
       solicitacao: {
         id: solicitacao.idSolicitacao,
         passageiro: {

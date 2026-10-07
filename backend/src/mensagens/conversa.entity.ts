@@ -1,4 +1,5 @@
 import {
+  Column,
   CreateDateColumn,
   Entity,
   Index,
@@ -26,4 +27,7 @@ export class Conversa {
 
   @CreateDateColumn({ name: 'criado_em', type: 'timestamptz' })
   criadoEm!: Date;
+
+  @Column({ name: 'encerrada_em', type: 'timestamptz', nullable: true })
+  encerradaEm: Date | null = null;
 }

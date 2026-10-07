@@ -53,12 +53,14 @@ describe('MensagensController', () => {
       'https://exemplo.com/motorista.jpg',
     );
     expect(resposta.dados[0].encerrada).toBe(false);
+    expect(resposta.dados[0].encerradaEm).toBeNull();
   });
 
   it('retorna estado de encerramento junto das mensagens antigas', async () => {
     const conversa = {
       idConversa: 30,
       criadoEm: new Date(),
+      encerradaEm: new Date('2026-10-07T15:00:00Z'),
       solicitacao: {
         idSolicitacao: 10,
         status: 'ACEITA',
@@ -97,8 +99,10 @@ describe('MensagensController', () => {
     expect(resposta.dados[0].conteudo).toBe('Mensagem antiga');
     expect(resposta.conversa.status).toBe('ACEITA');
     expect(resposta.conversa.encerrada).toBe(true);
+    expect(resposta.conversa.encerradaEm).toEqual(conversa.encerradaEm);
     expect(resposta.conversa.solicitacao.carona.status).toBe('FINALIZADA');
     const lista = await controller.listarConversas(request);
     expect(lista.dados[0].encerrada).toBe(true);
+    expect(lista.dados[0].encerradaEm).toEqual(conversa.encerradaEm);
   });
 });

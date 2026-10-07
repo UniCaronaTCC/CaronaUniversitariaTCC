@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
@@ -16,12 +18,14 @@ class ConversasTela extends StatefulWidget {
   final CarregarConversas? carregarConversas;
   final ValueChanged<Conversa>? abrirConversa;
   final int? idUsuario;
+  final DateTime Function()? agora;
 
   const ConversasTela({
     super.key,
     this.carregarConversas,
     this.abrirConversa,
     this.idUsuario,
+    this.agora,
   });
 
   @override
@@ -33,6 +37,30 @@ class _ConversasTelaState extends State<ConversasTela>
   List<Conversa> conversas = [];
   bool carregando = true;
   String? mensagemErro;
+  bool mostrarEncerradas = false;
+  Timer? _timerArquivamento;
+
+  DateTime get agora => widget.agora?.call() ?? DateTime.now();
+
+  void _agendarArquivamento() {
+    _timerArquivamento?.cancel();
+    final instante = agora;
+    final prazos =
+        conversas
+            .where((conversa) => conversa.encerrada)
+            .map((conversa) => conversa.arquivarEm)
+            .whereType<DateTime>()
+            .where((prazo) => prazo.isAfter(instante))
+            .toList()
+          ..sort();
+    if (prazos.isEmpty) return;
+
+    _timerArquivamento = Timer(prazos.first.difference(instante), () {
+      if (!mounted) return;
+      setState(() {});
+      _agendarArquivamento();
+    });
+  }
 
   int get idUsuarioAtual {
     if (widget.idUsuario != null) {
@@ -60,6 +88,7 @@ class _ConversasTelaState extends State<ConversasTela>
 
   @override
   void dispose() {
+    _timerArquivamento?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     MensagemService.totalMensagensNaoLidas.removeListener(
       atualizarConversasEmTempoReal,
@@ -72,7 +101,11 @@ class _ConversasTelaState extends State<ConversasTela>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) carregarDados(silencioso: true);
+    if (state == AppLifecycleState.resumed) {
+      setState(() {});
+      _agendarArquivamento();
+      carregarDados(silencioso: true);
+    }
   }
 
   void atualizarConversasEmTempoReal() {
@@ -99,7 +132,9 @@ class _ConversasTelaState extends State<ConversasTela>
       setState(() {
         conversas = (resultado['dados'] as List).whereType<Conversa>().toList();
         carregando = false;
+        mensagemErro = null;
       });
+      _agendarArquivamento();
       return;
     }
 
@@ -182,15 +217,71 @@ class _ConversasTelaState extends State<ConversasTela>
       );
     }
 
+    final instante = agora;
+    final recentes = conversas
+        .where((conversa) => !conversa.deveArquivar(instante))
+        .toList();
+    final encerradas = conversas
+        .where((conversa) => conversa.deveArquivar(instante))
+        .toList();
+    final quantidadeRecentes = recentes.isEmpty ? 1 : recentes.length;
+    final quantidadeEncerradas = mostrarEncerradas
+        ? (encerradas.isEmpty ? 1 : encerradas.length)
+        : 0;
+
     return RefreshIndicator(
       onRefresh: carregarDados,
       child: ListView.separated(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
-        itemCount: conversas.length,
+        itemCount: quantidadeRecentes + 1 + quantidadeEncerradas,
         separatorBuilder: (_, _) => const SizedBox(height: 12),
         itemBuilder: (context, index) {
-          final conversa = conversas[index];
+          if (index == quantidadeRecentes) {
+            return Column(
+              children: [
+                const Divider(),
+                Semantics(
+                  expanded: mostrarEncerradas,
+                  child: TextButton(
+                    onPressed: () => setState(() {
+                      mostrarEncerradas = !mostrarEncerradas;
+                    }),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.archive_outlined),
+                        const SizedBox(width: 12),
+                        const Expanded(child: Text('Encerradas')),
+                        Text('${encerradas.length}'),
+                        const SizedBox(width: 8),
+                        Icon(
+                          mostrarEncerradas
+                              ? Icons.expand_less
+                              : Icons.expand_more,
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            );
+          }
+          final recentesVazias = index < quantidadeRecentes && recentes.isEmpty;
+          if (recentesVazias ||
+              (index > quantidadeRecentes && encerradas.isEmpty)) {
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Text(
+                recentesVazias
+                    ? 'Nenhuma conversa recente'
+                    : 'Nenhuma conversa arquivada',
+                style: const TextStyle(color: Colors.black54),
+              ),
+            );
+          }
+          final conversa = index < quantidadeRecentes
+              ? recentes[index]
+              : encerradas[index - quantidadeRecentes - 1];
 
           return CardConversa(
             conversa: conversa,
