@@ -114,6 +114,63 @@ describe('CaronasService', () => {
     );
   });
 
+  it('retorna detalhes para o motorista, incluindo carona encerrada e pontos em ordem', async () => {
+    const carona = {
+      idCarona: 20,
+      status: 'FINALIZADA',
+      usuario: { idUsuario: 1 },
+      pontosEmbarque: [{ ordem: 2 }, { ordem: 1 }],
+    };
+    repository.findOne.mockResolvedValue(carona);
+    const resultado = await service.buscarDetalhesCarona(20, 1);
+    expect(resultado).toBe(carona);
+    expect(resultado.pontosEmbarque.map((p) => p.ordem)).toEqual([1, 2]);
+    expect(solicitacoesRepository.exists).not.toHaveBeenCalled();
+    expect(repository.findOne).toHaveBeenCalledWith({
+      where: { idCarona: 20 },
+      relations: { usuario: { veiculo: true }, pontosEmbarque: true },
+    });
+  });
+
+  it.each(['ATIVA', 'LOTADA', 'FINALIZADA', 'CANCELADA'])(
+    'permite passageiro vinculado consultar carona %s mesmo apos expirar ou cancelar',
+    async (status) => {
+      repository.findOne.mockResolvedValue({
+        idCarona: 20,
+        status,
+        usuario: { idUsuario: 1 },
+      });
+      solicitacoesRepository.exists.mockResolvedValue(true);
+      const resultado = await service.buscarDetalhesCarona(20, 2);
+      expect(resultado.status).toBe(status);
+      expect(resultado.pontosEmbarque).toEqual([]);
+      expect(solicitacoesRepository.exists).toHaveBeenCalledWith({
+        where: {
+          carona: { idCarona: 20 },
+          passageiro: { idUsuario: 2 },
+        },
+      });
+    },
+  );
+
+  it('nao expoe detalhes a usuario sem vinculo com a carona', async () => {
+    repository.findOne.mockResolvedValue({
+      idCarona: 20,
+      usuario: { idUsuario: 1 },
+    });
+    await expect(service.buscarDetalhesCarona(20, 99)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('recusa consulta de carona inexistente', async () => {
+    repository.findOne.mockResolvedValue(null);
+    await expect(service.buscarDetalhesCarona(20, 2)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(solicitacoesRepository.exists).not.toHaveBeenCalled();
+  });
+
   it('bloqueia criação antes de salvar quando a CNH não é aprovada', async () => {
     usersService.exigirCnhParaOferecerCarona.mockRejectedValue(
       new ForbiddenException(),

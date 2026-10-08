@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uni_carona/home/conversa_detalhe.dart';
+import 'package:uni_carona/home/detalhes_carona.dart';
+import 'package:uni_carona/models/carona.dart';
 import 'package:uni_carona/models/conversa.dart';
 import 'package:uni_carona/models/mensagem.dart';
 import 'conversa_estado_test.dart' show conversaJson;
@@ -35,6 +37,144 @@ void main() {
     );
   }
 
+  Carona caronaDoChat(String status) => Carona(
+    id: 20,
+    origem: 'Centro',
+    destino: 'UniSalesiano',
+    dataInicio: DateTime(2026, 10, 8),
+    horario: '19:00:00',
+    vagas: 3,
+    valor: 8,
+    recorrente: false,
+    diasSemana: const [],
+    status: status,
+    motorista: 'Maria',
+    idMotorista: 2,
+    veiculoModelo: 'Onix',
+    veiculoCor: 'Branco',
+    veiculoPlaca: '***1D23',
+  );
+
+  for (final status in ['ATIVA', 'FINALIZADA', 'CANCELADA']) {
+    testWidgets(
+      'abre mesma tela de detalhes pelo cabecalho com carona $status',
+      (tester) async {
+        final carona = caronaDoChat(status);
+        await tester.pumpWidget(
+          MaterialApp(
+            home: ConversaDetalheTela(
+              conversa: Conversa.fromJson(conversaJson(status)),
+              idUsuario: 1,
+              usarRealtime: false,
+              carregarMensagens: () async => {
+                'sucesso': true,
+                'dados': criarHistorico(1),
+              },
+              carregarCarona: (id) async {
+                expect(id, 20);
+                return {'sucesso': true, 'dados': carona};
+              },
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(
+          find.byKey(const ValueKey('avatar-cabecalho-conversa')),
+        );
+        await tester.pumpAndSettle();
+        final detalhes = tester.widget<DetalhesCaronaTela>(
+          find.byType(DetalhesCaronaTela),
+        );
+        expect(detalhes.carona, same(carona));
+        expect(detalhes.indiceNavegacaoOrigem, 1);
+        expect(find.text('Detalhes da carona'), findsOneWidget);
+        expect(find.text('SOLICITAR VAGA'), findsNothing);
+        await tester.tap(find.byTooltip('Voltar'));
+        await tester.pumpAndSettle();
+        expect(find.text('Mensagem 1'), findsOneWidget);
+      },
+    );
+  }
+
+  testWidgets('erro nos detalhes mantem chat e permite tentar novamente', (
+    tester,
+  ) async {
+    var tentativas = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversaDetalheTela(
+          conversa: conversa,
+          idUsuario: 1,
+          usarRealtime: false,
+          carregarMensagens: () async => {
+            'sucesso': true,
+            'dados': criarHistorico(1),
+          },
+          carregarCarona: (_) async {
+            tentativas++;
+            return tentativas == 1
+                ? {'sucesso': false, 'mensagem': 'Carona não encontrada'}
+                : {'sucesso': true, 'dados': caronaDoChat('ATIVA')};
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Maria'));
+    await tester.pumpAndSettle();
+    expect(find.text('Carona não encontrada'), findsOneWidget);
+    expect(find.text('Mensagem 1'), findsOneWidget);
+    expect(find.byType(DetalhesCaronaTela), findsNothing);
+    await tester.tap(find.text('Maria'));
+    await tester.pumpAndSettle();
+    expect(tentativas, 2);
+    expect(find.byType(DetalhesCaronaTela), findsOneWidget);
+  });
+
+  testWidgets(
+    'impede consultas duplicadas e suporta texto ampliado no cabecalho',
+    (tester) async {
+      tester.view.physicalSize = const Size(320, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final resposta = Completer<Map<String, dynamic>>();
+      var consultas = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (_, child) => MediaQuery(
+            data: const MediaQueryData(textScaler: TextScaler.linear(1.5)),
+            child: child!,
+          ),
+          home: ConversaDetalheTela(
+            conversa: conversa,
+            idUsuario: 1,
+            usarRealtime: false,
+            carregarMensagens: () async => {
+              'sucesso': true,
+              'dados': <Mensagem>[],
+            },
+            carregarCarona: (_) {
+              consultas++;
+              return resposta.future;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      final cabecalho = find.byKey(const ValueKey('cabecalho-detalhes-carona'));
+      await tester.tap(cabecalho);
+      await tester.pump();
+      await tester.tap(cabecalho);
+      expect(consultas, 1);
+      resposta.complete({'sucesso': false, 'mensagem': 'Sem conexão'});
+      await tester.pumpAndSettle();
+      expect(find.text('Sem conexão'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   ScrollPosition posicaoLista(WidgetTester tester) {
     final lista = tester.widget<ListView>(
       find.byKey(const ValueKey('lista-mensagens')),
@@ -64,13 +204,9 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.byType(TextField), findsOneWidget);
-    tester.binding.handleAppLifecycleStateChanged(
-      AppLifecycleState.inactive,
-    );
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
     finalizada = true;
-    tester.binding.handleAppLifecycleStateChanged(
-      AppLifecycleState.resumed,
-    );
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     await tester.pumpAndSettle();
     expect(find.byType(TextField), findsNothing);
     expect(find.text('Mensagem 1'), findsOneWidget);

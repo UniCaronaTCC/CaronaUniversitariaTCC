@@ -19,6 +19,45 @@ class CaronaService {
     return _listarCaronas('caronas/minhas');
   }
 
+  static Future<Map<String, dynamic>> buscarDetalhesCarona(int idCarona) async {
+    try {
+      final resposta = await AuthService.enviarComToken(
+        (token) => http.get(
+          Uri.parse('${ApiConfig.baseUrl}/caronas/$idCarona'),
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+      if (resposta == null) {
+        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+      }
+
+      final corpo = _decodificarResposta(resposta);
+      final dados = corpo['dados'];
+      if (resposta.statusCode == 200 && dados is Map) {
+        return {
+          'sucesso': true,
+          'dados': Carona.fromJson(Map<String, dynamic>.from(dados)),
+        };
+      }
+      if (resposta.statusCode == 401) {
+        await AuthService.sair();
+        return {
+          'sucesso': false,
+          'mensagem': 'Sua sessão expirou. Entre novamente.',
+        };
+      }
+      return {
+        'sucesso': false,
+        'mensagem': _obterMensagem(corpo, 'Não foi possível carregar a carona'),
+      };
+    } catch (_) {
+      return {
+        'sucesso': false,
+        'mensagem': 'Não foi possível carregar a carona. Tente novamente.',
+      };
+    }
+  }
+
   static Future<Map<String, dynamic>> _listarCaronas(String rota) async {
     try {
       final url = Uri.parse('${ApiConfig.baseUrl}/$rota');

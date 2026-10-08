@@ -131,6 +131,7 @@ describe('CaronasController', () => {
     const service = {
       listarCaronas: jest.fn().mockResolvedValue([carona]),
       listarMinhasCaronas: jest.fn().mockResolvedValue([carona]),
+      buscarDetalhesCarona: jest.fn().mockResolvedValue(carona),
     };
     const controller = new CaronasController(
       service as unknown as CaronasService,
@@ -139,12 +140,30 @@ describe('CaronasController', () => {
 
     const disponiveis = await controller.listarCaronas(request);
     const minhas = await controller.listarMinhasCaronas(request);
+    const detalhes = await controller.buscarDetalhesCarona('1', request);
 
     expect(disponiveis.dados[0].usuario.veiculo.placa).toBe('***1D23');
     expect(minhas.dados[0].usuario.veiculo.placa).toBe('***1D23');
     expect(JSON.stringify(disponiveis)).not.toContain('ABC1D23');
     expect(JSON.stringify(minhas)).not.toContain('ABC1D23');
+    expect(detalhes.dados.usuario.veiculo.placa).toBe('***1D23');
+    expect(JSON.stringify(detalhes)).not.toContain('ABC1D23');
+    expect(service.buscarDetalhesCarona).toHaveBeenCalledWith(1, 1);
   });
+
+  it.each(['0', '-1', 'abc', '1.2'])(
+    'recusa identificador %s ao consultar detalhes',
+    async (id) => {
+      const service = { buscarDetalhesCarona: jest.fn() };
+      const controller = new CaronasController(
+        service as unknown as CaronasService,
+      );
+      await expect(
+        controller.buscarDetalhesCarona(id, { usuario: { sub: 1 } } as never),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(service.buscarDetalhesCarona).not.toHaveBeenCalled();
+    },
+  );
 
   it('recusa coordenadas inválidas ao atualizar a posição', async () => {
     const service = { atualizarPosicaoAtual: jest.fn() };
