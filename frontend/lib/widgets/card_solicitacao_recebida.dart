@@ -100,7 +100,7 @@ class CardSolicitacaoRecebida extends StatelessWidget {
                   : 'Local de embarque não informado',
             ),
 
-            if (solicitacao.pontoNovoSolicitado) ...[
+            if (solicitacao.pontoNovoSolicitado && pendente) ...[
               const SizedBox(height: 8),
               const Text(
                 'Este local foi sugerido pelo passageiro e ainda depende da aprovação do motorista.',

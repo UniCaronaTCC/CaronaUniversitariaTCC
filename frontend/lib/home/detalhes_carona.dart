@@ -20,12 +20,16 @@ class DetalhesCaronaTela extends StatefulWidget {
   final Carona carona;
   final int? indiceNavegacaoOrigem;
   final bool permitirSolicitacao;
+  final bool somenteConsulta;
+  final String? fotoMotorista;
 
   const DetalhesCaronaTela({
     super.key,
     required this.carona,
     this.indiceNavegacaoOrigem,
     this.permitirSolicitacao = true,
+    this.somenteConsulta = false,
+    this.fotoMotorista,
   });
 
   @override
@@ -328,12 +332,16 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: BarraSuperiorPadrao(
-        titulo: usuarioEhMotorista ? 'Gerenciar carona' : 'Detalhes da carona',
+        titulo: usuarioEhMotorista && !widget.somenteConsulta
+            ? 'Gerenciar carona'
+            : 'Detalhes da carona',
       ),
       body: SafeArea(
         child: ConteudoDetalhesCarona(
           carona: caronaAtual,
-          rodape: usuarioEhMotorista
+          somenteConsulta: widget.somenteConsulta,
+          fotoMotorista: widget.fotoMotorista,
+          rodape: usuarioEhMotorista && !widget.somenteConsulta
               ? PainelSolicitacoesCarona(
                   idCarona: caronaAtual.id,
                   onSolicitacaoAceita: _atualizarCarona,
@@ -344,9 +352,10 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (usuarioEhMotorista && permiteAcoes)
+          if (!widget.somenteConsulta && usuarioEhMotorista && permiteAcoes)
             _acoesGerenciamento()
-          else if (!usuarioEhMotorista &&
+          else if (!widget.somenteConsulta &&
+              !usuarioEhMotorista &&
               permiteAcoes &&
               widget.permitirSolicitacao)
             _botaoSolicitar(),

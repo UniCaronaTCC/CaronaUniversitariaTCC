@@ -101,9 +101,11 @@ class _MapaRotaCaronaState extends State<MapaRotaCarona> {
               children: [
                 Icon(Icons.route, color: AppColors.primary),
                 SizedBox(width: 10),
-                Text(
-                  'Percurso da carona',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Expanded(
+                  child: Text(
+                    'Percurso da carona',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),

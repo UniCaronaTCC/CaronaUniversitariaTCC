@@ -97,6 +97,8 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
           carona: carona,
           indiceNavegacaoOrigem: 1,
           permitirSolicitacao: false,
+          somenteConsulta: true,
+          fotoMotorista: widget.conversa.fotoMotorista,
         ),
       ),
     );

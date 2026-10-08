@@ -87,6 +87,8 @@ void main() {
         );
         expect(detalhes.carona, same(carona));
         expect(detalhes.indiceNavegacaoOrigem, 1);
+        expect(detalhes.somenteConsulta, isTrue);
+        expect(find.text('Vagas disponíveis'), findsNothing);
         expect(find.text('Detalhes da carona'), findsOneWidget);
         expect(find.text('SOLICITAR VAGA'), findsNothing);
         await tester.tap(find.byTooltip('Voltar'));
