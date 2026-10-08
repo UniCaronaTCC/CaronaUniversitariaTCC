@@ -8,6 +8,7 @@ class AuthCampoTexto extends StatefulWidget {
   final TextEditingController controller;
   final bool obscureText;
   final TextInputType? keyboardType;
+  final TextCapitalization textCapitalization;
 
   const AuthCampoTexto({
     super.key,
@@ -16,6 +17,7 @@ class AuthCampoTexto extends StatefulWidget {
     required this.controller,
     this.obscureText = false,
     this.keyboardType,
+    this.textCapitalization = TextCapitalization.none,
   });
 
   @override
@@ -37,6 +39,7 @@ class _AuthCampoTextoState extends State<AuthCampoTexto> {
       controller: widget.controller,
       obscureText: _textoOculto,
       keyboardType: widget.keyboardType,
+      textCapitalization: widget.textCapitalization,
       style: const TextStyle(color: AppColors.text, fontSize: 15),
       decoration: InputDecoration(
         filled: true,
