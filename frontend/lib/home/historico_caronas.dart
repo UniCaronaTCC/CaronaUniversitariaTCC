@@ -82,9 +82,9 @@ class _HistoricoCaronasTelaState extends State<HistoricoCaronasTela> {
     setState(() {
       carregando = false;
       ofertas = _listaTipada<Carona>(resultados[0]['dados']);
-      pedidos = _listaTipada<SolicitacaoEnviada>(
-        resultados[1]['dados'],
-      ).where((pedido) => pedido.status == 'ACEITA').toList();
+      pedidos = _listaTipada<SolicitacaoEnviada>(resultados[1]['dados'])
+          .where((pedido) => pedido.status == 'ACEITA' || pedido.arquivada)
+          .toList();
     });
   }
 
@@ -204,28 +204,28 @@ class _HistoricoCaronasTelaState extends State<HistoricoCaronasTela> {
   }
 
   Widget _historicoPassageiro() {
-    final proximas = pedidos
-        .where((pedido) => !pedido.caronaFinalizada)
-        .toList();
-    final finalizadas = pedidos
-        .where((pedido) => pedido.caronaFinalizada)
-        .toList();
+    final proximas = pedidos.where((pedido) => !pedido.arquivada).toList();
+    final finalizadas = pedidos.where((pedido) => pedido.arquivada).toList();
 
     return _listaHistorico(
       tituloAtivas: 'Viagens confirmadas',
+      tituloEncerradas: 'Caronas encerradas',
       mensagemVazia: 'Você ainda não participou de caronas',
       itensAtivos: proximas,
       itensFinalizados: finalizadas,
       construirItem: (pedido) => CardSolicitacaoEnviada(
         solicitacao: pedido,
         processando: idProcessando == pedido.id,
-        onAvaliar: pedido.podeAvaliar ? () => avaliar(pedido) : null,
+        onAvaliar: pedido.podeAvaliar && !pedido.expirada
+            ? () => avaliar(pedido)
+            : null,
       ),
     );
   }
 
   Widget _listaHistorico<T>({
     required String tituloAtivas,
+    String tituloEncerradas = 'Caronas finalizadas',
     required String mensagemVazia,
     required List<T> itensAtivos,
     required List<T> itensFinalizados,
@@ -257,21 +257,21 @@ class _HistoricoCaronasTelaState extends State<HistoricoCaronasTela> {
             _listaSeparada(itensAtivos, construirItem),
           if (itensFinalizados.isNotEmpty) ...[
             const SizedBox(height: 32),
-            const Row(
+            Row(
               children: [
-                Expanded(child: Divider()),
+                const Expanded(child: Divider()),
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
                   child: Text(
-                    'Caronas finalizadas',
-                    style: TextStyle(
+                    tituloEncerradas,
+                    style: const TextStyle(
                       color: Colors.black54,
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
-                Expanded(child: Divider()),
+                const Expanded(child: Divider()),
               ],
             ),
             const SizedBox(height: 16),

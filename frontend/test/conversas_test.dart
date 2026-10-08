@@ -13,6 +13,48 @@ import 'conversa_estado_test.dart' show conversaJson;
 void main() {
   final instante = DateTime.utc(2026, 10, 8, 15);
 
+  testWidgets('chat vai para Encerradas imediatamente ao expirar', (
+    tester,
+  ) async {
+    var expirada = false;
+    Conversa? aberta;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversasTela(
+          idUsuario: 1,
+          agora: () => instante,
+          carregarConversas: () async => {
+            'sucesso': true,
+            'dados': [
+              Conversa.fromJson(
+                conversaJson('ATIVA')
+                  ..['status'] = expirada ? 'EXPIRADA' : 'ACEITA',
+              ),
+            ],
+          },
+          abrirConversa: (conversa) => aberta = conversa,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Maria'), findsOneWidget);
+    expirada = true;
+    MensagemService.versaoConversas.value++;
+    await tester.pumpAndSettle();
+    expect(find.text('Maria'), findsNothing);
+    expect(find.text('Nenhuma conversa recente'), findsOneWidget);
+    await tester.tap(find.text('Encerradas'));
+    await tester.pumpAndSettle();
+    expect(find.text('Maria'), findsOneWidget);
+    expect(find.text('Encerrada'), findsOneWidget);
+    await tester.tap(find.text('Maria'));
+    expect(aberta!.encerrada, isTrue);
+    expect(aberta!.status, 'EXPIRADA');
+    await tester.tap(find.text('Encerradas'));
+    await tester.pumpAndSettle();
+    expect(find.text('Maria'), findsNothing);
+  });
+
   Conversa conversaEncerrada(String nome, DateTime encerradaEm) {
     final json = conversaJson('FINALIZADA')
       ..['encerradaEm'] = encerradaEm.toIso8601String();

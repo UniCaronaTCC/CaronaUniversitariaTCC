@@ -97,27 +97,25 @@ class SolicitacaoEnviada {
 
   bool get cancelada => status.startsWith('CANCELADA_');
 
-  String get statusExibicao => pagamentoConfirmado ? 'CONFIRMADA' : status;
+  bool get expirada => status == 'EXPIRADA' || statusCarona == 'EXPIRADA';
+
+  bool get arquivada =>
+      caronaFinalizada || cancelada || expirada || statusCarona == 'CANCELADA';
+
+  String get statusExibicao =>
+      expirada ? 'EXPIRADA' : (pagamentoConfirmado ? 'CONFIRMADA' : status);
 
   bool get podePagarPix =>
-      status == 'ACEITA' &&
-      !pagamentoConfirmado &&
-      !recorrente &&
-      !caronaFinalizada &&
-      !cancelada;
+      status == 'ACEITA' && !pagamentoConfirmado && !recorrente && !arquivada;
 
   bool get aceiteAguardandoAcao =>
-      status == 'ACEITA' &&
-      !pagamentoConfirmado &&
-      !caronaFinalizada &&
-      !cancelada;
+      status == 'ACEITA' && !pagamentoConfirmado && !arquivada;
 
   bool get pagamentoRecorrenteIndisponivel =>
       aceiteAguardandoAcao && recorrente;
 
   bool get podeCancelar =>
-      !caronaFinalizada &&
-      !cancelada &&
+      !arquivada &&
       !pagamentoConfirmado &&
       (status == 'PENDENTE' || status == 'ACEITA');
 
