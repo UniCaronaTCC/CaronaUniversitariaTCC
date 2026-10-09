@@ -2,11 +2,13 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
+  BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { QueryFailedError, Repository } from 'typeorm';
 
-import { extrairDadosCnh } from './dados-cnh';
+import { conferirDadosCnh, nomeCompletoValido } from './dados-cnh';
 import { LeituraCnhService } from './leitura-cnh.service';
 import { User } from './user.entity';
 import { cnhPermiteOferecerCarona, hojeEmSaoPaulo } from './verificacao-cnh';
@@ -14,6 +16,7 @@ import { cnhPermiteOferecerCarona, hojeEmSaoPaulo } from './verificacao-cnh';
 @Injectable()
 export class VerificacaoCnhService {
   private readonly emAndamento = new Set<number>();
+  private readonly logger = new Logger(VerificacaoCnhService.name);
 
   constructor(
     @InjectRepository(User)
@@ -21,11 +24,23 @@ export class VerificacaoCnhService {
     private readonly leitura: LeituraCnhService,
   ) {}
 
-  async verificar(idUsuario: number, frente: Buffer, verso: Buffer) {
+  async verificar(
+    idUsuario: number,
+    frente: Buffer,
+    verso: Buffer,
+    nomeCompleto: string,
+  ) {
+    if (!nomeCompletoValido(nomeCompleto)) {
+      throw new BadRequestException(
+        'Informe seu nome completo conforme a CNH. Se o campo não aparece, atualize o app.',
+      );
+    }
     if (this.emAndamento.has(idUsuario)) {
       throw new ConflictException('Já existe uma verificação em andamento');
     }
     this.emAndamento.add(idUsuario);
+    const inicio = Date.now();
+    this.logger.log('CNH: verificação iniciada');
 
     try {
       const usuario = await this.usuarios.findOne({ where: { idUsuario } });
@@ -36,11 +51,15 @@ export class VerificacaoCnhService {
         return { status: 'APROVADA' as const };
       }
 
+      this.logger.log('CNH: iniciando leitura das fotos');
       const texto = await this.leitura.ler(frente, verso);
-      const dados = extrairDadosCnh(texto, usuario.nome, hoje);
+      this.logger.log('CNH: leitura concluída, conferindo campos');
+      const conferencia = conferirDadosCnh(texto, nomeCompleto, hoje);
+      const dados = conferencia.dados;
       const privacidadeAceitaEm = new Date();
 
       if (!dados) {
+        this.logger.warn(`CNH: ${conferencia.motivo}`);
         await this.usuarios.update(idUsuario, {
           statusVerificacaoCnh: 'RECUSADA',
           cpf: null,
@@ -50,7 +69,7 @@ export class VerificacaoCnhService {
           cnhVerificadaEm: null,
           privacidadeAceitaEm,
         });
-        return { status: 'RECUSADA' as const };
+        return { status: 'RECUSADA' as const, motivo: conferencia.motivo };
       }
 
       try {
@@ -79,9 +98,16 @@ export class VerificacaoCnhService {
         throw erro;
       }
 
+      this.logger.log('CNH: dados conferidos');
       return { status: 'APROVADA' as const };
+    } catch (erro) {
+      this.logger.warn('CNH: verificação interrompida por falha');
+      throw erro;
     } finally {
       this.emAndamento.delete(idUsuario);
+      this.logger.log(
+        `CNH: verificação encerrada em ${Date.now() - inicio} ms`,
+      );
     }
   }
 }

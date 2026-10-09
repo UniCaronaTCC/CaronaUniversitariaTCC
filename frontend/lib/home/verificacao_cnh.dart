@@ -10,6 +10,7 @@ import '../services/foto_cnh_temporaria.dart'
     if (dart.library.io) '../services/foto_cnh_temporaria_io.dart';
 import '../services/verificacao_cnh_service.dart';
 import '../widgets/componentes_padrao.dart';
+import '../widgets/foto_cnh.dart';
 
 typedef CapturarFotoCnh = Future<XFile?> Function();
 typedef EnviarFotosCnh =
@@ -17,6 +18,7 @@ typedef EnviarFotosCnh =
       Uint8List frente,
       Uint8List verso,
       bool aceite,
+      String nomeCompleto,
     );
 
 class VerificacaoCnhTela extends StatefulWidget {
@@ -47,6 +49,7 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
   bool enviando = false;
   bool aprovadaAgora = false;
   String? erro;
+  final nomeCompleto = TextEditingController();
 
   bool get aprovada => aprovadaAgora || verificacao.permiteOferecerCarona();
   bool get ocupada => carregando || capturando || enviando;
@@ -143,17 +146,27 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
 
   Future<void> enviar() async {
     if (ocupada || !aceite || frente == null || verso == null) return;
+    if (nomeCompleto.text.trim().split(RegExp(r'\s+')).length < 2) {
+      setState(() => erro = 'Informe seu nome completo conforme a CNH');
+      return;
+    }
     setState(() {
       enviando = true;
       erro = null;
     });
     try {
       final resultado =
-          await (widget.enviarFotos?.call(frente!, verso!, aceite) ??
+          await (widget.enviarFotos?.call(
+                frente!,
+                verso!,
+                aceite,
+                nomeCompleto.text.trim(),
+              ) ??
               const VerificacaoCnhService().enviar(
                 frente!,
                 verso!,
                 aceitePrivacidade: aceite,
+                nomeCompleto: nomeCompleto.text.trim(),
               ));
       if (!mounted) return;
       if (resultado['sucesso'] == true && resultado['dados'] is Map) {
@@ -164,7 +177,8 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
         if (!mounted) return;
         if (!aprovadaAgora) {
           erro =
-              'Não conseguimos conferir seus dados. Fotografe o documento inteiro, com boa luz e sem reflexos';
+              resultado['mensagem']?.toString() ??
+              'Não conseguimos conferir os dados da CNH. Confira as fotos e tente novamente';
         }
       } else {
         erro =
@@ -181,6 +195,7 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
   @override
   void dispose() {
     descartarImagens();
+    nomeCompleto.dispose();
     super.dispose();
   }
 
@@ -223,7 +238,7 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Precisamos conferir seu nome, CPF, categoria e validade da CNH. Guardamos esses dados e os últimos quatro dígitos do registro; as fotos são descartadas após a leitura.',
+                  'Conferimos o nome completo informado com a foto, sem alterar seu nome de perfil. Guardamos CPF, categoria, validade e os últimos quatro dígitos do registro. O nome informado é usado somente na conferência e as fotos são descartadas após a leitura.',
                   style: TextStyle(height: 1.4),
                 ),
                 CheckboxListTile(
@@ -241,14 +256,24 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                _FotoCnh(
+                TextField(
+                  controller: nomeCompleto,
+                  enabled: aceite && !ocupada,
+                  maxLength: 150,
+                  textCapitalization: TextCapitalization.words,
+                  decoration: const InputDecoration(
+                    labelText: 'Nome completo conforme a CNH',
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FotoCnh(
                   titulo: 'Frente da CNH',
                   bytes: frente,
                   habilitada: aceite && !ocupada,
                   onFotografar: () => fotografar(true),
                 ),
                 const SizedBox(height: 16),
-                _FotoCnh(
+                FotoCnh(
                   titulo: 'Verso da CNH',
                   bytes: verso,
                   habilitada: aceite && !ocupada,
@@ -289,64 +314,6 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
             ],
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _FotoCnh extends StatelessWidget {
-  final String titulo;
-  final Uint8List? bytes;
-  final bool habilitada;
-  final VoidCallback onFotografar;
-
-  const _FotoCnh({
-    required this.titulo,
-    this.bytes,
-    required this.habilitada,
-    required this.onFotografar,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.black12),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text(titulo, style: const TextStyle(fontWeight: FontWeight.w600)),
-          const SizedBox(height: 12),
-          AspectRatio(
-            aspectRatio: 1.6,
-            child: bytes == null
-                ? const ColoredBox(
-                    color: Color(0xFFF4F4F4),
-                    child: Icon(
-                      Icons.credit_card_outlined,
-                      size: 48,
-                      color: Colors.black38,
-                    ),
-                  )
-                : Image.memory(
-                    bytes!,
-                    fit: BoxFit.contain,
-                    gaplessPlayback: true,
-                    errorBuilder: (_, _, _) => const Center(
-                      child: Text('Foto inválida. Tire outra foto'),
-                    ),
-                  ),
-          ),
-          const SizedBox(height: 8),
-          OutlinedButton.icon(
-            onPressed: habilitada ? onFotografar : null,
-            icon: const Icon(Icons.camera_alt_outlined),
-            label: Text(bytes == null ? 'Fotografar' : 'Refazer foto'),
-          ),
-        ],
       ),
     );
   }

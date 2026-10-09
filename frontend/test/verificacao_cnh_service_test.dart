@@ -30,6 +30,7 @@ void main() {
     final resultado = await service.enviar(
       frente,
       verso,
+      nomeCompleto: 'João Pedro da Silva',
       aceitePrivacidade: true,
     );
     expect(resultado['dados']['status'], 'APROVADA');
@@ -37,6 +38,8 @@ void main() {
     expect(recebido.headers['authorization'], 'Bearer token-teste');
     expect(recebido.headers['content-type'], startsWith('multipart/form-data'));
     expect(recebido.body, contains('name="aceitePrivacidade"'));
+    expect(recebido.body, contains('name="nomeCompleto"'));
+    expect(utf8.decode(recebido.bodyBytes), contains('João Pedro da Silva'));
     expect(recebido.body, contains('name="frente"'));
     expect(recebido.body, contains('name="verso"'));
     expect(recebido.bodyBytes, containsAllInOrder(frente));
@@ -55,6 +58,7 @@ void main() {
       (await service.enviar(
         frente,
         verso,
+        nomeCompleto: 'João Pedro da Silva',
         aceitePrivacidade: false,
       ))['sucesso'],
       isFalse,
@@ -63,6 +67,7 @@ void main() {
       (await service.enviar(
         Uint8List(0),
         verso,
+        nomeCompleto: 'João Pedro da Silva',
         aceitePrivacidade: true,
       ))['sucesso'],
       isFalse,
@@ -71,6 +76,7 @@ void main() {
       (await service.enviar(
         Uint8List(5 * 1024 * 1024 + 1),
         verso,
+        nomeCompleto: 'João Pedro da Silva',
         aceitePrivacidade: true,
       ))['sucesso'],
       isFalse,
@@ -80,6 +86,7 @@ void main() {
       (await service.enviar(
         frente,
         verso,
+        nomeCompleto: 'João Pedro da Silva',
         aceitePrivacidade: true,
       ))['mensagem'],
       'Usuário não está logado',
@@ -99,6 +106,7 @@ void main() {
         (await recusada.enviar(
           frente,
           verso,
+          nomeCompleto: 'João Pedro da Silva',
           aceitePrivacidade: true,
         ))['dados']['status'],
         'RECUSADA',
@@ -115,6 +123,7 @@ void main() {
         (await falha.enviar(
           frente,
           verso,
+          nomeCompleto: 'João Pedro da Silva',
           aceitePrivacidade: true,
         ))['mensagem'],
         'Serviço temporariamente indisponível',
@@ -131,6 +140,7 @@ void main() {
     final resultado = await service.enviar(
       frente,
       verso,
+      nomeCompleto: 'João Pedro da Silva',
       aceitePrivacidade: true,
     );
     expect(resultado['sucesso'], isFalse);

@@ -71,6 +71,7 @@ describe('VerificacaoCnhController (HTTP)', () => {
     await request(app.getHttpServer())
       .post('/usuarios/cnh/verificar')
       .field('aceitePrivacidade', 'true')
+      .field('nomeCompleto', 'João Pedro da Silva')
       .attach('frente', foto, 'frente.png')
       .attach('verso', foto, 'verso.png')
       .expect(201)

@@ -13,6 +13,7 @@ import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { RequisicaoComUsuario } from '../auth/requisicao-com-usuario';
 import { VerificacaoCnhService } from './verificacao-cnh.service';
+import { motivosCnh } from './dados-cnh';
 
 interface FotoCnh {
   buffer: Buffer;
@@ -35,7 +36,14 @@ export class VerificacaoCnhController {
         { name: 'frente', maxCount: 1 },
         { name: 'verso', maxCount: 1 },
       ],
-      { limits: { files: 2, fileSize: 5 * 1024 * 1024, fields: 1 } },
+      {
+        limits: {
+          files: 2,
+          fileSize: 5 * 1024 * 1024,
+          fields: 2,
+          fieldSize: 1024,
+        },
+      },
     ),
   )
   async verificar(
@@ -63,6 +71,7 @@ export class VerificacaoCnhController {
         request.usuario.sub,
         frente,
         verso,
+        typeof body?.nomeCompleto === 'string' ? body.nomeCompleto : '',
       );
       return {
         sucesso: true,
@@ -70,7 +79,7 @@ export class VerificacaoCnhController {
         mensagem:
           resultado.status === 'APROVADA'
             ? 'Dados da CNH conferidos para os testes'
-            : 'Não foi possível conferir a CNH. Confira as fotos e tente novamente',
+            : motivosCnh[resultado.motivo],
       };
     } finally {
       frente?.fill(0);

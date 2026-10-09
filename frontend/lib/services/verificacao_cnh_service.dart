@@ -20,6 +20,7 @@ class VerificacaoCnhService {
     Uint8List frente,
     Uint8List verso, {
     required bool aceitePrivacidade,
+    required String nomeCompleto,
   }) async {
     if (!aceitePrivacidade) {
       return {'sucesso': false, 'mensagem': 'Aceite o aviso de privacidade'};
@@ -44,6 +45,7 @@ class VerificacaoCnhService {
               )
               ..headers['Authorization'] = 'Bearer $token'
               ..fields['aceitePrivacidade'] = 'true'
+              ..fields['nomeCompleto'] = nomeCompleto.trim()
               ..files.addAll([
                 http.MultipartFile.fromBytes(
                   'frente',

@@ -38,7 +38,7 @@ describe('VerificacaoCnhController', () => {
     await expect(
       controller.verificar(
         { frente: [{ buffer: jpeg() }] },
-        { aceitePrivacidade: 'true' },
+        { aceitePrivacidade: 'true', nomeCompleto: 'João Pedro da Silva' },
         requisicao,
       ),
     ).rejects.toThrow('Envie fotos da frente e do verso da CNH');
@@ -51,7 +51,7 @@ describe('VerificacaoCnhController', () => {
           frente: [{ buffer: Buffer.from('invalido') }],
           verso: [{ buffer: jpeg() }],
         },
-        { aceitePrivacidade: 'true' },
+        { aceitePrivacidade: 'true', nomeCompleto: 'João Pedro da Silva' },
         requisicao,
       ),
     ).rejects.toThrow('Envie fotos JPG, PNG ou WebP');
@@ -63,10 +63,15 @@ describe('VerificacaoCnhController', () => {
     const verso = jpeg();
     const resultado = await controller.verificar(
       { frente: [{ buffer: frente }], verso: [{ buffer: verso }] },
-      { aceitePrivacidade: 'true' },
+      { aceitePrivacidade: 'true', nomeCompleto: 'João Pedro da Silva' },
       requisicao,
     );
-    expect(verificacao.verificar).toHaveBeenCalledWith(7, frente, verso);
+    expect(verificacao.verificar).toHaveBeenCalledWith(
+      7,
+      frente,
+      verso,
+      'João Pedro da Silva',
+    );
     expect(resultado.dados).toEqual({ status: 'APROVADA' });
     expect([...frente, ...verso].every((byte) => byte === 0)).toBe(true);
   });

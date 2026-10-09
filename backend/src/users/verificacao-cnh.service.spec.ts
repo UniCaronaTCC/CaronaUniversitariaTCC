@@ -41,7 +41,14 @@ describe('VerificacaoCnhService', () => {
   });
 
   it('aprova e persiste apenas os campos definidos', async () => {
-    await expect(service.verificar(1, frente, verso)).resolves.toEqual({
+    usuarios.findOne.mockResolvedValue({
+      idUsuario: 1,
+      nome: 'João',
+      statusVerificacaoCnh: 'NAO_ENVIADA',
+    });
+    await expect(
+      service.verificar(1, frente, verso, 'João Pedro da Silva'),
+    ).resolves.toEqual({
       status: 'APROVADA',
     });
     expect(leitura.ler).toHaveBeenCalledWith(frente, verso);
@@ -59,12 +66,25 @@ describe('VerificacaoCnhService', () => {
     });
     expect(alteracoes.cnhVerificadaEm).toBeInstanceOf(Date);
     expect(alteracoes.privacidadeAceitaEm).toBeInstanceOf(Date);
+    expect(alteracoes).not.toHaveProperty('nome');
+    expect(alteracoes).not.toHaveProperty('nomeCompleto');
+  });
+
+  it('exige nome completo antes de consultar o banco ou ler fotos', async () => {
+    await expect(service.verificar(1, frente, verso, 'João')).rejects.toThrow(
+      'Informe seu nome completo',
+    );
+    expect(usuarios.findOne).not.toHaveBeenCalled();
+    expect(leitura.ler).not.toHaveBeenCalled();
   });
 
   it('recusa leitura inconclusiva e não guarda dados parciais', async () => {
     leitura.ler.mockResolvedValue('texto ilegível');
-    await expect(service.verificar(1, frente, verso)).resolves.toEqual({
+    await expect(
+      service.verificar(1, frente, verso, 'João Pedro da Silva'),
+    ).resolves.toEqual({
       status: 'RECUSADA',
+      motivo: 'NOME_NAO_LIDO',
     });
     expect(usuarios.update).toHaveBeenCalledWith(
       1,
@@ -80,9 +100,9 @@ describe('VerificacaoCnhService', () => {
 
   it('não muda o banco quando o OCR falha', async () => {
     leitura.ler.mockRejectedValue(new ServiceUnavailableException());
-    await expect(service.verificar(1, frente, verso)).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
+    await expect(
+      service.verificar(1, frente, verso, 'João Pedro da Silva'),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
     expect(usuarios.update).not.toHaveBeenCalled();
   });
 
@@ -94,7 +114,9 @@ describe('VerificacaoCnhService', () => {
       cnhCategoria: 'B',
       cnhValidade: '2099-10-06',
     });
-    await expect(service.verificar(1, frente, verso)).resolves.toEqual({
+    await expect(
+      service.verificar(1, frente, verso, 'João Pedro da Silva'),
+    ).resolves.toEqual({
       status: 'APROVADA',
     });
     expect(leitura.ler).not.toHaveBeenCalled();
@@ -108,8 +130,8 @@ describe('VerificacaoCnhService', () => {
         constraint: 'uq_usuarios_cpf',
       }),
     );
-    await expect(service.verificar(1, frente, verso)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(
+      service.verificar(1, frente, verso, 'João Pedro da Silva'),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 });

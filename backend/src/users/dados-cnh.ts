@@ -5,6 +5,37 @@ export interface DadosCnh {
   registroFinal: string;
 }
 
+export const motivosCnh = {
+  NOME_NAO_LIDO:
+    'Não conseguimos ler o nome completo na CNH. Fotografe essa parte com nitidez.',
+  NOME_DIVERGENTE:
+    'O nome lido não corresponde ao nome completo informado. Confira o preenchimento e a foto.',
+  CPF_NAO_LIDO: 'Não conseguimos ler o CPF na CNH. Refaça a foto dessa parte.',
+  CPF_INVALIDO:
+    'O CPF lido não passou na conferência. Refaça a foto com os números nítidos.',
+  CATEGORIA_NAO_LIDA: 'Não conseguimos ler a categoria da CNH.',
+  CATEGORIA_INCOMPATIVEL:
+    'A categoria lida não permite dirigir automóveis. Confira a foto da categoria.',
+  VALIDADE_NAO_LIDA: 'Não conseguimos ler uma data de validade válida na CNH.',
+  CNH_VENCIDA:
+    'A data de validade lida está vencida. Confira a validade e a foto.',
+  REGISTRO_NAO_LIDO: 'Não conseguimos ler o número de registro da CNH.',
+} as const;
+
+type ConferenciaCnh =
+  | { dados: DadosCnh; motivo?: never }
+  | { dados: null; motivo: keyof typeof motivosCnh };
+
+export function nomeCompletoValido(nome: unknown): nome is string {
+  return (
+    typeof nome === 'string' &&
+    nome.trim().length <= 150 &&
+    /^[\p{L}]+(?:['’-][\p{L}]+)*(?:\s+[\p{L}]+(?:['’-][\p{L}]+)*)+$/u.test(
+      nome.trim(),
+    )
+  );
+}
+
 function normalizar(texto: string): string {
   return texto
     .normalize('NFD')
@@ -62,20 +93,44 @@ function dataIso(valor: string): string | null {
   return `${ano.toString().padStart(4, '0')}-${mes.toString().padStart(2, '0')}-${dia.toString().padStart(2, '0')}`;
 }
 
-export function extrairDadosCnh(
+export function conferirDadosCnh(
   texto: string,
   nomeUsuario: string,
   hoje: string,
-): DadosCnh | null {
+): ConferenciaCnh {
   const linhas = texto.split(/\r?\n/).map(normalizar).filter(Boolean);
 
   const nome = normalizar(nomeUsuario);
-  const nomeDocumento = campoAposRotulo(
-    linhas,
-    /\bNOME(?: E SOBRENOME)?\b/,
-    /([A-Z]+(?: [A-Z]+)+)/,
+  // Junta somente linhas do nome, parando antes de outros campos.
+  const indiceNome = linhas.findIndex((linha) =>
+    /\bNOME(?: E SOBRENOME)?\b/.test(linha),
   );
-  if (!nome || !nomeDocumento || !nomeDocumento.includes(nome)) return null;
+  const partes: string[] = [];
+  if (indiceNome >= 0) {
+    const primeira = linhas[indiceNome]
+      .replace(/^.*?\bNOME(?: E SOBRENOME)?\b/, '')
+      .trim();
+    const candidatos = [
+      primeira,
+      ...linhas.slice(indiceNome + 1, indiceNome + 4),
+    ];
+    for (const linha of candidatos) {
+      if (!linha) continue;
+      if (
+        /\b(CPF|REGISTRO|VALIDADE|CATEGORIA|CAT|FILIACAO|NASCIMENTO|DATA|DOC|IDENTIDADE|ASSINATURA|NACIONALIDADE|PERMISSAO)\b/.test(
+          linha,
+        ) ||
+        !/^[A-Z]+(?:[.'’\- ]+[A-Z]+)*$/.test(linha)
+      )
+        break;
+      partes.push(linha);
+    }
+  }
+  const nomeDocumento = partes.join(' ');
+  if (!nomeDocumento) return { dados: null, motivo: 'NOME_NAO_LIDO' };
+  if (!nomeCompletoValido(nomeUsuario) || nomeDocumento !== nome) {
+    return { dados: null, motivo: 'NOME_DIVERGENTE' };
+  }
 
   const cpfLido = campoAposRotulo(
     linhas,
@@ -83,14 +138,17 @@ export function extrairDadosCnh(
     /\b(\d{3}[. ]?\d{3}[. ]?\d{3}[- ]?\d{2})\b/,
   );
   const cpf = cpfLido?.replace(/\D/g, '') ?? '';
-  if (!cpfValido(cpf)) return null;
+  if (!cpfLido) return { dados: null, motivo: 'CPF_NAO_LIDO' };
+  if (!cpfValido(cpf)) return { dados: null, motivo: 'CPF_INVALIDO' };
 
   const categoria = campoAposRotulo(
     linhas,
-    /\b(?:CATEGORIA|CAT\.? HAB\.?)(?=\s|$)/,
-    /\b(A?[BCDE])\b/,
+    /\b(?:CATEGORIA|CAT\.?\s*HAB\.?)(?=\s|$)/,
+    /\b(A?[BCDE]|A|ACC)\b/,
   );
-  if (!categoria) return null;
+  if (!categoria) return { dados: null, motivo: 'CATEGORIA_NAO_LIDA' };
+  if (!/^A?[BCDE]$/.test(categoria))
+    return { dados: null, motivo: 'CATEGORIA_INCOMPATIVEL' };
 
   const validadeLida = campoAposRotulo(
     linhas,
@@ -98,15 +156,26 @@ export function extrairDadosCnh(
     /\b(\d{2}\/\d{2}\/\d{4})\b/,
   );
   const validade = validadeLida ? dataIso(validadeLida) : null;
-  if (!validade || validade < hoje) return null;
+  if (!validade) return { dados: null, motivo: 'VALIDADE_NAO_LIDA' };
+  if (validade < hoje) return { dados: null, motivo: 'CNH_VENCIDA' };
 
   const registro = campoAposRotulo(linhas, /\bREGISTRO\b/, /\b(\d{11})\b/);
-  if (!registro) return null;
+  if (!registro) return { dados: null, motivo: 'REGISTRO_NAO_LIDO' };
 
   return {
-    cpf,
-    categoria,
-    validade,
-    registroFinal: registro.slice(-4),
+    dados: {
+      cpf,
+      categoria,
+      validade,
+      registroFinal: registro.slice(-4),
+    },
   };
+}
+
+export function extrairDadosCnh(
+  texto: string,
+  nome: string,
+  hoje: string,
+): DadosCnh | null {
+  return conferirDadosCnh(texto, nome, hoje).dados;
 }

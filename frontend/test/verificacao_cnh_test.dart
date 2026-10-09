@@ -25,9 +25,13 @@ void main() {
   Future<void> fotografarDuas(WidgetTester tester) async {
     await tester.tap(find.byType(Checkbox));
     await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'João Pedro da Silva');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
       find.widgetWithText(OutlinedButton, 'Fotografar').first,
       200,
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(OutlinedButton, 'Fotografar').first);
@@ -35,11 +39,16 @@ void main() {
     await tester.scrollUntilVisible(
       find.widgetWithText(OutlinedButton, 'Fotografar').first,
       200,
+      scrollable: find.byType(Scrollable).first,
     );
     await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(OutlinedButton, 'Fotografar').first);
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(botaoEnviar, 200);
+    await tester.scrollUntilVisible(
+      botaoEnviar,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
   }
 
@@ -57,8 +66,9 @@ void main() {
             capturas++;
             return XFile.fromData(Uint8List.fromList(png), name: 'cnh.png');
           },
-          enviarFotos: (frente, verso, aceite) async {
+          enviarFotos: (frente, verso, aceite, nome) async {
             envios++;
+            expect(nome, 'João Pedro da Silva');
             expect(frente, png);
             expect(verso, png);
             expect(aceite, isTrue);
@@ -104,7 +114,7 @@ void main() {
           },
           capturarFoto: () async =>
               XFile.fromData(Uint8List.fromList(png), name: 'cnh.png'),
-          enviarFotos: (_, _, _) async {
+          enviarFotos: (_, _, _, _) async {
             envios++;
             return {'sucesso': false, 'mensagem': 'Falha de conexão'};
           },
@@ -132,9 +142,10 @@ void main() {
           },
           capturarFoto: () async =>
               XFile.fromData(Uint8List.fromList(png), name: 'cnh.png'),
-          enviarFotos: (_, _, _) async => {
+          enviarFotos: (_, _, _, _) async => {
             'sucesso': true,
             'dados': {'status': 'RECUSADA'},
+            'mensagem': 'Não conseguimos ler a categoria da CNH.',
           },
         ),
       ),
@@ -143,7 +154,10 @@ void main() {
     await fotografarDuas(tester);
     await tester.tap(botaoEnviar);
     await tester.pumpAndSettle();
-    expect(find.textContaining('Não conseguimos conferir'), findsOneWidget);
+    expect(
+      find.text('Não conseguimos ler a categoria da CNH.'),
+      findsOneWidget,
+    );
     expect(find.widgetWithText(OutlinedButton, 'Fotografar'), findsWidgets);
     expect(tester.widget<FilledButton>(botaoEnviar).onPressed, isNull);
   });
@@ -196,7 +210,11 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await tester.scrollUntilVisible(find.text('Enviar para verificação'), 200);
+    await tester.scrollUntilVisible(
+      find.text('Enviar para verificação'),
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
   });

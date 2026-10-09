@@ -6,6 +6,18 @@ O usuario abre Perfil > Habilitacao > Verificar CNH, ou tenta oferecer uma
 carona. Aceita o uso dos dados, fotografa frente e verso pela camera e envia.
 Pode revisar e refazer as fotos antes de enviar.
 
+Na verificacao, informa `nomeCompleto` conforme o documento. Esse nome e
+comparado integralmente com o OCR, tolerando acentos, espacos e quebras de
+linha. Nao altera o nome de exibicao do perfil e nao e persistido nem logado.
+O endpoint exige esse campo multipart junto com `aceitePrivacidade`.
+Atualizar backend e app juntos; clientes antigos recebem orientacao para
+atualizar. A conferencia continua sem comprovar titularidade ou autenticidade.
+
+Recusas retornam `dados.motivo` e uma `mensagem` especifica para o campo.
+Logs contem apenas etapas, codigo de recusa e duracao, nunca texto do OCR,
+nome, CPF ou fotos. O app exibe a mensagem da resposta. O motivo nao e salvo
+no banco; ao reabrir o perfil, apenas o status permanece disponivel.
+
 O Flutter envia as duas imagens e `aceitePrivacidade=true` para
 `POST /usuarios/cnh/verificar` com o token da sessao. O backend confere os dados
 por OCR, grava APROVADA ou RECUSADA e descarta as imagens. O app atualiza o perfil.
