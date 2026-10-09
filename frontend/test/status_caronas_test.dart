@@ -65,7 +65,8 @@ void main() {
       MaterialApp(home: DetalhesCaronaTela(carona: carona)),
     );
 
-    expect(find.text('FINALIZADA'), findsOneWidget);
+    expect(find.text('Carona finalizada'), findsOneWidget);
+    expect(find.text('Vagas disponíveis'), findsNothing);
     expect(find.text('EDITAR'), findsNothing);
     expect(find.text('EXCLUIR'), findsNothing);
 

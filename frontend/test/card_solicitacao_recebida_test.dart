@@ -4,6 +4,48 @@ import 'package:uni_carona/models/solicitacao_recebida.dart';
 import 'package:uni_carona/widgets/card_solicitacao_recebida.dart';
 
 void main() {
+  for (final caso in [
+    ('PENDENTE', 'ATIVA', true),
+    ('ACEITA', 'ATIVA', false),
+    ('ACEITA', 'FINALIZADA', false),
+    ('EXPIRADA', 'ATIVA', false),
+  ]) {
+    testWidgets('aviso de aprovação do embarque: ${caso.$1}/${caso.$2}', (
+      tester,
+    ) async {
+      final solicitacao = SolicitacaoRecebida(
+        id: 1,
+        status: caso.$1,
+        statusCarona: caso.$2,
+        tipoPontoEmbarque: 'NOVO_SOLICITADO',
+        localEmbarque: 'Rua A, 100',
+        embarqueLatitude: -21.2,
+        embarqueLongitude: -50.4,
+        passageiro: 'Maria',
+        idCarona: 2,
+        destino: 'UniSalesiano',
+        dataInicio: DateTime(2026, 10, 12),
+        horario: '19:00:00',
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: CardSolicitacaoRecebida(
+              solicitacao: solicitacao,
+              processando: false,
+              onAceitar: () {},
+              onRecusar: () {},
+            ),
+          ),
+        ),
+      );
+      expect(
+        find.textContaining('ainda depende da aprovação'),
+        caso.$3 ? findsOneWidget : findsNothing,
+      );
+    });
+  }
+
   test('lê o status da carona na solicitação recebida', () {
     final solicitacao = SolicitacaoRecebida.fromJson({
       'id': 1,

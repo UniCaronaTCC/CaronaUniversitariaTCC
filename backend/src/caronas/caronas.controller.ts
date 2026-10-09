@@ -172,6 +172,18 @@ export class CaronasController {
     };
   }
 
+  @Get(':idCarona')
+  async buscarDetalhesCarona(
+    @Param('idCarona') idRecebido: string,
+    @Req() request: RequisicaoComUsuario,
+  ) {
+    const carona = await this.caronasService.buscarDetalhesCarona(
+      this.validarIdCarona(idRecebido),
+      request.usuario.sub,
+    );
+    return { sucesso: true, dados: this.formatarCarona(carona) };
+  }
+
   private validarPosicaoAtual(
     body: DadosCaronaRecebidos,
   ): DadosPosicaoAtualCarona {

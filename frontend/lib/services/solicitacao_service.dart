@@ -56,9 +56,7 @@ class SolicitacaoService {
     final recebidasPendentes = solicitacoes
         .where(
           (solicitacao) =>
-              solicitacao.status == 'PENDENTE' &&
-              !solicitacao.caronaFinalizada &&
-              !solicitacao.cancelada,
+              solicitacao.status == 'PENDENTE' && !solicitacao.arquivada,
         )
         .length;
     final aceitesAguardandoAcao = enviadas

@@ -19,11 +19,17 @@ import 'corrida_em_andamento.dart';
 class DetalhesCaronaTela extends StatefulWidget {
   final Carona carona;
   final int? indiceNavegacaoOrigem;
+  final bool permitirSolicitacao;
+  final bool somenteConsulta;
+  final String? fotoMotorista;
 
   const DetalhesCaronaTela({
     super.key,
     required this.carona,
     this.indiceNavegacaoOrigem,
+    this.permitirSolicitacao = true,
+    this.somenteConsulta = false,
+    this.fotoMotorista,
   });
 
   @override
@@ -40,8 +46,9 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
     final atualizacao = ++_ultimaAtualizacao;
     final idCarona = caronaAtual.id;
     try {
-      final resultado = await CaronaService.listarMinhasCaronas()
-          .timeout(const Duration(seconds: 20));
+      final resultado = await CaronaService.listarMinhasCaronas().timeout(
+        const Duration(seconds: 20),
+      );
       if (!mounted || atualizacao != _ultimaAtualizacao) return;
 
       final dados = resultado['dados'];
@@ -62,10 +69,7 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
         content: const Text(
           'A solicitação foi aceita, mas não foi possível atualizar o percurso.',
         ),
-        action: SnackBarAction(
-          label: 'ATUALIZAR',
-          onPressed: _atualizarCarona,
-        ),
+        action: SnackBarAction(label: 'ATUALIZAR', onPressed: _atualizarCarona),
       ),
     );
   }
@@ -96,9 +100,7 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
 
     final finalizada = await Navigator.push<Carona>(
       context,
-      MaterialPageRoute(
-        builder: (_) => CorridaEmAndamentoTela(carona: carona),
-      ),
+      MaterialPageRoute(builder: (_) => CorridaEmAndamentoTela(carona: carona)),
     );
     if (!mounted || finalizada == null) return;
     setState(() => _caronaAtualizada = finalizada);
@@ -156,23 +158,16 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
             children: [
               const Text(
                 'Escolha o ponto de embarque',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 6),
-              const Text(
-                'Selecione um dos pontos cadastrados pelo motorista.',
-              ),
+              const Text('Selecione um dos pontos cadastrados pelo motorista.'),
               const SizedBox(height: 16),
 
               if (caronaAtual.pontosEmbarque.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 12),
-                  child: Text(
-                    'Nenhum ponto de embarque foi cadastrado.',
-                  ),
+                  child: Text('Nenhum ponto de embarque foi cadastrado.'),
                 )
               else
                 ...caronaAtual.pontosEmbarque.map(_itemPontoEmbarque),
@@ -181,12 +176,8 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
 
               ListTile(
                 contentPadding: EdgeInsets.zero,
-                leading: const Icon(
-                  Icons.add_location_alt_outlined,
-                ),
-                title: const Text(
-                  'Solicitar novo ponto de embarque',
-                ),
+                leading: const Icon(Icons.add_location_alt_outlined),
+                title: const Text('Solicitar novo ponto de embarque'),
                 subtitle: const Text(
                   'O motorista poderá aceitar ou recusar o novo local.',
                 ),
@@ -205,11 +196,7 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
     return ListTile(
       contentPadding: EdgeInsets.zero,
       leading: const Icon(Icons.location_on_outlined),
-      title: Text(
-        nome != null && nome.isNotEmpty
-            ? nome
-            : 'Ponto de embarque',
-      ),
+      title: Text(nome != null && nome.isNotEmpty ? nome : 'Ponto de embarque'),
       subtitle: Text(ponto.endereco),
       trailing: const Icon(Icons.chevron_right),
       onTap: () => Navigator.pop(context, ponto),
@@ -243,8 +230,8 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
   }
 
   Future<void> _enviarSolicitacao(
-      Future<Map<String, dynamic>> requisicao,
-      ) async {
+    Future<Map<String, dynamic>> requisicao,
+  ) async {
     setState(() {
       enviandoSolicitacao = true;
     });
@@ -310,9 +297,7 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
       excluindoCarona = true;
     });
 
-    final resultado = await CaronaService.excluirCarona(
-      caronaAtual.id,
-    );
+    final resultado = await CaronaService.excluirCarona(caronaAtual.id);
 
     if (!mounted) {
       return;
@@ -332,39 +317,47 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
   }
 
   void _mostrarMensagem(String mensagem) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensagem),
-      ),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(mensagem)));
   }
 
   @override
   Widget build(BuildContext context) {
+    final permiteAcoes = [
+      'ATIVA',
+      'LOTADA',
+      'EM_ANDAMENTO',
+    ].contains(caronaAtual.status);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: BarraSuperiorPadrao(
-        titulo: usuarioEhMotorista
+        titulo: usuarioEhMotorista && !widget.somenteConsulta
             ? 'Gerenciar carona'
             : 'Detalhes da carona',
       ),
       body: SafeArea(
         child: ConteudoDetalhesCarona(
           carona: caronaAtual,
-          rodape: usuarioEhMotorista
+          somenteConsulta: widget.somenteConsulta,
+          fotoMotorista: widget.fotoMotorista,
+          rodape: usuarioEhMotorista && !widget.somenteConsulta
               ? PainelSolicitacoesCarona(
-            idCarona: caronaAtual.id,
-            onSolicitacaoAceita: _atualizarCarona,
-          )
+                  idCarona: caronaAtual.id,
+                  onSolicitacaoAceita: _atualizarCarona,
+                )
               : null,
         ),
       ),
       bottomNavigationBar: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (usuarioEhMotorista && !caronaAtual.finalizada)
+          if (!widget.somenteConsulta && usuarioEhMotorista && permiteAcoes)
             _acoesGerenciamento()
-          else if (!usuarioEhMotorista && !caronaAtual.finalizada)
+          else if (!widget.somenteConsulta &&
+              !usuarioEhMotorista &&
+              permiteAcoes &&
+              widget.permitirSolicitacao)
             _botaoSolicitar(),
 
           BarraNavegacaoHome(
@@ -421,27 +414,25 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
             ],
             Row(
               children: [
-            Expanded(
-              child: OutlinedButton.icon(
-                onPressed: excluindoCarona
-                        || caronaAtual.emAndamento
-                    ? null
-                    : confirmarExclusao,
-                icon: const Icon(Icons.delete_outline),
-                label: const Text('EXCLUIR'),
-              ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: ElevatedButton.icon(
-                onPressed: excluindoCarona
-                        || caronaAtual.emAndamento
-                    ? null
-                    : editarCarona,
-                icon: const Icon(Icons.edit_outlined),
-                label: const Text('EDITAR'),
-              ),
-            ),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: excluindoCarona || caronaAtual.emAndamento
+                        ? null
+                        : confirmarExclusao,
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('EXCLUIR'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: excluindoCarona || caronaAtual.emAndamento
+                        ? null
+                        : editarCarona,
+                    icon: const Icon(Icons.edit_outlined),
+                    label: const Text('EDITAR'),
+                  ),
+                ),
               ],
             ),
           ],
@@ -465,23 +456,18 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
                 : solicitarVaga,
             icon: enviandoSolicitacao
                 ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-              ),
-            )
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
                 : Icon(
-              solicitacaoEnviada
-                  ? Icons.check_circle_outline
-                  : Icons.person_add_alt_1,
-            ),
+                    solicitacaoEnviada
+                        ? Icons.check_circle_outline
+                        : Icons.person_add_alt_1,
+                  ),
             label: Text(
-              solicitacaoEnviada
-                  ? 'SOLICITAÇÃO ENVIADA'
-                  : 'SOLICITAR VAGA',
+              solicitacaoEnviada ? 'SOLICITAÇÃO ENVIADA' : 'SOLICITAR VAGA',
             ),
-
           ),
         ),
       ),

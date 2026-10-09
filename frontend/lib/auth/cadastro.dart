@@ -23,7 +23,7 @@ class _CadastroTelaState extends State<CadastroTela> {
   bool carregando = false;
 
   Future<void> fazerCadastro() async {
-    if (nomeController.text.isEmpty) {
+    if (nomeController.text.trim().isEmpty) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Informe seu nome')));
@@ -82,8 +82,7 @@ class _CadastroTelaState extends State<CadastroTela> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            resultado['dados']['mensagem'] ??
-                'Cadastro realizado com sucesso',
+            resultado['dados']['mensagem'] ?? 'Cadastro realizado com sucesso',
           ),
         ),
       );
@@ -91,22 +90,16 @@ class _CadastroTelaState extends State<CadastroTela> {
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(
-          builder: (context) => ConfirmarEmailTela(
-            email: email,
-          ),
+          builder: (context) => ConfirmarEmailTela(email: email),
         ),
       );
 
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(
+    ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text(
-          resultado['mensagem']?.toString() ?? 'Erro ao cadastrar',
-        ),
+        content: Text(resultado['mensagem']?.toString() ?? 'Erro ao cadastrar'),
       ),
     );
   }
@@ -153,6 +146,7 @@ class _CadastroTelaState extends State<CadastroTela> {
                   hint: 'Nome',
                   icone: Icons.person,
                   controller: nomeController,
+                  textCapitalization: TextCapitalization.sentences,
                 ),
                 const SizedBox(height: 16),
                 AuthCampoTexto(

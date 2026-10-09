@@ -57,8 +57,7 @@ class SolicitacaoRecebida {
       id: converterJsonParaInt(json['id']),
       status: json['status']?.toString() ?? 'PENDENTE',
 
-      tipoPontoEmbarque:
-      json['tipoPontoEmbarque']?.toString() ?? 'EXISTENTE',
+      tipoPontoEmbarque: json['tipoPontoEmbarque']?.toString() ?? 'EXISTENTE',
 
       idPontoEmbarque: json['idPontoEmbarque'] == null
           ? null
@@ -66,13 +65,9 @@ class SolicitacaoRecebida {
 
       localEmbarque: json['localEmbarque']?.toString() ?? '',
 
-      embarqueLatitude: converterJsonParaDouble(
-        json['embarqueLatitude'],
-      ),
+      embarqueLatitude: converterJsonParaDouble(json['embarqueLatitude']),
 
-      embarqueLongitude: converterJsonParaDouble(
-        json['embarqueLongitude'],
-      ),
+      embarqueLongitude: converterJsonParaDouble(json['embarqueLongitude']),
 
       passageiro: passageiro['nome']?.toString() ?? 'Passageiro',
 
@@ -80,14 +75,11 @@ class SolicitacaoRecebida {
 
       destino: carona['destino']?.toString() ?? '',
 
-      dataInicio: DateTime.parse(
-        carona['dataInicio'].toString(),
-      ),
+      dataInicio: DateTime.parse(carona['dataInicio'].toString()),
 
       horario: carona['horario']?.toString() ?? '',
 
-      statusCarona:
-      carona['status']?.toString() ?? 'ATIVA',
+      statusCarona: carona['status']?.toString() ?? 'ATIVA',
 
       avaliada: json['avaliada'] == true,
 
@@ -101,30 +93,26 @@ class SolicitacaoRecebida {
     );
   }
 
-  String get dataFormatada =>
-      FormatadorData.relativa(dataInicio);
+  String get dataFormatada => FormatadorData.relativa(dataInicio);
 
-  String get horarioFormatado =>
-      DataHoraUtils.formatarHorarioTexto(horario);
+  String get horarioFormatado => DataHoraUtils.formatarHorarioTexto(horario);
 
-  bool get caronaFinalizada =>
-      statusCarona == 'FINALIZADA';
+  bool get caronaFinalizada => statusCarona == 'FINALIZADA';
 
-  bool get cancelada =>
-      status.startsWith('CANCELADA_');
+  bool get cancelada => status.startsWith('CANCELADA_');
+
+  bool get expirada => status == 'EXPIRADA' || statusCarona == 'EXPIRADA';
+
+  bool get arquivada =>
+      caronaFinalizada || cancelada || expirada || statusCarona == 'CANCELADA';
 
   String get statusExibicao =>
-      pagamentoConfirmado ? 'CONFIRMADA' : status;
+      expirada ? 'EXPIRADA' : (pagamentoConfirmado ? 'CONFIRMADA' : status);
 
   bool get podeCancelar =>
-      !caronaFinalizada &&
-          !cancelada &&
-          !pagamentoConfirmado &&
-          status == 'ACEITA';
+      !arquivada && !pagamentoConfirmado && status == 'ACEITA';
 
-  bool get pontoNovoSolicitado =>
-      tipoPontoEmbarque == 'NOVO_SOLICITADO';
+  bool get pontoNovoSolicitado => tipoPontoEmbarque == 'NOVO_SOLICITADO';
 
-  bool get pontoExistente =>
-      tipoPontoEmbarque == 'EXISTENTE';
+  bool get pontoExistente => tipoPontoEmbarque == 'EXISTENTE';
 }

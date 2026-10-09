@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/supabase_config.dart';
+import '../utils/normalizacao_nome.dart';
 
 class SupabaseAuthService {
   const SupabaseAuthService._();
@@ -69,7 +70,7 @@ class SupabaseAuthService {
     return _cliente.auth.signUp(
       email: email,
       password: senha,
-      data: {'nome': nome},
+      data: {'nome': normalizarNomeUsuario(nome)},
     );
   }
 

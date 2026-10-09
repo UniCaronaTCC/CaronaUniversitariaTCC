@@ -6,12 +6,14 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:uni_carona/services/auth_service.dart';
+import 'package:uni_carona/services/supabase_auth_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   late String mensagem;
   String? codigo;
+  Map<String, dynamic>? corpoCadastro;
 
   setUpAll(() async {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
@@ -24,11 +26,11 @@ void main() {
       publishableKey: 'chave-publica-teste',
       httpClient: MockClient((requisicao) async {
         expect(requisicao.url.host, 'supabase.example');
+        if (requisicao.url.path.endsWith('/signup')) {
+          corpoCadastro = jsonDecode(requisicao.body) as Map<String, dynamic>;
+        }
         return http.Response(
-          jsonEncode({
-            'msg': mensagem,
-            'code': codigo,
-          }),
+          jsonEncode({'msg': mensagem, 'code': codigo}),
           400,
           headers: {
             'content-type': 'application/json',
@@ -49,6 +51,7 @@ void main() {
 
   setUp(() {
     codigo = null;
+    corpoCadastro = null;
     AuthService.tokenUsuarioLogado = null;
     AuthService.usuarioLogado = null;
   });
@@ -131,4 +134,23 @@ void main() {
       'A senha não atende aos requisitos de segurança',
     );
   });
+
+  test(
+    'cadastro envia nome com inicial maiuscula sem alterar senha ou email',
+    () async {
+      codigo = 'weak_password';
+      mensagem = 'Password should contain at least 8 characters';
+      await expectLater(
+        SupabaseAuthService.cadastrar(
+          '  joão da Silva  ',
+          'joao@example.com',
+          'curta',
+        ),
+        throwsA(isA<AuthException>()),
+      );
+      expect(corpoCadastro!['data']['nome'], 'João da Silva');
+      expect(corpoCadastro!['email'], 'joao@example.com');
+      expect(corpoCadastro!['password'], 'curta');
+    },
+  );
 }

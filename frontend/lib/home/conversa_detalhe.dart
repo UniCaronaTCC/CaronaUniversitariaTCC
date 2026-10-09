@@ -1,18 +1,24 @@
 import 'dart:async';
+import 'dart:math' show max;
 
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/app_colors.dart';
+import '../models/carona.dart';
 import '../models/conversa.dart';
 import '../models/mensagem.dart';
 import '../services/auth_service.dart';
+import '../services/carona_service.dart';
 import '../services/mensagem_service.dart';
 import '../widgets/avatar_usuario.dart';
 import '../widgets/componentes_padrao.dart';
+import 'detalhes_carona.dart';
 
 typedef CarregarMensagens = Future<Map<String, dynamic>> Function();
 typedef EnviarMensagem = Future<Map<String, dynamic>> Function(String conteudo);
+typedef CarregarCaronaDoChat =
+    Future<Map<String, dynamic>> Function(int idCarona);
 
 class ConversaDetalheTela extends StatefulWidget {
   final Conversa conversa;
@@ -20,6 +26,7 @@ class ConversaDetalheTela extends StatefulWidget {
   final CarregarMensagens? carregarMensagens;
   final EnviarMensagem? enviarMensagem;
   final bool usarRealtime;
+  final CarregarCaronaDoChat? carregarCarona;
 
   const ConversaDetalheTela({
     super.key,
@@ -28,6 +35,7 @@ class ConversaDetalheTela extends StatefulWidget {
     this.carregarMensagens,
     this.enviarMensagem,
     this.usarRealtime = true,
+    this.carregarCarona,
   });
 
   @override
@@ -49,6 +57,53 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
   Timer? atualizacaoEstado;
   bool consultando = false;
   bool emPrimeiroPlano = true;
+  bool carregandoCarona = false;
+
+  Future<void> abrirDetalhesCarona() async {
+    if (carregandoCarona) return;
+    setState(() => carregandoCarona = true);
+    Map<String, dynamic> resultado;
+    try {
+      resultado =
+          await (widget.carregarCarona?.call(widget.conversa.idCarona) ??
+                  CaronaService.buscarDetalhesCarona(widget.conversa.idCarona))
+              .timeout(const Duration(seconds: 15));
+    } catch (_) {
+      resultado = {
+        'sucesso': false,
+        'mensagem': 'Não foi possível carregar a carona. Tente novamente.',
+      };
+    }
+    if (!mounted) return;
+    setState(() => carregandoCarona = false);
+    final carona = resultado['dados'];
+    if (resultado['sucesso'] != true ||
+        carona is! Carona ||
+        carona.id != widget.conversa.idCarona) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            resultado['mensagem']?.toString() ??
+                'Não foi possível carregar a carona',
+          ),
+        ),
+      );
+      return;
+    }
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DetalhesCaronaTela(
+          carona: carona,
+          indiceNavegacaoOrigem: 1,
+          permitirSolicitacao: false,
+          somenteConsulta: true,
+          fotoMotorista: widget.conversa.fotoMotorista,
+        ),
+      ),
+    );
+    if (mounted) await carregarDados(silencioso: true);
+  }
 
   int get idUsuarioAtual {
     if (widget.idUsuario != null) {
@@ -323,47 +378,70 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
+        toolbarHeight: max(
+          kToolbarHeight,
+          MediaQuery.textScalerOf(context).scale(36) + 20,
+        ),
         backgroundColor: AppColors.background,
         foregroundColor: AppColors.text,
         elevation: 0,
         titleSpacing: 0,
-        title: Row(
-          children: [
-            AvatarUsuario(
-              key: const ValueKey('avatar-cabecalho-conversa'),
-              nome: nome,
-              urlFoto: foto,
-              raio: 18,
-              desativado: encerrada,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+        title: Tooltip(
+          message: 'Ver detalhes da carona',
+          child: InkWell(
+            key: const ValueKey('cabecalho-detalhes-carona'),
+            onTap: carregandoCarona ? null : abrirDetalhesCarona,
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+              child: Row(
                 children: [
-                  Text(
-                    nome,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      fontSize: 17,
-                      fontWeight: FontWeight.w600,
+                  AvatarUsuario(
+                    key: const ValueKey('avatar-cabecalho-conversa'),
+                    nome: nome,
+                    urlFoto: foto,
+                    raio: 18,
+                    desativado: encerrada,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          nome,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 17,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          widget.conversa.destino,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.black54,
+                            fontSize: 12,
+                            fontWeight: FontWeight.normal,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  Text(
-                    widget.conversa.destino,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
-                      color: Colors.black54,
-                      fontSize: 12,
-                      fontWeight: FontWeight.normal,
-                    ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: carregandoCarona
+                        ? const CircularProgressIndicator(strokeWidth: 2)
+                        : const Icon(Icons.chevron_right, size: 20),
                   ),
                 ],
               ),
             ),
-          ],
+          ),
         ),
       ),
       body: SafeArea(

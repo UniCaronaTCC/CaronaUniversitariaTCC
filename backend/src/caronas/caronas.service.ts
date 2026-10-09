@@ -428,6 +428,30 @@ export class CaronasService {
       .getMany();
   }
 
+  async buscarDetalhesCarona(
+    idCarona: number,
+    idUsuario: number,
+  ): Promise<Carona> {
+    await this.finalizarCaronasVencidas();
+    const carona = await this.caronasRepository.findOne({
+      where: { idCarona },
+      relations: { usuario: { veiculo: true }, pontosEmbarque: true },
+    });
+
+    if (!carona) throw new NotFoundException('Carona não encontrada');
+
+    if (carona.usuario.idUsuario !== idUsuario) {
+      const vinculado = await this.solicitacoesRepository.exists({
+        where: { carona: { idCarona }, passageiro: { idUsuario } },
+      });
+      if (!vinculado) throw new NotFoundException('Carona não encontrada');
+    }
+
+    carona.pontosEmbarque ??= [];
+    carona.pontosEmbarque.sort((a, b) => a.ordem - b.ordem);
+    return carona;
+  }
+
   private async buscarCaronaDoUsuario(
     idCarona: number,
     idUsuario: number,

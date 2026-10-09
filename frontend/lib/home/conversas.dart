@@ -47,7 +47,7 @@ class _ConversasTelaState extends State<ConversasTela>
     final instante = agora;
     final prazos =
         conversas
-            .where((conversa) => conversa.encerrada)
+            .where((conversa) => conversa.encerrada && !conversa.expirada)
             .map((conversa) => conversa.arquivarEm)
             .whereType<DateTime>()
             .where((prazo) => prazo.isAfter(instante))

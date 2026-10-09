@@ -5,12 +5,21 @@ import '../mapa/widgets/mapa_rota_carona.dart';
 import '../models/carona.dart';
 import '../models/ponto_embarque.dart';
 import '../utils/formatador_data.dart';
+import 'avatar_usuario.dart';
 
 class ConteudoDetalhesCarona extends StatelessWidget {
   final Carona carona;
   final Widget? rodape;
+  final bool somenteConsulta;
+  final String? fotoMotorista;
 
-  const ConteudoDetalhesCarona({super.key, required this.carona, this.rodape});
+  const ConteudoDetalhesCarona({
+    super.key,
+    required this.carona,
+    this.rodape,
+    this.somenteConsulta = false,
+    this.fotoMotorista,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -21,110 +30,85 @@ class ConteudoDetalhesCarona extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(
-                Icons.directions_car_outlined,
-                color: AppColors.primary,
-                size: 30,
+              AvatarUsuario(
+                nome: carona.motorista,
+                urlFoto: fotoMotorista,
+                raio: 22,
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: Text(
-                  carona.motorista,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: AppColors.text,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-              ),
-              Text(
-                carona.valorFormatado,
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Motorista',
+                      style: TextStyle(color: Colors.black54, fontSize: 13),
+                    ),
+                    const SizedBox(height: 3),
+                    Text(
+                      carona.motorista,
+                      style: const TextStyle(
+                        color: AppColors.text,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
 
-          if (carona.status != 'ATIVA') ...[
-            const SizedBox(height: 12),
-            Text(
-              carona.status,
-              style: const TextStyle(
-                color: Colors.black54,
-                fontSize: 13,
-                fontWeight: FontWeight.bold,
+          const SizedBox(height: 12),
+          Text(
+            _textoStatus(),
+            style: const TextStyle(
+              color: Colors.black54,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const Divider(height: 32),
+          Wrap(
+            spacing: 24,
+            runSpacing: 20,
+            children: [
+              SizedBox(
+                width: 150,
+                child: _SecaoDetalhe(
+                  titulo: 'Data e horário',
+                  icone: Icons.access_time,
+                  conteudo: '${_textoData()}\n${carona.horarioFormatado}',
+                ),
               ),
-            ),
-          ],
-
-          const SizedBox(height: 32),
-
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                const Icon(
-                  Icons.access_time,
-                  color: AppColors.primary,
-                  size: 34,
+              SizedBox(
+                width: 150,
+                child: _SecaoDetalhe(
+                  titulo: 'Valor por passageiro',
+                  icone: Icons.payments_outlined,
+                  conteudo: carona.valorFormatado,
                 ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        carona.horarioFormatado,
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _textoData(),
-                        style: const TextStyle(
-                          color: AppColors.text,
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-
-          const SizedBox(height: 30),
-
-          _SecaoDetalhe(
-            titulo: 'Destino',
-            icone: Icons.location_on_outlined,
-            conteudo: carona.destino,
-          ),
-
+          const Divider(height: 32),
           if (carona.origem.trim().isNotEmpty) ...[
-            const SizedBox(height: 22),
             _SecaoDetalhe(
               titulo: 'Origem',
               icone: Icons.trip_origin,
               conteudo: carona.origem.trim(),
             ),
-          ],
-
-          if (carona.veiculoModelo?.trim().isNotEmpty == true) ...[
             const SizedBox(height: 22),
+          ],
+          _SecaoPontosEmbarque(pontos: carona.pontosEmbarque),
+          const SizedBox(height: 22),
+          _SecaoDetalhe(
+            titulo: 'Destino',
+            icone: Icons.location_on_outlined,
+            conteudo: carona.destino,
+          ),
+          const Divider(height: 32),
+          if (carona.veiculoModelo?.trim().isNotEmpty == true) ...[
             _SecaoDetalhe(
               titulo: 'Veículo',
               icone: Icons.directions_car_outlined,
@@ -138,17 +122,15 @@ class ConteudoDetalhesCarona extends StatelessWidget {
             ),
           ],
 
-          const SizedBox(height: 22),
-
-          _SecaoPontosEmbarque(pontos: carona.pontosEmbarque),
-
-          const SizedBox(height: 22),
-
-          _SecaoDetalhe(
-            titulo: 'Vagas disponíveis',
-            icone: Icons.people_outline,
-            conteudo: '${carona.vagas} vagas',
-          ),
+          if (!somenteConsulta &&
+              ['ATIVA', 'LOTADA'].contains(carona.status)) ...[
+            const SizedBox(height: 22),
+            _SecaoDetalhe(
+              titulo: 'Vagas disponíveis',
+              icone: Icons.people_outline,
+              conteudo: '${carona.vagas} vagas',
+            ),
+          ],
 
           if (carona.recorrente) ...[
             const SizedBox(height: 22),
@@ -178,11 +160,19 @@ class ConteudoDetalhesCarona extends StatelessWidget {
   }
 
   String _textoData() {
-    if (carona.recorrente && carona.diasSemana.isNotEmpty) {
-      return carona.diasSemana.join(', ');
-    }
+    return '${FormatadorData.completa(carona.dataInicio)}/${carona.dataInicio.year}';
+  }
 
-    return carona.dataFormatada;
+  String _textoStatus() {
+    return switch (carona.status) {
+      'ATIVA' => 'Carona agendada',
+      'LOTADA' => 'Carona lotada',
+      'EM_ANDAMENTO' => 'Carona em andamento',
+      'FINALIZADA' => 'Carona finalizada',
+      'CANCELADA' => 'Carona cancelada',
+      'EXPIRADA' => 'Carona expirada',
+      _ => 'Carona encerrada',
+    };
   }
 
   String _textoRecorrencia() {

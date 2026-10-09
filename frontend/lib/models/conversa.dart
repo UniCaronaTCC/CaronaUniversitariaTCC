@@ -95,8 +95,11 @@ class Conversa {
 
   DateTime? get arquivarEm => encerradaEm?.add(const Duration(hours: 24));
 
+  bool get expirada => status == 'EXPIRADA' || statusCarona == 'EXPIRADA';
+
   bool deveArquivar(DateTime agora) =>
-      encerrada && arquivarEm != null && !arquivarEm!.isAfter(agora);
+      encerrada &&
+      (expirada || (arquivarEm != null && !arquivarEm!.isAfter(agora)));
 
   String nomeOutroParticipante(int idUsuarioAtual) {
     return idUsuarioAtual == idPassageiro ? motorista : passageiro;

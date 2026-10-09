@@ -125,16 +125,10 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela>
     setState(() {
       carregando = false;
       solicitacoesRecebidas = recebidas
-          .where(
-            (solicitacao) =>
-                !solicitacao.caronaFinalizada && !solicitacao.cancelada,
-          )
+          .where((solicitacao) => !solicitacao.arquivada)
           .toList();
       solicitacoesEnviadas = enviadas
-          .where(
-            (solicitacao) =>
-                !solicitacao.caronaFinalizada && !solicitacao.cancelada,
-          )
+          .where((solicitacao) => !solicitacao.arquivada)
           .toList();
     });
   }

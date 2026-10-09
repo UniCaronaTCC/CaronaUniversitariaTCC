@@ -24,6 +24,25 @@ Map<String, dynamic> conversaJson(
 };
 
 void main() {
+  test('arquiva chat de solicitacao expirada sem aguardar 24h ou horario', () {
+    final agora = DateTime.utc(2026, 10, 8, 12);
+    final json = conversaJson('ATIVA')..['status'] = 'EXPIRADA';
+    final conversa = Conversa.fromJson(json);
+    expect(conversa.encerrada, isTrue);
+    expect(conversa.deveArquivar(agora), isTrue);
+    json['encerradaEm'] = agora.toIso8601String();
+    expect(Conversa.fromJson(json).deveArquivar(agora), isTrue);
+  });
+
+  test('arquiva imediatamente quando a propria carona esta expirada', () {
+    expect(
+      Conversa.fromJson(
+        conversaJson('EXPIRADA'),
+      ).deveArquivar(DateTime.utc(2026, 10, 8)),
+      isTrue,
+    );
+  });
+
   test('arquiva somente apos 24 horas completas do encerramento', () {
     final json = conversaJson('FINALIZADA')
       ..['criadoEm'] = '2026-01-01T12:00:00Z'

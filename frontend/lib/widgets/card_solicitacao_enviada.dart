@@ -26,9 +26,7 @@ class CardSolicitacaoEnviada extends StatelessWidget {
   Widget build(BuildContext context) {
     return Material(
       key: ValueKey('card-pedido-${solicitacao.id}'),
-      color: solicitacao.caronaFinalizada || solicitacao.cancelada
-          ? const Color(0xFFF1F1F1)
-          : Colors.white,
+      color: solicitacao.arquivada ? const Color(0xFFF1F1F1) : Colors.white,
       borderRadius: BorderRadius.circular(8),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -66,7 +64,9 @@ class CardSolicitacaoEnviada extends StatelessWidget {
             Align(
               alignment: Alignment.centerRight,
               child: StatusSolicitacao(
-                status: solicitacao.caronaFinalizada
+                status: solicitacao.expirada
+                    ? 'EXPIRADA'
+                    : solicitacao.caronaFinalizada
                     ? 'FINALIZADA'
                     : solicitacao.statusExibicao,
               ),
