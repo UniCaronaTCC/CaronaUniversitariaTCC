@@ -18,6 +18,16 @@ Logs contem apenas etapas, codigo de recusa e duracao, nunca texto do OCR,
 nome, CPF ou fotos. O app exibe a mensagem da resposta. O motivo nao e salvo
 no banco; ao reabrir o perfil, apenas o status permanece disponivel.
 
+CPF tolera espacos e pontuacao, mas continua exigindo 11 digitos e checksum
+valido. Registro tolera espacos e exige exatamente 11 digitos. Validade aceita
+DD/MM/AAAA ou DD.MM.AAAA, com espacos junto aos separadores, validando calendario
+e vencimento. Nao ha substituicao de letras por numeros.
+
+Campos numericos e categoria devem ter valor inteiro na mesma linha do rotulo
+ou na linha seguinte. Rotulos repetidos, texto de outro campo, mais de uma data
+ou continuacao numerica ambigua sao recusados. O parser textual nao deduz a
+posicao das colunas; layouts com campos misturados podem exigir nova captura.
+
 O Flutter envia as duas imagens e `aceitePrivacidade=true` para
 `POST /usuarios/cnh/verificar` com o token da sessao. O backend confere os dados
 por OCR, grava APROVADA ou RECUSADA e descarta as imagens. O app atualiza o perfil.

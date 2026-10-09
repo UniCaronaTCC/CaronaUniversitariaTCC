@@ -16,7 +16,8 @@ export const motivosCnh = {
   CATEGORIA_NAO_LIDA: 'Não conseguimos ler a categoria da CNH.',
   CATEGORIA_INCOMPATIVEL:
     'A categoria lida não permite dirigir automóveis. Confira a foto da categoria.',
-  VALIDADE_NAO_LIDA: 'Não conseguimos ler uma data de validade válida na CNH.',
+  VALIDADE_NAO_LIDA:
+    'Não conseguimos identificar com segurança a validade da CNH. Fotografe o campo de validade com nitidez.',
   CNH_VENCIDA:
     'A data de validade lida está vencida. Confira a validade e a foto.',
   REGISTRO_NAO_LIDO: 'Não conseguimos ler o número de registro da CNH.',
@@ -51,18 +52,28 @@ function campoAposRotulo(
   rotulo: RegExp,
   valor: RegExp,
 ): string | null {
+  const campos: string[] = [];
   for (let indice = 0; indice < linhas.length; indice++) {
     const encontrado = rotulo.exec(linhas[indice]);
     if (!encontrado) continue;
 
-    const restante = linhas[indice].slice(
-      encontrado.index + encontrado[0].length,
-    );
-    const contexto = `${restante} ${linhas[indice + 1] ?? ''}`;
+    // Não deduzimos colunas a partir do texto: outro rótulo antes deste
+    // torna a associação ambígua. Aceita apenas numeração/prefixo do campo.
+    const prefixo = linhas[indice].slice(0, encontrado.index).trim();
+    if (!/^(?:N[O.]?\s*)?(?:\d{1,2}[A-E]?\s*)?$/.test(prefixo)) return null;
+    const restante = linhas[indice]
+      .slice(encontrado.index + encontrado[0].length)
+      .trim();
+    const indiceValor = restante ? indice : indice + 1;
+    const contexto = restante || linhas[indiceValor] || '';
+    // A expressão deve casar com o valor inteiro, nunca com um trecho
+    // de outro campo. Mais uma linha numérica também exige nova captura.
     const resultado = valor.exec(contexto);
-    if (resultado) return resultado[1];
+    if (!resultado || /^[\d\s/.-]+$/.test(linhas[indiceValor + 1] ?? ''))
+      return null;
+    campos.push(resultado[1]);
   }
-  return null;
+  return campos.length === 1 ? campos[0] : null;
 }
 
 function cpfValido(cpf: string): boolean {
@@ -81,7 +92,7 @@ function cpfValido(cpf: string): boolean {
 }
 
 function dataIso(valor: string): string | null {
-  const [dia, mes, ano] = valor.split('/').map(Number);
+  const [dia, mes, ano] = valor.split(/[/.]/).map(Number);
   const data = new Date(Date.UTC(ano, mes - 1, dia));
   if (
     data.getUTCFullYear() !== ano ||
@@ -132,11 +143,7 @@ export function conferirDadosCnh(
     return { dados: null, motivo: 'NOME_DIVERGENTE' };
   }
 
-  const cpfLido = campoAposRotulo(
-    linhas,
-    /\bCPF\b/,
-    /\b(\d{3}[. ]?\d{3}[. ]?\d{3}[- ]?\d{2})\b/,
-  );
+  const cpfLido = campoAposRotulo(linhas, /\bCPF\b/, /^(\d[\d .-]*\d)$/);
   const cpf = cpfLido?.replace(/\D/g, '') ?? '';
   if (!cpfLido) return { dados: null, motivo: 'CPF_NAO_LIDO' };
   if (!cpfValido(cpf)) return { dados: null, motivo: 'CPF_INVALIDO' };
@@ -144,7 +151,7 @@ export function conferirDadosCnh(
   const categoria = campoAposRotulo(
     linhas,
     /\b(?:CATEGORIA|CAT\.?\s*HAB\.?)(?=\s|$)/,
-    /\b(A?[BCDE]|A|ACC)\b/,
+    /^(A?[BCDE]|A|ACC)$/,
   );
   if (!categoria) return { dados: null, motivo: 'CATEGORIA_NAO_LIDA' };
   if (!/^A?[BCDE]$/.test(categoria))
@@ -153,13 +160,17 @@ export function conferirDadosCnh(
   const validadeLida = campoAposRotulo(
     linhas,
     /\bVALIDADE\b/,
-    /\b(\d{2}\/\d{2}\/\d{4})\b/,
+    /^(\d{2}\s*([/.])\s*\d{2}\s*\2\s*\d{4})$/,
   );
   const validade = validadeLida ? dataIso(validadeLida) : null;
   if (!validade) return { dados: null, motivo: 'VALIDADE_NAO_LIDA' };
   if (validade < hoje) return { dados: null, motivo: 'CNH_VENCIDA' };
 
-  const registro = campoAposRotulo(linhas, /\bREGISTRO\b/, /\b(\d{11})\b/);
+  const registro = campoAposRotulo(
+    linhas,
+    /\bREGISTRO\b/,
+    /^(\d(?:\s*\d){10})$/,
+  )?.replace(/\s/g, '');
   if (!registro) return { dados: null, motivo: 'REGISTRO_NAO_LIDO' };
 
   return {
