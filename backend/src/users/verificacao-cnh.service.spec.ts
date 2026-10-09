@@ -1,4 +1,8 @@
-import { ConflictException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  ConflictException,
+  ServiceUnavailableException,
+  Logger,
+} from '@nestjs/common';
 import { QueryFailedError, Repository } from 'typeorm';
 
 import { LeituraCnhService } from './leitura-cnh.service';
@@ -38,6 +42,49 @@ describe('VerificacaoCnhService', () => {
 
   it('usa o dia local de São Paulo', () => {
     expect(hojeEmSaoPaulo(new Date('2026-10-07T02:30:00Z'))).toBe('2026-10-06');
+  });
+
+  it('registra diagnóstico sem nome, CPF, OCR ou buffers e sem mudar a resposta', async () => {
+    const logs: unknown[] = [];
+    const log = jest
+      .spyOn(Logger.prototype, 'log')
+      .mockImplementation((mensagem: unknown) => {
+        logs.push(mensagem);
+      });
+    const warn = jest
+      .spyOn(Logger.prototype, 'warn')
+      .mockImplementation((mensagem: unknown) => {
+        logs.push(mensagem);
+      });
+    try {
+      leitura.ler.mockResolvedValue(
+        texto.replace('NOME JOAO PEDRO DA SILVA', 'NOME 1 JOAO PEDRO DA SILVA'),
+      );
+      const resposta = await service.verificar(
+        1,
+        frente,
+        verso,
+        'João Pedro da Silva',
+      );
+      expect(resposta).toEqual({ status: 'RECUSADA', motivo: 'NOME_NAO_LIDO' });
+      expect(logs).toContain(
+        'CNH: diagnostico_nome {"titulosEncontrados":1,"linhasAceitas":0,"parada":"DIGITOS_NA_LINHA","resultado":"NAO_EXTRAIDO"}',
+      );
+      const serializado = JSON.stringify(logs);
+      for (const dado of [
+        'JOAO PEDRO',
+        'João Pedro',
+        '529.982',
+        '12345678901',
+        'frente',
+        'verso',
+      ]) {
+        expect(serializado).not.toContain(dado);
+      }
+    } finally {
+      log.mockRestore();
+      warn.mockRestore();
+    }
   });
 
   it('aprova e persiste apenas os campos definidos', async () => {

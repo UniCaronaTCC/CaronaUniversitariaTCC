@@ -54,7 +54,17 @@ export class VerificacaoCnhService {
       this.logger.log('CNH: iniciando leitura das fotos');
       const texto = await this.leitura.ler(frente, verso);
       this.logger.log('CNH: leitura concluída, conferindo campos');
-      const conferencia = conferirDadosCnh(texto, nomeCompleto, hoje);
+      const conferencia = conferirDadosCnh(
+        texto,
+        nomeCompleto,
+        hoje,
+        (diagnostico) => {
+          // Somente códigos fixos e contagens, nunca o texto do documento.
+          this.logger.log(
+            `CNH: diagnostico_nome ${JSON.stringify(diagnostico)}`,
+          );
+        },
+      );
       const dados = conferencia.dados;
       const privacidadeAceitaEm = new Date();
 

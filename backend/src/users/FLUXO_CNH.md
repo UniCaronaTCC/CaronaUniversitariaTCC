@@ -14,9 +14,19 @@ Atualizar backend e app juntos; clientes antigos recebem orientacao para
 atualizar. A conferencia continua sem comprovar titularidade ou autenticidade.
 
 Recusas retornam `dados.motivo` e uma `mensagem` especifica para o campo.
-Logs contem apenas etapas, codigo de recusa e duracao, nunca texto do OCR,
+Logs contem apenas etapas, codigos, contagens e duracao, nunca texto do OCR,
 nome, CPF ou fotos. O app exibe a mensagem da resposta. O motivo nao e salvo
 no banco; ao reabrir o perfil, apenas o status permanece disponivel.
+
+O log `CNH: diagnostico_nome` mostra quantos titulos de nome foram encontrados,
+quantas linhas foram aceitas, onde a extracao parou e se o nome corresponde.
+`TITULO_AUSENTE`, `DIGITOS_NA_LINHA` e `FORMATO_NAO_RECONHECIDO` ajudam a
+localizar falhas de leitura. `OUTRO_CAMPO` pode ser uma parada normal depois
+do nome; confira tambem `resultado` (`NAO_EXTRAIDO`, `DIVERGENTE` ou
+`CORRESPONDE`). Esses indicadores descrevem o texto lido, nao a qualidade real
+da foto. Nao alteram as regras de aprovacao nem sao enviados ao aplicativo.
+Para investigar no Render, publique o backend atualizado, repita uma tentativa
+e procure essa linha nos logs. Esta melhoria nao exige alteracao no banco.
 
 CPF tolera espacos e pontuacao, mas continua exigindo 11 digitos e checksum
 valido. Registro tolera espacos e exige exatamente 11 digitos. Validade aceita

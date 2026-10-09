@@ -94,6 +94,54 @@ describe('extração de dados da CNH', () => {
     expect(nomeCompletoValido('João D’Ávila')).toBe(true);
   });
 
+  it('reconhece o título 2 e 1 NOME E SOBRENOME sem depender de maiúsculas', () => {
+    const diagnostico = jest.fn();
+    const leitura = texto.replace('NOME E SOBRENOME', '2 e 1 NOME E SOBRENOME');
+    expect(
+      conferirDadosCnh(leitura, 'joão pedro da silva', hoje, diagnostico).dados,
+    ).not.toBeNull();
+    expect(diagnostico).toHaveBeenCalledWith({
+      titulosEncontrados: 1,
+      linhasAceitas: 1,
+      parada: 'OUTRO_CAMPO',
+      resultado: 'CORRESPONDE',
+    });
+  });
+
+  it.each([
+    ['JOAO PEDRO DA SILVA', 'TITULO_AUSENTE', 0, 'NAO_EXTRAIDO'],
+    ['NOME\n1 JOAO PEDRO DA SILVA', 'DIGITOS_NA_LINHA', 0, 'NAO_EXTRAIDO'],
+    ['NOME JOAO PEDRO DA SILVA CPF', 'OUTRO_CAMPO', 0, 'NAO_EXTRAIDO'],
+    [
+      'NOME E SOBRENOME / NAME AND SURNAME\nJOAO PEDRO DA SILVA',
+      'FORMATO_NAO_RECONHECIDO',
+      0,
+      'NAO_EXTRAIDO',
+    ],
+    ['NOME\nMARIA SILVA', 'FIM_DA_LEITURA', 1, 'DIVERGENTE'],
+    ['NOME', 'FIM_DA_LEITURA', 0, 'NAO_EXTRAIDO'],
+  ])(
+    'diagnostica a estrutura sem retornar texto: %s',
+    (leitura, parada, linhasAceitas, resultado) => {
+      const diagnostico = jest.fn();
+      const semDiagnostico = conferirDadosCnh(
+        leitura,
+        'João Pedro da Silva',
+        hoje,
+      );
+      expect(
+        conferirDadosCnh(leitura, 'João Pedro da Silva', hoje, diagnostico),
+      ).toEqual(semDiagnostico);
+      expect(diagnostico).toHaveBeenCalledTimes(1);
+      expect(diagnostico).toHaveBeenCalledWith({
+        titulosEncontrados: leitura.includes('NOME') ? 1 : 0,
+        linhasAceitas,
+        parada,
+        resultado,
+      });
+    },
+  );
+
   it.each(['529.982 .247-25', '529 . 982 . 247 - 25', '529 982 247 25'])(
     'tolera espaços no CPF %s',
     (cpf) => {

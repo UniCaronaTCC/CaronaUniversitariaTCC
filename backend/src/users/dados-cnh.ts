@@ -27,6 +27,19 @@ type ConferenciaCnh =
   | { dados: DadosCnh; motivo?: never }
   | { dados: null; motivo: keyof typeof motivosCnh };
 
+export interface DiagnosticoNomeCnh {
+  titulosEncontrados: number;
+  linhasAceitas: number;
+  parada:
+    | 'TITULO_AUSENTE'
+    | 'FIM_DA_LEITURA'
+    | 'OUTRO_CAMPO'
+    | 'DIGITOS_NA_LINHA'
+    | 'FORMATO_NAO_RECONHECIDO'
+    | 'LIMITE_DE_LINHAS';
+  resultado: 'NAO_EXTRAIDO' | 'DIVERGENTE' | 'CORRESPONDE';
+}
+
 export function nomeCompletoValido(nome: unknown): nome is string {
   return (
     typeof nome === 'string' &&
@@ -108,6 +121,7 @@ export function conferirDadosCnh(
   texto: string,
   nomeUsuario: string,
   hoje: string,
+  diagnosticarNome?: (diagnostico: DiagnosticoNomeCnh) => void,
 ): ConferenciaCnh {
   const linhas = texto.split(/\r?\n/).map(normalizar).filter(Boolean);
 
@@ -117,7 +131,13 @@ export function conferirDadosCnh(
     /\bNOME(?: E SOBRENOME)?\b/.test(linha),
   );
   const partes: string[] = [];
+  const titulosEncontrados = linhas.filter((linha) =>
+    /\bNOME(?: E SOBRENOME)?\b/.test(linha),
+  ).length;
+  let parada: DiagnosticoNomeCnh['parada'] = 'TITULO_AUSENTE';
   if (indiceNome >= 0) {
+    parada =
+      linhas.length > indiceNome + 4 ? 'LIMITE_DE_LINHAS' : 'FIM_DA_LEITURA';
     const primeira = linhas[indiceNome]
       .replace(/^.*?\bNOME(?: E SOBRENOME)?\b/, '')
       .trim();
@@ -130,14 +150,31 @@ export function conferirDadosCnh(
       if (
         /\b(CPF|REGISTRO|VALIDADE|CATEGORIA|CAT|FILIACAO|NASCIMENTO|DATA|DOC|IDENTIDADE|ASSINATURA|NACIONALIDADE|PERMISSAO)\b/.test(
           linha,
-        ) ||
-        !/^[A-Z]+(?:[.'’\- ]+[A-Z]+)*$/.test(linha)
-      )
+        )
+      ) {
+        parada = 'OUTRO_CAMPO';
         break;
+      }
+      if (!/^[A-Z]+(?:[.'’\- ]+[A-Z]+)*$/.test(linha)) {
+        parada = /\d/.test(linha)
+          ? 'DIGITOS_NA_LINHA'
+          : 'FORMATO_NAO_RECONHECIDO';
+        break;
+      }
       partes.push(linha);
     }
   }
   const nomeDocumento = partes.join(' ');
+  diagnosticarNome?.({
+    titulosEncontrados,
+    linhasAceitas: partes.length,
+    parada,
+    resultado: !nomeDocumento
+      ? 'NAO_EXTRAIDO'
+      : nomeCompletoValido(nomeUsuario) && nomeDocumento === nome
+        ? 'CORRESPONDE'
+        : 'DIVERGENTE',
+  });
   if (!nomeDocumento) return { dados: null, motivo: 'NOME_NAO_LIDO' };
   if (!nomeCompletoValido(nomeUsuario) || nomeDocumento !== nome) {
     return { dados: null, motivo: 'NOME_DIVERGENTE' };
