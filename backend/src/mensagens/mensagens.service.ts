@@ -8,8 +8,10 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { IsNull, LessThan, Not, Repository } from 'typeorm';
 
 import { Solicitacao } from '../solicitacoes/solicitacao.entity';
+import { CaronasService } from '../caronas/caronas.service';
 import { Conversa } from './conversa.entity';
 import { Mensagem } from './mensagem.entity';
+import { conversaEncerrada } from './estado-conversa';
 
 @Injectable()
 export class MensagensService {
@@ -20,12 +22,14 @@ export class MensagensService {
     private readonly mensagensRepository: Repository<Mensagem>,
     @InjectRepository(Solicitacao)
     private readonly solicitacoesRepository: Repository<Solicitacao>,
+    private readonly caronasService: CaronasService,
   ) {}
 
   async obterOuCriarConversa(
     idSolicitacao: number,
     idUsuario: number,
   ): Promise<Conversa> {
+    await this.caronasService.finalizarCaronasVencidas();
     const existente = await this.buscarPorSolicitacao(idSolicitacao);
 
     if (existente) {
@@ -53,6 +57,13 @@ export class MensagensService {
       );
     }
 
+    if (conversaEncerrada(solicitacao)) {
+      throw new ConflictException({
+        message: 'Esta conversa está encerrada',
+        codigo: 'CONVERSA_ENCERRADA',
+      });
+    }
+
     const conversa = this.conversasRepository.create({ solicitacao });
 
     try {
@@ -70,6 +81,7 @@ export class MensagensService {
   }
 
   async listarConversas(idUsuario: number) {
+    await this.caronasService.finalizarCaronasVencidas();
     const conversas = await this.conversasRepository
       .createQueryBuilder('conversa')
       .innerJoinAndSelect('conversa.solicitacao', 'solicitacao')
@@ -120,8 +132,8 @@ export class MensagensService {
     idConversa: number,
     idUsuario: number,
     antesDe?: number,
-  ): Promise<Mensagem[]> {
-    await this.buscarConversaPermitida(idConversa, idUsuario);
+  ): Promise<{ conversa: Conversa; mensagens: Mensagem[] }> {
+    const conversa = await this.buscarConversaPermitida(idConversa, idUsuario);
 
     await this.mensagensRepository
       .createQueryBuilder()
@@ -142,7 +154,7 @@ export class MensagensService {
       take: 50,
     });
 
-    return mensagens.reverse();
+    return { conversa, mensagens: mensagens.reverse() };
   }
 
   contarMensagensNaoLidas(idUsuario: number): Promise<number> {
@@ -169,8 +181,11 @@ export class MensagensService {
   ): Promise<Mensagem> {
     const conversa = await this.buscarConversaPermitida(idConversa, idUsuario);
 
-    if (conversa.solicitacao.status !== 'ACEITA') {
-      throw new ConflictException('Esta conversa está encerrada');
+    if (conversaEncerrada(conversa.solicitacao)) {
+      throw new ConflictException({
+        message: 'Esta conversa está encerrada',
+        codigo: 'CONVERSA_ENCERRADA',
+      });
     }
 
     const texto = conteudo.trim();
@@ -206,6 +221,7 @@ export class MensagensService {
     idConversa: number,
     idUsuario: number,
   ): Promise<Conversa> {
+    await this.caronasService.finalizarCaronasVencidas();
     const conversa = await this.conversasRepository.findOne({
       where: { idConversa },
       relations: {

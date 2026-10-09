@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -9,6 +10,7 @@ import { QueryFailedError, Repository } from 'typeorm';
 import { InstituicoesService } from '../instituicoes/instituicoes.service';
 import { User } from './user.entity';
 import { Veiculo } from './veiculo.entity';
+import { cnhPermiteOferecerCarona, hojeEmSaoPaulo } from './verificacao-cnh';
 
 @Injectable()
 export class UsersService {
@@ -30,6 +32,16 @@ export class UsersService {
     return this.usersRepository.findOne({
       where: { authId },
     });
+  }
+
+  async exigirCnhParaOferecerCarona(idUsuario: number): Promise<void> {
+    const usuario = await this.buscarPorId(idUsuario);
+    if (!usuario || !cnhPermiteOferecerCarona(usuario, hojeEmSaoPaulo())) {
+      throw new ForbiddenException({
+        message: 'Verifique uma CNH válida no perfil antes de oferecer caronas',
+        codigo: 'CNH_NAO_APROVADA',
+      });
+    }
   }
 
   async atualizarPerfil(

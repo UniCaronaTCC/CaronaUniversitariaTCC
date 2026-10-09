@@ -40,7 +40,9 @@ describe('CaronasService', () => {
   };
   let usersService: {
     buscarVeiculo: jest.Mock;
+    exigirCnhParaOferecerCarona: jest.Mock;
   };
+  let dataSource: { transaction: jest.Mock };
 
   const dados: DadosCriacaoCarona = {
     idUsuario: 1,
@@ -89,14 +91,16 @@ describe('CaronasService', () => {
     };
     usersService = {
       buscarVeiculo: jest.fn().mockResolvedValue({ idVeiculo: 1 }),
+      exigirCnhParaOferecerCarona: jest.fn().mockResolvedValue(undefined),
     };
+    dataSource = { transaction: jest.fn().mockResolvedValue({ idCarona: 1 }) };
 
     service = new CaronasService(
       repository as unknown as Repository<Carona>,
       {} as Repository<PontoEmbarque>,
       posicoesRepository as unknown as Repository<PosicaoAtualCarona>,
       solicitacoesRepository as unknown as Repository<Solicitacao>,
-      {} as DataSource,
+      dataSource as unknown as DataSource,
       usersService as unknown as UsersService,
       {} as RecorrenciasService,
     );
@@ -108,6 +112,22 @@ describe('CaronasService', () => {
     await expect(service.criarCarona(dados)).rejects.toThrow(
       'Cadastre seu veículo no perfil antes de oferecer uma carona',
     );
+  });
+
+  it('bloqueia criação antes de salvar quando a CNH não é aprovada', async () => {
+    usersService.exigirCnhParaOferecerCarona.mockRejectedValue(
+      new ForbiddenException(),
+    );
+    await expect(service.criarCarona(dados)).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(dataSource.transaction).not.toHaveBeenCalled();
+  });
+
+  it('confere a CNH antes de criar a carona avulsa', async () => {
+    await service.criarCarona(dados);
+    expect(usersService.exigirCnhParaOferecerCarona).toHaveBeenCalledWith(1);
+    expect(dataSource.transaction).toHaveBeenCalledTimes(1);
   });
 
   it('atualiza uma carona pertencente ao usuário', async () => {
@@ -156,6 +176,17 @@ describe('CaronasService', () => {
     expect(queryBuilder.update).toHaveBeenCalledWith(Carona);
     expect(queryBuilder.set).toHaveBeenCalledWith({ status: 'FINALIZADA' });
     expect(queryBuilder.execute).toHaveBeenCalledTimes(1);
+    expect(queryBuilder.where).toHaveBeenCalledWith('status IN (:...status)', {
+      status: ['ATIVA', 'LOTADA'],
+    });
+    const [condicaoRecebida] = queryBuilder.andWhere.mock.calls[0] as [string];
+    const condicao = condicaoRecebida.trim();
+    expect(condicao).toContain(
+      '(recorrente = false OR id_recorrencia IS NULL)',
+    );
+    // O OR precisa ficar dentro do AND para preservar caronas canceladas.
+    expect(condicao.startsWith('(\n')).toBe(true);
+    expect(condicao.endsWith(')')).toBe(true);
   });
 
   it('inicia uma carona dentro da janela permitida', async () => {

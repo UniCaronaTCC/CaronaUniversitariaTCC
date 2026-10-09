@@ -6,9 +6,186 @@ import 'package:uni_carona/config/app_colors.dart';
 import 'package:uni_carona/home/conversas.dart';
 import 'package:uni_carona/models/conversa.dart';
 import 'package:uni_carona/models/mensagem.dart';
+import 'package:uni_carona/services/mensagem_service.dart';
 import 'package:uni_carona/widgets/avatar_usuario.dart';
+import 'conversa_estado_test.dart' show conversaJson;
 
 void main() {
+  final instante = DateTime.utc(2026, 10, 8, 15);
+
+  Conversa conversaEncerrada(String nome, DateTime encerradaEm) {
+    final json = conversaJson('FINALIZADA')
+      ..['encerradaEm'] = encerradaEm.toIso8601String();
+    (json['solicitacao']['motorista'] as Map)['nome'] = nome;
+    return Conversa.fromJson(json);
+  }
+
+  testWidgets('recolhe somente encerradas ha um dia e abre historico', (
+    tester,
+  ) async {
+    final recente = conversaEncerrada(
+      'Recente',
+      instante.subtract(const Duration(hours: 23)),
+    );
+    final antiga = conversaEncerrada(
+      'Antiga',
+      instante.subtract(const Duration(hours: 24)),
+    );
+    Conversa? aberta;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversasTela(
+          idUsuario: 1,
+          agora: () => instante,
+          carregarConversas: () async => {
+            'sucesso': true,
+            'dados': [recente, antiga],
+          },
+          abrirConversa: (conversa) => aberta = conversa,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Recente'), findsOneWidget);
+    expect(find.text('Antiga'), findsNothing);
+    expect(find.text('Encerradas'), findsOneWidget);
+    await tester.tap(find.text('Encerradas'));
+    await tester.pumpAndSettle();
+    expect(find.text('Antiga'), findsOneWidget);
+    await tester.tap(find.text('Antiga'));
+    expect(aberta, same(antiga));
+    expect(aberta!.encerrada, isTrue);
+    await tester.tap(find.text('Encerradas'));
+    await tester.pumpAndSettle();
+    expect(find.text('Antiga'), findsNothing);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('historico acessivel quando nao restam conversas recentes', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversasTela(
+          idUsuario: 1,
+          agora: () => instante,
+          carregarConversas: () async => {
+            'sucesso': true,
+            'dados': [
+              conversaEncerrada(
+                'Antiga',
+                instante.subtract(const Duration(days: 2)),
+              ),
+            ],
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Nenhuma conversa recente'), findsOneWidget);
+    expect(find.text('Antiga'), findsNothing);
+    await tester.tap(find.text('Encerradas'));
+    await tester.pumpAndSettle();
+    expect(find.text('Antiga'), findsOneWidget);
+  });
+
+  testWidgets('arquiva ao completar 24h com a tela aberta sem nova consulta', (
+    tester,
+  ) async {
+    var agora = instante;
+    var consultas = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversasTela(
+          idUsuario: 1,
+          agora: () => agora,
+          carregarConversas: () async {
+            consultas++;
+            return {
+              'sucesso': true,
+              'dados': [
+                conversaEncerrada(
+                  'Recente',
+                  instante
+                      .subtract(const Duration(hours: 24))
+                      .add(const Duration(minutes: 1)),
+                ),
+              ],
+            };
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Recente'), findsOneWidget);
+    agora = instante.add(const Duration(minutes: 1));
+    await tester.pump(const Duration(minutes: 1));
+    await tester.pumpAndSettle();
+    expect(find.text('Recente'), findsNothing);
+    expect(consultas, 1);
+    await tester.tap(find.text('Encerradas'));
+    await tester.pumpAndSettle();
+    expect(find.text('Recente'), findsOneWidget);
+    await tester.pumpWidget(const SizedBox());
+  });
+
+  testWidgets('secao vazia e estado expandido preservado apos atualizar', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ConversasTela(
+          idUsuario: 1,
+          carregarConversas: () async => {
+            'sucesso': true,
+            'dados': [Conversa.fromJson(conversaJson('ATIVA'))],
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Encerradas'));
+    await tester.pumpAndSettle();
+    expect(find.text('Nenhuma conversa arquivada'), findsOneWidget);
+    MensagemService.versaoConversas.value++;
+    await tester.pumpAndSettle();
+    expect(find.text('Nenhuma conversa arquivada'), findsOneWidget);
+  });
+
+  testWidgets(
+    'aviso de estado atualiza lista sem mudar contador de nao lidas',
+    (tester) async {
+      var finalizada = false;
+      var consultas = 0;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ConversasTela(
+            idUsuario: 1,
+            carregarConversas: () async {
+              consultas++;
+              return {
+                'sucesso': true,
+                'dados': [
+                  Conversa.fromJson(
+                    conversaJson(finalizada ? 'FINALIZADA' : 'ATIVA'),
+                  ),
+                ],
+              };
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Encerrada'), findsNothing);
+      final totalAnterior = MensagemService.totalMensagensNaoLidas.value;
+      finalizada = true;
+      MensagemService.versaoConversas.value++;
+      await tester.pumpAndSettle();
+      expect(find.text('Encerrada'), findsOneWidget);
+      expect(consultas, 2);
+      expect(MensagemService.totalMensagensNaoLidas.value, totalAnterior);
+    },
+  );
   testWidgets('lista conversas e destaca conversa encerrada', (tester) async {
     final conversas = [
       Conversa(

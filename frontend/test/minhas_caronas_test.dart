@@ -3,8 +3,52 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:uni_carona/home/minhas_caronas.dart';
 import 'package:uni_carona/models/solicitacao_enviada.dart';
 import 'package:uni_carona/models/solicitacao_recebida.dart';
+import 'package:uni_carona/services/mensagem_service.dart';
 
 void main() {
+  testWidgets(
+    'remove aceite antigo quando a carona termina sem apagar o aceite',
+    (tester) async {
+      var finalizada = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          home: MinhasCaronasTela(
+            carregarRecebidas: () async => {
+              'sucesso': true,
+              'dados': [
+                SolicitacaoRecebida(
+                  id: 12,
+                  status: 'ACEITA',
+                  localEmbarque: 'Local teste',
+                  embarqueLatitude: -21.2,
+                  embarqueLongitude: -50.4,
+                  passageiro: 'henrique',
+                  idCarona: 13,
+                  destino: 'UniSALESIANO',
+                  dataInicio: DateTime(2026, 9, 22),
+                  horario: '19:01:00',
+                  statusCarona: finalizada ? 'FINALIZADA' : 'ATIVA',
+                ),
+              ],
+            },
+            carregarEnviadas: () async => {
+              'sucesso': true,
+              'dados': <SolicitacaoEnviada>[],
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('henrique'), findsOneWidget);
+      expect(find.text('CANCELAR PARTICIPAÇÃO'), findsOneWidget);
+      finalizada = true;
+      MensagemService.versaoConversas.value++;
+      await tester.pumpAndSettle();
+      expect(find.text('henrique'), findsNothing);
+      expect(find.text('CANCELAR PARTICIPAÇÃO'), findsNothing);
+      expect(find.text('Nenhuma solicitação recebida'), findsOneWidget);
+    },
+  );
   testWidgets('abre nas recebidas e separa as solicitações enviadas', (
     tester,
   ) async {

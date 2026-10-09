@@ -15,6 +15,7 @@ import type { RequisicaoComUsuario } from '../auth/requisicao-com-usuario';
 import { Conversa } from './conversa.entity';
 import { Mensagem } from './mensagem.entity';
 import { MensagensService } from './mensagens.service';
+import { conversaEncerrada } from './estado-conversa';
 
 @UseGuards(JwtAuthGuard)
 @Controller()
@@ -73,7 +74,7 @@ export class MensagensController {
       ? this.validarId(antesDeRecebido, 'Mensagem inválida')
       : undefined;
 
-    const mensagens = await this.mensagensService.listarMensagens(
+    const { mensagens, conversa } = await this.mensagensService.listarMensagens(
       idConversa,
       request.usuario.sub,
       antesDe,
@@ -82,6 +83,7 @@ export class MensagensController {
     return {
       sucesso: true,
       dados: mensagens.map((mensagem) => this.formatarMensagem(mensagem)),
+      conversa: this.formatarConversa(conversa),
     };
   }
 
@@ -112,6 +114,8 @@ export class MensagensController {
     return {
       id: conversa.idConversa,
       status: solicitacao.status,
+      encerrada: conversaEncerrada(solicitacao),
+      encerradaEm: conversa.encerradaEm ?? null,
       solicitacao: {
         id: solicitacao.idSolicitacao,
         passageiro: {
@@ -126,6 +130,7 @@ export class MensagensController {
         },
         carona: {
           id: solicitacao.carona.idCarona,
+          status: solicitacao.carona.status,
           destino: solicitacao.carona.destino,
           dataInicio: solicitacao.carona.dataInicio,
           horario: solicitacao.carona.horario,

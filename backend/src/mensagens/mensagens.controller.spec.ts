@@ -18,6 +18,7 @@ describe('MensagensController', () => {
         },
         carona: {
           idCarona: 20,
+          status: 'ATIVA',
           destino: 'UniSalesiano',
           dataInicio: '2026-09-02',
           horario: '19:00:00',
@@ -51,5 +52,57 @@ describe('MensagensController', () => {
     expect(resposta.dados[0].solicitacao.motorista.fotoPerfil).toBe(
       'https://exemplo.com/motorista.jpg',
     );
+    expect(resposta.dados[0].encerrada).toBe(false);
+    expect(resposta.dados[0].encerradaEm).toBeNull();
+  });
+
+  it('retorna estado de encerramento junto das mensagens antigas', async () => {
+    const conversa = {
+      idConversa: 30,
+      criadoEm: new Date(),
+      encerradaEm: new Date('2026-10-07T15:00:00Z'),
+      solicitacao: {
+        idSolicitacao: 10,
+        status: 'ACEITA',
+        passageiro: { idUsuario: 1, nome: 'Passageiro' },
+        carona: {
+          idCarona: 20,
+          status: 'FINALIZADA',
+          destino: 'Faculdade',
+          dataInicio: '2026-10-07',
+          horario: '18:00:00',
+          usuario: { idUsuario: 2, nome: 'Motorista' },
+        },
+      },
+    } as unknown as Conversa;
+    const service = {
+      listarMensagens: jest.fn().mockResolvedValue({
+        conversa,
+        mensagens: [
+          {
+            idMensagem: 40,
+            conteudo: 'Mensagem antiga',
+            criadoEm: new Date(),
+            remetente: { idUsuario: 1 },
+          },
+        ],
+      }),
+      listarConversas: jest
+        .fn()
+        .mockResolvedValue([
+          { conversa, mensagensNaoLidas: 0, ultimaMensagem: null },
+        ]),
+    } as unknown as MensagensService;
+    const controller = new MensagensController(service);
+    const request = { usuario: { sub: 1 } } as RequisicaoComUsuario;
+    const resposta = await controller.listarMensagens('30', undefined, request);
+    expect(resposta.dados[0].conteudo).toBe('Mensagem antiga');
+    expect(resposta.conversa.status).toBe('ACEITA');
+    expect(resposta.conversa.encerrada).toBe(true);
+    expect(resposta.conversa.encerradaEm).toEqual(conversa.encerradaEm);
+    expect(resposta.conversa.solicitacao.carona.status).toBe('FINALIZADA');
+    const lista = await controller.listarConversas(request);
+    expect(lista.dados[0].encerrada).toBe(true);
+    expect(lista.dados[0].encerradaEm).toEqual(conversa.encerradaEm);
   });
 });

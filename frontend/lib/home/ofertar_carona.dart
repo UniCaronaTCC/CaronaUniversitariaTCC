@@ -6,6 +6,7 @@ import '../mapa/models/localizacao_selecionada.dart';
 import '../mapa/screens/mapa_screen.dart';
 import '../models/carona.dart';
 import '../models/ponto_embarque.dart';
+import '../models/verificacao_cnh.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/carona_service.dart';
 import '../services/auth_service.dart';
@@ -14,12 +15,14 @@ import '../utils/formatador_moeda.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/formulario_ofertar_carona.dart';
+import 'verificacao_cnh.dart';
 
 class OfertarCaronaTela extends StatefulWidget {
   final LocalizacaoSelecionada? destinoInicial;
   final Carona? caronaParaEditar;
   final int? idRecorrencia;
   final int indiceNavegacao;
+  final Future<Map<String, dynamic>> Function()? carregarPerfil;
 
   const OfertarCaronaTela({
     super.key,
@@ -27,6 +30,7 @@ class OfertarCaronaTela extends StatefulWidget {
     this.caronaParaEditar,
     this.idRecorrencia,
     this.indiceNavegacao = 0,
+    this.carregarPerfil,
   });
 
   @override
@@ -50,19 +54,26 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
   bool caronaRecorrente = false;
   bool enviandoCarona = false;
+  bool carregandoCnh = false;
+  String? erroCnh;
+  Map<String, dynamic>? perfilOferta;
+  VerificacaoCnh verificacaoCnh = const VerificacaoCnh();
 
   final List<String> diasSelecionados = [];
   final List<PontoEmbarque> pontosEmbarque = [];
 
   bool get editando => widget.caronaParaEditar != null;
+  bool get precisaCnh => !editando || widget.idRecorrencia != null;
 
   bool get possuiVeiculo =>
-      editando || AuthService.usuarioLogado?['veiculo'] is Map;
+      editando ||
+      (perfilOferta ?? AuthService.usuarioLogado)?['veiculo'] is Map;
 
   @override
   void initState() {
     super.initState();
     vagasController.text = '1';
+    if (precisaCnh) atualizarCnh();
 
     final carona = widget.caronaParaEditar;
 
@@ -73,6 +84,44 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
     destinoSelecionado = widget.destinoInicial;
     destinoController.text = widget.destinoInicial?.descricaoCompleta ?? '';
+  }
+
+  Future<void> atualizarCnh() async {
+    setState(() {
+      carregandoCnh = true;
+      erroCnh = null;
+    });
+    try {
+      final perfil =
+          await (widget.carregarPerfil?.call() ?? AuthService.buscarPerfil())
+              .timeout(const Duration(seconds: 15));
+      if (!mounted) return;
+      if (perfil['sucesso'] == true && perfil['dados'] is Map) {
+        perfilOferta = Map<String, dynamic>.from(perfil['dados']);
+        verificacaoCnh = VerificacaoCnh.fromPerfil(perfilOferta!);
+      } else {
+        erroCnh =
+            perfil['mensagem']?.toString() ??
+            'Não foi possível conferir sua habilitação';
+      }
+    } catch (_) {
+      if (mounted) {
+        erroCnh = 'Não foi possível conferir sua habilitação. Tente novamente';
+      }
+    } finally {
+      if (mounted) setState(() => carregandoCnh = false);
+    }
+  }
+
+  Future<void> abrirVerificacaoCnh() async {
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            VerificacaoCnhTela(carregarPerfil: widget.carregarPerfil),
+      ),
+    );
+    if (mounted) await atualizarCnh();
   }
 
   void _preencherEdicao(Carona carona) {
@@ -330,6 +379,10 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
   // Valida e envia a oferta para o backend.
   Future<void> ofertarCarona() async {
+    if (precisaCnh && !verificacaoCnh.permiteOferecerCarona()) {
+      await abrirVerificacaoCnh();
+      return;
+    }
     if (!possuiVeiculo) {
       mostrarMensagem(
         'Cadastre seu veículo no perfil antes de oferecer uma carona',
@@ -407,6 +460,10 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       return;
     }
 
+    if (resultado['codigo'] == 'CNH_NAO_APROVADA') {
+      await atualizarCnh();
+      if (!mounted) return;
+    }
     mostrarMensagem(
       resultado['mensagem']?.toString() ?? 'Erro ao criar carona',
     );
@@ -473,6 +530,8 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     await Navigator.pushNamed(context, NavegacaoPrincipal.rotaPerfil);
 
     if (mounted) {
+      if (precisaCnh) await atualizarCnh();
+      if (!mounted) return;
       setState(() {});
     }
   }
@@ -510,54 +569,91 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
         ),
       ),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
-          child: FormularioOfertarCarona(
-            titulo: widget.idRecorrencia != null
-                ? 'Editar recorrência'
-                : editando
-                ? 'Editar carona'
-                : 'Ofertar carona',
-            descricao: widget.idRecorrencia != null
-                ? 'Alterações valem para novas datas. Caronas já publicadas são mantidas.'
-                : editando
-                ? 'Atualize os dados da viagem'
-                : 'Informe os dados da viagem',
-            textoBotao: editando ? 'SALVAR ALTERAÇÕES' : 'OFERTAR CARONA',
-            textoCarregando: editando ? 'SALVANDO...' : 'ENVIANDO...',
+        child:
+            precisaCnh &&
+                (carregandoCnh ||
+                    erroCnh != null ||
+                    !verificacaoCnh.permiteOferecerCarona())
+            ? SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: EstadoConteudoPadrao(
+                    carregando: carregandoCnh,
+                    icone: Icons.badge_outlined,
+                    titulo: carregandoCnh
+                        ? 'Conferindo sua habilitação'
+                        : erroCnh != null
+                        ? 'Não foi possível continuar'
+                        : 'Verifique sua CNH',
+                    mensagem: carregandoCnh
+                        ? null
+                        : erroCnh ??
+                              'Para oferecer caronas, precisamos conferir uma CNH válida para dirigir automóveis',
+                    textoBotao: carregandoCnh
+                        ? null
+                        : erroCnh != null
+                        ? 'Tentar novamente'
+                        : 'Verificar CNH',
+                    iconeBotao: erroCnh != null
+                        ? Icons.refresh
+                        : Icons.badge_outlined,
+                    onPressed: carregandoCnh
+                        ? null
+                        : erroCnh != null
+                        ? atualizarCnh
+                        : abrirVerificacaoCnh,
+                  ),
+                ),
+              )
+            : SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: FormularioOfertarCarona(
+                  titulo: widget.idRecorrencia != null
+                      ? 'Editar recorrência'
+                      : editando
+                      ? 'Editar carona'
+                      : 'Ofertar carona',
+                  descricao: widget.idRecorrencia != null
+                      ? 'Alterações valem para novas datas. Caronas já publicadas são mantidas.'
+                      : editando
+                      ? 'Atualize os dados da viagem'
+                      : 'Informe os dados da viagem',
+                  textoBotao: editando ? 'SALVAR ALTERAÇÕES' : 'OFERTAR CARONA',
+                  textoCarregando: editando ? 'SALVANDO...' : 'ENVIANDO...',
 
-            origemController: origemController,
-            destinoController: destinoController,
-            dataController: dataController,
-            horarioController: horarioController,
-            vagasController: vagasController,
-            valorController: valorController,
-            observacoesController: observacoesController,
+                  origemController: origemController,
+                  destinoController: destinoController,
+                  dataController: dataController,
+                  horarioController: horarioController,
+                  vagasController: vagasController,
+                  valorController: valorController,
+                  observacoesController: observacoesController,
 
-            caronaRecorrente: caronaRecorrente,
-            enviandoCarona: enviandoCarona,
-            diasSelecionados: diasSelecionados,
+                  caronaRecorrente: caronaRecorrente,
+                  enviandoCarona: enviandoCarona,
+                  diasSelecionados: diasSelecionados,
 
-            pontosEmbarque: pontosEmbarque,
-            origemSelecionada: origemSelecionada,
-            pontosEmbarqueEditaveis: !editando || widget.idRecorrencia != null,
-            mostrarRecorrencia: !editando || widget.idRecorrencia != null,
-            possuiVeiculo: possuiVeiculo,
+                  pontosEmbarque: pontosEmbarque,
+                  origemSelecionada: origemSelecionada,
+                  pontosEmbarqueEditaveis:
+                      !editando || widget.idRecorrencia != null,
+                  mostrarRecorrencia: !editando || widget.idRecorrencia != null,
+                  possuiVeiculo: possuiVeiculo,
 
-            onSelecionarOrigem: escolherOrigemNoMapa,
-            onSelecionarDestino: escolherDestinoNoMapa,
-            onAdicionarPontoEmbarque: adicionarPontoEmbarque,
-            onRemoverPontoEmbarque: removerPontoEmbarque,
-            onSelecionarData: escolherData,
-            onSelecionarHorario: escolherHorario,
-            onDestinoChanged: alterarTextoDestino,
-            onDestinoSelecionado: selecionarDestino,
-            onRecorrenciaChanged: alterarRecorrencia,
-            onDiaSelecionado: alternarDiaSemana,
-            onOfertarCarona: ofertarCarona,
-            onCadastrarVeiculo: abrirCadastroVeiculo,
-          ),
-        ),
+                  onSelecionarOrigem: escolherOrigemNoMapa,
+                  onSelecionarDestino: escolherDestinoNoMapa,
+                  onAdicionarPontoEmbarque: adicionarPontoEmbarque,
+                  onRemoverPontoEmbarque: removerPontoEmbarque,
+                  onSelecionarData: escolherData,
+                  onSelecionarHorario: escolherHorario,
+                  onDestinoChanged: alterarTextoDestino,
+                  onDestinoSelecionado: selecionarDestino,
+                  onRecorrenciaChanged: alterarRecorrencia,
+                  onDiaSelecionado: alternarDiaSemana,
+                  onOfertarCarona: ofertarCarona,
+                  onCadastrarVeiculo: abrirCadastroVeiculo,
+                ),
+              ),
       ),
     );
   }

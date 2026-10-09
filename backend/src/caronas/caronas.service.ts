@@ -58,6 +58,8 @@ export class CaronasService {
 
     if (dados.recorrente) return this.recorrenciasService.criar(dados);
 
+    await this.usersService.exigirCnhParaOferecerCarona(dados.idUsuario);
+
     return this.dataSource.transaction(async (manager) => {
       const caronasRepository = manager.getRepository(Carona);
       const pontosRepository = manager.getRepository(PontoEmbarque);
@@ -176,19 +178,22 @@ export class CaronasService {
       .where('status IN (:...status)', {
         status: ['ATIVA', 'LOTADA'],
       })
+      // Cadastros legados sem programação não geram novas datas de carona.
       .andWhere(
         `
         (
-          recorrente = false
-          AND (data_inicio + horario + INTERVAL '2 hours') <=
-            (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
-        )
-        OR
-        (
-          recorrente = true
-          AND data_fim IS NOT NULL
-          AND (data_fim + horario) <=
-            (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
+          (
+            (recorrente = false OR id_recorrencia IS NULL)
+            AND (data_inicio + horario + INTERVAL '2 hours') <=
+              (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
+          )
+          OR
+          (
+            recorrente = true
+            AND data_fim IS NOT NULL
+            AND (data_fim + horario) <=
+              (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
+          )
         )
         `,
       )

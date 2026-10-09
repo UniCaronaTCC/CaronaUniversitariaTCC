@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../auth/login.dart';
 import '../config/app_colors.dart';
 import '../models/instituicao.dart';
+import '../models/verificacao_cnh.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/avaliacao_service.dart';
 import '../services/auth_service.dart';
@@ -17,6 +18,7 @@ import '../widgets/foto_perfil.dart';
 import 'avaliacoes_recebidas.dart';
 import 'historico_caronas.dart';
 import 'recorrencias.dart';
+import 'verificacao_cnh.dart';
 
 typedef CarregarPerfil = Future<Map<String, dynamic>> Function();
 typedef AtualizarPerfil =
@@ -159,6 +161,17 @@ class _PerfilTelaState extends State<PerfilTela> {
       context,
       MaterialPageRoute(builder: (_) => const HistoricoCaronasTela()),
     );
+  }
+
+  Future<void> abrirVerificacaoCnh() async {
+    await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            VerificacaoCnhTela(carregarPerfil: widget.carregarPerfil),
+      ),
+    );
+    if (mounted) await carregarDados();
   }
 
   Future<void> editarPerfil() async {
@@ -538,6 +551,7 @@ class _PerfilTelaState extends State<PerfilTela> {
 
   @override
   Widget build(BuildContext context) {
+    final cnh = VerificacaoCnh.fromPerfil(usuario);
     final nome = usuario['nome']?.toString().trim() ?? '';
     final email = usuario['email']?.toString().trim() ?? '';
     final instituicao = usuario['instituicao']?.toString().trim() ?? '';
@@ -737,6 +751,35 @@ class _PerfilTelaState extends State<PerfilTela> {
                 context,
                 MaterialPageRoute(builder: (_) => const RecorrenciasTela()),
               ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Habilitação',
+              style: TextStyle(
+                color: AppColors.text,
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: Icon(
+                cnh.permiteOferecerCarona()
+                    ? Icons.verified_outlined
+                    : Icons.badge_outlined,
+                color: cnh.permiteOferecerCarona()
+                    ? Colors.green
+                    : AppColors.primary,
+              ),
+              title: Text(cnh.textoStatus),
+              subtitle: Text(
+                cnh.permiteOferecerCarona()
+                    ? 'Categoria ${cnh.categoria} · Válida até ${cnh.validadeFormatada}'
+                    : 'Necessária para oferecer caronas',
+              ),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: carregando ? null : abrirVerificacaoCnh,
             ),
             const SizedBox(height: 24),
             const Text(

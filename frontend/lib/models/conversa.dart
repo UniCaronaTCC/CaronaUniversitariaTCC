@@ -4,6 +4,8 @@ import 'mensagem.dart';
 class Conversa {
   final int id;
   final String status;
+  final String statusCarona;
+  final bool encerradaPeloServidor;
   final int idSolicitacao;
   final int idPassageiro;
   final String passageiro;
@@ -16,12 +18,15 @@ class Conversa {
   final DateTime dataInicio;
   final String horario;
   final DateTime criadoEm;
+  final DateTime? encerradaEm;
   final Mensagem? ultimaMensagem;
   final int mensagensNaoLidas;
 
   const Conversa({
     required this.id,
     required this.status,
+    this.statusCarona = 'ATIVA',
+    this.encerradaPeloServidor = false,
     required this.idSolicitacao,
     required this.idPassageiro,
     required this.passageiro,
@@ -34,6 +39,7 @@ class Conversa {
     required this.dataInicio,
     required this.horario,
     required this.criadoEm,
+    this.encerradaEm,
     this.ultimaMensagem,
     this.mensagensNaoLidas = 0,
   });
@@ -58,6 +64,8 @@ class Conversa {
     return Conversa(
       id: converterJsonParaInt(json['id']),
       status: json['status']?.toString() ?? 'ACEITA',
+      statusCarona: carona['status']?.toString() ?? 'ATIVA',
+      encerradaPeloServidor: json['encerrada'] == true,
       idSolicitacao: converterJsonParaInt(solicitacao['id']),
       idPassageiro: converterJsonParaInt(passageiro['id']),
       passageiro: passageiro['nome']?.toString() ?? 'Passageiro',
@@ -70,6 +78,9 @@ class Conversa {
       dataInicio: DateTime.parse(carona['dataInicio'].toString()),
       horario: carona['horario']?.toString() ?? '',
       criadoEm: DateTime.parse(json['criadoEm'].toString()).toLocal(),
+      encerradaEm: DateTime.tryParse(
+        json['encerradaEm']?.toString() ?? '',
+      )?.toLocal(),
       mensagensNaoLidas: converterJsonParaInt(json['mensagensNaoLidas']),
       ultimaMensagem: ultimaMensagem is Map
           ? Mensagem.fromJson(Map<String, dynamic>.from(ultimaMensagem))
@@ -77,7 +88,15 @@ class Conversa {
     );
   }
 
-  bool get encerrada => status != 'ACEITA';
+  bool get encerrada =>
+      encerradaPeloServidor ||
+      status != 'ACEITA' ||
+      !['ATIVA', 'LOTADA', 'EM_ANDAMENTO'].contains(statusCarona);
+
+  DateTime? get arquivarEm => encerradaEm?.add(const Duration(hours: 24));
+
+  bool deveArquivar(DateTime agora) =>
+      encerrada && arquivarEm != null && !arquivarEm!.isAfter(agora);
 
   String nomeOutroParticipante(int idUsuarioAtual) {
     return idUsuarioAtual == idPassageiro ? motorista : passageiro;
