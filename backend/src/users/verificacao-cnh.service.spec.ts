@@ -33,7 +33,9 @@ describe('VerificacaoCnhService', () => {
       }),
       update: jest.fn().mockResolvedValue({ affected: 1 }),
     };
-    leitura = { ler: jest.fn().mockResolvedValue(texto) };
+    leitura = {
+      ler: jest.fn().mockResolvedValue({ texto, nome: 'JOAO PEDRO DA SILVA' }),
+    };
     service = new VerificacaoCnhService(
       usuarios as unknown as Repository<User>,
       leitura as unknown as LeituraCnhService,

@@ -6,12 +6,13 @@ import {
 import { tmpdir } from 'node:os';
 import sharp from 'sharp';
 import { createWorker } from 'tesseract.js';
+import { nomePeloLayout, type LeituraCnh } from './nome-cnh-layout';
 
 @Injectable()
 export class LeituraCnhService {
   private leiturasEmAndamento = 0;
 
-  async ler(frente: Buffer, verso: Buffer): Promise<string> {
+  async ler(frente: Buffer, verso: Buffer): Promise<LeituraCnh> {
     if (this.leiturasEmAndamento >= 2) {
       throw new ServiceUnavailableException(
         'Muitas verificações em andamento. Tente novamente em instantes',
@@ -31,9 +32,16 @@ export class LeituraCnhService {
           cachePath: tmpdir(),
         });
         try {
-          const primeira = await worker.recognize(frentePreparada);
+          const primeira = await worker.recognize(
+            frentePreparada,
+            {},
+            { text: true, blocks: true },
+          );
           const segunda = await worker.recognize(versoPreparado);
-          return `${primeira.data.text}\n${segunda.data.text}`;
+          return {
+            texto: `${primeira.data.text}\n${segunda.data.text}`,
+            nome: nomePeloLayout(primeira.data.blocks),
+          };
         } finally {
           await worker.terminate();
         }

@@ -1,3 +1,5 @@
+import type { LeituraCnh } from './nome-cnh-layout';
+
 export interface DadosCnh {
   cpf: string;
   categoria: string;
@@ -32,6 +34,8 @@ export interface DiagnosticoNomeCnh {
   linhasAceitas: number;
   parada:
     | 'TITULO_AUSENTE'
+    | 'REGIAO_LIDA'
+    | 'REGIAO_NAO_IDENTIFICADA'
     | 'FIM_DA_LEITURA'
     | 'OUTRO_CAMPO'
     | 'DIGITOS_NA_LINHA'
@@ -118,11 +122,12 @@ function dataIso(valor: string): string | null {
 }
 
 export function conferirDadosCnh(
-  texto: string,
+  entrada: string | LeituraCnh,
   nomeUsuario: string,
   hoje: string,
   diagnosticarNome?: (diagnostico: DiagnosticoNomeCnh) => void,
 ): ConferenciaCnh {
+  const texto = typeof entrada === 'string' ? entrada : entrada.texto;
   const linhas = texto.split(/\r?\n/).map(normalizar).filter(Boolean);
 
   const nome = normalizar(nomeUsuario);
@@ -164,11 +169,18 @@ export function conferirDadosCnh(
       partes.push(linha);
     }
   }
-  const nomeDocumento = partes.join(' ');
+  const porLayout = typeof entrada !== 'string';
+  const nomeDocumento = porLayout
+    ? normalizar(entrada.nome ?? '')
+    : partes.join(' ');
   diagnosticarNome?.({
     titulosEncontrados,
-    linhasAceitas: partes.length,
-    parada,
+    linhasAceitas: porLayout ? (nomeDocumento ? 1 : 0) : partes.length,
+    parada: porLayout
+      ? nomeDocumento
+        ? 'REGIAO_LIDA'
+        : 'REGIAO_NAO_IDENTIFICADA'
+      : parada,
     resultado: !nomeDocumento
       ? 'NAO_EXTRAIDO'
       : nomeCompletoValido(nomeUsuario) && nomeDocumento === nome

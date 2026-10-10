@@ -45,6 +45,16 @@ Falha de conexao permite repetir o envio; recusa exige novas fotos.
 
 ## Publicacao
 
+A leitura do nome usa as coordenadas das palavras na frente da CNH. Localiza
+um unico titulo NOME, considera a numeracao anterior e procura ate duas linhas
+abaixo, limitadas pelos campos vizinhos e pela distancia ao titulo. Traducoes
+na linha do titulo nao entram no nome. A selecao nao usa o nome digitado.
+Regiao ausente ou ambigua resulta em NOME_NAO_LIDO, sem voltar ao texto geral.
+Os logs indicam REGIAO_LIDA ou REGIAO_NAO_IDENTIFICADA. A comparacao continua
+integral; os outros campos mantem a extracao textual anterior. Isso ainda nao
+resolve todos os layouts nem erros de reconhecimento de letras e exige teste
+no documento real. Nao ha mudanca de banco ou contrato do aplicativo.
+
 O backend exige CNH APROVADA, categoria B/C/D/E (ou AB/AC/AD/AE) e validade
 vigente para criar caronas avulsas ou programacoes recorrentes. Usa o dia de
 Sao Paulo. Retorna HTTP 403 com `codigo=CNH_NAO_APROVADA` quando nao autorizado.

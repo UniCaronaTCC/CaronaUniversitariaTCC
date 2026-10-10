@@ -40,7 +40,16 @@ describe('LeituraCnhService', () => {
     jest.mocked(createWorker).mockResolvedValue(worker as never);
 
     const imagem = await criarImagem(900, 600);
-    await expect(service.ler(imagem, imagem)).resolves.toBe('FRENTE\nVERSO');
+    await expect(service.ler(imagem, imagem)).resolves.toEqual({
+      texto: 'FRENTE\nVERSO',
+      nome: null,
+    });
+    expect(worker.recognize).toHaveBeenNthCalledWith(
+      1,
+      processadas[0],
+      {},
+      { text: true, blocks: true },
+    );
     expect(createWorker).toHaveBeenCalledWith('por', undefined, {
       cachePath: tmpdir(),
     });
