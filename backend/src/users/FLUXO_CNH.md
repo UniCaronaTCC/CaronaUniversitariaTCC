@@ -45,6 +45,15 @@ Falha de conexao permite repetir o envio; recusa exige novas fotos.
 
 ## Publicacao
 
+O log `CNH: regiao_nome` detalha a recusa espacial: TITULO_AUSENTE,
+TITULO_DUPLICADO, ALTURA_INVALIDA, PALAVRA_NA_BORDA, REGIAO_VAZIA,
+EXCESSO_DE_LINHAS, NOME_DISTANTE, OUTRO_CAMPO ou FORMATO_INVALIDO.
+REGIAO_LIDA indica sucesso da extracao, antes da comparacao do nome.
+Inclui apenas contagens de titulos e linhas candidatas, sem texto ou coordenadas.
+Uma contagem zero pode indicar que a etapa de linhas ainda nao foi executada.
+A mensagem de NOME_NAO_LIDO informa a limitacao da leitura automatica, sem
+afirmar que a foto esta sem nitidez. O app ja exibe essa mensagem do backend.
+
 A leitura do nome usa as coordenadas das palavras na frente da CNH. Localiza
 um unico titulo NOME, considera a numeracao anterior e procura ate duas linhas
 abaixo, limitadas pelos campos vizinhos e pela distancia ao titulo. Traducoes

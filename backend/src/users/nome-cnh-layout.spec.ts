@@ -15,6 +15,56 @@ function blocos(...lines: ReturnType<typeof linha>[]): Block[] {
 }
 
 describe('nomePeloLayout', () => {
+  it.each([
+    ['TITULO_AUSENTE', null],
+    [
+      'TITULO_DUPLICADO',
+      blocos(linha('NOME', 100, 10), linha('NOME', 100, 80)),
+    ],
+    ['REGIAO_VAZIA', blocos(linha('NOME', 100, 10))],
+    [
+      'PALAVRA_NA_BORDA',
+      blocos(linha('NOME', 100, 10), linha('JOAO PEDRO SILVA', 60, 40)),
+    ],
+    [
+      'EXCESSO_DE_LINHAS',
+      blocos(
+        linha('NOME', 100, 10),
+        linha('JOAO', 100, 30),
+        linha('PEDRO', 100, 50),
+        linha('SILVA', 100, 70),
+      ),
+    ],
+    [
+      'NOME_DISTANTE',
+      blocos(linha('NOME', 100, 10), linha('JOAO PEDRO', 100, 80)),
+    ],
+    [
+      'FORMATO_INVALIDO',
+      blocos(linha('NOME', 100, 10), linha('JOAO 123', 100, 40)),
+    ],
+    [
+      'REGIAO_LIDA',
+      blocos(linha('NOME', 100, 10), linha('JOAO PEDRO', 100, 40)),
+    ],
+  ] as const)(
+    'diagnostica %s sem expor texto ou alterar o resultado',
+    (motivo, entrada) => {
+      const diagnosticar = jest.fn();
+      expect(nomePeloLayout(entrada, diagnosticar)).toBe(
+        nomePeloLayout(entrada),
+      );
+      expect(diagnosticar).toHaveBeenCalledTimes(1);
+      expect(diagnosticar).toHaveBeenCalledWith({
+        motivo,
+        titulos: expect.any(Number) as number,
+        linhasCandidatas: expect.any(Number) as number,
+      });
+      expect(JSON.stringify(diagnosticar.mock.calls)).not.toMatch(
+        /JOAO|PEDRO|SILVA|123|bbox/,
+      );
+    },
+  );
   it('aceita pontuação depois do título', () => {
     expect(
       nomePeloLayout(

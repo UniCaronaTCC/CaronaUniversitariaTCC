@@ -9,7 +9,7 @@ export interface DadosCnh {
 
 export const motivosCnh = {
   NOME_NAO_LIDO:
-    'Não conseguimos ler o nome completo na CNH. Fotografe essa parte com nitidez.',
+    'Não foi possível identificar o campo de nome completo na CNH. Isso pode ocorrer por uma limitação da leitura automática, mesmo com uma foto nítida. Confira se a frente do documento está inteira e tente novamente.',
   NOME_DIVERGENTE:
     'O nome lido não corresponde ao nome completo informado. Confira o preenchimento e a foto.',
   CPF_NAO_LIDO: 'Não conseguimos ler o CPF na CNH. Refaça a foto dessa parte.',

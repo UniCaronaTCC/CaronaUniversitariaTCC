@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   Injectable,
+  Logger,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { tmpdir } from 'node:os';
@@ -10,6 +11,7 @@ import { nomePeloLayout, type LeituraCnh } from './nome-cnh-layout';
 
 @Injectable()
 export class LeituraCnhService {
+  private readonly logger = new Logger(LeituraCnhService.name);
   private leiturasEmAndamento = 0;
 
   async ler(frente: Buffer, verso: Buffer): Promise<LeituraCnh> {
@@ -40,7 +42,12 @@ export class LeituraCnhService {
           const segunda = await worker.recognize(versoPreparado);
           return {
             texto: `${primeira.data.text}\n${segunda.data.text}`,
-            nome: nomePeloLayout(primeira.data.blocks),
+            nome: nomePeloLayout(primeira.data.blocks, (diagnostico) => {
+              // Somente códigos e contagens, sem palavras ou coordenadas da foto.
+              this.logger.log(
+                `CNH: regiao_nome ${JSON.stringify(diagnostico)}`,
+              );
+            }),
           };
         } finally {
           await worker.terminate();
