@@ -1,8 +1,10 @@
 import type { Bbox, Block } from 'tesseract.js';
+import type { CamposCnh } from './campos-cnh-layout';
 
 export interface LeituraCnh {
   texto: string;
   nome: string | null;
+  campos?: CamposCnh;
 }
 
 const normalizar = (texto: string) =>
@@ -82,6 +84,12 @@ export function nomePeloLayout(
       outroCampo.test(normalizar(p.text)),
   );
   regiao.y1 = Math.min(regiao.y1, ...proximosCampos.map((p) => p.bbox.y0));
+  // Uma leve inclinação pode colocar o topo de uma letra acima do fim
+  // do título. Só toleramos essa sobreposição se o centro estiver abaixo.
+  const abaixoDoTitulo = (p: (typeof palavras)[number]) =>
+    !linhaTitulo.words.includes(p) &&
+    p.bbox.y0 >= regiao.y0 - altura / 2 &&
+    (p.bbox.y0 + p.bbox.y1) / 2 > regiao.y0;
   // Não descartar silenciosamente uma palavra que cruza a borda:
   // isso poderia transformar um nome completo em outro nome mais curto.
   const cortada = palavras.some(
@@ -91,7 +99,7 @@ export function nomePeloLayout(
       p.bbox.y0 < regiao.y1 &&
       (p.bbox.x0 < regiao.x0 ||
         p.bbox.x1 > regiao.x1 ||
-        p.bbox.y0 < regiao.y0 ||
+        (p.bbox.y0 < regiao.y0 && !abaixoDoTitulo(p)) ||
         p.bbox.y1 > regiao.y1),
   );
   if (cortada) return concluir('PALAVRA_NA_BORDA');
@@ -100,7 +108,7 @@ export function nomePeloLayout(
       linha.words
         .filter(
           (p) =>
-            p.bbox.y0 >= regiao.y0 &&
+            abaixoDoTitulo(p) &&
             p.bbox.y1 <= regiao.y1 &&
             p.bbox.x0 >= regiao.x0 &&
             p.bbox.x1 <= regiao.x1,

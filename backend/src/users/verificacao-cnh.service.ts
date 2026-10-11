@@ -88,7 +88,7 @@ export class VerificacaoCnhService {
           cpf: dados.cpf,
           cnhCategoria: dados.categoria,
           cnhValidade: dados.validade,
-          cnhRegistroFinal: dados.registroFinal,
+          cnhRegistroFinal: null,
           cnhVerificadaEm: new Date(),
           privacidadeAceitaEm,
         });

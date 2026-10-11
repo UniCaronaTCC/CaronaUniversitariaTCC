@@ -11,6 +11,7 @@ import '../services/foto_cnh_temporaria.dart'
 import '../services/verificacao_cnh_service.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/foto_cnh.dart';
+import 'recortar_cnh.dart';
 
 typedef CapturarFotoCnh = Future<XFile?> Function();
 typedef EnviarFotosCnh =
@@ -24,12 +25,16 @@ typedef EnviarFotosCnh =
 class VerificacaoCnhTela extends StatefulWidget {
   final Future<Map<String, dynamic>> Function()? carregarPerfil;
   final CapturarFotoCnh? capturarFoto;
+  final CapturarFotoCnh? escolherFoto;
+  final Future<Uint8List?> Function(Uint8List)? recortarFoto;
   final EnviarFotosCnh? enviarFotos;
 
   const VerificacaoCnhTela({
     super.key,
     this.carregarPerfil,
     this.capturarFoto,
+    this.escolherFoto,
+    this.recortarFoto,
     this.enviarFotos,
   });
 
@@ -87,7 +92,10 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
     }
   }
 
-  Future<void> fotografar(bool fotografarFrente) async {
+  Future<void> fotografar(
+    bool fotografarFrente, {
+    ImageSource origem = ImageSource.camera,
+  }) async {
     if (!aceite || ocupada) return;
     setState(() {
       capturando = true;
@@ -95,10 +103,13 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
     });
     Uint8List? bytes;
     try {
+      final selecionar = origem == ImageSource.camera
+          ? widget.capturarFoto
+          : widget.escolherFoto;
       final foto =
-          await (widget.capturarFoto?.call() ??
+          await (selecionar?.call() ??
               ImagePicker().pickImage(
-                source: ImageSource.camera,
+                source: origem,
                 preferredCameraDevice: CameraDevice.rear,
                 maxWidth: 2600,
                 maxHeight: 2600,
@@ -109,7 +120,10 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
       try {
         bytes = await foto.readAsBytes();
       } finally {
-        if (widget.capturarFoto == null) await descartarFotoCnh(foto.path);
+        // A imagem original da galeria pertence ao usuário e não é apagada.
+        if (origem == ImageSource.camera && selecionar == null) {
+          await descartarFotoCnh(foto.path);
+        }
       }
       if (!mounted) {
         bytes.fillRange(0, bytes.length, 0);
@@ -118,6 +132,19 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
       if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
         bytes.fillRange(0, bytes.length, 0);
         erro = 'A foto deve ter até 5 MB. Tire outra foto';
+        return;
+      }
+      final original = bytes;
+      try {
+        bytes =
+            await (widget.recortarFoto?.call(original) ??
+                recortarCnh(context, original));
+      } finally {
+        original.fillRange(0, original.length, 0);
+      }
+      if (bytes == null) return;
+      if (!mounted) {
+        bytes.fillRange(0, bytes.length, 0);
         return;
       }
       final anterior = fotografarFrente ? frente : verso;
@@ -130,7 +157,7 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
     } catch (_) {
       if (mounted) {
         erro =
-            'Não foi possível abrir a câmera. Confira a permissão e tente novamente';
+            'Não foi possível obter a foto. Confira a permissão e tente novamente';
       }
     } finally {
       if (mounted) setState(() => capturando = false);
@@ -238,7 +265,7 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Conferimos o nome completo informado com a foto, sem alterar seu nome de perfil. Guardamos CPF, categoria, validade e os últimos quatro dígitos do registro. O nome informado é usado somente na conferência e as fotos são descartadas após a leitura.',
+                  'Conferimos o nome completo informado com a foto, sem alterar seu nome de perfil. Guardamos CPF, categoria e validade. O nome informado é usado somente na conferência e as fotos são descartadas após a leitura.',
                   style: TextStyle(height: 1.4),
                 ),
                 CheckboxListTile(
@@ -271,6 +298,8 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
                   bytes: frente,
                   habilitada: aceite && !ocupada,
                   onFotografar: () => fotografar(true),
+                  onEscolherGaleria: () =>
+                      fotografar(true, origem: ImageSource.gallery),
                 ),
                 const SizedBox(height: 16),
                 FotoCnh(
@@ -278,6 +307,8 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
                   bytes: verso,
                   habilitada: aceite && !ocupada,
                   onFotografar: () => fotografar(false),
+                  onEscolherGaleria: () =>
+                      fotografar(false, origem: ImageSource.gallery),
                 ),
                 const SizedBox(height: 24),
                 FilledButton.icon(

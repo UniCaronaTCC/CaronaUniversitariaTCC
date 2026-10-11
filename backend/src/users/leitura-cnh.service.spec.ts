@@ -8,7 +8,10 @@ import { createWorker } from 'tesseract.js';
 
 import { LeituraCnhService } from './leitura-cnh.service';
 
-jest.mock('tesseract.js', () => ({ createWorker: jest.fn() }));
+jest.mock('tesseract.js', () => ({
+  createWorker: jest.fn(),
+  PSM: { AUTO: '3' },
+}));
 
 describe('LeituraCnhService', () => {
   const service = new LeituraCnhService();
@@ -26,7 +29,7 @@ describe('LeituraCnhService', () => {
 
   beforeEach(() => jest.resetAllMocks());
 
-  it('processa as duas fotos e encerra o worker', async () => {
+  it('valida as duas fotos, lê os campos da frente e encerra o worker', async () => {
     const processadas: Buffer[] = [];
     const recognize = jest.fn((imagem: Buffer) => {
       processadas.push(imagem);
@@ -35,14 +38,16 @@ describe('LeituraCnhService', () => {
     });
     const worker = {
       recognize,
+      setParameters: jest.fn().mockResolvedValue(undefined),
       terminate: jest.fn().mockResolvedValue(undefined),
     };
     jest.mocked(createWorker).mockResolvedValue(worker as never);
 
     const imagem = await criarImagem(900, 600);
     await expect(service.ler(imagem, imagem)).resolves.toEqual({
-      texto: 'FRENTE\nVERSO',
+      texto: 'FRENTE',
       nome: null,
+      campos: { cpf: null, validade: null, categoria: null },
     });
     expect(worker.recognize).toHaveBeenNthCalledWith(
       1,
@@ -53,7 +58,11 @@ describe('LeituraCnhService', () => {
     expect(createWorker).toHaveBeenCalledWith('por', undefined, {
       cachePath: tmpdir(),
     });
-    expect(worker.recognize).toHaveBeenCalledTimes(2);
+    expect(worker.recognize).toHaveBeenCalledTimes(1);
+    expect(worker.setParameters).toHaveBeenCalledWith({
+      tessedit_pageseg_mode: '3',
+      thresholding_method: '2',
+    });
     expect(worker.terminate).toHaveBeenCalledTimes(1);
     expect(processadas[0].every((byte) => byte === 0)).toBe(true);
   });
@@ -78,6 +87,7 @@ describe('LeituraCnhService', () => {
 
   it('limita verificações simultâneas para não esgotar o servidor', async () => {
     const worker = {
+      setParameters: jest.fn().mockResolvedValue(undefined),
       recognize: jest.fn().mockResolvedValue({ data: { text: 'CNH' } }),
       terminate: jest.fn().mockResolvedValue(undefined),
     };

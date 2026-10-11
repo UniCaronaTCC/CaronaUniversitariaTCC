@@ -15,6 +15,18 @@ function blocos(...lines: ReturnType<typeof linha>[]): Block[] {
 }
 
 describe('nomePeloLayout', () => {
+  it('preserva sobrenome com pequena sobreposição vertical ao título', () => {
+    const nome = linha('JOAO PEDRO SILVA', 100, 28);
+    nome.words[2].bbox.y0 = 22;
+    expect(nomePeloLayout(blocos(linha('NOME', 100, 10), nome))).toBe(
+      'JOAO PEDRO SILVA',
+    );
+  });
+  it('recusa sobreposição excessiva em vez de omitir parte do nome', () => {
+    const nome = linha('JOAO PEDRO SILVA', 100, 28);
+    nome.words[2].bbox.y0 = 12;
+    expect(nomePeloLayout(blocos(linha('NOME', 100, 10), nome))).toBeNull();
+  });
   it.each([
     ['TITULO_AUSENTE', null],
     [

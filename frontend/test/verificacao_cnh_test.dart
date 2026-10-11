@@ -17,6 +17,52 @@ void main() {
     'cnhValidade': '2099-10-07',
   };
   tearDown(() => AuthService.usuarioLogado = null);
+  testWidgets('galeria exige aceite e mostra a foto escolhida', (tester) async {
+    var escolhas = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: VerificacaoCnhTela(
+          recortarFoto: (bytes) async => Uint8List.fromList(bytes),
+          carregarPerfil: () async => {
+            'sucesso': true,
+            'dados': <String, dynamic>{},
+          },
+          capturarFoto: () async => throw StateError('Não deve abrir a câmera'),
+          escolherFoto: () async {
+            escolhas++;
+            return XFile.fromData(Uint8List.fromList(png), name: 'cnh.png');
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final galeria = find
+        .widgetWithText(OutlinedButton, 'Escolher da galeria')
+        .first;
+    await tester.scrollUntilVisible(
+      galeria,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(tester.widget<OutlinedButton>(galeria).onPressed, isNull);
+    await tester.scrollUntilVisible(
+      find.byType(Checkbox),
+      -200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.tap(find.byType(Checkbox));
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(
+      galeria,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(galeria);
+    await tester.pumpAndSettle();
+    expect(escolhas, 1);
+    expect(find.widgetWithText(OutlinedButton, 'Refazer foto'), findsOneWidget);
+  });
   final botaoEnviar = find.ancestor(
     of: find.text('Enviar para verificação'),
     matching: find.byWidgetPredicate((widget) => widget is FilledButton),
@@ -61,6 +107,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: VerificacaoCnhTela(
+          recortarFoto: (bytes) async => Uint8List.fromList(bytes),
           carregarPerfil: () async => {'sucesso': true, 'dados': status},
           capturarFoto: () async {
             capturas++;
@@ -108,6 +155,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: VerificacaoCnhTela(
+          recortarFoto: (bytes) async => Uint8List.fromList(bytes),
           carregarPerfil: () async => {
             'sucesso': true,
             'dados': <String, dynamic>{},
@@ -136,6 +184,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: VerificacaoCnhTela(
+          recortarFoto: (bytes) async => Uint8List.fromList(bytes),
           carregarPerfil: () async => {
             'sucesso': true,
             'dados': {'statusVerificacaoCnh': 'RECUSADA'},
@@ -172,6 +221,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: VerificacaoCnhTela(
+          recortarFoto: (bytes) async => Uint8List.fromList(bytes),
           carregarPerfil: () async => {
             'sucesso': true,
             'dados': perfilAprovado,
@@ -202,6 +252,7 @@ void main() {
           child: child!,
         ),
         home: VerificacaoCnhTela(
+          recortarFoto: (bytes) async => Uint8List.fromList(bytes),
           carregarPerfil: () async => {
             'sucesso': true,
             'dados': <String, dynamic>{},

@@ -20,8 +20,17 @@ describe('extração de dados da CNH', () => {
       cpf: '52998224725',
       categoria: 'AB',
       validade: '2030-10-06',
-      registroFinal: '8901',
     });
+  });
+
+  it('dispensa registro e não devolve esse dado', () => {
+    const resultado = extrairDadosCnh(
+      texto.replace(/Nº REGISTRO.*/, ''),
+      'João Pedro da Silva',
+      hoje,
+    );
+    expect(resultado).not.toBeNull();
+    expect(resultado).not.toHaveProperty('registroFinal');
   });
 
   it('aceita o rótulo abreviado de categoria', () => {
@@ -37,7 +46,6 @@ describe('extração de dados da CNH', () => {
     ['CNH vencida', texto.replace('06/10/2030', '05/10/2026')],
     ['data impossível', texto.replace('06/10/2030', '31/02/2030')],
     ['categoria A', texto.replace('CATEGORIA AB', 'CATEGORIA A')],
-    ['registro ausente', texto.replace('12345678901', '')],
   ])('não aprova %s', (_cenario, leitura) => {
     expect(extrairDadosCnh(leitura, 'João Pedro da Silva', hoje)).toBeNull();
   });
@@ -80,7 +88,6 @@ describe('extração de dados da CNH', () => {
     ['CPF_INVALIDO', texto.replace('529.982.247-25', '111.111.111-11')],
     ['CATEGORIA_INCOMPATIVEL', texto.replace('CATEGORIA AB', 'CATEGORIA A')],
     ['CNH_VENCIDA', texto.replace('06/10/2030', '05/10/2026')],
-    ['REGISTRO_NAO_LIDO', texto.replace('12345678901', '')],
   ])('explica a recusa %s sem devolver os dados lidos', (motivo, leitura) => {
     expect(conferirDadosCnh(leitura, 'João Pedro da Silva', hoje)).toEqual({
       dados: null,
@@ -163,8 +170,8 @@ describe('extração de dados da CNH', () => {
           texto.replace('12345678901', registro),
           'João Pedro da Silva',
           hoje,
-        )?.registroFinal,
-      ).toBe('8901');
+        ),
+      ).not.toHaveProperty('registroFinal');
     },
   );
 
@@ -203,8 +210,6 @@ describe('extração de dados da CNH', () => {
     ['CPF 529.982.247-25', 'CPF 529982247251'],
     ['CPF 529.982.247-25', 'CPF 52998224725 52998224725'],
     ['CPF 529.982.247-25', 'CPF 529.982 .247-24'],
-    ['Nº REGISTRO 12345678901', 'N REGISTRO\nCPF 52998224725'],
-    ['Nº REGISTRO 12345678901', 'N REGISTRO 123456789012'],
     ['CATEGORIA AB', 'CATEGORIA\nOBSERVACOES B'],
     ['CATEGORIA AB', 'CATEGORIA A\nCATEGORIA B'],
     ['VALIDADE 06/10/2030', 'VALIDADE 31 / 02 / 2030'],

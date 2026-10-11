@@ -4,7 +4,6 @@ export interface DadosCnh {
   cpf: string;
   categoria: string;
   validade: string;
-  registroFinal: string;
 }
 
 export const motivosCnh = {
@@ -22,7 +21,6 @@ export const motivosCnh = {
     'Não conseguimos identificar com segurança a validade da CNH. Fotografe o campo de validade com nitidez.',
   CNH_VENCIDA:
     'A data de validade lida está vencida. Confira a validade e a foto.',
-  REGISTRO_NAO_LIDO: 'Não conseguimos ler o número de registro da CNH.',
 } as const;
 
 type ConferenciaCnh =
@@ -93,7 +91,7 @@ function campoAposRotulo(
   return campos.length === 1 ? campos[0] : null;
 }
 
-function cpfValido(cpf: string): boolean {
+export function cpfValido(cpf: string): boolean {
   if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false;
 
   for (const tamanho of [9, 10]) {
@@ -192,42 +190,41 @@ export function conferirDadosCnh(
     return { dados: null, motivo: 'NOME_DIVERGENTE' };
   }
 
-  const cpfLido = campoAposRotulo(linhas, /\bCPF\b/, /^(\d[\d .-]*\d)$/);
+  const campos = typeof entrada === 'string' ? undefined : entrada.campos;
+  const cpfLido = campos
+    ? campos.cpf
+    : campoAposRotulo(linhas, /\bCPF\b/, /^(\d[\d .-]*\d)$/);
   const cpf = cpfLido?.replace(/\D/g, '') ?? '';
   if (!cpfLido) return { dados: null, motivo: 'CPF_NAO_LIDO' };
   if (!cpfValido(cpf)) return { dados: null, motivo: 'CPF_INVALIDO' };
 
-  const categoria = campoAposRotulo(
-    linhas,
-    /\b(?:CATEGORIA|CAT\.?\s*HAB\.?)(?=\s|$)/,
-    /^(A?[BCDE]|A|ACC)$/,
-  );
+  const categoria = campos
+    ? campos.categoria
+    : campoAposRotulo(
+        linhas,
+        /\b(?:CATEGORIA|CAT\.?\s*HAB\.?)(?=\s|$)/,
+        /^(A?[BCDE]|A|ACC)$/,
+      );
   if (!categoria) return { dados: null, motivo: 'CATEGORIA_NAO_LIDA' };
   if (!/^A?[BCDE]$/.test(categoria))
     return { dados: null, motivo: 'CATEGORIA_INCOMPATIVEL' };
 
-  const validadeLida = campoAposRotulo(
-    linhas,
-    /\bVALIDADE\b/,
-    /^(\d{2}\s*([/.])\s*\d{2}\s*\2\s*\d{4})$/,
-  );
+  const validadeLida = campos
+    ? campos.validade
+    : campoAposRotulo(
+        linhas,
+        /\bVALIDADE\b/,
+        /^(\d{2}\s*([/.])\s*\d{2}\s*\2\s*\d{4})$/,
+      );
   const validade = validadeLida ? dataIso(validadeLida) : null;
   if (!validade) return { dados: null, motivo: 'VALIDADE_NAO_LIDA' };
   if (validade < hoje) return { dados: null, motivo: 'CNH_VENCIDA' };
-
-  const registro = campoAposRotulo(
-    linhas,
-    /\bREGISTRO\b/,
-    /^(\d(?:\s*\d){10})$/,
-  )?.replace(/\s/g, '');
-  if (!registro) return { dados: null, motivo: 'REGISTRO_NAO_LIDO' };
 
   return {
     dados: {
       cpf,
       categoria,
       validade,
-      registroFinal: registro.slice(-4),
     },
   };
 }

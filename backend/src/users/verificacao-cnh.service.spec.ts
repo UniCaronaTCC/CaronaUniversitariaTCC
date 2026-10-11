@@ -111,7 +111,7 @@ describe('VerificacaoCnhService', () => {
       cpf: '52998224725',
       cnhCategoria: 'B',
       cnhValidade: '2099-10-06',
-      cnhRegistroFinal: '8901',
+      cnhRegistroFinal: null,
     });
     expect(alteracoes.cnhVerificadaEm).toBeInstanceOf(Date);
     expect(alteracoes.privacidadeAceitaEm).toBeInstanceOf(Date);

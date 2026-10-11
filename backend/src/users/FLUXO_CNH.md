@@ -2,94 +2,65 @@
 
 ## Fluxo
 
-O usuario abre Perfil > Habilitacao > Verificar CNH, ou tenta oferecer uma
-carona. Aceita o uso dos dados, fotografa frente e verso pela camera e envia.
-Pode revisar e refazer as fotos antes de enviar.
+O usuario aceita o uso dos dados, informa o nome completo e escolhe fotos da
+camera ou galeria. Depois de cada escolha, ajusta os quatro cantos do recorte
+para deixar somente o documento inteiro, com letras na posicao de leitura.
+Cancelar o recorte preserva a foto anterior. O original da galeria nao e apagado.
+O recorte e feito em memoria, sem biblioteca nativa adicional. Exige ao menos
+600 x 400 pixels e no maximo 5 MB por imagem.
 
-Na verificacao, informa `nomeCompleto` conforme o documento. Esse nome e
-comparado integralmente com o OCR, tolerando acentos, espacos e quebras de
-linha. Nao altera o nome de exibicao do perfil e nao e persistido nem logado.
-O endpoint exige esse campo multipart junto com `aceitePrivacidade`.
-Atualizar backend e app juntos; clientes antigos recebem orientacao para
-atualizar. A conferencia continua sem comprovar titularidade ou autenticidade.
+O app continua enviando frente, verso, nomeCompleto e aceitePrivacidade para
+POST /usuarios/cnh/verificar, com o token da sessao. O backend valida os dois
+arquivos, mas le apenas a frente, onde ficam os quatro campos necessarios.
+Nao exige nem extrai registro. A coluna cnh_registro_final continua nullable;
+novas verificacoes gravam null. Nao e necessario executar migracao ou apagar
+registros existentes.
 
-Recusas retornam `dados.motivo` e uma `mensagem` especifica para o campo.
-Logs contem apenas etapas, codigos, contagens e duracao, nunca texto do OCR,
-nome, CPF ou fotos. O app exibe a mensagem da resposta. O motivo nao e salvo
-no banco; ao reabrir o perfil, apenas o status permanece disponivel.
+## Leitura
 
-O log `CNH: diagnostico_nome` mostra quantos titulos de nome foram encontrados,
-quantas linhas foram aceitas, onde a extracao parou e se o nome corresponde.
-`TITULO_AUSENTE`, `DIGITOS_NA_LINHA` e `FORMATO_NAO_RECONHECIDO` ajudam a
-localizar falhas de leitura. `OUTRO_CAMPO` pode ser uma parada normal depois
-do nome; confira tambem `resultado` (`NAO_EXTRAIDO`, `DIVERGENTE` ou
-`CORRESPONDE`). Esses indicadores descrevem o texto lido, nao a qualidade real
-da foto. Nao alteram as regras de aprovacao nem sao enviados ao aplicativo.
-Para investigar no Render, publique o backend atualizado, repita uma tentativa
-e procure essa linha nos logs. Esta melhoria nao exige alteracao no banco.
+O Tesseract usa segmentacao automatica e contraste adaptativo (Sauvola),
+preservando a imagem colorida. As coordenadas dos rotulos delimitam nome,
+CPF, validade e categoria, sem posicoes fixas para uma foto especifica.
+Rotulos duplicados ou valores cortados/ambiguos sao recusados.
 
-CPF tolera espacos e pontuacao, mas continua exigindo 11 digitos e checksum
-valido. Registro tolera espacos e exige exatamente 11 digitos. Validade aceita
-DD/MM/AAAA ou DD.MM.AAAA, com espacos junto aos separadores, validando calendario
-e vencimento. Nao ha substituicao de letras por numeros.
+Se faltar um campo, ocorre no maximo uma releitura do pequeno recorte desse
+campo, no mesmo worker. CPF que falha no checksum tambem recebe essa releitura.
+O recorte do nome recebe margem branca e contraste Otsu; categoria usa canal
+vermelho para reduzir interferencia do fundo. Nao ha substituicao de digitos,
+preenchimento pelo nome informado ou escolha de datas sem rotulo.
+Pequenas variacoes do rotulo de categoria podem localizar o recorte; a releitura
+textual exige o rotulo CATEGORIA ou CAT.HAB. antes do valor.
 
-Campos numericos e categoria devem ter valor inteiro na mesma linha do rotulo
-ou na linha seguinte. Rotulos repetidos, texto de outro campo, mais de uma data
-ou continuacao numerica ambigua sao recusados. O parser textual nao deduz a
-posicao das colunas; layouts com campos misturados podem exigir nova captura.
+Nome deve corresponder integralmente ao informado, tolerando acentos e espacos.
+CPF exige 11 digitos e checksum valido. Validade exige data real e nao vencida.
+Categoria deve permitir carro: B/C/D/E ou AB/AC/AD/AE. O nome de perfil nao muda;
+nome informado e fotos nao sao persistidos. Os buffers de preparo e recorte sao
+limpos ao encerrar, inclusive em falhas.
 
-O Flutter envia as duas imagens e `aceitePrivacidade=true` para
-`POST /usuarios/cnh/verificar` com o token da sessao. O backend confere os dados
-por OCR, grava APROVADA ou RECUSADA e descarta as imagens. O app atualiza o perfil.
-Falha de conexao permite repetir o envio; recusa exige novas fotos.
+O parser textual permanece para compatibilidade interna e testes. A leitura
+real usa os campos espaciais e nao procura um campo ausente no texto geral.
 
-## Publicacao
+## Logs e publicacao
 
-O log `CNH: regiao_nome` detalha a recusa espacial: TITULO_AUSENTE,
-TITULO_DUPLICADO, ALTURA_INVALIDA, PALAVRA_NA_BORDA, REGIAO_VAZIA,
-EXCESSO_DE_LINHAS, NOME_DISTANTE, OUTRO_CAMPO ou FORMATO_INVALIDO.
-REGIAO_LIDA indica sucesso da extracao, antes da comparacao do nome.
-Inclui apenas contagens de titulos e linhas candidatas, sem texto ou coordenadas.
-Uma contagem zero pode indicar que a etapa de linhas ainda nao foi executada.
-A mensagem de NOME_NAO_LIDO informa a limitacao da leitura automatica, sem
-afirmar que a foto esta sem nitidez. O app ja exibe essa mensagem do backend.
+CNH: campos_lidos informa somente true/false para cada campo.
+CNH: diagnostico_nome informa contagens e resultado da comparacao.
+Os logs nao incluem texto OCR, nomes, CPF, coordenadas ou fotos.
+Falhas do processamento continuam distintas de uma recusa dos dados.
 
-A leitura do nome usa as coordenadas das palavras na frente da CNH. Localiza
-um unico titulo NOME, considera a numeracao anterior e procura ate duas linhas
-abaixo, limitadas pelos campos vizinhos e pela distancia ao titulo. Traducoes
-na linha do titulo nao entram no nome. A selecao nao usa o nome digitado.
-Regiao ausente ou ambigua resulta em NOME_NAO_LIDO, sem voltar ao texto geral.
-Os logs indicam REGIAO_LIDA ou REGIAO_NAO_IDENTIFICADA. A comparacao continua
-integral; os outros campos mantem a extracao textual anterior. Isso ainda nao
-resolve todos os layouts nem erros de reconhecimento de letras e exige teste
-no documento real. Nao ha mudanca de banco ou contrato do aplicativo.
+Atualizar backend e app para usar o recorte. O tempo em computador local nao
+preve o tempo do Render gratuito; testar uma tentativa depois de deploy Live.
+O fluxo nao consulta uma base oficial nem comprova autenticidade ou suspensao.
+Outros modelos de documento e condicoes de captura ainda precisam de testes.
 
-O backend exige CNH APROVADA, categoria B/C/D/E (ou AB/AC/AD/AE) e validade
-vigente para criar caronas avulsas ou programacoes recorrentes. Usa o dia de
-Sao Paulo. Retorna HTTP 403 com `codigo=CNH_NAO_APROVADA` quando nao autorizado.
+## Teste manual
 
-A geracao automatica de novas datas tambem confere a CNH. Programacoes sem
-habilitacao vigente nao geram novas caronas. Pausar continua permitido; retomar
-uma programacao ativa exige a conferencia. Caronas ja criadas sao preservadas.
+1. Aceitar o aviso e escolher frente e verso na camera ou galeria.
+2. Recortar o fundo sem cortar bordas, textos ou numeros da CNH.
+3. Cancelar uma nova escolha e conferir que a previa anterior permanece.
+4. Informar o nome completo e enviar; acompanhar campos_lidos nos logs.
+5. Conferir aprovacao, categoria e validade no perfil.
+6. Conferir recusa para nome divergente, CPF invalido, categoria A e vencimento.
+7. Conferir nova tentativa apos falha de rede.
 
-## Teste manual no celular
-
-1. Atualize e rode o backend e o app. Nao precisa de ngrok para a CNH.
-2. Com um usuario sem CNH aprovada, tente oferecer uma carona: deve aparecer
-   a entrada para verificar a CNH.
-3. Abra a verificacao. Sem aceitar o aviso, a camera e o envio ficam desativados.
-4. Aceite, fotografe a frente e o verso completos, nitidos e sem reflexos.
-5. Confira as previas e envie. Com dados compativeis, aparece CNH conferida.
-6. Conclua: o formulario de oferta deve abrir. Ainda e necessario ter veiculo.
-7. No perfil, confira categoria e validade. Abrir novamente nao exige novas fotos.
-8. Teste fotos ilegiveis: deve pedir novas fotos. Teste sem rede: deve permitir
-   tentar novamente. A aprovacao fica no banco e continua apos reiniciar o app.
-
-Fotos de teste usadas por testes automatizados sao sinteticas. Nao coloque
-fotos reais, CPF, token ou documentos pessoais no repositorio.
-
-## Limite desta etapa
-
-OCR confere o texto apresentado; autenticidade oficial fica para a futura
-integracao com o Vio. O teste manual com CNH real ainda e necessario para
-avaliar a leitura nos modelos fisicos de documento usados pelos participantes.
+Os testes automatizados usam dados sinteticos. Fotos reais autorizadas para
+investigacao local nao devem ir para o repositorio, logs ou fixtures.

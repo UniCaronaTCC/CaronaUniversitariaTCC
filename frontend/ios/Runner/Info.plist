@@ -49,5 +49,7 @@
 	<string>O UniCarona usa sua localização durante a corrida para acompanhar o trajeto.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>O UniCarona usa a câmera para fotografar sua CNH e conferir sua habilitação.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>O BuscaEu permite selecionar fotos para o perfil e para conferir sua CNH.</string>
 </dict>
 </plist>
