@@ -3,6 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
+  NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { QueryFailedError, Repository } from 'typeorm';
@@ -69,19 +70,28 @@ export class UsersService {
       throw new BadRequestException('Campus inválido');
     }
 
-    usuario.idInstituicao = instituicao.idInstituicao;
+    const alteracoes = {
+      idInstituicao: instituicao.idInstituicao,
+      instituicao: instituicao.nome,
+      campus,
+    };
+    const resultado = await this.usersRepository.update(idUsuario, alteracoes);
+    if (resultado.affected === 0) return null;
 
-    usuario.instituicao = instituicao.nome;
-
-    usuario.campus = campus;
-
-    return this.usersRepository.save(usuario);
+    return Object.assign(usuario, alteracoes);
   }
 
   async atualizarFotoPerfil(usuario: User, fotoPerfil: string): Promise<User> {
-    usuario.fotoPerfil = fotoPerfil;
+    // Salvar a entidade inteira pode desvincular relacoes nao carregadas.
+    const resultado = await this.usersRepository.update(usuario.idUsuario, {
+      fotoPerfil,
+    });
+    if (resultado.affected === 0) {
+      throw new NotFoundException('Usuário não encontrado');
+    }
 
-    return this.usersRepository.save(usuario);
+    usuario.fotoPerfil = fotoPerfil;
+    return usuario;
   }
 
   async buscarVeiculo(idUsuario: number): Promise<Veiculo | null> {

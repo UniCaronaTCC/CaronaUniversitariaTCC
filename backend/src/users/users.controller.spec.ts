@@ -164,6 +164,51 @@ describe('UsersController', () => {
     expect(fotoPerfilService.enviar).not.toHaveBeenCalled();
   });
 
+  it('retorna a nova foto preservando veiculo e status da CNH', async () => {
+    const usuario = {
+      idUsuario: 1,
+      nome: 'Teste',
+      statusVerificacaoCnh: 'APROVADA',
+      cnhCategoria: 'AB',
+      cnhValidade: '2099-05-01',
+      cpf: '52998224725',
+    };
+    const url = 'https://exemplo.com/foto?v=2';
+    usersService.buscarPorId.mockResolvedValue(usuario);
+    fotoPerfilService.enviar.mockResolvedValue(url);
+    usersService.atualizarFotoPerfil.mockResolvedValue({
+      ...usuario,
+      fotoPerfil: url,
+    });
+    usersService.buscarVeiculo.mockResolvedValue({
+      idVeiculo: 7,
+      modelo: 'Onix',
+      cor: 'Branco',
+      placa: 'ABC1D23',
+    });
+    const request = { usuario: { sub: 1 } } as unknown as Parameters<
+      UsersController['atualizarFotoPerfil']
+    >[1];
+    const foto = { buffer: Buffer.from([0xff, 0xd8, 0xff, 0x00]) };
+
+    const resultado = await controller.atualizarFotoPerfil(foto, request);
+
+    expect(fotoPerfilService.enviar).toHaveBeenCalledWith(
+      1,
+      foto.buffer,
+      'image/jpeg',
+    );
+    expect(usersService.atualizarFotoPerfil).toHaveBeenCalledWith(usuario, url);
+    expect(resultado.dados).toMatchObject({
+      fotoPerfil: url,
+      statusVerificacaoCnh: 'APROVADA',
+      cnhCategoria: 'AB',
+      cnhValidade: '2099-05-01',
+      veiculo: { id: 7, modelo: 'Onix' },
+    });
+    expect(resultado.dados).not.toHaveProperty('cpf');
+  });
+
   it('normaliza e salva os dados do veículo', async () => {
     usersService.buscarPorId.mockResolvedValue({ idUsuario: 1 });
     usersService.salvarVeiculo.mockResolvedValue({

@@ -11,6 +11,7 @@ describe('UsersService', () => {
   let repository: {
     findOne: jest.Mock;
     save: jest.Mock;
+    update: jest.Mock;
   };
   let instituicoesService: {
     buscarPorId: jest.Mock;
@@ -26,6 +27,7 @@ describe('UsersService', () => {
     repository = {
       findOne: jest.fn(),
       save: jest.fn(),
+      update: jest.fn().mockResolvedValue({ affected: 1 }),
     };
     instituicoesService = {
       buscarPorId: jest.fn(),
@@ -129,7 +131,6 @@ describe('UsersService', () => {
       idInstituicao: 1,
       nome: 'Centro Universitário Salesiano',
     });
-    repository.save.mockImplementation((dados: User) => Promise.resolve(dados));
 
     const resultado = await service.atualizarPerfil(1, 1, 'Araçatuba');
 
@@ -137,7 +138,12 @@ describe('UsersService', () => {
     expect(resultado?.instituicao).toBe('Centro Universitário Salesiano');
     expect(resultado?.campus).toBe('Araçatuba');
     expect(resultado?.tipoPerfil).toBe('PASSAGEIRO');
-    expect(repository.save).toHaveBeenCalledWith(usuario);
+    expect(repository.update).toHaveBeenCalledWith(1, {
+      idInstituicao: 1,
+      instituicao: 'Centro Universitário Salesiano',
+      campus: 'Araçatuba',
+    });
+    expect(repository.save).not.toHaveBeenCalled();
     expect(instituicoesService.campusValido).toHaveBeenCalledWith(
       1,
       'Araçatuba',
@@ -146,7 +152,6 @@ describe('UsersService', () => {
 
   it('salva a URL da foto no usuário', async () => {
     const usuario = { idUsuario: 1, fotoPerfil: null } as User;
-    repository.save.mockImplementation((dados: User) => Promise.resolve(dados));
 
     const resultado = await service.atualizarFotoPerfil(
       usuario,
@@ -154,7 +159,121 @@ describe('UsersService', () => {
     );
 
     expect(resultado.fotoPerfil).toBe('https://exemplo.com/foto');
-    expect(repository.save).toHaveBeenCalledWith(usuario);
+    expect(repository.update).toHaveBeenCalledWith(1, {
+      fotoPerfil: 'https://exemplo.com/foto',
+    });
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it.each([null, { idVeiculo: 7 }])(
+    'atualiza somente a foto sem persistir veiculo ou CNH: %j',
+    async (veiculo) => {
+      const usuario = Object.assign(new User(), {
+        idUsuario: 1,
+        fotoPerfil: 'https://exemplo.com/antiga',
+        veiculo,
+        statusVerificacaoCnh: 'APROVADA',
+        cnhCategoria: 'AB',
+        cnhValidade: '2099-05-01',
+      });
+      const antes = { ...usuario };
+
+      const resultado = await service.atualizarFotoPerfil(
+        usuario,
+        'https://exemplo.com/nova',
+      );
+
+      expect(repository.update).toHaveBeenCalledWith(1, {
+        fotoPerfil: 'https://exemplo.com/nova',
+      });
+      expect(resultado).toEqual({
+        ...antes,
+        fotoPerfil: 'https://exemplo.com/nova',
+      });
+      expect(repository.save).not.toHaveBeenCalled();
+      expect(veiculosRepository.save).not.toHaveBeenCalled();
+    },
+  );
+
+  it('nao altera a foto em memoria quando o banco recusa a atualizacao', async () => {
+    const usuario = Object.assign(new User(), {
+      idUsuario: 1,
+      fotoPerfil: 'https://exemplo.com/antiga',
+    });
+    repository.update.mockRejectedValue(new Error('falha no banco'));
+
+    await expect(
+      service.atualizarFotoPerfil(usuario, 'https://exemplo.com/nova'),
+    ).rejects.toThrow('falha no banco');
+    expect(usuario.fotoPerfil).toBe('https://exemplo.com/antiga');
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it('informa se o usuario foi removido antes de salvar a foto', async () => {
+    const usuario = Object.assign(new User(), {
+      idUsuario: 1,
+      fotoPerfil: null,
+    });
+    repository.update.mockResolvedValue({ affected: 0 });
+
+    await expect(
+      service.atualizarFotoPerfil(usuario, 'https://exemplo.com/nova'),
+    ).rejects.toThrow('Usuário não encontrado');
+    expect(usuario.fotoPerfil).toBeNull();
+  });
+
+  it('preserva veiculo, foto e CNH ao editar instituicao e campus', async () => {
+    const usuario = Object.assign(new User(), {
+      idUsuario: 1,
+      fotoPerfil: 'https://exemplo.com/foto',
+      veiculo: null,
+      statusVerificacaoCnh: 'APROVADA',
+      cnhCategoria: 'AB',
+      cnhValidade: '2099-05-01',
+    });
+    const antes = { ...usuario };
+    repository.findOne.mockResolvedValue(usuario);
+    instituicoesService.buscarPorId.mockResolvedValue({
+      idInstituicao: 2,
+      nome: 'Universidade',
+    });
+
+    const resultado = await service.atualizarPerfil(1, 2, 'Campus');
+
+    const alteracoes = {
+      idInstituicao: 2,
+      instituicao: 'Universidade',
+      campus: 'Campus',
+    };
+    expect(repository.update).toHaveBeenCalledWith(1, alteracoes);
+    expect(resultado).toEqual({ ...antes, ...alteracoes });
+    expect(repository.save).not.toHaveBeenCalled();
+    expect(veiculosRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('nao atualiza o perfil para um campus invalido', async () => {
+    repository.findOne.mockResolvedValue({ idUsuario: 1 });
+    instituicoesService.buscarPorId.mockResolvedValue({
+      idInstituicao: 2,
+      nome: 'Universidade',
+    });
+    instituicoesService.campusValido.mockResolvedValue(false);
+
+    await expect(service.atualizarPerfil(1, 2, 'Invalido')).rejects.toThrow(
+      'Campus inválido',
+    );
+    expect(repository.update).not.toHaveBeenCalled();
+  });
+
+  it('retorna null se o usuario foi removido durante a edicao do perfil', async () => {
+    repository.findOne.mockResolvedValue({ idUsuario: 1 });
+    instituicoesService.buscarPorId.mockResolvedValue({
+      idInstituicao: 2,
+      nome: 'Universidade',
+    });
+    repository.update.mockResolvedValue({ affected: 0 });
+
+    await expect(service.atualizarPerfil(1, 2, 'Campus')).resolves.toBeNull();
   });
 
   it('cadastra um veículo para o usuário', async () => {
