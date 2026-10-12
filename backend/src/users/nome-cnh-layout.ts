@@ -14,7 +14,7 @@ const normalizar = (texto: string) =>
     .toUpperCase()
     .trim();
 const outroCampo =
-  /\b(CPF|REGISTRO|VALIDADE|CATEGORIA|CAT|FILIACAO|NASCIMENTO|DATA|DOC|IDENTIDADE|ASSINATURA|NACIONALIDADE|PERMISSAO)\b/;
+  /\b(CPF|REGISTRO|VALIDADE|CATEGORIA|CAT|FILIACAO|NASCIMENTO|DATA|DOC|IDENTIDADE|ASSINATURA|NACIONALIDADE|PERMISSAO|HABILITACAO)\b/;
 const sobrepoe = (a: Bbox, b: Bbox) => a.x0 < b.x1 && a.x1 > b.x0;
 
 type MotivoRegiao =
@@ -65,7 +65,7 @@ export function nomePeloLayout(
   const vizinhos = palavras.filter(
     (p) =>
       p.bbox.x0 > titulo.bbox.x1 &&
-      Math.abs(p.bbox.y0 - titulo.bbox.y0) < altura &&
+      Math.abs(p.bbox.y0 - titulo.bbox.y0) < altura * 2 &&
       outroCampo.test(normalizar(p.text)),
   );
   const regiao: Bbox = {
@@ -86,14 +86,49 @@ export function nomePeloLayout(
   regiao.y1 = Math.min(regiao.y1, ...proximosCampos.map((p) => p.bbox.y0));
   // Uma leve inclinação pode colocar o topo de uma letra acima do fim
   // do título. Só toleramos essa sobreposição se o centro estiver abaixo.
-  const abaixoDoTitulo = (p: (typeof palavras)[number]) =>
-    !linhaTitulo.words.includes(p) &&
-    p.bbox.y0 >= regiao.y0 - altura / 2 &&
-    (p.bbox.y0 + p.bbox.y1) / 2 > regiao.y0;
+  const abaixoDoTitulo = (p: (typeof palavras)[number]) => {
+    const centro = (p.bbox.y0 + p.bbox.y1) / 2;
+    if (linhaTitulo.words.includes(p) || centro <= regiao.y0) return false;
+    if (p.bbox.y0 >= regiao.y0 - altura / 2) return true;
+    if (p.bbox.y0 < regiao.y0 - altura) return false;
+    // Uma moldura pode aumentar a caixa de uma palavra. Só toleramos isso
+    // quando pelo menos duas outras palavras confirmam a mesma linha de base.
+    const referencias = linhas
+      .find((l) => l.words.includes(p))!
+      .words.filter(
+        (q) =>
+          q !== p &&
+          q.bbox.x0 >= regiao.x0 &&
+          q.bbox.x1 <= regiao.x1 &&
+          q.bbox.y0 >= regiao.y0 - altura / 2 &&
+          (q.bbox.y0 + q.bbox.y1) / 2 > regiao.y0 &&
+          /^[\p{L}'’.-]+$/u.test(q.text) &&
+          !outroCampo.test(normalizar(q.text)),
+      );
+    if (referencias.length < 2) return false;
+    const centros = referencias
+      .map((q) => (q.bbox.y0 + q.bbox.y1) / 2)
+      .sort((a, b) => a - b);
+    const alturas = referencias
+      .map((q) => q.bbox.y1 - q.bbox.y0)
+      .sort((a, b) => a - b);
+    return (
+      Math.abs(centro - centros[Math.floor(centros.length / 2)]) <=
+      alturas[Math.floor(alturas.length / 2)] / 2
+    );
+  };
   // Não descartar silenciosamente uma palavra que cruza a borda:
   // isso poderia transformar um nome completo em outro nome mais curto.
   const cortada = palavras.some(
     (p) =>
+      !linhaTitulo.words.includes(p) &&
+      !outroCampo.test(normalizar(p.text)) &&
+      !(
+        vizinhos.length &&
+        /\d/.test(p.text) &&
+        (p.bbox.x0 + p.bbox.x1) / 2 >= regiao.x1
+      ) &&
+      (p.bbox.y0 + p.bbox.y1) / 2 > regiao.y0 &&
       sobrepoe(p.bbox, regiao) &&
       p.bbox.y1 > regiao.y0 &&
       p.bbox.y0 < regiao.y1 &&

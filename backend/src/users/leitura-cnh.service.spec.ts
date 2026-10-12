@@ -5,6 +5,7 @@ import {
 import { tmpdir } from 'node:os';
 import sharp from 'sharp';
 import { createWorker } from 'tesseract.js';
+import type { Block } from 'tesseract.js';
 
 import { LeituraCnhService } from './leitura-cnh.service';
 
@@ -58,13 +59,68 @@ describe('LeituraCnhService', () => {
     expect(createWorker).toHaveBeenCalledWith('por', undefined, {
       cachePath: tmpdir(),
     });
-    expect(worker.recognize).toHaveBeenCalledTimes(1);
+    expect(worker.recognize).toHaveBeenCalledTimes(4);
     expect(worker.setParameters).toHaveBeenCalledWith({
       tessedit_pageseg_mode: '3',
       thresholding_method: '2',
     });
     expect(worker.terminate).toHaveBeenCalledTimes(1);
-    expect(processadas[0].every((byte) => byte === 0)).toBe(true);
+    expect(
+      processadas.every((imagem) => imagem.every((byte) => byte === 0)),
+    ).toBe(true);
+  });
+
+  it.each([1, 2, 3, 4])(
+    'encontra rótulos na tentativa %i sem criar outro worker',
+    async (tentativa) => {
+      const palavras = ['NOME', 'CPF', 'VALIDADE'].map((text, i) => ({
+        text,
+        bbox: { x0: 100 + i * 250, x1: 150 + i * 250, y0: 10, y1: 20 },
+      }));
+      const blocks = [
+        { paragraphs: [{ lines: [{ words: palavras }] }] },
+      ] as unknown as Block[];
+      const processadas: Buffer[] = [];
+      const worker = {
+        recognize: jest.fn((imagem: Buffer) => {
+          processadas.push(imagem);
+          return Promise.resolve({
+            data: {
+              text: 'CNH',
+              blocks: processadas.length === tentativa ? blocks : null,
+            },
+          });
+        }),
+        setParameters: jest.fn().mockResolvedValue(undefined),
+        terminate: jest.fn().mockResolvedValue(undefined),
+      };
+      jest.mocked(createWorker).mockResolvedValue(worker as never);
+      const imagem = await criarImagem(900, 600);
+      await service.ler(imagem, imagem);
+      expect(worker.recognize).toHaveBeenCalledTimes(tentativa);
+      expect(createWorker).toHaveBeenCalledTimes(1);
+      expect(worker.terminate).toHaveBeenCalledTimes(1);
+      expect(
+        processadas.every((foto) => foto.every((byte) => byte === 0)),
+      ).toBe(true);
+    },
+  );
+
+  it('aceita dimensão mínima também quando a foto é vertical', async () => {
+    const worker = {
+      recognize: jest
+        .fn()
+        .mockResolvedValue({ data: { text: '', blocks: null } }),
+      setParameters: jest.fn().mockResolvedValue(undefined),
+      terminate: jest.fn().mockResolvedValue(undefined),
+    };
+    jest.mocked(createWorker).mockResolvedValue(worker as never);
+    const imagem = await criarImagem(400, 600);
+    await expect(service.ler(imagem, imagem)).resolves.toHaveProperty(
+      'nome',
+      null,
+    );
+    expect(worker.terminate).toHaveBeenCalledTimes(1);
   });
 
   it('rejeita imagem pequena antes de iniciar o OCR', async () => {

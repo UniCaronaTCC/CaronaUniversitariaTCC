@@ -21,38 +21,57 @@ export async function lerCamposCnh(
     validade: valorDoCampo(blocos, 'validade', width, height),
     categoria: valorDoCampo(blocos, 'categoria', width, height),
   };
-  // No máximo um recorte pequeno por campo ausente, no mesmo worker.
+  // Um recorte por campo, com até duas leituras de contraste no mesmo worker.
   for (const campo of Object.keys(valores) as CampoCnh[]) {
     if (
       valores[campo] &&
       (campo !== 'cpf' || cpfValido(valores.cpf!.replace(/\D/g, '')))
     )
       continue;
-    const regiao = regiaoDoCampo(blocos, campo, width, height);
+    const regiao = regiaoDoCampo(blocos, campo, width, height, true);
     if (!regiao) continue;
     let recorte: Buffer | undefined;
     try {
       let preparo = sharp(imagem)
         .extract(regiao)
         .resize({ width: Math.min(1800, regiao.width * 4) });
-      if (campo === 'nome') {
-        preparo = preparo.extend({
-          top: 10,
-          bottom: 10,
-          left: 10,
-          right: 10,
-          background: 'white',
-        });
-      }
+      preparo = preparo.extend({
+        top: 10,
+        bottom: 10,
+        left: 10,
+        right: 10,
+        background: 'white',
+      });
       if (campo === 'categoria')
         preparo = preparo.extractChannel(0).normalise();
       recorte = await preparo.png().toBuffer();
       await worker.setParameters({
-        tessedit_pageseg_mode: PSM.SINGLE_BLOCK,
+        tessedit_pageseg_mode:
+          campo === 'nome' ? PSM.SINGLE_BLOCK : PSM.SINGLE_LINE,
         thresholding_method: campo === 'nome' ? '0' : '2',
       });
       const leitura = await worker.recognize(recorte);
-      valores[campo] = valorDoRecorte(leitura.data.text, campo);
+      let valor = valorDoRecorte(leitura.data.text, campo, true);
+      if (!valor || (campo === 'cpf' && !cpfValido(valor.replace(/\D/g, '')))) {
+        let contraste: Buffer | undefined;
+        try {
+          contraste = await sharp(recorte)
+            .extractChannel(campo === 'validade' ? 1 : 0)
+            .normalise()
+            .png()
+            .toBuffer();
+          await worker.setParameters({
+            tessedit_pageseg_mode:
+              campo === 'nome' ? PSM.SINGLE_BLOCK : PSM.SINGLE_LINE,
+            thresholding_method: '0',
+          });
+          const segunda = await worker.recognize(contraste);
+          valor = valorDoRecorte(segunda.data.text, campo, true);
+        } finally {
+          contraste?.fill(0);
+        }
+      }
+      valores[campo] = valor;
     } finally {
       recorte?.fill(0);
     }

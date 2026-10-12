@@ -15,6 +15,33 @@ function blocos(...lines: ReturnType<typeof linha>[]): Block[] {
 }
 
 describe('nomePeloLayout', () => {
+  it('preserva palavra com caixa ampliada por moldura quando a linha de base confirma o nome', () => {
+    const nome = linha('MARIA CLARA SILVA', 100, 24);
+    for (const p of nome.words) p.bbox.y1 = 40;
+    nome.words[0].bbox.y0 = 12;
+    nome.words[0].bbox.y1 = 41;
+    const titulo = linha('NOME', 100, 10);
+    titulo.words[0].bbox.y1 = 20;
+    expect(nomePeloLayout(blocos(titulo, nome))).toBe('MARIA CLARA SILVA');
+  });
+  it('isola data de coluna vizinha com cabeçalho ligeiramente mais alto', () => {
+    const titulo = linha('NOME', 100, 20);
+    const vizinho = linha('HABILITACAO', 600, 10);
+    const nome = linha('MARIA CLARA SILVA', 100, 40);
+    nome.words.push(...linha('01/01/2020', 600, 28).words);
+    expect(nomePeloLayout(blocos(titulo, vizinho, nome))).toBe(
+      'MARIA CLARA SILVA',
+    );
+  });
+  it('ignora cabeçalho acima do nome que toca a borda vertical', () => {
+    const cabecalho = linha('NOME E SOBRENOME', 100, 10);
+    cabecalho.words[2].bbox.y0 = 13;
+    cabecalho.words[2].bbox.y1 = 28;
+    const vizinho = linha('1 HABILITACAO', 600, 14);
+    expect(
+      nomePeloLayout(blocos(cabecalho, vizinho, linha('MARIA SILVA', 100, 35))),
+    ).toBe('MARIA SILVA');
+  });
   it('preserva sobrenome com pequena sobreposição vertical ao título', () => {
     const nome = linha('JOAO PEDRO SILVA', 100, 28);
     nome.words[2].bbox.y0 = 22;

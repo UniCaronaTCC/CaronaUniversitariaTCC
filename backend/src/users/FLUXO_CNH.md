@@ -6,8 +6,9 @@ O usuario aceita o uso dos dados, informa o nome completo e escolhe fotos da
 camera ou galeria. Depois de cada escolha, ajusta os quatro cantos do recorte
 para deixar somente o documento inteiro, com letras na posicao de leitura.
 Cancelar o recorte preserva a foto anterior. O original da galeria nao e apagado.
+As setas de rotacao giram 90 graus e preservam a mesma area selecionada.
 O recorte e feito em memoria, sem biblioteca nativa adicional. Exige ao menos
-600 x 400 pixels e no maximo 5 MB por imagem.
+600 pixels no lado maior, 400 no menor e no maximo 5 MB por imagem.
 
 O app continua enviando frente, verso, nomeCompleto e aceitePrivacidade para
 POST /usuarios/cnh/verificar, com o token da sessao. O backend valida os dois
@@ -24,12 +25,22 @@ CPF, validade e categoria, sem posicoes fixas para uma foto especifica.
 Rotulos duplicados ou valores cortados/ambiguos sao recusados.
 
 Se faltar um campo, ocorre no maximo uma releitura do pequeno recorte desse
-campo, no mesmo worker. CPF que falha no checksum tambem recebe essa releitura.
-O recorte do nome recebe margem branca e contraste Otsu; categoria usa canal
-vermelho para reduzir interferencia do fundo. Nao ha substituicao de digitos,
+campo, com ate duas tentativas de contraste no mesmo worker. CPF que falha no
+checksum tambem recebe essa releitura. O recorte respeita rotulos unicos,
+colunas vizinhas e molduras reconhecidas; nao estreita o campo horizontalmente
+pelos digitos reconhecidos, pois a primeira leitura pode ter omitido digitos.
+Todos os recortes recebem margem branca. Nome usa contraste Otsu; categoria
+usa canal vermelho e a segunda tentativa de validade usa canal verde.
+Nao ha substituicao de digitos,
 preenchimento pelo nome informado ou escolha de datas sem rotulo.
 Pequenas variacoes do rotulo de categoria podem localizar o recorte; a releitura
-textual exige o rotulo CATEGORIA ou CAT.HAB. antes do valor.
+aceita valor sem repetir o rotulo somente dentro dessa regiao confirmada.
+Valores ambiguos, linhas adicionais e rotulos duplicados continuam recusados.
+
+Sem rotulos horizontais suficientes (nome e pelo menos dois outros campos),
+o backend tenta ate quatro orientacoes da mesma frente. Nao combina campos
+de orientacoes diferentes, nao usa o nome digitado para escolher a orientacao
+e mantem o limite de dois workers simultaneos. Os buffers sao limpos ao final.
 
 Nome deve corresponder integralmente ao informado, tolerando acentos e espacos.
 CPF exige 11 digitos e checksum valido. Validade exige data real e nao vencida.
@@ -61,6 +72,7 @@ Outros modelos de documento e condicoes de captura ainda precisam de testes.
 5. Conferir aprovacao, categoria e validade no perfil.
 6. Conferir recusa para nome divergente, CPF invalido, categoria A e vencimento.
 7. Conferir nova tentativa apos falha de rede.
+8. Girar uma selecao, conferir bordas e confirmar que o arquivo original nao muda.
 
 Os testes automatizados usam dados sinteticos. Fotos reais autorizadas para
 investigacao local nao devem ir para o repositorio, logs ou fixtures.

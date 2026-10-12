@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'dart:ui' as ui;
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 
 Future<Uint8List?> recortarCnh(BuildContext context, Uint8List bytes) =>
@@ -19,6 +20,7 @@ class _RecortarCnhTelaState extends State<RecortarCnhTela> {
   ui.Image? imagem;
   Rect selecao = const Rect.fromLTRB(0, 0, 1, 1);
   bool salvando = false;
+  int giros = 0;
   String? erro;
 
   @override
@@ -45,27 +47,61 @@ class _RecortarCnhTelaState extends State<RecortarCnhTela> {
     }
   }
 
+  void girar(int passo) {
+    if (imagem == null || salvando) return;
+    setState(() {
+      giros = (giros + passo) % 4;
+      selecao = passo > 0
+          ? Rect.fromLTRB(
+              1 - selecao.bottom,
+              selecao.left,
+              1 - selecao.top,
+              selecao.right,
+            )
+          : Rect.fromLTRB(
+              selecao.top,
+              1 - selecao.right,
+              selecao.bottom,
+              1 - selecao.left,
+            );
+      erro = null;
+    });
+  }
+
   Future<void> confirmar() async {
     if (imagem == null || salvando) return;
     setState(() => salvando = true);
     try {
       final foto = imagem!;
+      final largura = giros.isEven ? foto.width : foto.height;
+      final altura = giros.isEven ? foto.height : foto.width;
       final origem = Rect.fromLTRB(
-        (selecao.left * foto.width).floorToDouble(),
-        (selecao.top * foto.height).floorToDouble(),
-        (selecao.right * foto.width).ceilToDouble(),
-        (selecao.bottom * foto.height).ceilToDouble(),
+        (selecao.left * largura).floorToDouble(),
+        (selecao.top * altura).floorToDouble(),
+        (selecao.right * largura).ceilToDouble(),
+        (selecao.bottom * altura).ceilToDouble(),
       );
-      if (origem.width < 600 || origem.height < 400) {
+      if (math.max(origem.width, origem.height) < 600 ||
+          math.min(origem.width, origem.height) < 400) {
         setState(
           () => erro = 'O recorte ficou pequeno. Tire uma foto mais próxima',
         );
         return;
       }
       final recorder = ui.PictureRecorder();
-      Canvas(
-        recorder,
-      ).drawImageRect(foto, origem, Offset.zero & origem.size, Paint());
+      final canvas = Canvas(recorder)..translate(-origem.left, -origem.top);
+      switch (giros) {
+        case 1:
+          canvas.translate(foto.height.toDouble(), 0);
+          canvas.rotate(math.pi / 2);
+        case 2:
+          canvas.translate(foto.width.toDouble(), foto.height.toDouble());
+          canvas.rotate(math.pi);
+        case 3:
+          canvas.translate(0, foto.width.toDouble());
+          canvas.rotate(3 * math.pi / 2);
+      }
+      canvas.drawImage(foto, Offset.zero, Paint());
       final desenho = recorder.endRecording();
       final recorte = await desenho.toImage(
         origem.width.toInt(),
@@ -106,7 +142,23 @@ class _RecortarCnhTelaState extends State<RecortarCnhTela> {
   Widget build(BuildContext context) => PopScope(
     canPop: !salvando,
     child: Scaffold(
-      appBar: AppBar(title: const Text('Recortar CNH')),
+      appBar: AppBar(
+        title: const Text('Recortar CNH'),
+        actions: [
+          IconButton(
+            key: const ValueKey('girar-esquerda'),
+            tooltip: 'Girar para a esquerda',
+            onPressed: imagem == null || salvando ? null : () => girar(-1),
+            icon: const Icon(Icons.rotate_left),
+          ),
+          IconButton(
+            key: const ValueKey('girar-direita'),
+            tooltip: 'Girar para a direita',
+            onPressed: imagem == null || salvando ? null : () => girar(1),
+            icon: const Icon(Icons.rotate_right),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: Column(
           children: [
@@ -130,7 +182,10 @@ class _RecortarCnhTelaState extends State<RecortarCnhTela> {
                   }
                   final tamanho = applyBoxFit(
                     BoxFit.contain,
-                    Size(foto.width.toDouble(), foto.height.toDouble()),
+                    Size(
+                      (giros.isEven ? foto.width : foto.height).toDouble(),
+                      (giros.isEven ? foto.height : foto.width).toDouble(),
+                    ),
                     Size(limites.maxWidth - 48, limites.maxHeight - 48),
                   ).destination;
                   return Center(
@@ -141,7 +196,10 @@ class _RecortarCnhTelaState extends State<RecortarCnhTela> {
                         clipBehavior: Clip.none,
                         children: [
                           Positioned.fill(
-                            child: RawImage(image: foto, fit: BoxFit.fill),
+                            child: RotatedBox(
+                              quarterTurns: giros,
+                              child: RawImage(image: foto, fit: BoxFit.fill),
+                            ),
                           ),
                           Positioned.fromRect(
                             rect: Rect.fromLTRB(

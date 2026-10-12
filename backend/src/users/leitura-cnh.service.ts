@@ -9,6 +9,7 @@ import sharp from 'sharp';
 import { createWorker, PSM } from 'tesseract.js';
 import { type LeituraCnh } from './nome-cnh-layout';
 import { lerCamposCnh } from './ler-campos-cnh';
+import { rotulosCnhLocalizados } from './campos-cnh-layout';
 
 @Injectable()
 export class LeituraCnhService {
@@ -35,32 +36,51 @@ export class LeituraCnhService {
           cachePath: tmpdir(),
         });
         try {
-          await worker.setParameters({
-            tessedit_pageseg_mode: PSM.AUTO,
-            thresholding_method: '2',
-          });
-          const primeira = await worker.recognize(
-            frentePreparada,
-            {},
-            { text: true, blocks: true },
-          );
-          const campos = await lerCamposCnh(
-            worker,
-            frentePreparada,
-            primeira.data.blocks,
-          );
+          let leitura: LeituraCnh = {
+            texto: '',
+            nome: null,
+            campos: { cpf: null, validade: null, categoria: null },
+          };
+          // Só tentamos outras orientações quando faltam os rótulos do
+          // documento. Todas as leituras usam o mesmo worker e a mesma foto.
+          for (const angulo of [0, 270, 90, 180]) {
+            const orientada = angulo
+              ? await sharp(frentePreparada).rotate(angulo).png().toBuffer()
+              : frentePreparada;
+            try {
+              await worker.setParameters({
+                tessedit_pageseg_mode: PSM.AUTO,
+                thresholding_method: '2',
+              });
+              const resultado = await worker.recognize(
+                orientada,
+                {},
+                { text: true, blocks: true },
+              );
+              if (angulo === 0) leitura.texto = resultado.data.text;
+              if (!rotulosCnhLocalizados(resultado.data.blocks)) continue;
+              leitura = {
+                texto: resultado.data.text,
+                ...(await lerCamposCnh(
+                  worker,
+                  orientada,
+                  resultado.data.blocks,
+                )),
+              };
+              break;
+            } finally {
+              if (angulo) orientada.fill(0);
+            }
+          }
           this.logger.log(
             `CNH: campos_lidos ${JSON.stringify({
-              nome: !!campos.nome,
-              cpf: !!campos.campos?.cpf,
-              validade: !!campos.campos?.validade,
-              categoria: !!campos.campos?.categoria,
+              nome: !!leitura.nome,
+              cpf: !!leitura.campos?.cpf,
+              validade: !!leitura.campos?.validade,
+              categoria: !!leitura.campos?.categoria,
             })}`,
           );
-          return {
-            texto: primeira.data.text,
-            ...campos,
-          };
+          return leitura;
         } finally {
           await worker.terminate();
         }
@@ -86,8 +106,8 @@ export class LeituraCnhService {
       if (
         !metadados.width ||
         !metadados.height ||
-        metadados.width < 600 ||
-        metadados.height < 400
+        Math.max(metadados.width, metadados.height) < 600 ||
+        Math.min(metadados.width, metadados.height) < 400
       ) {
         throw new BadRequestException('Envie fotos maiores e mais nítidas');
       }
