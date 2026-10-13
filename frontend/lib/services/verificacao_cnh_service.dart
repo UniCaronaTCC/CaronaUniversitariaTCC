@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show debugPrint, kDebugMode;
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
@@ -11,11 +12,54 @@ import 'sessao_service.dart';
 class VerificacaoCnhService {
   final http.Client? cliente;
   final Duration prazo;
+  final void Function(String)? registrarDiagnostico;
 
   const VerificacaoCnhService({
     this.cliente,
     this.prazo = const Duration(seconds: 90),
+    this.registrarDiagnostico,
   });
+
+  void _diagnosticar(String mensagem) {
+    if (!kDebugMode) return;
+    final registrar = registrarDiagnostico;
+    if (registrar != null) {
+      registrar('CNH_ENVIO $mensagem');
+    } else {
+      debugPrint('CNH_ENVIO $mensagem');
+    }
+  }
+
+  String _formatoResposta(Map<String, String> headers) {
+    final tipo = headers['content-type']?.split(';').first.trim().toLowerCase();
+    if (tipo == 'application/json' || (tipo?.endsWith('+json') ?? false)) {
+      return 'json';
+    }
+    if (tipo == 'text/html') return 'html';
+    if (tipo == 'text/plain') return 'texto';
+    return tipo == null ? 'ausente' : 'outro';
+  }
+
+  String _causaConexao(http.ClientException erro) {
+    // Classifica a mensagem, mas nunca a imprime: ela pode conter a URI.
+    final texto = erro.message.toLowerCase();
+    if (texto.contains('failed host lookup') ||
+        texto.contains('name or service not known') ||
+        texto.contains('no address associated with hostname')) {
+      return 'dns';
+    }
+    if (texto.contains('connection refused')) return 'conexao_recusada';
+    if (texto.contains('connection reset') || texto.contains('broken pipe')) {
+      return 'conexao_interrompida';
+    }
+    if (texto.contains('connection closed')) return 'conexao_fechada';
+    if (texto.contains('network is unreachable') ||
+        texto.contains('no route to host')) {
+      return 'rede_inacessivel';
+    }
+    if (texto.contains('timed out')) return 'timeout_socket';
+    return 'nao_classificada';
+  }
 
   Future<Map<String, dynamic>> reiniciarTeste() async {
     final conexao = cliente ?? http.Client();
@@ -88,8 +132,27 @@ class VerificacaoCnhService {
     }
 
     final conexao = cliente ?? http.Client();
+    final relogio = Stopwatch()..start();
+    var fase = 'preparacao';
+    var tentativa = 0;
+    int? statusHttp;
+    var formato = 'sem_resposta';
+    void registrarFalha(Object erro, String classe) {
+      // Nunca registrar a mensagem da excecao, corpo, cabecalhos ou documentos.
+      _diagnosticar(
+        'falha classe=$classe tipo=${erro.runtimeType} fase=$fase '
+        'http=${statusHttp ?? 'sem_resposta'} formato=$formato '
+        'tempo_ms=${relogio.elapsedMilliseconds}',
+      );
+    }
+
+    _diagnosticar('inicio');
     try {
       final resposta = await AuthService.enviarComToken((token) async {
+        tentativa++;
+        statusHttp = null;
+        formato = 'sem_resposta';
+        fase = 'preparacao';
         final pedido =
             http.MultipartRequest(
                 'POST',
@@ -110,12 +173,24 @@ class VerificacaoCnhService {
                   filename: 'verso.jpg',
                 ),
               ]);
-        return http.Response.fromStream(await conexao.send(pedido));
+        fase = 'aguardando_resposta';
+        _diagnosticar('requisicao tentativa=$tentativa');
+        final recebida = await conexao.send(pedido);
+        statusHttp = recebida.statusCode;
+        formato = _formatoResposta(recebida.headers);
+        _diagnosticar(
+          'resposta http=$statusHttp formato=$formato '
+          'tempo_ms=${relogio.elapsedMilliseconds}',
+        );
+        fase = 'lendo_resposta';
+        return http.Response.fromStream(recebida);
       }).timeout(prazo);
 
       if (resposta == null) {
+        _diagnosticar('sem_sessao');
         return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
       }
+      fase = 'interpretando_resposta';
       final corpo = jsonDecode(resposta.body);
       if (corpo is! Map) throw const FormatException();
       final dados = corpo['dados'];
@@ -136,18 +211,38 @@ class VerificacaoCnhService {
             ? mensagem.join('\n')
             : mensagem?.toString() ?? 'Não foi possível conferir a CNH',
       };
-    } on TimeoutException {
+    } on TimeoutException catch (erro) {
+      registrarFalha(erro, 'timeout');
       return {
         'sucesso': false,
         'mensagem':
             'A verificação demorou. Atualize o status antes de tentar novamente',
       };
-    } catch (_) {
+    } on FormatException catch (erro) {
+      registrarFalha(erro, 'resposta_invalida');
       return {
         'sucesso': false,
-        'mensagem': 'Não foi possível conectar ao servidor. Tente novamente',
+        'mensagem':
+            'O servidor retornou uma resposta inválida'
+            '${statusHttp == null ? '' : ' (HTTP $statusHttp)'}. '
+            'Atualize o status antes de tentar novamente',
+      };
+    } on http.ClientException catch (erro) {
+      registrarFalha(erro, 'conexao');
+      _diagnosticar('conexao causa=${_causaConexao(erro)}');
+      return {
+        'sucesso': false,
+        'mensagem':
+            'Falha de conexão ao enviar a CNH. Confira a internet e tente novamente',
+      };
+    } catch (erro) {
+      registrarFalha(erro, 'inesperada');
+      return {
+        'sucesso': false,
+        'mensagem': 'Não foi possível concluir o envio da CNH. Tente novamente',
       };
     } finally {
+      relogio.stop();
       if (cliente == null) conexao.close();
     }
   }

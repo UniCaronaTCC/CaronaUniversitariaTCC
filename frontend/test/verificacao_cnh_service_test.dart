@@ -14,6 +14,119 @@ void main() {
   setUp(() => AuthService.tokenUsuarioLogado = 'token-teste');
   tearDown(() => AuthService.tokenUsuarioLogado = null);
 
+  for (final resposta in [
+    http.Response(
+      '<html>dado-sensivel-sintetico</html>',
+      502,
+      headers: {'content-type': 'text/html; charset=utf-8'},
+    ),
+    http.Response('', 503, headers: {'content-type': 'text/plain'}),
+    http.Response(
+      '["dado-sensivel-sintetico"]',
+      200,
+      headers: {'content-type': 'application/json'},
+    ),
+  ]) {
+    test('diagnostica resposta invalida HTTP ${resposta.statusCode}', () async {
+      final logs = <String>[];
+      final service = VerificacaoCnhService(
+        registrarDiagnostico: logs.add,
+        cliente: MockClient((_) async => resposta),
+      );
+      final resultado = await service.enviar(
+        frente,
+        verso,
+        nomeCompleto: 'Nome Sensivel',
+        aceitePrivacidade: true,
+      );
+      expect(resultado['sucesso'], false);
+      expect(resultado['mensagem'], contains('HTTP ${resposta.statusCode}'));
+      expect(resultado['mensagem'], isNot(contains('conectar')));
+      final diagnostico = logs.join('\n');
+      expect(diagnostico, contains('CNH_ENVIO inicio'));
+      expect(diagnostico, contains('classe=resposta_invalida'));
+      expect(diagnostico, contains('tipo=FormatException'));
+      expect(diagnostico, contains('fase=interpretando_resposta'));
+      expect(diagnostico, contains('http=${resposta.statusCode}'));
+      expect(diagnostico, isNot(contains('dado-sensivel-sintetico')));
+      expect(diagnostico, isNot(contains('Nome Sensivel')));
+      expect(diagnostico, isNot(contains('token-teste')));
+    });
+  }
+
+  test(
+    'diagnostica falha de conexao sem imprimir mensagem da excecao',
+    () async {
+      final logs = <String>[];
+      final service = VerificacaoCnhService(
+        registrarDiagnostico: logs.add,
+        cliente: MockClient((_) async {
+          throw http.ClientException('dado-sensivel-sintetico token-teste');
+        }),
+      );
+      final resultado = await service.enviar(
+        frente,
+        verso,
+        nomeCompleto: 'Nome Sensivel',
+        aceitePrivacidade: true,
+      );
+      expect(resultado['mensagem'], contains('Falha de conexão'));
+      final diagnostico = logs.join('\n');
+      expect(diagnostico, contains('classe=conexao tipo=ClientException'));
+      expect(diagnostico, contains('fase=aguardando_resposta'));
+      expect(diagnostico, contains('http=sem_resposta'));
+      expect(diagnostico, isNot(contains('dado-sensivel-sintetico')));
+      expect(diagnostico, isNot(contains('token-teste')));
+    },
+  );
+
+  test('falha inesperada nao e apresentada como falta de conexao', () async {
+    final logs = <String>[];
+    final service = VerificacaoCnhService(
+      registrarDiagnostico: logs.add,
+      cliente: MockClient(
+        (_) async => throw StateError('dado-sensivel-sintetico'),
+      ),
+    );
+    final resultado = await service.enviar(
+      frente,
+      verso,
+      nomeCompleto: 'Nome Sensivel',
+      aceitePrivacidade: true,
+    );
+    expect(resultado['sucesso'], false);
+    expect(resultado['mensagem'], contains('concluir o envio'));
+    expect(logs.join('\n'), contains('classe=inesperada tipo=StateError'));
+    expect(logs.join('\n'), isNot(contains('dado-sensivel-sintetico')));
+  });
+
+  for (final caso in <String, String>{
+    "Failed host lookup: 'dado-sensivel-sintetico'": 'dns',
+    'Connection refused dado-sensivel-sintetico': 'conexao_recusada',
+    'Connection reset by peer dado-sensivel-sintetico': 'conexao_interrompida',
+    'Connection closed before full header dado-sensivel-sintetico':
+        'conexao_fechada',
+    'Network is unreachable dado-sensivel-sintetico': 'rede_inacessivel',
+    'Connection timed out dado-sensivel-sintetico': 'timeout_socket',
+    'dado-sensivel-sintetico': 'nao_classificada',
+  }.entries) {
+    test('classifica conexao como ${caso.value} sem expor mensagem', () async {
+      final logs = <String>[];
+      final service = VerificacaoCnhService(
+        registrarDiagnostico: logs.add,
+        cliente: MockClient((_) async => throw http.ClientException(caso.key)),
+      );
+      await service.enviar(
+        frente,
+        verso,
+        nomeCompleto: 'Nome Sensivel',
+        aceitePrivacidade: true,
+      );
+      expect(logs.join('\n'), contains('conexao causa=${caso.value}'));
+      expect(logs.join('\n'), isNot(contains('dado-sensivel-sintetico')));
+    });
+  }
+
   test(
     'reinicia com um unico POST sem documento ou id de outra conta',
     () async {
@@ -161,7 +274,9 @@ void main() {
 
   test('limita a espera e permite consultar se o servidor concluiu', () async {
     final pendente = Completer<http.Response>();
+    final logs = <String>[];
     final service = VerificacaoCnhService(
+      registrarDiagnostico: logs.add,
       prazo: const Duration(milliseconds: 1),
       cliente: MockClient((_) => pendente.future),
     );
@@ -173,6 +288,7 @@ void main() {
     );
     expect(resultado['sucesso'], isFalse);
     expect(resultado['mensagem'], contains('Atualize o status'));
+    expect(logs.join('\n'), contains('classe=timeout tipo=TimeoutException'));
     pendente.complete(http.Response('{}', 500));
   });
 }

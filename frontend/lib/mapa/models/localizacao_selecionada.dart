@@ -6,6 +6,8 @@ class LocalizacaoSelecionada {
   final String? cidade;
   final String? estado;
   final String? pais;
+  final String? rua;
+  final String? numero;
   final bool pontoEspecifico;
 
   // Nome digitado pelo usuário, como "UniSalesiano".
@@ -18,6 +20,8 @@ class LocalizacaoSelecionada {
     this.cidade,
     this.estado,
     this.pais,
+    this.rua,
+    this.numero,
     this.pontoEspecifico = true,
   });
 
@@ -28,6 +32,63 @@ class LocalizacaoSelecionada {
       ponto.latitude <= 90 &&
       ponto.longitude >= -180 &&
       ponto.longitude <= 180;
+
+  Map<String, dynamic> toJson() => {
+    'latitude': ponto.latitude,
+    'longitude': ponto.longitude,
+    'endereco': endereco,
+    'nome': nome,
+    'cidade': cidade,
+    'estado': estado,
+    'pais': pais,
+    'rua': rua,
+    'numero': numero,
+    'pontoEspecifico': pontoEspecifico,
+  };
+
+  factory LocalizacaoSelecionada.fromJson(Map<String, dynamic> json) {
+    final latitude = json['latitude'];
+    final longitude = json['longitude'];
+    final endereco = json['endereco'];
+    if (latitude is! num ||
+        longitude is! num ||
+        endereco is! String ||
+        endereco.trim().isEmpty ||
+        json['pontoEspecifico'] is! bool) {
+      throw const FormatException('Destino salvo invalido');
+    }
+    if (!latitude.isFinite ||
+        !longitude.isFinite ||
+        latitude < -90 ||
+        latitude > 90 ||
+        longitude < -180 ||
+        longitude > 180) {
+      throw const FormatException('Coordenadas do destino invalidas');
+    }
+    String? textoOpcional(String campo) {
+      final valor = json[campo];
+      if (valor != null && valor is! String) {
+        throw const FormatException('Destino salvo invalido');
+      }
+      return valor as String?;
+    }
+
+    final local = LocalizacaoSelecionada(
+      ponto: LatLng(latitude.toDouble(), longitude.toDouble()),
+      endereco: endereco,
+      nome: textoOpcional('nome'),
+      cidade: textoOpcional('cidade'),
+      estado: textoOpcional('estado'),
+      pais: textoOpcional('pais'),
+      rua: textoOpcional('rua'),
+      numero: textoOpcional('numero'),
+      pontoEspecifico: json['pontoEspecifico'] as bool,
+    );
+    if (!local.coordenadasValidas) {
+      throw const FormatException('Coordenadas do destino invalidas');
+    }
+    return local;
+  }
 
   // Une o nome conhecido ao endereço completo.
   String get descricaoCompleta {

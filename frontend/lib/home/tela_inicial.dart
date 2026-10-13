@@ -7,6 +7,8 @@ import '../mapa/services/localizacao_service.dart';
 import '../models/carona.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/carona_service.dart';
+import '../services/auth_service.dart';
+import '../services/destino_preferido_service.dart';
 import '../utils/filtro_caronas.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/botao_acao_home.dart';
@@ -23,8 +25,13 @@ import 'selecionar_destino.dart';
 
 class TelaInicial extends StatefulWidget {
   final String nomeUsuario;
+  final DestinoPreferidoService destinoPreferidoService;
 
-  const TelaInicial({super.key, required this.nomeUsuario});
+  const TelaInicial({
+    super.key,
+    required this.nomeUsuario,
+    this.destinoPreferidoService = const DestinoPreferidoService(),
+  });
 
   @override
   State<TelaInicial> createState() => _TelaInicialState();
@@ -42,19 +49,39 @@ class _TelaInicialState extends State<TelaInicial> {
   String? mensagemErroMinhasCaronas;
   LocalizacaoSelecionada? destinoSelecionado;
   String? cidadeAtual;
+  late final Future<void> carregamentoDestino;
+  late final int? idUsuario;
+  bool escolhendoDestino = false;
 
   @override
   void initState() {
     super.initState();
+    idUsuario = int.tryParse(
+      AuthService.usuarioLogado?['id']?.toString() ?? '',
+    );
+    carregamentoDestino = carregarDestinoPreferido();
     carregarConteudo();
     carregarCidadeAtual();
   }
 
+  Future<void> carregarDestinoPreferido() async {
+    if (idUsuario == null || idUsuario! <= 0) return;
+    try {
+      final destino = await widget.destinoPreferidoService.carregar(idUsuario!);
+      if (mounted) setState(() => destinoSelecionado = destino);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Não foi possível carregar seu destino salvo'),
+          ),
+        );
+      }
+    }
+  }
+
   Future<void> carregarConteudo() async {
-    await Future.wait([
-      carregarCaronas(),
-      carregarMinhasCaronas(),
-    ]);
+    await Future.wait([carregarCaronas(), carregarMinhasCaronas()]);
   }
 
   Future<void> carregarCidadeAtual() async {
@@ -122,9 +149,7 @@ class _TelaInicialState extends State<TelaInicial> {
     final dados = resultado['dados'];
 
     if (resultado['sucesso'] == true && dados is List<Carona>) {
-      final caronasAtivas = dados
-          .where((carona) => !carona.finalizada)
-          .toList()
+      final caronasAtivas = dados.where((carona) => !carona.finalizada).toList()
         ..sort((a, b) => a.dataInicio.compareTo(b.dataInicio));
 
       setState(() {
@@ -143,6 +168,8 @@ class _TelaInicialState extends State<TelaInicial> {
   }
 
   Future<void> abrirBusca() async {
+    await carregamentoDestino;
+    if (!mounted) return;
     await Navigator.push(
       context,
       MaterialPageRoute(
@@ -158,6 +185,8 @@ class _TelaInicialState extends State<TelaInicial> {
   }
 
   Future<void> abrirOferta() async {
+    await carregamentoDestino;
+    if (!mounted) return;
     final caronaCriada = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
@@ -173,21 +202,41 @@ class _TelaInicialState extends State<TelaInicial> {
   }
 
   Future<void> escolherDestino() async {
-    final resultado = await Navigator.push<LocalizacaoSelecionada>(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            SelecionarDestinoTela(destinoInicial: destinoSelecionado),
-      ),
-    );
+    if (escolhendoDestino) return;
+    escolhendoDestino = true;
+    try {
+      await carregamentoDestino;
+      if (!mounted) return;
+      final resultado = await Navigator.push<LocalizacaoSelecionada>(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              SelecionarDestinoTela(destinoInicial: destinoSelecionado),
+        ),
+      );
 
-    if (!mounted || resultado == null) {
-      return;
+      if (!mounted || resultado == null) {
+        return;
+      }
+
+      if (idUsuario == null || idUsuario! <= 0) {
+        throw StateError('Usuario nao identificado');
+      }
+      await widget.destinoPreferidoService.salvar(idUsuario!, resultado);
+      if (mounted) setState(() => destinoSelecionado = resultado);
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Não foi possível salvar seu destino. Tente novamente',
+            ),
+          ),
+        );
+      }
+    } finally {
+      escolhendoDestino = false;
     }
-
-    setState(() {
-      destinoSelecionado = resultado;
-    });
   }
 
   void abrirDetalhes(Carona carona) {
@@ -203,10 +252,8 @@ class _TelaInicialState extends State<TelaInicial> {
     final alterada = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => DetalhesCaronaTela(
-          carona: carona,
-          indiceNavegacaoOrigem: 0,
-        ),
+        builder: (_) =>
+            DetalhesCaronaTela(carona: carona, indiceNavegacaoOrigem: 0),
       ),
     );
 
@@ -230,10 +277,8 @@ class _TelaInicialState extends State<TelaInicial> {
     final alterada = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
-        builder: (_) => OfertarCaronaTela(
-          caronaParaEditar: carona,
-          indiceNavegacao: 0,
-        ),
+        builder: (_) =>
+            OfertarCaronaTela(caronaParaEditar: carona, indiceNavegacao: 0),
       ),
     );
 

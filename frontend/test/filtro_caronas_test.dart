@@ -33,6 +33,103 @@ void main() {
     );
 
     expect(resultado.first.id, 2);
+    expect(resultado, hasLength(1));
+  });
+
+  test('nomes diferentes nao excluem a mesma faculdade por coordenadas', () {
+    final caronas = [
+      criarCarona(
+        id: 1,
+        destino: 'Unisalesiano - Rodovia sem numero',
+        destinoLatitude: -21.2358733,
+        destinoLongitude: -50.40848,
+      ),
+      criarCarona(
+        id: 2,
+        destino: 'UniSALESIANO - endereco completo',
+        destinoLatitude: -21.235275,
+        destinoLongitude: -50.4060626,
+      ),
+      criarCarona(
+        id: 3,
+        destino: 'UniSalesiano de outra cidade',
+        destinoLatitude: -23.5505,
+        destinoLongitude: -46.6333,
+      ),
+    ];
+    final resultado = FiltroCaronas.aplicar(
+      caronas: caronas,
+      destino: 'UniSALESIANO - Rodovia, 3821',
+      destinoLatitude: -21.235275,
+      destinoLongitude: -50.4060626,
+    );
+    expect(resultado.map((c) => c.id), [2, 1]);
+  });
+
+  test('destino selecionado exclui viagens distantes e sem coordenadas', () {
+    final resultado = FiltroCaronas.aplicar(
+      caronas: [
+        criarCarona(
+          id: 1,
+          destinoLatitude: -21.235275,
+          destinoLongitude: -50.4060626,
+        ),
+        criarCarona(
+          id: 2,
+          destinoLatitude: -21.24,
+          destinoLongitude: -50.4060626,
+        ),
+        criarCarona(id: 3),
+      ],
+      destinoLatitude: -21.235275,
+      destinoLongitude: -50.4060626,
+    );
+    expect(resultado.map((c) => c.id), [1]);
+  });
+
+  test('coordenadas invalidas da busca usam filtro textual sem falhar', () {
+    final resultado = FiltroCaronas.aplicar(
+      caronas: [
+        criarCarona(id: 1),
+        criarCarona(id: 2, destino: 'Outro lugar'),
+      ],
+      destino: 'unisalesiano',
+      destinoLatitude: double.nan,
+      destinoLongitude: -50,
+    );
+    expect(resultado.map((c) => c.id), [1]);
+  });
+
+  test('destino geográfico continua respeitando data e horario preferido', () {
+    final resultado = FiltroCaronas.aplicar(
+      caronas: [
+        criarCarona(
+          id: 1,
+          horario: '18:00',
+          dataInicio: DateTime(2026, 7, 23),
+          destinoLatitude: -21.235275,
+          destinoLongitude: -50.4060626,
+        ),
+        criarCarona(
+          id: 2,
+          horario: '19:00',
+          dataInicio: DateTime(2026, 7, 23),
+          destinoLatitude: -21.235275,
+          destinoLongitude: -50.4060626,
+        ),
+        criarCarona(
+          id: 3,
+          dataInicio: DateTime(2026, 7, 24),
+          destinoLatitude: -21.235275,
+          destinoLongitude: -50.4060626,
+        ),
+      ],
+      destinoLatitude: -21.235275,
+      destinoLongitude: -50.4060626,
+      data: DateTime(2026, 7, 23),
+      horarioPreferidoEmMinutos: 19 * 60,
+    );
+    expect(resultado.map((c) => c.id), [2, 1]);
   });
 
   test('data selecionada continua filtrando as caronas', () {

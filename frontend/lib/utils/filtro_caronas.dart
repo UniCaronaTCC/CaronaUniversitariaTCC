@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import '../models/carona.dart';
 
 class FiltroCaronas {
+  static const raioDestinoMetros = 500.0;
   static List<Carona> aplicar({
     required List<Carona> caronas,
     String destino = '',
@@ -15,18 +16,21 @@ class FiltroCaronas {
   }) {
     final destinoNormalizado = _normalizarTexto(destino);
     final cidadeNormalizada = _normalizarTexto(cidadePreferida ?? '');
-    final possuiCoordenadas =
-        destinoLatitude != null && destinoLongitude != null;
+    final possuiCoordenadas = _coordenadasValidas(
+      destinoLatitude,
+      destinoLongitude,
+    );
     final priorizarCidade =
         destinoNormalizado.isEmpty &&
         !possuiCoordenadas &&
         cidadeNormalizada.isNotEmpty;
 
     final resultado = caronas.where((carona) {
-      final destinoCorresponde =
-          destinoNormalizado.isEmpty ||
-          possuiCoordenadas ||
-          _normalizarTexto(carona.destino).contains(destinoNormalizado);
+      final destinoCorresponde = possuiCoordenadas
+          ? _calcularDistancia(carona, destinoLatitude!, destinoLongitude!) <=
+                raioDestinoMetros
+          : destinoNormalizado.isEmpty ||
+                _normalizarTexto(carona.destino).contains(destinoNormalizado);
 
       final dataCorresponde = data == null || _ocorreNaData(carona, data);
 
@@ -49,8 +53,8 @@ class FiltroCaronas {
       if (possuiCoordenadas) {
         final distanciaPrimeira = _calcularDistancia(
           primeira,
-          destinoLatitude,
-          destinoLongitude,
+          destinoLatitude!,
+          destinoLongitude!,
         );
         final distanciaSegunda = _calcularDistancia(
           segunda,
@@ -114,16 +118,26 @@ class FiltroCaronas {
     double latitude,
     double longitude,
   ) {
-    if (carona.destinoLatitude == null || carona.destinoLongitude == null) {
+    if (!_coordenadasValidas(carona.destinoLatitude, carona.destinoLongitude)) {
       return double.infinity;
     }
 
     return const Distance().as(
-      LengthUnit.Kilometer,
+      LengthUnit.Meter,
       LatLng(latitude, longitude),
       LatLng(carona.destinoLatitude!, carona.destinoLongitude!),
     );
   }
+
+  static bool _coordenadasValidas(double? latitude, double? longitude) =>
+      latitude != null &&
+      longitude != null &&
+      latitude.isFinite &&
+      longitude.isFinite &&
+      latitude >= -90 &&
+      latitude <= 90 &&
+      longitude >= -180 &&
+      longitude <= 180;
 
   static bool _ocorreNaData(Carona carona, DateTime dataEscolhida) {
     final data = _somenteData(dataEscolhida);

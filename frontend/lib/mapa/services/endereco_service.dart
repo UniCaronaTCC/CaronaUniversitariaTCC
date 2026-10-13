@@ -10,6 +10,10 @@ import 'package:latlong2/latlong.dart';
 import '../models/localizacao_selecionada.dart';
 
 class EnderecoService {
+  final http.Client? cliente;
+
+  EnderecoService({this.cliente});
+
   Future<LocalizacaoSelecionada?> buscarLocalizacaoPorCoordenadas(
     double latitude,
     double longitude,
@@ -89,6 +93,7 @@ class EnderecoService {
         resultados = _juntarSemDuplicar(resultados, alternativos);
       }
 
+      resultados = _juntarSemDuplicar(resultados, []);
       resultados.sort(
         (a, b) =>
             _calcularPrioridade(
@@ -132,12 +137,12 @@ class EnderecoService {
       parametros['lon'] = longitudeReferencia.toString();
     }
 
-    final resposta = await http
-        .get(
-          Uri.https('photon.komoot.io', '/api', parametros),
-          headers: {'User-Agent': 'UniCarona/1.0'},
-        )
-        .timeout(const Duration(seconds: 8));
+    final url = Uri.https('photon.komoot.io', '/api', parametros);
+    final headers = {'User-Agent': 'UniCarona/1.0'};
+    final resposta =
+        await (cliente?.get(url, headers: headers) ??
+                http.get(url, headers: headers))
+            .timeout(const Duration(seconds: 8));
 
     if (resposta.statusCode != 200) {
       debugPrint('Erro Photon: ${resposta.statusCode}');
@@ -186,7 +191,14 @@ class EnderecoService {
 
     final latitude = double.tryParse(coordinates[1].toString());
 
-    if (latitude == null || longitude == null) {
+    if (latitude == null ||
+        longitude == null ||
+        !latitude.isFinite ||
+        !longitude.isFinite ||
+        latitude < -90 ||
+        latitude > 90 ||
+        longitude < -180 ||
+        longitude > 180) {
       return null;
     }
 
@@ -236,6 +248,8 @@ class EnderecoService {
       cidade: cidade.isEmpty ? null : cidade,
       estado: estado,
       pais: pais,
+      rua: rua.isEmpty ? null : rua,
+      numero: numero.isEmpty ? null : numero,
       pontoEspecifico: pontoEspecifico,
     );
   }
@@ -244,22 +258,48 @@ class EnderecoService {
     List<LocalizacaoSelecionada> primeiraLista,
     List<LocalizacaoSelecionada> segundaLista,
   ) {
-    final resultado = [...primeiraLista];
-
-    for (final local in segundaLista) {
-      final jaExiste = resultado.any(
-        (existente) =>
-            existente.ponto.latitude == local.ponto.latitude &&
-            existente.ponto.longitude == local.ponto.longitude,
+    final resultado = <LocalizacaoSelecionada>[];
+    for (final local in [...primeiraLista, ...segundaLista]) {
+      final indice = resultado.indexWhere(
+        (existente) => _mesmoLugar(existente, local),
       );
-
-      if (!jaExiste) {
+      if (indice == -1) {
         resultado.add(local);
+      } else if (_completudeEndereco(local) >
+          _completudeEndereco(resultado[indice])) {
+        resultado[indice] = local;
       }
     }
 
     return resultado;
   }
+
+  bool _mesmoLugar(LocalizacaoSelecionada a, LocalizacaoSelecionada b) {
+    final nome = _normalizarCompacto(a.nome ?? '');
+    final outroNome = _normalizarCompacto(b.nome ?? '');
+    if (nome.isEmpty && outroNome.isEmpty) {
+      return a.ponto == b.ponto &&
+          _normalizar(a.endereco) == _normalizar(b.endereco);
+    }
+    if (nome.isEmpty || nome != outroNome) return false;
+    for (final par in [
+      (a.cidade, b.cidade),
+      (a.estado, b.estado),
+      (a.rua, b.rua),
+      (a.numero, b.numero),
+    ]) {
+      final primeiro = _normalizar(par.$1 ?? '');
+      final segundo = _normalizar(par.$2 ?? '');
+      if (primeiro.isNotEmpty && segundo.isNotEmpty && primeiro != segundo) {
+        return false;
+      }
+    }
+    // O mesmo campus pode aparecer como ponto e como area no OpenStreetMap.
+    return const Distance().as(LengthUnit.Meter, a.ponto, b.ponto) <= 350;
+  }
+
+  int _completudeEndereco(LocalizacaoSelecionada local) =>
+      (local.numero?.isNotEmpty == true ? 1000 : 0) + local.endereco.length;
 
   double _calcularPrioridade({
     required LocalizacaoSelecionada local,
