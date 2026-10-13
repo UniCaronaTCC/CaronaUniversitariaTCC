@@ -4,7 +4,6 @@ import {
   Logger,
 } from '@nestjs/common';
 import { DataSource, QueryFailedError, Repository } from 'typeorm';
-import { ConfigService } from '@nestjs/config';
 import { Carona } from '../caronas/carona.entity';
 import { RecorrenciaCarona } from '../caronas/recorrencia.entity';
 
@@ -26,7 +25,6 @@ describe('VerificacaoCnhService', () => {
   let usuarios: { findOne: jest.Mock; update: jest.Mock };
   let leitura: { ler: jest.Mock };
   let service: VerificacaoCnhService;
-  let config: { get: jest.Mock };
   let ofertas: { exists: jest.Mock };
   let recorrencias: { exists: jest.Mock };
   let dataSource: { transaction: jest.Mock };
@@ -42,15 +40,6 @@ describe('VerificacaoCnhService', () => {
     };
     leitura = {
       ler: jest.fn().mockResolvedValue({ texto, nome: 'JOAO PEDRO DA SILVA' }),
-    };
-    config = {
-      get: jest.fn(
-        (key: string) =>
-          ({
-            CNH_TEST_RESET_ENABLED: 'true',
-            CNH_TEST_RESET_USER_IDS: '1, 7',
-          })[key],
-      ),
     };
     ofertas = { exists: jest.fn().mockResolvedValue(false) };
     recorrencias = { exists: jest.fn().mockResolvedValue(false) };
@@ -76,7 +65,6 @@ describe('VerificacaoCnhService', () => {
     service = new VerificacaoCnhService(
       usuarios as unknown as Repository<User>,
       leitura as unknown as LeituraCnhService,
-      config as unknown as ConfigService,
       dataSource as unknown as DataSource,
     );
   });
@@ -141,21 +129,26 @@ describe('VerificacaoCnhService', () => {
     });
   });
 
-  it.each([undefined, 'false', 'TRUE', '1'])(
-    'bloqueia reset sem ativacao explicita: %s',
-    async (flag) => {
-      config.get.mockReturnValue(flag);
-      await expect(service.reiniciarParaTeste(1)).rejects.toThrow(
-        'indisponível',
+  it.each([1, 2, 7, 42])(
+    'reinicia a propria conta %s sem configuracao adicional',
+    async (idUsuario) => {
+      usuarios.findOne.mockResolvedValue({ idUsuario });
+      await expect(service.reiniciarParaTeste(idUsuario)).resolves.toEqual({
+        status: 'NAO_ENVIADA',
+      });
+      expect(usuarios.update).toHaveBeenCalledWith(
+        idUsuario,
+        expect.objectContaining({ statusVerificacaoCnh: 'NAO_ENVIADA' }),
       );
-      expect(dataSource.transaction).not.toHaveBeenCalled();
     },
   );
 
-  it('bloqueia outras contas mesmo com o recurso ligado', async () => {
-    expect(service.permiteReinicioTeste(7)).toBe(true);
-    await expect(service.reiniciarParaTeste(2)).rejects.toThrow('indisponível');
-    expect(dataSource.transaction).not.toHaveBeenCalled();
+  it('nao altera dados de usuario inexistente', async () => {
+    usuarios.findOne.mockResolvedValue(null);
+    await expect(service.reiniciarParaTeste(42)).rejects.toThrow(
+      'Usuário não encontrado',
+    );
+    expect(usuarios.update).not.toHaveBeenCalled();
   });
 
   it.each(['carona', 'recorrencia'])(

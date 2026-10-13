@@ -2,18 +2,11 @@
 
 ## Reinicio temporario para testes
 
-Recurso de QA a retirar antes da entrega: GET /usuarios/cnh/testes e
-POST /usuarios/cnh/reiniciar-teste, autenticados e sem ID no corpo.
-Por padrao fica desativado. No backend de testes do Render, habilitar:
-
-```text
-CNH_TEST_RESET_ENABLED=true
-CNH_TEST_RESET_USER_IDS=1
-```
-
-A lista aceita IDs autorizados separados por virgula; nao sao tokens/chaves.
-O botao "Reiniciar CNH (teste)" aparece na tela aprovada somente quando o
-backend autoriza a conta. Exige confirmacao. Limpa somente campos de CNH
+Recurso de QA a retirar antes da entrega: POST /usuarios/cnh/reiniciar-teste,
+autenticado e sem ID no corpo. Reinicia somente a conta identificada pelo JWT.
+Nao exige variaveis de ambiente, lista de IDs ou consulta de permissao.
+O botao "Reiniciar CNH (teste)" aparece na tela aprovada sem consultar permissao.
+Exige confirmacao. Limpa somente campos de CNH
 e consentimento; preserva usuario, foto, veiculo, pagamentos e historico.
 Bloqueia enquanto houver leitura/reset em andamento neste processo,
 ofertas ATIVA/LOTADA/EM_ANDAMENTO ou recorrencias ativas como motorista.
@@ -21,9 +14,10 @@ Nao cancela nem pausa nada automaticamente. Para testar nessa conta,
 pausar recorrencias e resolver ofertas ativas primeiro.
 Nao testar a mesma conta simultaneamente por dois backends diferentes.
 A atualizacao usa transacao, bloqueio da linha e confere linhas afetadas.
-Nao exige migracao. A configuracao precisa do deploy atualizado e o botao
-precisa do app recompilado. Antes da entrega, remover rotas, metodos,
-botao e variaveis; nao apenas esconder o botao.
+Nao exige migracao. Precisa apenas do backend publicado e do app atualizado.
+Durante esta etapa de testes, qualquer conta autenticada pode reiniciar sua
+propria CNH, respeitando os bloqueios acima. Nao publicar este recurso na
+entrega final: remover rota, metodo e botao; nao apenas esconder o botao.
 
 ## Fluxo
 

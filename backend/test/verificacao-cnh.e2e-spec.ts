@@ -4,8 +4,8 @@ import sharp from 'sharp';
 import request from 'supertest';
 import { App } from 'supertest/types';
 
-import { JwtAuthGuard } from '../src/auth/jwt-auth.guard';
-import type { RequisicaoComUsuario } from '../src/auth/requisicao-com-usuario';
+import { SupabaseAuthService } from '../src/auth/supabase-auth.service';
+import { UsersService } from '../src/users/users.service';
 import { VerificacaoCnhController } from '../src/users/verificacao-cnh.controller';
 import { VerificacaoCnhService } from '../src/users/verificacao-cnh.service';
 
@@ -26,7 +26,6 @@ describe('VerificacaoCnhController (HTTP)', () => {
   const reiniciarParaTeste = jest
     .fn()
     .mockResolvedValue({ status: 'NAO_ENVIADA' });
-  const permiteReinicioTeste = jest.fn().mockReturnValue(false);
 
   beforeAll(async () => {
     const modulo = await Test.createTestingModule({
@@ -34,26 +33,30 @@ describe('VerificacaoCnhController (HTTP)', () => {
       providers: [
         {
           provide: VerificacaoCnhService,
-          useValue: { verificar, reiniciarParaTeste, permiteReinicioTeste },
+          useValue: { verificar, reiniciarParaTeste },
+        },
+        {
+          provide: SupabaseAuthService,
+          useValue: {
+            buscarUsuario: jest.fn((token: string) =>
+              Promise.resolve(
+                token === 'token-teste' ? { authId: 'conta-teste' } : null,
+              ),
+            ),
+          },
+        },
+        {
+          provide: UsersService,
+          useValue: {
+            buscarPorAuthId: jest.fn().mockResolvedValue({
+              idUsuario: 42,
+              email: 'teste@example.com',
+              nome: 'Teste',
+            }),
+          },
         },
       ],
-    })
-      .overrideGuard(JwtAuthGuard)
-      .useValue({
-        canActivate: (contexto: {
-          switchToHttp: () => {
-            getRequest: () => RequisicaoComUsuario;
-          };
-        }) => {
-          contexto.switchToHttp().getRequest().usuario = {
-            sub: 42,
-            email: 'teste@example.com',
-            nome: 'Teste',
-          };
-          return true;
-        },
-      })
-      .compile();
+    }).compile();
 
     app = modulo.createNestApplication<App>();
     await app.init();
@@ -64,23 +67,28 @@ describe('VerificacaoCnhController (HTTP)', () => {
     verificar.mockClear();
     recebidos.length = 0;
     reiniciarParaTeste.mockClear();
-    permiteReinicioTeste.mockClear();
   });
 
-  it('consulta o recurso e ignora id fornecido pelo cliente no reset', async () => {
-    await request(app.getHttpServer())
-      .get('/usuarios/cnh/testes')
-      .expect(200)
-      .expect(({ body }: { body: { dados: { permiteReinicio: boolean } } }) =>
-        expect(body.dados.permiteReinicio).toBe(false),
-      );
-    expect(permiteReinicioTeste).toHaveBeenCalledWith(42);
+  it('ignora id fornecido pelo cliente no reset', async () => {
     await request(app.getHttpServer())
       .post('/usuarios/cnh/reiniciar-teste')
+      .set('Authorization', 'Bearer token-teste')
       .send({ idUsuario: 1 })
       .expect(201);
     expect(reiniciarParaTeste).toHaveBeenCalledWith(42);
   });
+
+  it.each([undefined, 'Basic token-teste', 'Bearer token-invalido'])(
+    'bloqueia reset sem autenticacao valida: %s',
+    async (authorization) => {
+      const pedido = request(app.getHttpServer()).post(
+        '/usuarios/cnh/reiniciar-teste',
+      );
+      if (authorization) pedido.set('Authorization', authorization);
+      await pedido.send({ idUsuario: 42 }).expect(401);
+      expect(reiniciarParaTeste).not.toHaveBeenCalled();
+    },
+  );
 
   it('recebe duas fotos e o aceite sem persistir arquivos', async () => {
     const foto = await sharp({
@@ -96,6 +104,7 @@ describe('VerificacaoCnhController (HTTP)', () => {
 
     await request(app.getHttpServer())
       .post('/usuarios/cnh/verificar')
+      .set('Authorization', 'Bearer token-teste')
       .field('aceitePrivacidade', 'true')
       .field('nomeCompleto', 'João Pedro da Silva')
       .attach('frente', foto, 'frente.png')

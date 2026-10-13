@@ -6,7 +6,6 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ConfigService } from '@nestjs/config';
 import { DataSource, In, QueryFailedError, Repository } from 'typeorm';
 import { Carona } from '../caronas/carona.entity';
 import { RecorrenciaCarona } from '../caronas/recorrencia.entity';
@@ -25,24 +24,11 @@ export class VerificacaoCnhService {
     @InjectRepository(User)
     private readonly usuarios: Repository<User>,
     private readonly leitura: LeituraCnhService,
-    private readonly config: ConfigService,
     private readonly dataSource: DataSource,
   ) {}
 
   // Recurso temporario de QA: remover junto com a rota antes da entrega.
-  permiteReinicioTeste(idUsuario: number): boolean {
-    if (this.config.get<string>('CNH_TEST_RESET_ENABLED') !== 'true')
-      return false;
-    const ids = (this.config.get<string>('CNH_TEST_RESET_USER_IDS') ?? '')
-      .split(',')
-      .map((id) => id.trim());
-    return ids.includes(String(idUsuario));
-  }
-
   async reiniciarParaTeste(idUsuario: number) {
-    if (!this.permiteReinicioTeste(idUsuario)) {
-      throw new NotFoundException('Recurso de testes indisponível');
-    }
     if (this.emAndamento.has(idUsuario)) {
       throw new ConflictException(
         'Aguarde a verificação em andamento terminar',

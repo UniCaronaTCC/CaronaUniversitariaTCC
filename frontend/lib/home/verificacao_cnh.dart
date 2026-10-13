@@ -28,7 +28,6 @@ class VerificacaoCnhTela extends StatefulWidget {
   final CapturarFotoCnh? escolherFoto;
   final Future<Uint8List?> Function(Uint8List)? recortarFoto;
   final EnviarFotosCnh? enviarFotos;
-  final Future<bool> Function()? carregarReinicioTeste;
   final Future<Map<String, dynamic>> Function()? reiniciarTeste;
 
   const VerificacaoCnhTela({
@@ -38,7 +37,6 @@ class VerificacaoCnhTela extends StatefulWidget {
     this.escolherFoto,
     this.recortarFoto,
     this.enviarFotos,
-    this.carregarReinicioTeste,
     this.reiniciarTeste,
   });
 
@@ -57,7 +55,6 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
   bool capturando = false;
   bool enviando = false;
   bool aprovadaAgora = false;
-  bool permiteReinicioTeste = false;
   bool reiniciando = false;
   String? erro;
   final nomeCompleto = TextEditingController();
@@ -92,11 +89,6 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
             resultado['mensagem']?.toString() ??
             'Não foi possível atualizar o status';
       }
-      final permitido =
-          aprovada &&
-          await (widget.carregarReinicioTeste?.call() ??
-              const VerificacaoCnhService().permiteReinicioTeste());
-      if (mounted) permiteReinicioTeste = permitido;
     } catch (_) {
       if (mounted) erro = 'Não foi possível atualizar o status';
     } finally {
@@ -105,7 +97,7 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
   }
 
   Future<void> reiniciarParaTeste() async {
-    if (ocupada || !permiteReinicioTeste) return;
+    if (ocupada || !aprovada) return;
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -322,14 +314,13 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
                   icon: const Icon(Icons.check),
                   label: const Text('Concluir'),
                 ),
-                if (permiteReinicioTeste)
-                  TextButton.icon(
-                    onPressed: ocupada ? null : reiniciarParaTeste,
-                    icon: const Icon(Icons.restart_alt),
-                    label: Text(
-                      reiniciando ? 'Reiniciando...' : 'Reiniciar CNH (teste)',
-                    ),
+                TextButton.icon(
+                  onPressed: ocupada ? null : reiniciarParaTeste,
+                  icon: const Icon(Icons.restart_alt),
+                  label: Text(
+                    reiniciando ? 'Reiniciando...' : 'Reiniciar CNH (teste)',
                   ),
+                ),
               ] else ...[
                 const Text(
                   'Antes de oferecer caronas',

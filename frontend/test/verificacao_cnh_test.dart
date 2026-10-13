@@ -27,7 +27,6 @@ void main() {
       MaterialApp(
         home: VerificacaoCnhTela(
           carregarPerfil: () async => {'sucesso': true, 'dados': perfil},
-          carregarReinicioTeste: () async => true,
           reiniciarTeste: () async {
             reinicios++;
             perfil = {'statusVerificacaoCnh': 'NAO_ENVIADA'};
@@ -64,7 +63,6 @@ void main() {
             'sucesso': true,
             'dados': perfilAprovado,
           },
-          carregarReinicioTeste: () async => true,
           reiniciarTeste: () async => {
             'sucesso': false,
             'mensagem': 'Existe carona ativa',
@@ -81,7 +79,9 @@ void main() {
     expect(find.text('Existe carona ativa'), findsOneWidget);
   });
 
-  testWidgets('reset nao aparece quando servidor nao autoriza', (tester) async {
+  testWidgets('reset aparece na CNH aprovada sem consulta extra', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: VerificacaoCnhTela(
@@ -89,12 +89,11 @@ void main() {
             'sucesso': true,
             'dados': perfilAprovado,
           },
-          carregarReinicioTeste: () async => false,
         ),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Reiniciar CNH (teste)'), findsNothing);
+    expect(find.text('Reiniciar CNH (teste)'), findsOneWidget);
   });
   testWidgets('galeria exige aceite e mostra a foto escolhida', (tester) async {
     var escolhas = 0;

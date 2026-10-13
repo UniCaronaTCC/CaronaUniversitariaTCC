@@ -2,7 +2,6 @@ import {
   BadRequestException,
   Body,
   Controller,
-  Get,
   Post,
   Req,
   UploadedFiles,
@@ -29,17 +28,6 @@ interface FotosCnh {
 @Controller('usuarios/cnh')
 export class VerificacaoCnhController {
   constructor(private readonly verificacao: VerificacaoCnhService) {}
-
-  @Get('testes')
-  recursosTeste(@Req() request: RequisicaoComUsuario) {
-    return {
-      dados: {
-        permiteReinicio: this.verificacao.permiteReinicioTeste(
-          request.usuario.sub,
-        ),
-      },
-    };
-  }
 
   @Post('reiniciar-teste')
   async reiniciarTeste(@Req() request: RequisicaoComUsuario) {

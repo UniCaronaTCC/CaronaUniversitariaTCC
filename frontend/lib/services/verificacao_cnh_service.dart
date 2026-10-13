@@ -17,27 +17,6 @@ class VerificacaoCnhService {
     this.prazo = const Duration(seconds: 90),
   });
 
-  Future<bool> permiteReinicioTeste() async {
-    final conexao = cliente ?? http.Client();
-    try {
-      final resposta = await AuthService.enviarComToken(
-        (token) => conexao.get(
-          Uri.parse('${ApiConfig.baseUrl}/usuarios/cnh/testes'),
-          headers: {'Authorization': 'Bearer $token'},
-        ),
-      ).timeout(const Duration(seconds: 15));
-      if (resposta?.statusCode != 200) return false;
-      final corpo = jsonDecode(resposta!.body);
-      return corpo is Map &&
-          corpo['dados'] is Map &&
-          corpo['dados']['permiteReinicio'] == true;
-    } catch (_) {
-      return false;
-    } finally {
-      if (cliente == null) conexao.close();
-    }
-  }
-
   Future<Map<String, dynamic>> reiniciarTeste() async {
     final conexao = cliente ?? http.Client();
     try {

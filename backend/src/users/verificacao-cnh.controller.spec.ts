@@ -8,7 +8,6 @@ describe('VerificacaoCnhController', () => {
   const requisicao = { usuario: { sub: 7 } } as RequisicaoComUsuario;
   let verificacao: {
     verificar: jest.Mock;
-    permiteReinicioTeste: jest.Mock;
     reiniciarParaTeste: jest.Mock;
   };
   let controller: VerificacaoCnhController;
@@ -16,7 +15,6 @@ describe('VerificacaoCnhController', () => {
   beforeEach(() => {
     verificacao = {
       verificar: jest.fn().mockResolvedValue({ status: 'APROVADA' }),
-      permiteReinicioTeste: jest.fn().mockReturnValue(false),
       reiniciarParaTeste: jest
         .fn()
         .mockResolvedValue({ status: 'NAO_ENVIADA' }),
@@ -28,11 +26,7 @@ describe('VerificacaoCnhController', () => {
 
   const jpeg = () => Buffer.from([0xff, 0xd8, 0xff, 0x00]);
 
-  it('consulta e reinicia apenas a conta autenticada', async () => {
-    expect(controller.recursosTeste(requisicao).dados.permiteReinicio).toBe(
-      false,
-    );
-    expect(verificacao.permiteReinicioTeste).toHaveBeenCalledWith(7);
+  it('reinicia apenas a conta autenticada', async () => {
     expect((await controller.reiniciarTeste(requisicao)).dados).toEqual({
       status: 'NAO_ENVIADA',
     });
