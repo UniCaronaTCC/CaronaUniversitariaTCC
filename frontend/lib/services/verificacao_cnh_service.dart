@@ -6,6 +6,7 @@ import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
 import 'auth_service.dart';
+import 'sessao_service.dart';
 
 class VerificacaoCnhService {
   final http.Client? cliente;
@@ -15,6 +16,78 @@ class VerificacaoCnhService {
     this.cliente,
     this.prazo = const Duration(seconds: 90),
   });
+
+  Future<bool> permiteReinicioTeste() async {
+    final conexao = cliente ?? http.Client();
+    try {
+      final resposta = await AuthService.enviarComToken(
+        (token) => conexao.get(
+          Uri.parse('${ApiConfig.baseUrl}/usuarios/cnh/testes'),
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      ).timeout(const Duration(seconds: 15));
+      if (resposta?.statusCode != 200) return false;
+      final corpo = jsonDecode(resposta!.body);
+      return corpo is Map &&
+          corpo['dados'] is Map &&
+          corpo['dados']['permiteReinicio'] == true;
+    } catch (_) {
+      return false;
+    } finally {
+      if (cliente == null) conexao.close();
+    }
+  }
+
+  Future<Map<String, dynamic>> reiniciarTeste() async {
+    final conexao = cliente ?? http.Client();
+    try {
+      final resposta = await AuthService.enviarComToken(
+        (token) => conexao.post(
+          Uri.parse('${ApiConfig.baseUrl}/usuarios/cnh/reiniciar-teste'),
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      ).timeout(const Duration(seconds: 15));
+      if (resposta == null) {
+        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+      }
+      final corpo = jsonDecode(resposta.body);
+      if (corpo is! Map) throw const FormatException();
+      if (resposta.statusCode >= 200 &&
+          resposta.statusCode < 300 &&
+          corpo['dados'] is Map &&
+          corpo['dados']['status'] == 'NAO_ENVIADA') {
+        final perfil = AuthService.usuarioLogado;
+        if (perfil != null) {
+          AuthService.usuarioLogado = {
+            ...perfil,
+            'statusVerificacaoCnh': 'NAO_ENVIADA',
+            'cnhCategoria': null,
+            'cnhValidade': null,
+          };
+          final token = AuthService.tokenUsuarioLogado;
+          if (token != null) {
+            await SessaoService.salvar(token, AuthService.usuarioLogado!);
+          }
+        }
+        return {'sucesso': true};
+      }
+      return {
+        'sucesso': false,
+        'mensagem':
+            corpo['message']?.toString() ??
+            corpo['mensagem']?.toString() ??
+            'Não foi possível reiniciar a CNH',
+      };
+    } catch (_) {
+      return {
+        'sucesso': false,
+        'mensagem':
+            'Não foi possível confirmar o reinício. Atualize o status antes de tentar novamente',
+      };
+    } finally {
+      if (cliente == null) conexao.close();
+    }
+  }
 
   Future<Map<String, dynamic>> enviar(
     Uint8List frente,

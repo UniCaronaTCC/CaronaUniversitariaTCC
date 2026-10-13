@@ -3,7 +3,10 @@ import {
   ServiceUnavailableException,
   Logger,
 } from '@nestjs/common';
-import { QueryFailedError, Repository } from 'typeorm';
+import { DataSource, QueryFailedError, Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
+import { Carona } from '../caronas/carona.entity';
+import { RecorrenciaCarona } from '../caronas/recorrencia.entity';
 
 import { LeituraCnhService } from './leitura-cnh.service';
 import { User } from './user.entity';
@@ -23,6 +26,10 @@ describe('VerificacaoCnhService', () => {
   let usuarios: { findOne: jest.Mock; update: jest.Mock };
   let leitura: { ler: jest.Mock };
   let service: VerificacaoCnhService;
+  let config: { get: jest.Mock };
+  let ofertas: { exists: jest.Mock };
+  let recorrencias: { exists: jest.Mock };
+  let dataSource: { transaction: jest.Mock };
 
   beforeEach(() => {
     usuarios = {
@@ -36,10 +43,161 @@ describe('VerificacaoCnhService', () => {
     leitura = {
       ler: jest.fn().mockResolvedValue({ texto, nome: 'JOAO PEDRO DA SILVA' }),
     };
+    config = {
+      get: jest.fn(
+        (key: string) =>
+          ({
+            CNH_TEST_RESET_ENABLED: 'true',
+            CNH_TEST_RESET_USER_IDS: '1, 7',
+          })[key],
+      ),
+    };
+    ofertas = { exists: jest.fn().mockResolvedValue(false) };
+    recorrencias = { exists: jest.fn().mockResolvedValue(false) };
+    dataSource = {
+      transaction: jest.fn(
+        (
+          executar: (manager: {
+            getRepository: (entity: unknown) => unknown;
+          }) => Promise<unknown>,
+        ) =>
+          executar({
+            getRepository: (entity: unknown) =>
+              entity === User
+                ? usuarios
+                : entity === Carona
+                  ? ofertas
+                  : entity === RecorrenciaCarona
+                    ? recorrencias
+                    : null,
+          }),
+      ),
+    };
     service = new VerificacaoCnhService(
       usuarios as unknown as Repository<User>,
       leitura as unknown as LeituraCnhService,
+      config as unknown as ConfigService,
+      dataSource as unknown as DataSource,
     );
+  });
+
+  it('reinicia somente os campos da CNH e permite uma nova leitura', async () => {
+    await expect(service.reiniciarParaTeste(1)).resolves.toEqual({
+      status: 'NAO_ENVIADA',
+    });
+    expect(usuarios.update).toHaveBeenCalledWith(1, {
+      statusVerificacaoCnh: 'NAO_ENVIADA',
+      cpf: null,
+      cnhCategoria: null,
+      cnhValidade: null,
+      cnhRegistroFinal: null,
+      cnhVerificadaEm: null,
+      privacidadeAceitaEm: null,
+    });
+    expect(usuarios.findOne).toHaveBeenCalledWith({
+      where: { idUsuario: 1 },
+      lock: { mode: 'pessimistic_write' },
+    });
+    await service.verificar(1, frente, verso, 'João Pedro da Silva');
+    expect(leitura.ler).toHaveBeenCalledTimes(1);
+  });
+
+  it('executa aprovar, reiniciar e aprovar novamente sem reutilizar o OCR antigo', async () => {
+    const usuario = {
+      idUsuario: 1,
+      nome: 'Teste',
+      statusVerificacaoCnh: 'NAO_ENVIADA',
+    };
+    usuarios.findOne.mockImplementation(() => Promise.resolve({ ...usuario }));
+    usuarios.update.mockImplementation((_id: number, campos: object) => {
+      Object.assign(usuario, campos);
+      return Promise.resolve({ affected: 1 });
+    });
+    await service.verificar(1, frente, verso, 'João Pedro da Silva');
+    expect(usuario.statusVerificacaoCnh).toBe('APROVADA');
+    await service.reiniciarParaTeste(1);
+    expect(usuario.statusVerificacaoCnh).toBe('NAO_ENVIADA');
+    expect(usuario.nome).toBe('Teste');
+    await service.verificar(1, frente, verso, 'João Pedro da Silva');
+    expect(usuario.statusVerificacaoCnh).toBe('APROVADA');
+    expect(leitura.ler).toHaveBeenCalledTimes(2);
+  });
+
+  it('bloqueia clique duplicado e novo envio enquanto o reset esta pendente', async () => {
+    let concluir!: () => void;
+    const aguardando = new Promise<void>((resolve) => (concluir = resolve));
+    dataSource.transaction.mockImplementationOnce(() => aguardando);
+    const primeiro = service.reiniciarParaTeste(1);
+    await expect(service.reiniciarParaTeste(1)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    await expect(
+      service.verificar(1, frente, verso, 'João Pedro da Silva'),
+    ).rejects.toBeInstanceOf(ConflictException);
+    concluir();
+    await primeiro;
+    await expect(service.reiniciarParaTeste(1)).resolves.toEqual({
+      status: 'NAO_ENVIADA',
+    });
+  });
+
+  it.each([undefined, 'false', 'TRUE', '1'])(
+    'bloqueia reset sem ativacao explicita: %s',
+    async (flag) => {
+      config.get.mockReturnValue(flag);
+      await expect(service.reiniciarParaTeste(1)).rejects.toThrow(
+        'indisponível',
+      );
+      expect(dataSource.transaction).not.toHaveBeenCalled();
+    },
+  );
+
+  it('bloqueia outras contas mesmo com o recurso ligado', async () => {
+    expect(service.permiteReinicioTeste(7)).toBe(true);
+    await expect(service.reiniciarParaTeste(2)).rejects.toThrow('indisponível');
+    expect(dataSource.transaction).not.toHaveBeenCalled();
+  });
+
+  it.each(['carona', 'recorrencia'])(
+    'bloqueia reset com %s ativa',
+    async (tipo) => {
+      (tipo === 'carona' ? ofertas : recorrencias).exists.mockResolvedValue(
+        true,
+      );
+      await expect(service.reiniciarParaTeste(1)).rejects.toThrow(
+        'ofertas ativas',
+      );
+      expect(usuarios.update).not.toHaveBeenCalled();
+    },
+  );
+
+  it('nao anuncia reset se nenhuma linha foi atualizada', async () => {
+    usuarios.update.mockResolvedValue({ affected: 0 });
+    await expect(service.reiniciarParaTeste(1)).rejects.toThrow(
+      'Usuário não encontrado',
+    );
+  });
+
+  it('libera o bloqueio depois de falha no banco', async () => {
+    usuarios.update.mockRejectedValueOnce(new Error('falha'));
+    await expect(service.reiniciarParaTeste(1)).rejects.toThrow('falha');
+    await expect(service.reiniciarParaTeste(1)).resolves.toEqual({
+      status: 'NAO_ENVIADA',
+    });
+  });
+
+  it('impede reset enquanto o OCR esta em andamento', async () => {
+    let concluir!: (valor: string) => void;
+    leitura.ler.mockReturnValue(
+      new Promise<string>((resolve) => (concluir = resolve)),
+    );
+    const envio = service.verificar(1, frente, verso, 'João Pedro da Silva');
+    await Promise.resolve();
+    await expect(service.reiniciarParaTeste(1)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    concluir(texto);
+    await envio;
   });
 
   it('usa o dia local de São Paulo', () => {

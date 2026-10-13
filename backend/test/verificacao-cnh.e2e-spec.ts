@@ -23,11 +23,20 @@ describe('VerificacaoCnhController (HTTP)', () => {
       return Promise.resolve({ status: 'APROVADA' });
     },
   );
+  const reiniciarParaTeste = jest
+    .fn()
+    .mockResolvedValue({ status: 'NAO_ENVIADA' });
+  const permiteReinicioTeste = jest.fn().mockReturnValue(false);
 
   beforeAll(async () => {
     const modulo = await Test.createTestingModule({
       controllers: [VerificacaoCnhController],
-      providers: [{ provide: VerificacaoCnhService, useValue: { verificar } }],
+      providers: [
+        {
+          provide: VerificacaoCnhService,
+          useValue: { verificar, reiniciarParaTeste, permiteReinicioTeste },
+        },
+      ],
     })
       .overrideGuard(JwtAuthGuard)
       .useValue({
@@ -54,6 +63,23 @@ describe('VerificacaoCnhController (HTTP)', () => {
   beforeEach(() => {
     verificar.mockClear();
     recebidos.length = 0;
+    reiniciarParaTeste.mockClear();
+    permiteReinicioTeste.mockClear();
+  });
+
+  it('consulta o recurso e ignora id fornecido pelo cliente no reset', async () => {
+    await request(app.getHttpServer())
+      .get('/usuarios/cnh/testes')
+      .expect(200)
+      .expect(({ body }: { body: { dados: { permiteReinicio: boolean } } }) =>
+        expect(body.dados.permiteReinicio).toBe(false),
+      );
+    expect(permiteReinicioTeste).toHaveBeenCalledWith(42);
+    await request(app.getHttpServer())
+      .post('/usuarios/cnh/reiniciar-teste')
+      .send({ idUsuario: 1 })
+      .expect(201);
+    expect(reiniciarParaTeste).toHaveBeenCalledWith(42);
   });
 
   it('recebe duas fotos e o aceite sem persistir arquivos', async () => {

@@ -14,6 +14,42 @@ void main() {
   setUp(() => AuthService.tokenUsuarioLogado = 'token-teste');
   tearDown(() => AuthService.tokenUsuarioLogado = null);
 
+  test(
+    'consulta permissao e reinicia sem enviar documento ou id de outra conta',
+    () async {
+      final pedidos = <http.Request>[];
+      final service = VerificacaoCnhService(
+        cliente: MockClient((r) async {
+          pedidos.add(r);
+          return http.Response(
+            r.method == 'GET'
+                ? '{"dados":{"permiteReinicio":true}}'
+                : '{"dados":{"status":"NAO_ENVIADA"}}',
+            r.method == 'GET' ? 200 : 201,
+          );
+        }),
+      );
+      expect(await service.permiteReinicioTeste(), true);
+      expect((await service.reiniciarTeste())['sucesso'], true);
+      expect(pedidos.last.url.path, '/usuarios/cnh/reiniciar-teste');
+      expect(pedidos.last.headers['authorization'], 'Bearer token-teste');
+      expect(pedidos.last.body, isEmpty);
+    },
+  );
+
+  test(
+    'falha de permissao esconde recurso e nao transforma erro em reset',
+    () async {
+      final service = VerificacaoCnhService(
+        cliente: MockClient(
+          (_) async => http.Response('{"message":"Recurso indisponivel"}', 404),
+        ),
+      );
+      expect(await service.permiteReinicioTeste(), false);
+      expect((await service.reiniciarTeste())['sucesso'], false);
+    },
+  );
+
   test('envia fotos e aceite ao backend com o token', () async {
     late http.Request recebido;
     final service = VerificacaoCnhService(

@@ -28,6 +28,8 @@ class VerificacaoCnhTela extends StatefulWidget {
   final CapturarFotoCnh? escolherFoto;
   final Future<Uint8List?> Function(Uint8List)? recortarFoto;
   final EnviarFotosCnh? enviarFotos;
+  final Future<bool> Function()? carregarReinicioTeste;
+  final Future<Map<String, dynamic>> Function()? reiniciarTeste;
 
   const VerificacaoCnhTela({
     super.key,
@@ -36,6 +38,8 @@ class VerificacaoCnhTela extends StatefulWidget {
     this.escolherFoto,
     this.recortarFoto,
     this.enviarFotos,
+    this.carregarReinicioTeste,
+    this.reiniciarTeste,
   });
 
   @override
@@ -53,11 +57,13 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
   bool capturando = false;
   bool enviando = false;
   bool aprovadaAgora = false;
+  bool permiteReinicioTeste = false;
+  bool reiniciando = false;
   String? erro;
   final nomeCompleto = TextEditingController();
 
   bool get aprovada => aprovadaAgora || verificacao.permiteOferecerCarona();
-  bool get ocupada => carregando || capturando || enviando;
+  bool get ocupada => carregando || capturando || enviando || reiniciando;
 
   @override
   void initState() {
@@ -79,16 +85,74 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
         verificacao = VerificacaoCnh.fromPerfil(
           Map<String, dynamic>.from(resultado['dados']),
         );
+        aprovadaAgora = verificacao.permiteOferecerCarona();
         if (verificacao.permiteOferecerCarona()) descartarImagens();
       } else {
         erro =
             resultado['mensagem']?.toString() ??
             'Não foi possível atualizar o status';
       }
+      final permitido =
+          aprovada &&
+          await (widget.carregarReinicioTeste?.call() ??
+              const VerificacaoCnhService().permiteReinicioTeste());
+      if (mounted) permiteReinicioTeste = permitido;
     } catch (_) {
       if (mounted) erro = 'Não foi possível atualizar o status';
     } finally {
       if (mounted) setState(() => carregando = false);
+    }
+  }
+
+  Future<void> reiniciarParaTeste() async {
+    if (ocupada || !permiteReinicioTeste) return;
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Reiniciar CNH para teste?'),
+        content: const Text(
+          'A aprovação e os dados da CNH serão removidos. Você precisará enviar o documento novamente. Seu perfil, veículo e histórico serão preservados.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Reiniciar'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmar != true || ocupada) return;
+    setState(() {
+      reiniciando = true;
+      erro = null;
+    });
+    try {
+      final resultado =
+          await (widget.reiniciarTeste?.call() ??
+              const VerificacaoCnhService().reiniciarTeste());
+      if (!mounted) return;
+      if (resultado['sucesso'] == true) {
+        aprovadaAgora = false;
+        verificacao = const VerificacaoCnh();
+        aceite = false;
+        nomeCompleto.clear();
+        descartarImagens();
+        await atualizarStatus();
+      } else {
+        erro =
+            resultado['mensagem']?.toString() ??
+            'Não foi possível reiniciar a CNH';
+      }
+    } catch (_) {
+      if (mounted) {
+        erro = 'Não foi possível confirmar o reinício. Atualize o status';
+      }
+    } finally {
+      if (mounted) setState(() => reiniciando = false);
     }
   }
 
@@ -229,7 +293,7 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
   @override
   Widget build(BuildContext context) {
     return PopScope(
-      canPop: !enviando,
+      canPop: !enviando && !reiniciando,
       child: Scaffold(
         backgroundColor: AppColors.background,
         appBar: const BarraSuperiorPadrao(titulo: 'Verificar CNH'),
@@ -258,6 +322,14 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
                   icon: const Icon(Icons.check),
                   label: const Text('Concluir'),
                 ),
+                if (permiteReinicioTeste)
+                  TextButton.icon(
+                    onPressed: ocupada ? null : reiniciarParaTeste,
+                    icon: const Icon(Icons.restart_alt),
+                    label: Text(
+                      reiniciando ? 'Reiniciando...' : 'Reiniciar CNH (teste)',
+                    ),
+                  ),
               ] else ...[
                 const Text(
                   'Antes de oferecer caronas',

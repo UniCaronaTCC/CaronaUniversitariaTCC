@@ -6,7 +6,10 @@ import {
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { ConfigService } from '@nestjs/config';
+import { DataSource, In, QueryFailedError, Repository } from 'typeorm';
+import { Carona } from '../caronas/carona.entity';
+import { RecorrenciaCarona } from '../caronas/recorrencia.entity';
 
 import { conferirDadosCnh, nomeCompletoValido } from './dados-cnh';
 import { LeituraCnhService } from './leitura-cnh.service';
@@ -22,7 +25,72 @@ export class VerificacaoCnhService {
     @InjectRepository(User)
     private readonly usuarios: Repository<User>,
     private readonly leitura: LeituraCnhService,
+    private readonly config: ConfigService,
+    private readonly dataSource: DataSource,
   ) {}
+
+  // Recurso temporario de QA: remover junto com a rota antes da entrega.
+  permiteReinicioTeste(idUsuario: number): boolean {
+    if (this.config.get<string>('CNH_TEST_RESET_ENABLED') !== 'true')
+      return false;
+    const ids = (this.config.get<string>('CNH_TEST_RESET_USER_IDS') ?? '')
+      .split(',')
+      .map((id) => id.trim());
+    return ids.includes(String(idUsuario));
+  }
+
+  async reiniciarParaTeste(idUsuario: number) {
+    if (!this.permiteReinicioTeste(idUsuario)) {
+      throw new NotFoundException('Recurso de testes indisponível');
+    }
+    if (this.emAndamento.has(idUsuario)) {
+      throw new ConflictException(
+        'Aguarde a verificação em andamento terminar',
+      );
+    }
+    this.emAndamento.add(idUsuario);
+    try {
+      await this.dataSource.transaction(async (manager) => {
+        const usuarios = manager.getRepository(User);
+        const usuario = await usuarios.findOne({
+          where: { idUsuario },
+          lock: { mode: 'pessimistic_write' },
+        });
+        if (!usuario) throw new NotFoundException('Usuário não encontrado');
+        const ofertas = await manager.getRepository(Carona).exists({
+          where: {
+            usuario: { idUsuario },
+            status: In(['ATIVA', 'LOTADA', 'EM_ANDAMENTO']),
+          },
+        });
+        const recorrencias = await manager
+          .getRepository(RecorrenciaCarona)
+          .exists({
+            where: { idUsuario, ativa: true },
+          });
+        if (ofertas || recorrencias) {
+          throw new ConflictException(
+            'Finalize ou cancele suas ofertas ativas e pause as recorrências antes de reiniciar a CNH',
+          );
+        }
+        const resultado = await usuarios.update(idUsuario, {
+          statusVerificacaoCnh: 'NAO_ENVIADA',
+          cpf: null,
+          cnhCategoria: null,
+          cnhValidade: null,
+          cnhRegistroFinal: null,
+          cnhVerificadaEm: null,
+          privacidadeAceitaEm: null,
+        });
+        if (resultado.affected !== 1) {
+          throw new NotFoundException('Usuário não encontrado');
+        }
+      });
+      return { status: 'NAO_ENVIADA' as const };
+    } finally {
+      this.emAndamento.delete(idUsuario);
+    }
+  }
 
   async verificar(
     idUsuario: number,

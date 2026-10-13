@@ -17,6 +17,85 @@ void main() {
     'cnhValidade': '2099-10-07',
   };
   tearDown(() => AuthService.usuarioLogado = null);
+
+  testWidgets('reset temporario exige confirmacao e retorna ao formulario', (
+    tester,
+  ) async {
+    var perfil = Map<String, dynamic>.from(perfilAprovado);
+    var reinicios = 0;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: VerificacaoCnhTela(
+          carregarPerfil: () async => {'sucesso': true, 'dados': perfil},
+          carregarReinicioTeste: () async => true,
+          reiniciarTeste: () async {
+            reinicios++;
+            perfil = {'statusVerificacaoCnh': 'NAO_ENVIADA'};
+            return {'sucesso': true};
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reiniciar CNH (teste)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Cancelar'));
+    await tester.pumpAndSettle();
+    expect(reinicios, 0);
+    expect(find.text('CNH conferida'), findsOneWidget);
+    await tester.tap(find.text('Reiniciar CNH (teste)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reiniciar'));
+    await tester.pumpAndSettle();
+    expect(reinicios, 1);
+    expect(find.text('CNH conferida'), findsNothing);
+    expect(find.byType(Checkbox), findsOneWidget);
+    expect(tester.widget<Checkbox>(find.byType(Checkbox)).value, false);
+    expect(find.text('Reiniciar CNH (teste)'), findsNothing);
+  });
+
+  testWidgets('reset bloqueado preserva a aprovacao e mostra motivo', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: VerificacaoCnhTela(
+          carregarPerfil: () async => {
+            'sucesso': true,
+            'dados': perfilAprovado,
+          },
+          carregarReinicioTeste: () async => true,
+          reiniciarTeste: () async => {
+            'sucesso': false,
+            'mensagem': 'Existe carona ativa',
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reiniciar CNH (teste)'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reiniciar'));
+    await tester.pumpAndSettle();
+    expect(find.text('CNH conferida'), findsOneWidget);
+    expect(find.text('Existe carona ativa'), findsOneWidget);
+  });
+
+  testWidgets('reset nao aparece quando servidor nao autoriza', (tester) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: VerificacaoCnhTela(
+          carregarPerfil: () async => {
+            'sucesso': true,
+            'dados': perfilAprovado,
+          },
+          carregarReinicioTeste: () async => false,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Reiniciar CNH (teste)'), findsNothing);
+  });
   testWidgets('galeria exige aceite e mostra a foto escolhida', (tester) async {
     var escolhas = 0;
     await tester.pumpWidget(
