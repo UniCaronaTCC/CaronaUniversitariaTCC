@@ -6,12 +6,10 @@ import 'package:image_picker/image_picker.dart';
 import '../config/app_colors.dart';
 import '../models/verificacao_cnh.dart';
 import '../services/auth_service.dart';
-import '../services/foto_cnh_temporaria.dart'
-    if (dart.library.io) '../services/foto_cnh_temporaria_io.dart';
 import '../services/verificacao_cnh_service.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/foto_cnh.dart';
-import 'recortar_cnh.dart';
+import 'selecionar_foto_cnh.dart';
 
 typedef CapturarFotoCnh = Future<XFile?> Function();
 typedef EnviarFotosCnh =
@@ -159,45 +157,14 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
     });
     Uint8List? bytes;
     try {
-      final selecionar = origem == ImageSource.camera
-          ? widget.capturarFoto
-          : widget.escolherFoto;
-      final foto =
-          await (selecionar?.call() ??
-              ImagePicker().pickImage(
-                source: origem,
-                preferredCameraDevice: CameraDevice.rear,
-                maxWidth: 2600,
-                maxHeight: 2600,
-                imageQuality: 95,
-                requestFullMetadata: false,
-              ));
-      if (foto == null) return;
-      try {
-        bytes = await foto.readAsBytes();
-      } finally {
-        // A imagem original da galeria pertence ao usuário e não é apagada.
-        if (origem == ImageSource.camera && selecionar == null) {
-          await descartarFotoCnh(foto.path);
-        }
-      }
-      if (!mounted) {
-        bytes.fillRange(0, bytes.length, 0);
-        return;
-      }
-      if (bytes.isEmpty || bytes.length > 5 * 1024 * 1024) {
-        bytes.fillRange(0, bytes.length, 0);
-        erro = 'A foto deve ter até 5 MB. Tire outra foto';
-        return;
-      }
-      final original = bytes;
-      try {
-        bytes =
-            await (widget.recortarFoto?.call(original) ??
-                recortarCnh(context, original));
-      } finally {
-        original.fillRange(0, original.length, 0);
-      }
+      bytes = await selecionarFotoCnh(
+        context,
+        lado: fotografarFrente ? 'Frente da CNH' : 'Verso da CNH',
+        origem: origem,
+        capturar: widget.capturarFoto,
+        escolher: widget.escolherFoto,
+        recortar: widget.recortarFoto,
+      );
       if (bytes == null) return;
       if (!mounted) {
         bytes.fillRange(0, bytes.length, 0);
@@ -210,6 +177,8 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
       } else {
         verso = bytes;
       }
+    } on FormatException catch (e) {
+      if (mounted) erro = e.message;
     } catch (_) {
       if (mounted) {
         erro =

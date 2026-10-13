@@ -8,18 +8,47 @@ import {
   type CampoCnh,
 } from './campos-cnh-layout';
 import { cpfValido } from './dados-cnh';
+import type {
+  DiagnosticoCampoCnh,
+  RelatarCampoCnh,
+} from './diagnostico-campo-cnh';
 
 export async function lerCamposCnh(
   worker: Worker,
   imagem: Buffer,
   blocos: Block[] | null,
+  diagnosticar?: (diagnostico: DiagnosticoCampoCnh) => void,
 ): Promise<Pick<LeituraCnh, 'nome' | 'campos'>> {
+  const relatar =
+    (campo: CampoCnh, etapa: DiagnosticoCampoCnh['etapa']): RelatarCampoCnh =>
+    (motivo) =>
+      diagnosticar?.({ campo, etapa, motivo });
   const { width = 0, height = 0 } = await sharp(imagem).metadata();
   const valores = {
-    nome: nomePeloLayout(blocos),
-    cpf: valorDoCampo(blocos, 'cpf', width, height),
-    validade: valorDoCampo(blocos, 'validade', width, height),
-    categoria: valorDoCampo(blocos, 'categoria', width, height),
+    nome: nomePeloLayout(blocos, ({ motivo }) =>
+      diagnosticar?.({ campo: 'nome', etapa: 'LEITURA_INICIAL', motivo }),
+    ),
+    cpf: valorDoCampo(
+      blocos,
+      'cpf',
+      width,
+      height,
+      relatar('cpf', 'LEITURA_INICIAL'),
+    ),
+    validade: valorDoCampo(
+      blocos,
+      'validade',
+      width,
+      height,
+      relatar('validade', 'LEITURA_INICIAL'),
+    ),
+    categoria: valorDoCampo(
+      blocos,
+      'categoria',
+      width,
+      height,
+      relatar('categoria', 'LEITURA_INICIAL'),
+    ),
   };
   // Um recorte por campo, com até duas leituras de contraste no mesmo worker.
   for (const campo of Object.keys(valores) as CampoCnh[]) {
@@ -28,7 +57,16 @@ export async function lerCamposCnh(
       (campo !== 'cpf' || cpfValido(valores.cpf!.replace(/\D/g, '')))
     )
       continue;
-    const regiao = regiaoDoCampo(blocos, campo, width, height, true);
+    if (campo === 'cpf' && valores.cpf)
+      relatar(campo, 'LEITURA_INICIAL')('CPF_INVALIDO');
+    const regiao = regiaoDoCampo(
+      blocos,
+      campo,
+      width,
+      height,
+      true,
+      relatar(campo, 'LOCALIZACAO_RECORTE'),
+    );
     if (!regiao) continue;
     let recorte: Buffer | undefined;
     try {
@@ -51,7 +89,12 @@ export async function lerCamposCnh(
         thresholding_method: campo === 'nome' ? '0' : '2',
       });
       const leitura = await worker.recognize(recorte);
-      let valor = valorDoRecorte(leitura.data.text, campo, true);
+      let valor = valorDoRecorte(
+        leitura.data.text,
+        campo,
+        true,
+        relatar(campo, 'RELEITURA'),
+      );
       if (!valor || (campo === 'cpf' && !cpfValido(valor.replace(/\D/g, '')))) {
         let contraste: Buffer | undefined;
         try {
@@ -66,7 +109,12 @@ export async function lerCamposCnh(
             thresholding_method: '0',
           });
           const segunda = await worker.recognize(contraste);
-          valor = valorDoRecorte(segunda.data.text, campo, true);
+          valor = valorDoRecorte(
+            segunda.data.text,
+            campo,
+            true,
+            relatar(campo, 'RELEITURA'),
+          );
         } finally {
           contraste?.fill(0);
         }

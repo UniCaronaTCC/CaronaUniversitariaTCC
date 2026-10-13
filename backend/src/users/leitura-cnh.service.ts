@@ -65,6 +65,10 @@ export class LeituraCnhService {
                   worker,
                   orientada,
                   resultado.data.blocks,
+                  (diagnostico) =>
+                    this.logger.log(
+                      `CNH: diagnostico_campo ${JSON.stringify(diagnostico)}`,
+                    ),
                 )),
               };
               break;

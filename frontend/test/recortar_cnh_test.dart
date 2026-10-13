@@ -114,13 +114,16 @@ void main() {
     );
     await tester.pump();
     final tamanho = tester.getSize(find.byType(RawImage));
-    final borda = tester.widget<Positioned>(
+    final borda = tester.getRect(
       find.byWidgetPredicate(
         (w) => w is Positioned && w.child is IgnorePointer,
       ),
     );
-    final largura = 1000 - (borda.left! / tamanho.width * 1000).floor();
-    final altura = 800 - (borda.top! / tamanho.height * 800).floor();
+    final origemFoto = tester.getTopLeft(find.byType(RawImage));
+    final largura =
+        1000 - ((borda.left - origemFoto.dx) / tamanho.width * 1000).floor();
+    final altura =
+        800 - ((borda.top - origemFoto.dy) / tamanho.height * 800).floor();
     await tester.tap(find.byKey(const ValueKey('girar-direita')));
     await tester.pump();
     await confirmar(tester);
@@ -170,10 +173,17 @@ void main() {
       await Future<void>.delayed(const Duration(milliseconds: 100));
     });
     await tester.pumpAndSettle();
-    await tester.drag(
-      find.byKey(const ValueKey('canto-0')),
-      const Offset(30, 30),
-    );
+    // A metade externa do puxador também precisa receber o toque.
+    for (var canto = 0; canto < 4; canto++) {
+      final puxador = find.byKey(ValueKey('canto-$canto'));
+      final antes = tester.getCenter(puxador);
+      final direcao = Offset(canto % 2 == 0 ? 1 : -1, canto < 2 ? 1 : -1);
+      await tester.dragFrom(antes - direcao * 12, direcao * 25);
+      await tester.pump();
+      final depois = tester.getCenter(puxador);
+      expect((depois.dx - antes.dx) * direcao.dx, greaterThan(0));
+      expect((depois.dy - antes.dy) * direcao.dy, greaterThan(0));
+    }
     await tester.runAsync(() async {
       await tester.tap(find.text('Usar recorte'));
       await Future<void>.delayed(const Duration(milliseconds: 100));

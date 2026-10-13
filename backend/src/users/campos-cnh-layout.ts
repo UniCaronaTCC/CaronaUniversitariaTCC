@@ -1,4 +1,5 @@
 import type { Block, Word } from 'tesseract.js';
+import type { RelatarCampoCnh, MotivoCampoCnh } from './diagnostico-campo-cnh';
 
 export type CampoCnh = 'nome' | 'cpf' | 'validade' | 'categoria';
 export type CamposCnh = Record<Exclude<CampoCnh, 'nome'>, string | null>;
@@ -51,13 +52,19 @@ export function regiaoDoCampo(
   largura: number,
   altura: number,
   somenteValor = false,
+  relatar?: RelatarCampoCnh,
 ): RegiaoCnh | null {
+  const recusar = (motivo: MotivoCampoCnh) => {
+    relatar?.(motivo);
+    return null;
+  };
   const palavras = linhas(blocos).flatMap((l) => l.words);
   const titulos = palavras.filter((p) => padroes[campo].test(rotulo(p.text)));
-  if (titulos.length !== 1) return null;
+  if (!titulos.length) return recusar('TITULO_AUSENTE');
+  if (titulos.length > 1) return recusar('TITULO_DUPLICADO');
   const titulo = titulos[0];
   const b = titulo.bbox;
-  if (b.y1 <= b.y0) return null;
+  if (b.y1 <= b.y0) return recusar('ALTURA_INVALIDA');
   const alturas = palavras
     .filter((p) =>
       Object.values(padroes).some((padrao) => padrao.test(rotulo(p.text))),
@@ -69,7 +76,7 @@ export function regiaoDoCampo(
     campo === 'validade'
       ? Math.max(b.y1 - b.y0, alturas[Math.floor(alturas.length / 2)] ?? 0)
       : b.y1 - b.y0;
-  if (h <= 0) return null;
+  if (h <= 0) return recusar('ALTURA_INVALIDA');
   const vizinhos = palavras.filter(
     (p) =>
       p !== titulo &&
@@ -158,8 +165,9 @@ export function regiaoDoCampo(
         p.bbox.y0 < top ||
         p.bbox.y1 > top + height),
   );
-  if (cortaValor) return null;
-  if (width <= 0 || height <= 0) return null;
+  if (cortaValor) return recusar('PALAVRA_NA_BORDA');
+  if (width <= 0 || height <= 0) return recusar('REGIAO_VAZIA');
+  relatar?.('REGIAO_LOCALIZADA');
   if (!somenteValor) return { left, top, width, height };
   const candidatas = linhas(blocos)
     .map((l) =>
@@ -196,8 +204,9 @@ export function valorDoCampo(
   campo: Exclude<CampoCnh, 'nome'>,
   largura: number,
   altura: number,
+  relatar?: RelatarCampoCnh,
 ): string | null {
-  const regiao = regiaoDoCampo(blocos, campo, largura, altura);
+  const regiao = regiaoDoCampo(blocos, campo, largura, altura, false, relatar);
   if (!regiao) return null;
   const todas = linhas(blocos);
   const titulo = todas
@@ -219,8 +228,13 @@ export function valorDoCampo(
         .join(' '),
     )
     .filter(Boolean);
-  if (candidatos.length !== 1) return null;
-  return validarFormato(campo, candidatos[0]);
+  if (candidatos.length !== 1) {
+    relatar?.(candidatos.length ? 'VALOR_AMBIGUO' : 'VALOR_AUSENTE');
+    return null;
+  }
+  const valor = validarFormato(campo, candidatos[0]);
+  relatar?.(valor ? 'CAMPO_LIDO' : 'FORMATO_INVALIDO');
+  return valor;
 }
 
 function validarFormato(campo: Exclude<CampoCnh, 'nome'>, valor: string) {
@@ -238,7 +252,12 @@ export function valorDoRecorte(
   texto: string,
   campo: CampoCnh,
   rotuloConfirmado = false,
+  relatar?: RelatarCampoCnh,
 ): string | null {
+  const recusar = (motivo: MotivoCampoCnh) => {
+    relatar?.(motivo);
+    return null;
+  };
   const partes = texto.split(/\r?\n/).map(limparBorda).filter(Boolean);
   const prefixo = '(?:\\d{1,2}[A-E]?(?:\\s*E\\s*\\d{1,2})?\\s*)?';
   const expressao = {
@@ -251,7 +270,8 @@ export function valorDoRecorte(
   const titulos = partes
     .map((p, i) => ({ encontrado: inicioRotulo.exec(p), i }))
     .filter(({ encontrado }) => encontrado !== null);
-  if (titulos.length > 1 || (!titulos.length && !rotuloConfirmado)) return null;
+  if (titulos.length > 1) return recusar('TITULO_DUPLICADO');
+  if (!titulos.length && !rotuloConfirmado) return recusar('TITULO_AUSENTE');
   // O rótulo já foi localizado de forma única na imagem inteira. A releitura
   // pode reconhecer apenas o valor, sem repetir as letras pequenas do título.
   if (titulos.length && titulos[0].i !== 0) return null;
@@ -264,16 +284,21 @@ export function valorDoRecorte(
   if (!valores.length || valores.length > (campo === 'nome' ? 2 : 1))
     return null;
   const valor = valores.join(' ');
-  if (campo !== 'nome') return validarFormato(campo, valor);
+  if (campo !== 'nome') {
+    const resultado = validarFormato(campo, valor);
+    relatar?.(resultado ? 'CAMPO_LIDO' : 'FORMATO_INVALIDO');
+    return resultado;
+  }
   if (
     /\b(CPF|DATA|FILIACAO|NASCIMENTO|VALIDADE|HABILITACAO)\b/.test(
       normalizar(valor),
     )
   )
-    return null;
-  return /^[\p{L}]+(?:['’-][\p{L}]+)*(?:\s+[\p{L}]+(?:['’-][\p{L}]+)*)+$/u.test(
-    valor,
-  )
-    ? valor
-    : null;
+    return recusar('OUTRO_CAMPO');
+  const valido =
+    /^[\p{L}]+(?:['’-][\p{L}]+)*(?:\s+[\p{L}]+(?:['’-][\p{L}]+)*)+$/u.test(
+      valor,
+    );
+  relatar?.(valido ? 'CAMPO_LIDO' : 'FORMATO_INVALIDO');
+  return valido ? valor : null;
 }

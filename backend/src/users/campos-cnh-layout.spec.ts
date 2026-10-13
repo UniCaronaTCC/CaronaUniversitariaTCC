@@ -123,6 +123,25 @@ describe('campos por posição', () => {
       expect(valorDoRecorte(texto, campo, true)).toBeNull();
     },
   );
+  it('diagnostica ausência e duplicação sem registrar valores pessoais', () => {
+    const relatar = jest.fn();
+    expect(regiaoDoCampo([], 'cpf', 600, 200, false, relatar)).toBeNull();
+    expect(relatar).toHaveBeenLastCalledWith('TITULO_AUSENTE');
+    expect(
+      regiaoDoCampo(
+        blocos([palavra('CPF', 100, 10), palavra('CPF', 300, 10)]),
+        'cpf',
+        600,
+        200,
+        false,
+        relatar,
+      ),
+    ).toBeNull();
+    expect(relatar).toHaveBeenLastCalledWith('TITULO_DUPLICADO');
+    expect(
+      relatar.mock.calls.every((args: unknown[]) => args.length === 1),
+    ).toBe(true);
+  });
   it('separa CPF e registro que compartilham a mesma linha', () => {
     const entrada = blocos(
       [palavra('CPF', 100, 10, 25), palavra('REGISTRO', 300, 10)],

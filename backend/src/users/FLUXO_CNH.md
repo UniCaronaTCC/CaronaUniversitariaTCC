@@ -22,11 +22,13 @@ entrega final: remover rota, metodo e botao; nao apenas esconder o botao.
 ## Fluxo
 
 O usuario aceita o uso dos dados, informa o nome completo e escolhe fotos da
-camera ou galeria. Depois de cada escolha, ajusta os quatro cantos do recorte
+camera ou galeria. A camera abre na horizontal com moldura para o documento
+inteiro e previa para confirmar ou refazer. O recorte segue a moldura com margem.
+Na galeria, ajusta os quatro cantos do recorte
 para deixar somente o documento inteiro, com letras na posicao de leitura.
 Cancelar o recorte preserva a foto anterior. O original da galeria nao e apagado.
-As setas de rotacao giram 90 graus e preservam a mesma area selecionada.
-O recorte e feito em memoria, sem biblioteca nativa adicional. Exige ao menos
+As setas de rotacao da galeria giram 90 graus e preservam a area selecionada.
+O recorte e feito em memoria; a captura guiada usa o plugin camera. Exige ao menos
 600 pixels no lado maior, 400 no menor e no maximo 5 MB por imagem.
 
 O app continua enviando frente, verso, nomeCompleto e aceitePrivacidade para
@@ -73,6 +75,9 @@ real usa os campos espaciais e nao procura um campo ausente no texto geral.
 ## Logs e publicacao
 
 CNH: campos_lidos informa somente true/false para cada campo.
+CNH: diagnostico_campo informa campo, etapa e motivo, sem o valor lido.
+Separa titulo ausente/duplicado, regiao vazia, palavra na borda e formato
+invalido na leitura inicial, localizacao do recorte e releitura.
 CNH: diagnostico_nome informa contagens e resultado da comparacao.
 Os logs nao incluem texto OCR, nomes, CPF, coordenadas ou fotos.
 Falhas do processamento continuam distintas de uma recusa dos dados.

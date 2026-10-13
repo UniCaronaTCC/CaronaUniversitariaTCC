@@ -190,12 +190,16 @@ class _RecortarCnhTelaState extends State<RecortarCnhTela> {
                   ).destination;
                   return Center(
                     child: SizedBox(
-                      width: tamanho.width,
-                      height: tamanho.height,
+                      width: tamanho.width + 48,
+                      height: tamanho.height + 48,
                       child: Stack(
                         clipBehavior: Clip.none,
                         children: [
-                          Positioned.fill(
+                          Positioned(
+                            left: 24,
+                            top: 24,
+                            width: tamanho.width,
+                            height: tamanho.height,
                             child: RotatedBox(
                               quarterTurns: giros,
                               child: RawImage(image: foto, fit: BoxFit.fill),
@@ -203,10 +207,10 @@ class _RecortarCnhTelaState extends State<RecortarCnhTela> {
                           ),
                           Positioned.fromRect(
                             rect: Rect.fromLTRB(
-                              selecao.left * tamanho.width,
-                              selecao.top * tamanho.height,
-                              selecao.right * tamanho.width,
-                              selecao.bottom * tamanho.height,
+                              24 + selecao.left * tamanho.width,
+                              24 + selecao.top * tamanho.height,
+                              24 + selecao.right * tamanho.width,
+                              24 + selecao.bottom * tamanho.height,
                             ),
                             child: IgnorePointer(
                               child: Container(
@@ -226,15 +230,18 @@ class _RecortarCnhTelaState extends State<RecortarCnhTela> {
                                           ? selecao.left
                                           : selecao.right) *
                                       tamanho.width) -
-                                  22,
+                                  22 +
+                                  24,
                               top:
                                   ((canto < 2 ? selecao.top : selecao.bottom) *
                                       tamanho.height) -
-                                  22,
+                                  22 +
+                                  24,
                               child: Semantics(
                                 label: 'Canto ${canto + 1} do recorte',
                                 child: GestureDetector(
                                   key: ValueKey('canto-$canto'),
+                                  behavior: HitTestBehavior.opaque,
                                   onPanUpdate: salvando
                                       ? null
                                       : (evento) {
