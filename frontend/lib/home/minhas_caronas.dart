@@ -21,16 +21,18 @@ import 'pagamento_pix.dart';
 typedef CarregarSolicitacoes = Future<Map<String, dynamic>> Function();
 
 class MinhasCaronasTela extends StatefulWidget {
+  final int abaInicial;
   final PagamentoService? pagamentoService;
   final CarregarSolicitacoes? carregarRecebidas;
   final CarregarSolicitacoes? carregarEnviadas;
 
   const MinhasCaronasTela({
     super.key,
+    this.abaInicial = 0,
     this.pagamentoService,
     this.carregarRecebidas,
     this.carregarEnviadas,
-  });
+  }) : assert(abaInicial == 0 || abaInicial == 1);
 
   @override
   State<MinhasCaronasTela> createState() => _MinhasCaronasTelaState();
@@ -291,6 +293,7 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela>
         .length;
 
     return DefaultTabController(
+      initialIndex: widget.abaInicial,
       length: 2,
       child: Scaffold(
         backgroundColor: AppColors.background,

@@ -13,6 +13,7 @@ import { MensagensModule } from './mensagens/mensagens.module';
 import { PagamentosModule } from './pagamentos/pagamentos.module';
 import { RotasModule } from './rotas/rotas.module';
 import { SolicitacoesModule } from './solicitacoes/solicitacoes.module';
+import { NotificacoesModule } from './notificacoes/notificacoes.module';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { SolicitacoesModule } from './solicitacoes/solicitacoes.module';
     MensagensModule,
     PagamentosModule,
     RotasModule,
+    NotificacoesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

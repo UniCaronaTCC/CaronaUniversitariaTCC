@@ -16,6 +16,7 @@ import '../widgets/card_carona_disponivel.dart';
 import '../widgets/card_destino_home.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/secao_caronas_publicadas.dart';
+import '../widgets/sino_notificacoes.dart';
 import 'buscar_carona.dart';
 import 'caronas_publicadas.dart';
 import 'detalhes_carona.dart';
@@ -370,27 +371,39 @@ class _TelaInicialState extends State<TelaInicial> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text.rich(
-                  TextSpan(
-                    children: [
-                      const TextSpan(
-                        text: 'Olá, ',
-                        style: TextStyle(color: AppColors.text, fontSize: 32),
-                      ),
-                      TextSpan(
-                        text: widget.nomeUsuario.isNotEmpty
-                            ? widget.nomeUsuario
-                            : 'usuário',
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
+                          children: [
+                            const TextSpan(
+                              text: 'Olá, ',
+                              style: TextStyle(
+                                color: AppColors.text,
+                                fontSize: 32,
+                              ),
+                            ),
+                            TextSpan(
+                              text: widget.nomeUsuario.isNotEmpty
+                                  ? widget.nomeUsuario
+                                  : 'usuário',
+                              style: const TextStyle(
+                                color: AppColors.primary,
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                    ],
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(width: 12),
+                    const SinoNotificacoes(),
+                  ],
                 ),
                 const SizedBox(height: 8),
                 const Text(

@@ -17,6 +17,7 @@ class MensagemService {
   static const Duration tempoLimiteEnvio = Duration(seconds: 10);
   static final ValueNotifier<int> totalMensagensNaoLidas = ValueNotifier(0);
   static final ValueNotifier<int> versaoConversas = ValueNotifier(0);
+  static final ValueNotifier<int> versaoNotificacoes = ValueNotifier(0);
   static RealtimeChannel? _canalMensagensNaoLidas;
   static int? _idUsuarioAcompanhado;
 
@@ -119,6 +120,10 @@ class MensagemService {
         .onBroadcast(
           event: 'CONVERSA_ATUALIZADA',
           callback: (_) => versaoConversas.value++,
+        )
+        .onBroadcast(
+          event: 'NOTIFICACAO_NOVA',
+          callback: (_) => versaoNotificacoes.value++,
         )
         .subscribe();
   }
