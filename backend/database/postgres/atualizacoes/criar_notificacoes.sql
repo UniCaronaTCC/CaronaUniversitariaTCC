@@ -162,12 +162,16 @@ BEGIN
       jsonb_build_object('tela', 'AVALIACOES'), 'avaliacao:' || NEW.id_avaliacao::TEXT);
 
   WHEN 'usuarios' THEN
+    -- O servico grava o aceite ao concluir cada tentativa, inclusive recusada.
     IF NEW.status_verificacao_cnh IN ('APROVADA', 'RECUSADA') AND
-      (OLD.status_verificacao_cnh IS DISTINCT FROM NEW.status_verificacao_cnh OR OLD.cnh_verificada_em IS DISTINCT FROM NEW.cnh_verificada_em) THEN
+      (OLD.status_verificacao_cnh IS DISTINCT FROM NEW.status_verificacao_cnh
+        OR OLD.cnh_verificada_em IS DISTINCT FROM NEW.cnh_verificada_em
+        OR OLD.privacidade_aceita_em IS DISTINCT FROM NEW.privacidade_aceita_em) THEN
       PERFORM unicarona.registrar_notificacao(NEW.id_usuario, 'CNH',
         CASE NEW.status_verificacao_cnh WHEN 'APROVADA' THEN 'CNH conferida' ELSE 'Confira a verificação da CNH' END,
         'O resultado da leitura da sua CNH está disponível.', jsonb_build_object('tela', 'CNH'),
-        'cnh:' || NEW.id_usuario::TEXT || ':' || pg_current_xact_id()::TEXT);
+        'cnh:' || NEW.id_usuario::TEXT || ':' || pg_current_xact_id()::TEXT || ':' ||
+          coalesce(NEW.privacidade_aceita_em::TEXT, 'sem-data'));
     END IF;
     IF OLD.status_verificacao IS DISTINCT FROM NEW.status_verificacao THEN
       PERFORM unicarona.registrar_notificacao(NEW.id_usuario, 'PERFIL', 'Verificação do perfil atualizada',

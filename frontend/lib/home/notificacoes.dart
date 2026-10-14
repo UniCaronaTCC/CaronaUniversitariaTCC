@@ -43,6 +43,7 @@ class _NotificacoesTelaState extends State<NotificacoesTela>
   bool consultando = false;
   bool carregandoMais = false;
   bool atualizarDepois = false;
+  bool leituraPendente = true;
   bool temMais = false;
   int? cursor;
   int? abrindo;
@@ -53,7 +54,7 @@ class _NotificacoesTelaState extends State<NotificacoesTela>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     MensagemService.versaoNotificacoes.addListener(atualizar);
-    carregar(marcarLidas: true);
+    carregar();
   }
 
   @override
@@ -73,45 +74,79 @@ class _NotificacoesTelaState extends State<NotificacoesTela>
       atualizarDepois = true;
       return;
     }
-    unawaited(carregar());
+    unawaited(carregar(preservarHistorico: true));
   }
 
-  Future<void> carregar({bool marcarLidas = false, bool mais = false}) async {
+  Future<void> carregar({
+    bool preservarHistorico = false,
+    bool mais = false,
+  }) async {
     if (consultando) return;
     consultando = true;
+    final marcarLidas = leituraPendente;
+    final preservar = preservarHistorico && itens.isNotEmpty && !marcarLidas;
+    final primeiroId = preservar ? itens.first.id : null;
     setState(() {
       carregandoMais = mais;
       erro = null;
     });
     try {
-      final resposta = await (marcarLidas
-          ? widget.service.abrir()
-          : widget.service.listar(antesDe: mais ? cursor : null));
-      if (!mounted) return;
-      if (resposta['sucesso'] != true ||
-          resposta['dados'] is! PaginaNotificacoes) {
-        final mensagem =
+      var antesDe = mais ? cursor : null;
+      final recebidos = <Notificacao>[];
+      late PaginaNotificacoes pagina;
+      while (true) {
+        final resposta = await (marcarLidas
+            ? widget.service.abrir()
+            : widget.service.listar(antesDe: antesDe));
+        if (!mounted) return;
+        if (resposta['sucesso'] != true ||
+            resposta['dados'] is! PaginaNotificacoes) {
+          mostrarErro(
             resposta['mensagem']?.toString() ??
-            'Não foi possível carregar as notificações';
-        if (itens.isEmpty) {
-          erro = mensagem;
-        } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(mensagem)));
+                'Não foi possível carregar as notificações',
+          );
+          return;
         }
-        return;
+        pagina = resposta['dados'] as PaginaNotificacoes;
+        recebidos.addAll(pagina.itens);
+        if (!preservar ||
+            !pagina.temMais ||
+            pagina.itens.isEmpty ||
+            pagina.itens.last.id <= primeiroId!) {
+          break;
+        }
+        // Recupera tambem intervalos com mais de uma pagina de avisos novos.
+        final proximo = pagina.proximoAntesDe;
+        if (proximo == null || (antesDe != null && proximo >= antesDe)) {
+          throw const FormatException('Cursor de notificacoes invalido');
+        }
+        antesDe = proximo;
       }
-      final pagina = resposta['dados'] as PaginaNotificacoes;
-      if (!mais) itens.clear();
-      final ids = itens.map((item) => item.id).toSet();
-      itens.addAll(pagina.itens.where((item) => ids.add(item.id)));
-      temMais = pagina.temMais;
-      cursor = pagina.proximoAntesDe;
-      if (marcarLidas) widget.onLeituraConfirmada?.call(pagina.totalNaoLidas);
+      if (preservar) {
+        final porId = {
+          for (final item in itens) item.id: item,
+          for (final item in recebidos) item.id: item,
+        };
+        itens
+          ..clear()
+          ..addAll(porId.values)
+          ..sort((a, b) => b.id.compareTo(a.id));
+      } else {
+        if (!mais) itens.clear();
+        final ids = itens.map((item) => item.id).toSet();
+        itens.addAll(recebidos.where((item) => ids.add(item.id)));
+        temMais = pagina.temMais;
+        cursor = pagina.proximoAntesDe;
+      }
+      if (marcarLidas) {
+        leituraPendente = false;
+        widget.onLeituraConfirmada?.call(pagina.totalNaoLidas);
+      }
     } catch (_) {
       if (mounted) {
-        erro = 'Não foi possível carregar as notificações. Tente novamente';
+        mostrarErro(
+          'Não foi possível carregar as notificações. Tente novamente',
+        );
       }
     } finally {
       consultando = false;
@@ -125,6 +160,16 @@ class _NotificacoesTelaState extends State<NotificacoesTela>
           atualizar();
         }
       }
+    }
+  }
+
+  void mostrarErro(String mensagem) {
+    if (itens.isEmpty) {
+      erro = mensagem;
+    } else {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(mensagem)));
     }
   }
 
@@ -161,7 +206,10 @@ class _NotificacoesTelaState extends State<NotificacoesTela>
           if (resposta['sucesso'] != true || resposta['dados'] is! Carona) {
             throw StateError('Carona indisponivel');
           }
-          tela = DetalhesCaronaTela(carona: resposta['dados'] as Carona);
+          tela = DetalhesCaronaTela(
+            carona: resposta['dados'] as Carona,
+            permitirSolicitacao: false,
+          );
         case 'SOLICITACOES':
           tela = MinhasCaronasTela(
             abaInicial: refs['aba'] == 'RECEBIDAS' ? 0 : 1,
@@ -236,7 +284,7 @@ class _NotificacoesTelaState extends State<NotificacoesTela>
                 mensagem: erro!,
                 icone: Icons.cloud_off_outlined,
                 textoBotao: 'Tentar novamente',
-                onPressed: () => carregar(marcarLidas: true),
+                onPressed: () => carregar(),
               )
             else if (itens.isEmpty)
               const EstadoConteudoPadrao(

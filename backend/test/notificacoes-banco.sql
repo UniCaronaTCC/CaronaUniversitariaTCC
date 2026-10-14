@@ -53,10 +53,16 @@ BEGIN
   INSERT INTO unicarona.avaliacoes(id_solicitacao, id_avaliador, id_avaliado, nota) VALUES(s,p,m,5);
   IF (SELECT count(*) FROM unicarona.notificacoes WHERE id_usuario=m AND tipo='AVALIACAO') <> 1 THEN RAISE EXCEPTION 'Avaliacao ausente'; END IF;
 
-  UPDATE unicarona.usuarios SET status_verificacao_cnh='RECUSADA', cnh_verificada_em=now() WHERE id_usuario=p;
+  UPDATE unicarona.usuarios SET status_verificacao_cnh='RECUSADA', cnh_verificada_em=NULL, privacidade_aceita_em=now() WHERE id_usuario=p;
   IF (SELECT count(*) FROM unicarona.notificacoes WHERE id_usuario=p AND tipo='CNH') <> 1 THEN RAISE EXCEPTION 'CNH ausente'; END IF;
   SELECT count(*) INTO antes FROM unicarona.notificacoes;
   UPDATE unicarona.usuarios SET status_verificacao_cnh='RECUSADA', cnh_verificada_em=cnh_verificada_em WHERE id_usuario=p;
+  IF (SELECT count(*) FROM unicarona.notificacoes) <> antes THEN RAISE EXCEPTION 'Regravacao de CNH duplicou aviso'; END IF;
+  UPDATE unicarona.usuarios SET status_verificacao_cnh='RECUSADA', cnh_verificada_em=NULL, privacidade_aceita_em=now()+interval '1 second' WHERE id_usuario=p;
+  IF (SELECT count(*) FROM unicarona.notificacoes WHERE id_usuario=p AND tipo='CNH') <> 2 THEN RAISE EXCEPTION 'Novo resultado recusado sem aviso'; END IF;
+  SELECT count(*) INTO antes FROM unicarona.notificacoes;
+  UPDATE unicarona.usuarios SET status_verificacao_cnh='RECUSADA', privacidade_aceita_em=privacidade_aceita_em WHERE id_usuario=p;
+  UPDATE unicarona.usuarios SET nome='QA Notificacoes Passageiro Atualizado' WHERE id_usuario=p;
   UPDATE unicarona.usuarios SET status_verificacao_cnh='NAO_ENVIADA', cnh_verificada_em=NULL WHERE id_usuario=p;
   IF (SELECT count(*) FROM unicarona.notificacoes) <> antes THEN RAISE EXCEPTION 'CNH redundante'; END IF;
 
