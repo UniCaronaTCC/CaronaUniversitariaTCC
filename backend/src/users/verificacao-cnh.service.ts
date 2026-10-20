@@ -80,8 +80,7 @@ export class VerificacaoCnhService {
 
   async verificar(
     idUsuario: number,
-    frente: Buffer,
-    verso: Buffer,
+    leituraOcr: unknown,
     nomeCompleto: string,
   ) {
     if (!nomeCompletoValido(nomeCompleto)) {
@@ -105,8 +104,7 @@ export class VerificacaoCnhService {
         return { status: 'APROVADA' as const };
       }
 
-      this.logger.log('CNH: iniciando leitura das fotos');
-      const texto = await this.leitura.ler(frente, verso);
+      const texto = this.leitura.ler(leituraOcr);
       this.logger.log('CNH: leitura concluída, conferindo campos');
       const conferencia = conferirDadosCnh(
         texto,

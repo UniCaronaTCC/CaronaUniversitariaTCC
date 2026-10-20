@@ -1,161 +1,80 @@
-import {
-  BadRequestException,
-  ServiceUnavailableException,
-} from '@nestjs/common';
-import { tmpdir } from 'node:os';
-import sharp from 'sharp';
-import { createWorker } from 'tesseract.js';
-import type { Block } from 'tesseract.js';
-
+import { BadRequestException } from '@nestjs/common';
 import { LeituraCnhService } from './leitura-cnh.service';
+import { conferirDadosCnh } from './dados-cnh';
 
-jest.mock('tesseract.js', () => ({
-  createWorker: jest.fn(),
-  PSM: { AUTO: '3' },
-}));
-
-describe('LeituraCnhService', () => {
-  const service = new LeituraCnhService();
-  const criarImagem = (width: number, height: number) =>
-    sharp({
-      create: {
-        width,
-        height,
-        channels: 3,
-        background: '#ffffff',
-      },
-    })
-      .png()
-      .toBuffer();
-
-  beforeEach(() => jest.resetAllMocks());
-
-  it('valida as duas fotos, lê os campos da frente e encerra o worker', async () => {
-    const processadas: Buffer[] = [];
-    const recognize = jest.fn((imagem: Buffer) => {
-      processadas.push(imagem);
-      const text = processadas.length === 1 ? 'FRENTE' : 'VERSO';
-      return Promise.resolve({ data: { text } });
-    });
-    const worker = {
-      recognize,
-      setParameters: jest.fn().mockResolvedValue(undefined),
-      terminate: jest.fn().mockResolvedValue(undefined),
-    };
-    jest.mocked(createWorker).mockResolvedValue(worker as never);
-
-    const imagem = await criarImagem(900, 600);
-    await expect(service.ler(imagem, imagem)).resolves.toEqual({
-      texto: 'FRENTE',
-      nome: null,
-      campos: { cpf: null, validade: null, categoria: null },
-    });
-    expect(worker.recognize).toHaveBeenNthCalledWith(
-      1,
-      processadas[0],
-      {},
-      { text: true, blocks: true },
-    );
-    expect(createWorker).toHaveBeenCalledWith('por', undefined, {
-      cachePath: tmpdir(),
-    });
-    expect(worker.recognize).toHaveBeenCalledTimes(4);
-    expect(worker.setParameters).toHaveBeenCalledWith({
-      tessedit_pageseg_mode: '3',
-      thresholding_method: '2',
-    });
-    expect(worker.terminate).toHaveBeenCalledTimes(1);
-    expect(
-      processadas.every((imagem) => imagem.every((byte) => byte === 0)),
-    ).toBe(true);
-  });
-
-  it.each([1, 2, 3, 4])(
-    'encontra rótulos na tentativa %i sem criar outro worker',
-    async (tentativa) => {
-      const palavras = ['NOME', 'CPF', 'VALIDADE'].map((text, i) => ({
-        text,
-        bbox: { x0: 100 + i * 250, x1: 150 + i * 250, y0: 10, y1: 20 },
-      }));
-      const blocks = [
-        { paragraphs: [{ lines: [{ words: palavras }] }] },
-      ] as unknown as Block[];
-      const processadas: Buffer[] = [];
-      const worker = {
-        recognize: jest.fn((imagem: Buffer) => {
-          processadas.push(imagem);
-          return Promise.resolve({
-            data: {
-              text: 'CNH',
-              blocks: processadas.length === tentativa ? blocks : null,
-            },
-          });
-        }),
-        setParameters: jest.fn().mockResolvedValue(undefined),
-        terminate: jest.fn().mockResolvedValue(undefined),
-      };
-      jest.mocked(createWorker).mockResolvedValue(worker as never);
-      const imagem = await criarImagem(900, 600);
-      await service.ler(imagem, imagem);
-      expect(worker.recognize).toHaveBeenCalledTimes(tentativa);
-      expect(createWorker).toHaveBeenCalledTimes(1);
-      expect(worker.terminate).toHaveBeenCalledTimes(1);
-      expect(
-        processadas.every((foto) => foto.every((byte) => byte === 0)),
-      ).toBe(true);
+const palavra = (texto: string, x0: number, y0: number, largura = 60) => ({
+  texto,
+  x0,
+  y0,
+  x1: x0 + largura,
+  y1: y0 + 10,
+});
+export const leituraTeste = () => ({
+  largura: 1000,
+  altura: 800,
+  linhas: [
+    { palavras: [palavra('NOME', 100, 20)] },
+    { palavras: [palavra('MARIA', 100, 40), palavra('SILVA', 165, 40)] },
+    { palavras: [palavra('CPF', 100, 150), palavra('REGISTRO', 400, 150)] },
+    {
+      palavras: [
+        palavra('529.982.247-25', 100, 170, 140),
+        palavra('12345678901', 400, 170, 130),
+      ],
     },
-  );
+    { palavras: [palavra('EMISSAO', 100, 250), palavra('VALIDADE', 400, 250)] },
+    {
+      palavras: [
+        palavra('01/01/2020', 100, 270, 100),
+        palavra('01/01/2099', 400, 270, 100),
+      ],
+    },
+    { palavras: [palavra('CAT.HAB.', 700, 350, 80)] },
+    { palavras: [palavra('AB', 700, 370, 30)] },
+  ],
+});
 
-  it('aceita dimensão mínima também quando a foto é vertical', async () => {
-    const worker = {
-      recognize: jest
-        .fn()
-        .mockResolvedValue({ data: { text: '', blocks: null } }),
-      setParameters: jest.fn().mockResolvedValue(undefined),
-      terminate: jest.fn().mockResolvedValue(undefined),
-    };
-    jest.mocked(createWorker).mockResolvedValue(worker as never);
-    const imagem = await criarImagem(400, 600);
-    await expect(service.ler(imagem, imagem)).resolves.toHaveProperty(
-      'nome',
-      null,
-    );
-    expect(worker.terminate).toHaveBeenCalledTimes(1);
-  });
-
-  it('rejeita imagem pequena antes de iniciar o OCR', async () => {
-    const pequena = await criarImagem(300, 200);
-    await expect(service.ler(pequena, pequena)).rejects.toBeInstanceOf(
-      BadRequestException,
-    );
-    expect(createWorker).not.toHaveBeenCalled();
-  });
-
-  it('não trata indisponibilidade do OCR como recusa da CNH', async () => {
-    jest
-      .mocked(createWorker)
-      .mockRejectedValue(new Error('sem dados de idioma'));
-    const imagem = await criarImagem(900, 600);
-    await expect(service.ler(imagem, imagem)).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
+describe('LeituraCnhService com ML Kit', () => {
+  const service = new LeituraCnhService();
+  it('separa pelas posições, sem confundir CPF/registro ou emissão/validade', () => {
+    const l = service.ler(leituraTeste());
+    expect(l.nome).toBe('MARIA SILVA');
+    expect(l.campos).toEqual({
+      cpf: '529.982.247-25',
+      validade: '01/01/2099',
+      categoria: 'AB',
+    });
+    expect(conferirDadosCnh(l, 'Maria Silva', '2026-10-20').dados).toEqual({
+      cpf: '52998224725',
+      validade: '2099-01-01',
+      categoria: 'AB',
+    });
+    expect(conferirDadosCnh(l, 'Outra Pessoa', '2026-10-20').motivo).toBe(
+      'NOME_DIVERGENTE',
     );
   });
-
-  it('limita verificações simultâneas para não esgotar o servidor', async () => {
-    const worker = {
-      setParameters: jest.fn().mockResolvedValue(undefined),
-      recognize: jest.fn().mockResolvedValue({ data: { text: 'CNH' } }),
-      terminate: jest.fn().mockResolvedValue(undefined),
-    };
-    jest.mocked(createWorker).mockResolvedValue(worker as never);
-    const imagem = await criarImagem(900, 600);
-
-    const primeira = service.ler(imagem, imagem);
-    const segunda = service.ler(imagem, imagem);
-    await expect(service.ler(imagem, imagem)).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
-    await Promise.all([primeira, segunda]);
-    expect(createWorker).toHaveBeenCalledTimes(2);
+  it.each([
+    null,
+    {},
+    { largura: 1000, altura: 800, linhas: 'texto' },
+    { largura: -1, altura: 800, linhas: [] },
+    { largura: 6000, altura: 6000, linhas: [] },
+  ])('recusa contrato inválido', (entrada) => {
+    expect(() => service.ler(entrada)).toThrow(BadRequestException);
+  });
+  it('recusa caixa fora da imagem e texto excessivo', () => {
+    const l = leituraTeste();
+    l.linhas[0].palavras[0].x1 = 1001;
+    expect(() => service.ler(l)).toThrow(BadRequestException);
+    l.linhas[0].palavras[0] = palavra('A'.repeat(151), 0, 0);
+    expect(() => service.ler(l)).toThrow(BadRequestException);
+  });
+  it('recusa rótulo duplicado e não inventa campo ausente', () => {
+    const l = leituraTeste();
+    l.linhas.push({ palavras: [palavra('CPF', 300, 600)] });
+    expect(service.ler(l).campos?.cpf).toBeNull();
+    expect(
+      service.ler({ largura: 1000, altura: 800, linhas: [] }).nome,
+    ).toBeNull();
   });
 });

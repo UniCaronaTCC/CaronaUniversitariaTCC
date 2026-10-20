@@ -8,14 +8,17 @@ import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import 'auth_service.dart';
 import 'sessao_service.dart';
+import 'ocr_cnh_service.dart';
 
 class VerificacaoCnhService {
   final http.Client? cliente;
+  final LerCnh? lerCnh;
   final Duration prazo;
   final void Function(String)? registrarDiagnostico;
 
   const VerificacaoCnhService({
     this.cliente,
+    this.lerCnh,
     this.prazo = const Duration(seconds: 90),
     this.registrarDiagnostico,
   });
@@ -113,24 +116,39 @@ class VerificacaoCnhService {
   }
 
   Future<Map<String, dynamic>> enviar(
-    Uint8List frente,
-    Uint8List verso, {
+    Uint8List frente, {
     required bool aceitePrivacidade,
     required String nomeCompleto,
   }) async {
     if (!aceitePrivacidade) {
       return {'sucesso': false, 'mensagem': 'Aceite o aviso de privacidade'};
     }
-    if (frente.isEmpty ||
-        verso.isEmpty ||
-        frente.length > 5 * 1024 * 1024 ||
-        verso.length > 5 * 1024 * 1024) {
+    if (frente.isEmpty || frente.length > 5 * 1024 * 1024) {
       return {
         'sucesso': false,
-        'mensagem': 'Envie duas fotos de até 5 MB cada',
+        'mensagem': 'Envie uma foto de até 5 MB da frente da CNH',
       };
     }
-
+    if (AuthService.tokenUsuarioLogado == null) {
+      return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+    }
+    final Map<String, dynamic> leitura;
+    try {
+      leitura = await (lerCnh ?? lerCnhNoCelular)(frente);
+    } on UnsupportedError {
+      return {
+        'sucesso': false,
+        'mensagem': 'Use Android ou iPhone para ler a CNH.',
+      };
+    } on FormatException catch (erro) {
+      return {'sucesso': false, 'mensagem': erro.message};
+    } catch (_) {
+      return {
+        'sucesso': false,
+        'mensagem':
+            'Não foi possível ler a foto no celular. Confira a orientação, os campos e tente novamente.',
+      };
+    }
     final conexao = cliente ?? http.Client();
     final relogio = Stopwatch()..start();
     var fase = 'preparacao';
@@ -154,25 +172,20 @@ class VerificacaoCnhService {
         formato = 'sem_resposta';
         fase = 'preparacao';
         final pedido =
-            http.MultipartRequest(
+            http.Request(
                 'POST',
-                Uri.parse('${ApiConfig.baseUrl}/usuarios/cnh/verificar'),
+                Uri.parse('${ApiConfig.baseUrl}/usuarios/cnh/verificar-mlkit'),
               )
-              ..headers['Authorization'] = 'Bearer $token'
-              ..fields['aceitePrivacidade'] = 'true'
-              ..fields['nomeCompleto'] = nomeCompleto.trim()
-              ..files.addAll([
-                http.MultipartFile.fromBytes(
-                  'frente',
-                  frente,
-                  filename: 'frente.jpg',
-                ),
-                http.MultipartFile.fromBytes(
-                  'verso',
-                  verso,
-                  filename: 'verso.jpg',
-                ),
-              ]);
+              ..headers.addAll({
+                'Authorization': 'Bearer $token',
+                'Content-Type': 'application/json',
+              })
+              ..body = jsonEncode({
+                'versaoLeitura': 'mlkit-v1',
+                'aceitePrivacidade': true,
+                'nomeCompleto': nomeCompleto.trim(),
+                'leitura': leitura,
+              });
         fase = 'aguardando_resposta';
         _diagnosticar('requisicao tentativa=$tentativa');
         final recebida = await conexao.send(pedido);
@@ -191,6 +204,13 @@ class VerificacaoCnhService {
         return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
       }
       fase = 'interpretando_resposta';
+      if (resposta.statusCode == 404) {
+        return {
+          'sucesso': false,
+          'mensagem':
+              'O servidor ainda não está atualizado para o novo leitor de CNH. Publique o backend atualizado antes de tentar novamente.',
+        };
+      }
       final corpo = jsonDecode(resposta.body);
       if (corpo is! Map) throw const FormatException();
       final dados = corpo['dados'];

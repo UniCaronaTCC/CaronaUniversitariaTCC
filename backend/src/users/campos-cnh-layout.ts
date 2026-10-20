@@ -1,4 +1,4 @@
-import type { Block, Word } from 'tesseract.js';
+import type { Block, Word } from './ocr-cnh';
 import type { RelatarCampoCnh, MotivoCampoCnh } from './diagnostico-campo-cnh';
 
 export type CampoCnh = 'nome' | 'cpf' | 'validade' | 'categoria';
@@ -32,26 +32,12 @@ const limparBorda = (s: string) =>
     .replace(/^[|()[\]{}]+|[|()[\]{}]+$/g, '')
     .trim();
 
-export function rotulosCnhLocalizados(blocos: Block[] | null): boolean {
-  const palavras = linhas(blocos).flatMap((l) => l.words);
-  const encontrados = (Object.keys(padroes) as CampoCnh[]).filter(
-    (campo) =>
-      palavras.filter((p) => padroes[campo].test(rotulo(p.text))).length === 1,
-  );
-  const horizontais = encontrados.filter((campo) => {
-    const titulo = palavras.find((p) => padroes[campo].test(rotulo(p.text)))!;
-    return titulo.bbox.x1 - titulo.bbox.x0 >= titulo.bbox.y1 - titulo.bbox.y0;
-  });
-  return horizontais.includes('nome') && horizontais.length >= 3;
-}
-
 // Rótulos orientam o recorte; nenhuma coordenada depende de uma foto específica.
 export function regiaoDoCampo(
   blocos: Block[] | null,
   campo: CampoCnh,
   largura: number,
   altura: number,
-  somenteValor = false,
   relatar?: RelatarCampoCnh,
 ): RegiaoCnh | null {
   const recusar = (motivo: MotivoCampoCnh) => {
@@ -103,7 +89,15 @@ export function regiaoDoCampo(
   );
   let right = Math.min(
     largura,
-    b.x1 + h * (campo === 'nome' ? 40 : campo === 'cpf' ? 14 : 3),
+    b.x1 +
+      h *
+        (campo === 'nome'
+          ? 40
+          : campo === 'cpf'
+            ? 14
+            : campo === 'validade'
+              ? 8
+              : 3),
     ...vizinhos.map((p) => p.bbox.x0 - h * 2),
   );
   // Linhas verticais reconhecidas como pontuação delimitam a célula,
@@ -168,35 +162,7 @@ export function regiaoDoCampo(
   if (cortaValor) return recusar('PALAVRA_NA_BORDA');
   if (width <= 0 || height <= 0) return recusar('REGIAO_VAZIA');
   relatar?.('REGIAO_LOCALIZADA');
-  if (!somenteValor) return { left, top, width, height };
-  const candidatas = linhas(blocos)
-    .map((l) =>
-      l.words.filter(
-        (p) =>
-          /[\p{L}\d]/u.test(p.text) &&
-          (p.bbox.y0 + p.bbox.y1) / 2 > b.y1 &&
-          (campo !== 'nome' || p.bbox.y0 >= b.y1 - h / 2) &&
-          p.bbox.y1 <= bottom &&
-          p.bbox.x0 >= left &&
-          p.bbox.x1 <= right &&
-          !outro.test(rotulo(p.text)),
-      ),
-    )
-    .filter((l) => l.length > 0);
-  if (!candidatas.length || candidatas.length > (campo === 'nome' ? 2 : 1))
-    return null;
-  const valores = candidatas.flat();
-  const x0 = left;
-  const x1 = right;
-  const y0 = Math.max(
-    top,
-    Math.floor(Math.min(...valores.map((p) => p.bbox.y0)) - h / 4),
-  );
-  const y1 = Math.min(
-    bottom,
-    Math.ceil(Math.max(...valores.map((p) => p.bbox.y1)) + h / 4),
-  );
-  return { left: x0, top: y0, width: x1 - x0, height: y1 - y0 };
+  return { left, top, width, height };
 }
 
 export function valorDoCampo(
@@ -206,7 +172,7 @@ export function valorDoCampo(
   altura: number,
   relatar?: RelatarCampoCnh,
 ): string | null {
-  const regiao = regiaoDoCampo(blocos, campo, largura, altura, false, relatar);
+  const regiao = regiaoDoCampo(blocos, campo, largura, altura, relatar);
   if (!regiao) return null;
   const todas = linhas(blocos);
   const titulo = todas
@@ -245,60 +211,4 @@ function validarFormato(campo: Exclude<CampoCnh, 'nome'>, valor: string) {
     categoria: /^(?:A?[BCDE]|A|ACC)$/,
   }[campo];
   return formato.test(texto) ? texto : null;
-}
-
-// Usado somente em um recorte delimitado por um título único já localizado.
-export function valorDoRecorte(
-  texto: string,
-  campo: CampoCnh,
-  rotuloConfirmado = false,
-  relatar?: RelatarCampoCnh,
-): string | null {
-  const recusar = (motivo: MotivoCampoCnh) => {
-    relatar?.(motivo);
-    return null;
-  };
-  const partes = texto.split(/\r?\n/).map(limparBorda).filter(Boolean);
-  const prefixo = '(?:\\d{1,2}[A-E]?(?:\\s*E\\s*\\d{1,2})?\\s*)?';
-  const expressao = {
-    nome: 'NOME(?:\\s+E\\s+SOBRENOME)?(?:\\s*/\\s*NAME\\s+AND\\s+SURNAME)?\\b',
-    cpf: '(?:D\\s*)?CPF\\b',
-    validade: '(?:B\\s*)?VALIDADE\\b',
-    categoria: '(?:CATEGORIA\\b|CAT\\.?\\s*HAB\\b\\.?)',
-  }[campo];
-  const inicioRotulo = new RegExp(`^${prefixo}${expressao}[\\s:.-]*`, 'i');
-  const titulos = partes
-    .map((p, i) => ({ encontrado: inicioRotulo.exec(p), i }))
-    .filter(({ encontrado }) => encontrado !== null);
-  if (titulos.length > 1) return recusar('TITULO_DUPLICADO');
-  if (!titulos.length && !rotuloConfirmado) return recusar('TITULO_AUSENTE');
-  // O rótulo já foi localizado de forma única na imagem inteira. A releitura
-  // pode reconhecer apenas o valor, sem repetir as letras pequenas do título.
-  if (titulos.length && titulos[0].i !== 0) return null;
-  const valores = titulos.length
-    ? [
-        partes[0].slice(titulos[0].encontrado![0].length),
-        ...partes.slice(1),
-      ].filter(Boolean)
-    : partes;
-  if (!valores.length || valores.length > (campo === 'nome' ? 2 : 1))
-    return null;
-  const valor = valores.join(' ');
-  if (campo !== 'nome') {
-    const resultado = validarFormato(campo, valor);
-    relatar?.(resultado ? 'CAMPO_LIDO' : 'FORMATO_INVALIDO');
-    return resultado;
-  }
-  if (
-    /\b(CPF|DATA|FILIACAO|NASCIMENTO|VALIDADE|HABILITACAO)\b/.test(
-      normalizar(valor),
-    )
-  )
-    return recusar('OUTRO_CAMPO');
-  const valido =
-    /^[\p{L}]+(?:['’-][\p{L}]+)*(?:\s+[\p{L}]+(?:['’-][\p{L}]+)*)+$/u.test(
-      valor,
-    );
-  relatar?.(valido ? 'CAMPO_LIDO' : 'FORMATO_INVALIDO');
-  return valido ? valor : null;
 }

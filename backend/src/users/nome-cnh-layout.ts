@@ -1,4 +1,4 @@
-import type { Bbox, Block } from 'tesseract.js';
+import type { Bbox, Block } from './ocr-cnh';
 import type { CamposCnh } from './campos-cnh-layout';
 
 export interface LeituraCnh {

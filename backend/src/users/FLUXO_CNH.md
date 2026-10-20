@@ -1,102 +1,51 @@
-# Conferencia de CNH do TCC
+# Conferencia de CNH com ML Kit
 
-## Reinicio temporario para testes
+O Flutter usa google_mlkit_text_recognition (SDK nativo do Google) no Android e
+no iPhone. A leitura usa somente a frente, onde estao nome, CPF, validade e
+categoria. Camera guiada e galeria com rotacao/recorte continuam disponiveis.
+A imagem e decodificada para normalizar orientacao. Se faltarem rotulos, sao
+tentadas ate quatro orientacoes no mesmo leitor. Campos de fotos ou orientacoes
+diferentes nunca sao combinados. Nao ha reconhecimento de texto no servidor.
 
-Recurso de QA a retirar antes da entrega: POST /usuarios/cnh/reiniciar-teste,
-autenticado e sem ID no corpo. Reinicia somente a conta identificada pelo JWT.
-Nao exige variaveis de ambiente, lista de IDs ou consulta de permissao.
-O botao "Reiniciar CNH (teste)" aparece na tela aprovada sem consultar permissao.
-Exige confirmacao. Limpa somente campos de CNH
-e consentimento; preserva usuario, foto, veiculo, pagamentos e historico.
-Bloqueia enquanto houver leitura/reset em andamento neste processo,
-ofertas ATIVA/LOTADA/EM_ANDAMENTO ou recorrencias ativas como motorista.
-Nao cancela nem pausa nada automaticamente. Para testar nessa conta,
-pausar recorrencias e resolver ofertas ativas primeiro.
-Nao testar a mesma conta simultaneamente por dois backends diferentes.
-A atualizacao usa transacao, bloqueio da linha e confere linhas afetadas.
-Nao exige migracao. Precisa apenas do backend publicado e do app atualizado.
-Durante esta etapa de testes, qualquer conta autenticada pode reiniciar sua
-propria CNH, respeitando os bloqueios acima. Nao publicar este recurso na
-entrega final: remover rota, metodo e botao; nao apenas esconder o botao.
+## Contrato
 
-## Fluxo
+POST /usuarios/cnh/verificar-mlkit, autenticado, Content-Type application/json:
+- versaoLeitura: mlkit-v1
+- aceitePrivacidade: boolean true
+- nomeCompleto: nome completo informado
+- leitura: { largura, altura, linhas: [{ palavras: [{ texto, x0, y0, x1, y1 }] }] }
 
-O usuario aceita o uso dos dados, informa o nome completo e escolhe fotos da
-camera ou galeria. A camera abre na horizontal com moldura para o documento
-inteiro e previa para confirmar ou refazer. O recorte segue a moldura com margem.
-Na galeria, ajusta os quatro cantos do recorte
-para deixar somente o documento inteiro, com letras na posicao de leitura.
-Cancelar o recorte preserva a foto anterior. O original da galeria nao e apagado.
-As setas de rotacao da galeria giram 90 graus e preservam a area selecionada.
-O recorte e feito em memoria; a captura guiada usa o plugin camera. Exige ao menos
-600 pixels no lado maior, 400 no menor e no maximo 5 MB por imagem.
+O usuario vem do JWT, nunca do corpo. O servidor valida dimensoes, limites,
+tipos e coordenadas e extrai os campos pelas posicoes/rotulos. Nao aceita um
+objeto com campos ja aprovados nem um status fornecido pelo cliente. Nome deve
+coincidir integralmente (normalizando acentos, caixa e espacos), CPF passa no
+checksum, validade exige calendario real e nao vencida, categoria deve permitir
+carro. CPF duplicado entre contas continua bloqueado. Campo ambiguo e recusado.
 
-O app continua enviando frente, verso, nomeCompleto e aceitePrivacidade para
-POST /usuarios/cnh/verificar, com o token da sessao. O backend valida os dois
-arquivos, mas le apenas a frente, onde ficam os quatro campos necessarios.
-Nao exige nem extrai registro. A coluna cnh_registro_final continua nullable;
-novas verificacoes gravam null. Nao e necessario executar migracao ou apagar
-registros existentes.
+## Privacidade e limites
 
-## Leitura
+Fotos nao sao enviadas ao backend. A foto temporaria local usada pelo plugin e
+removida ao concluir, inclusive em falhas. Nao persistimos texto completo ou
+nome informado, nem os imprimimos em logs. Guardamos CPF, categoria, validade,
+consentimento e estado/data da conferencia, como antes. Nao ha migracao de banco.
 
-O Tesseract usa segmentacao automatica e contraste adaptativo (Sauvola),
-preservando a imagem colorida. As coordenadas dos rotulos delimitam nome,
-CPF, validade e categoria, sem posicoes fixas para uma foto especifica.
-Rotulos duplicados ou valores cortados/ambiguos sao recusados.
+IMPORTANTE: o OCR recebido do celular pode ser adulterado. Estas regras conferem
+coerencia dos dados para o TCC e nao comprovam autenticidade, titularidade,
+suspensao ou autorizacao oficial para dirigir. Nao existe consulta ao Detran.
+Uma verificacao de identidade confiavel exige um servico/procedimento proprio.
 
-Se faltar um campo, ocorre no maximo uma releitura do pequeno recorte desse
-campo, com ate duas tentativas de contraste no mesmo worker. CPF que falha no
-checksum tambem recebe essa releitura. O recorte respeita rotulos unicos,
-colunas vizinhas e molduras reconhecidas; nao estreita o campo horizontalmente
-pelos digitos reconhecidos, pois a primeira leitura pode ter omitido digitos.
-Todos os recortes recebem margem branca. Nome usa contraste Otsu; categoria
-usa canal vermelho e a segunda tentativa de validade usa canal verde.
-Nao ha substituicao de digitos,
-preenchimento pelo nome informado ou escolha de datas sem rotulo.
-Pequenas variacoes do rotulo de categoria podem localizar o recorte; a releitura
-aceita valor sem repetir o rotulo somente dentro dessa regiao confirmada.
-Valores ambiguos, linhas adicionais e rotulos duplicados continuam recusados.
+## Publicacao e testes
 
-Sem rotulos horizontais suficientes (nome e pelo menos dois outros campos),
-o backend tenta ate quatro orientacoes da mesma frente. Nao combina campos
-de orientacoes diferentes, nao usa o nome digitado para escolher a orientacao
-e mantem o limite de dois workers simultaneos. Os buffers sao limpos ao final.
+Publicar backend e reinstalar o app juntos: o antigo envio multipart de fotos
+foi removido. Apps antigos recebem orientacao de atualizar; nao ha fallback.
+Android: compilar APK apos instalar dependencias Flutter.
+iOS: alvo 15.5+, instalar pods e compilar/testar em Mac/Xcode. O plugin Flutter
+e mantido pela comunidade; o reconhecimento executa no SDK nativo do Google.
 
-Nome deve corresponder integralmente ao informado, tolerando acentos e espacos.
-CPF exige 11 digitos e checksum valido. Validade exige data real e nao vencida.
-Categoria deve permitir carro: B/C/D/E ou AB/AC/AD/AE. O nome de perfil nao muda;
-nome informado e fotos nao sao persistidos. Os buffers de preparo e recorte sao
-limpos ao encerrar, inclusive em falhas.
+Testes unitarios cobrem extracao espacial, campos ambiguos, CPF, nome, validade,
+categoria e privacidade; teste HTTP usa modulos simulados sem banco real.
+Testar novas capturas e fotos que falharam anteriormente em aparelhos reais.
+Compilacao e testes simulados nao comprovam qualidade do OCR em cada aparelho.
 
-O parser textual permanece para compatibilidade interna e testes. A leitura
-real usa os campos espaciais e nao procura um campo ausente no texto geral.
-
-## Logs e publicacao
-
-CNH: campos_lidos informa somente true/false para cada campo.
-CNH: diagnostico_campo informa campo, etapa e motivo, sem o valor lido.
-Separa titulo ausente/duplicado, regiao vazia, palavra na borda e formato
-invalido na leitura inicial, localizacao do recorte e releitura.
-CNH: diagnostico_nome informa contagens e resultado da comparacao.
-Os logs nao incluem texto OCR, nomes, CPF, coordenadas ou fotos.
-Falhas do processamento continuam distintas de uma recusa dos dados.
-
-Atualizar backend e app para usar o recorte. O tempo em computador local nao
-preve o tempo do Render gratuito; testar uma tentativa depois de deploy Live.
-O fluxo nao consulta uma base oficial nem comprova autenticidade ou suspensao.
-Outros modelos de documento e condicoes de captura ainda precisam de testes.
-
-## Teste manual
-
-1. Aceitar o aviso e escolher frente e verso na camera ou galeria.
-2. Recortar o fundo sem cortar bordas, textos ou numeros da CNH.
-3. Cancelar uma nova escolha e conferir que a previa anterior permanece.
-4. Informar o nome completo e enviar; acompanhar campos_lidos nos logs.
-5. Conferir aprovacao, categoria e validade no perfil.
-6. Conferir recusa para nome divergente, CPF invalido, categoria A e vencimento.
-7. Conferir nova tentativa apos falha de rede.
-8. Girar uma selecao, conferir bordas e confirmar que o arquivo original nao muda.
-
-Os testes automatizados usam dados sinteticos. Fotos reais autorizadas para
-investigacao local nao devem ir para o repositorio, logs ou fixtures.
+Reinicio de CNH para QA: POST /usuarios/cnh/reiniciar-teste preservado. Continua
+bloqueado com ofertas/recorrencias ativas. Remover esse recurso antes da entrega.

@@ -10,9 +10,74 @@ import 'package:uni_carona/services/verificacao_cnh_service.dart';
 
 void main() {
   final frente = Uint8List.fromList([1, 2, 3]);
-  final verso = Uint8List.fromList([4, 5, 6]);
   setUp(() => AuthService.tokenUsuarioLogado = 'token-teste');
   tearDown(() => AuthService.tokenUsuarioLogado = null);
+
+  test(
+    'servidor antigo orienta atualizar backend em vez de culpar o aceite',
+    () async {
+      final service = VerificacaoCnhService(
+        lerCnh: (_) async => {'largura': 1000, 'altura': 800, 'linhas': []},
+        cliente: MockClient((pedido) async {
+          final corpo = jsonDecode(pedido.body) as Map;
+          expect(corpo['aceitePrivacidade'], true);
+          expect(pedido.url.path, '/usuarios/cnh/verificar-mlkit');
+          return http.Response(
+            '{"message":"Cannot POST /usuarios/cnh/verificar-mlkit"}',
+            404,
+          );
+        }),
+      );
+      final resultado = await service.enviar(
+        frente,
+        nomeCompleto: 'Maria Silva',
+        aceitePrivacidade: true,
+      );
+      expect(resultado['sucesso'], false);
+      expect(resultado['mensagem'], contains('backend atualizado'));
+    },
+  );
+
+  test('falha do leitor local não envia dados nem muda a conta', () async {
+    var chamadas = 0;
+    final service = VerificacaoCnhService(
+      lerCnh: (_) async => throw StateError('erro do leitor'),
+      cliente: MockClient((_) async {
+        chamadas++;
+        return http.Response('{}', 500);
+      }),
+    );
+    final resultado = await service.enviar(
+      frente,
+      nomeCompleto: 'Maria Silva',
+      aceitePrivacidade: true,
+    );
+    expect(resultado['sucesso'], false);
+    expect(resultado['mensagem'], contains('no celular'));
+    expect(chamadas, 0);
+  });
+
+  test('sem sessão ou aceite não inicia reconhecimento', () async {
+    var leituras = 0;
+    final service = VerificacaoCnhService(
+      lerCnh: (_) async {
+        leituras++;
+        return {};
+      },
+    );
+    await service.enviar(
+      frente,
+      nomeCompleto: 'Maria Silva',
+      aceitePrivacidade: false,
+    );
+    AuthService.tokenUsuarioLogado = null;
+    await service.enviar(
+      frente,
+      nomeCompleto: 'Maria Silva',
+      aceitePrivacidade: true,
+    );
+    expect(leituras, 0);
+  });
 
   for (final resposta in [
     http.Response(
@@ -30,12 +95,12 @@ void main() {
     test('diagnostica resposta invalida HTTP ${resposta.statusCode}', () async {
       final logs = <String>[];
       final service = VerificacaoCnhService(
+        lerCnh: (_) async => {'largura': 1000, 'altura': 800, 'linhas': []},
         registrarDiagnostico: logs.add,
         cliente: MockClient((_) async => resposta),
       );
       final resultado = await service.enviar(
         frente,
-        verso,
         nomeCompleto: 'Nome Sensivel',
         aceitePrivacidade: true,
       );
@@ -59,6 +124,7 @@ void main() {
     () async {
       final logs = <String>[];
       final service = VerificacaoCnhService(
+        lerCnh: (_) async => {'largura': 1000, 'altura': 800, 'linhas': []},
         registrarDiagnostico: logs.add,
         cliente: MockClient((_) async {
           throw http.ClientException('dado-sensivel-sintetico token-teste');
@@ -66,7 +132,6 @@ void main() {
       );
       final resultado = await service.enviar(
         frente,
-        verso,
         nomeCompleto: 'Nome Sensivel',
         aceitePrivacidade: true,
       );
@@ -83,6 +148,7 @@ void main() {
   test('falha inesperada nao e apresentada como falta de conexao', () async {
     final logs = <String>[];
     final service = VerificacaoCnhService(
+      lerCnh: (_) async => {'largura': 1000, 'altura': 800, 'linhas': []},
       registrarDiagnostico: logs.add,
       cliente: MockClient(
         (_) async => throw StateError('dado-sensivel-sintetico'),
@@ -90,7 +156,6 @@ void main() {
     );
     final resultado = await service.enviar(
       frente,
-      verso,
       nomeCompleto: 'Nome Sensivel',
       aceitePrivacidade: true,
     );
@@ -113,12 +178,12 @@ void main() {
     test('classifica conexao como ${caso.value} sem expor mensagem', () async {
       final logs = <String>[];
       final service = VerificacaoCnhService(
+        lerCnh: (_) async => {'largura': 1000, 'altura': 800, 'linhas': []},
         registrarDiagnostico: logs.add,
         cliente: MockClient((_) async => throw http.ClientException(caso.key)),
       );
       await service.enviar(
         frente,
-        verso,
         nomeCompleto: 'Nome Sensivel',
         aceitePrivacidade: true,
       );
@@ -132,6 +197,7 @@ void main() {
     () async {
       final pedidos = <http.Request>[];
       final service = VerificacaoCnhService(
+        lerCnh: (_) async => {'largura': 1000, 'altura': 800, 'linhas': []},
         cliente: MockClient((r) async {
           pedidos.add(r);
           return http.Response('{"dados":{"status":"NAO_ENVIADA"}}', 201);
@@ -148,6 +214,7 @@ void main() {
 
   test('backend antigo nao transforma erro em reset', () async {
     final service = VerificacaoCnhService(
+      lerCnh: (_) async => {'largura': 1000, 'altura': 800, 'linhas': []},
       cliente: MockClient(
         (_) async => http.Response('{"message":"Recurso indisponivel"}', 404),
       ),
@@ -155,9 +222,10 @@ void main() {
     expect((await service.reiniciarTeste())['sucesso'], false);
   });
 
-  test('envia fotos e aceite ao backend com o token', () async {
+  test('le a foto localmente e envia apenas OCR e aceite com token', () async {
     late http.Request recebido;
     final service = VerificacaoCnhService(
+      lerCnh: (_) async => {'largura': 1000, 'altura': 800, 'linhas': []},
       cliente: MockClient((pedido) async {
         recebido = pedido;
         return http.Response(
@@ -170,26 +238,26 @@ void main() {
     );
     final resultado = await service.enviar(
       frente,
-      verso,
       nomeCompleto: 'João Pedro da Silva',
       aceitePrivacidade: true,
     );
     expect(resultado['dados']['status'], 'APROVADA');
-    expect(recebido.url.path, '/usuarios/cnh/verificar');
+    expect(recebido.url.path, '/usuarios/cnh/verificar-mlkit');
     expect(recebido.headers['authorization'], 'Bearer token-teste');
-    expect(recebido.headers['content-type'], startsWith('multipart/form-data'));
-    expect(recebido.body, contains('name="aceitePrivacidade"'));
-    expect(recebido.body, contains('name="nomeCompleto"'));
-    expect(utf8.decode(recebido.bodyBytes), contains('João Pedro da Silva'));
-    expect(recebido.body, contains('name="frente"'));
-    expect(recebido.body, contains('name="verso"'));
-    expect(recebido.bodyBytes, containsAllInOrder(frente));
-    expect(recebido.bodyBytes, containsAllInOrder(verso));
+    expect(recebido.headers['content-type'], 'application/json');
+    final corpo = jsonDecode(recebido.body) as Map;
+    expect(corpo['versaoLeitura'], 'mlkit-v1');
+    expect(corpo['aceitePrivacidade'], true);
+    expect(corpo['nomeCompleto'], 'João Pedro da Silva');
+    expect(corpo['leitura']['largura'], 1000);
+    expect(corpo.containsKey('frente'), false);
+    expect(corpo.containsKey('verso'), false);
   });
 
   test('não envia sem aceite, fotos ou sessão', () async {
     var chamadas = 0;
     final service = VerificacaoCnhService(
+      lerCnh: (_) async => {'largura': 1000, 'altura': 800, 'linhas': []},
       cliente: MockClient((_) async {
         chamadas++;
         return http.Response('{}', 500);
@@ -198,7 +266,6 @@ void main() {
     expect(
       (await service.enviar(
         frente,
-        verso,
         nomeCompleto: 'João Pedro da Silva',
         aceitePrivacidade: false,
       ))['sucesso'],
@@ -207,7 +274,6 @@ void main() {
     expect(
       (await service.enviar(
         Uint8List(0),
-        verso,
         nomeCompleto: 'João Pedro da Silva',
         aceitePrivacidade: true,
       ))['sucesso'],
@@ -216,7 +282,6 @@ void main() {
     expect(
       (await service.enviar(
         Uint8List(5 * 1024 * 1024 + 1),
-        verso,
         nomeCompleto: 'João Pedro da Silva',
         aceitePrivacidade: true,
       ))['sucesso'],
@@ -226,7 +291,6 @@ void main() {
     expect(
       (await service.enviar(
         frente,
-        verso,
         nomeCompleto: 'João Pedro da Silva',
         aceitePrivacidade: true,
       ))['mensagem'],
@@ -239,6 +303,7 @@ void main() {
     'recusa é um resultado processado e erros de servidor permitem tentar novamente',
     () async {
       final recusada = VerificacaoCnhService(
+        lerCnh: (_) async => {'largura': 1000, 'altura': 800, 'linhas': []},
         cliente: MockClient(
           (_) async => http.Response('{"dados":{"status":"RECUSADA"}}', 201),
         ),
@@ -246,13 +311,13 @@ void main() {
       expect(
         (await recusada.enviar(
           frente,
-          verso,
           nomeCompleto: 'João Pedro da Silva',
           aceitePrivacidade: true,
         ))['dados']['status'],
         'RECUSADA',
       );
       final falha = VerificacaoCnhService(
+        lerCnh: (_) async => {'largura': 1000, 'altura': 800, 'linhas': []},
         cliente: MockClient(
           (_) async => http.Response(
             '{"message":"Serviço temporariamente indisponível"}',
@@ -263,7 +328,6 @@ void main() {
       expect(
         (await falha.enviar(
           frente,
-          verso,
           nomeCompleto: 'João Pedro da Silva',
           aceitePrivacidade: true,
         ))['mensagem'],
@@ -276,13 +340,13 @@ void main() {
     final pendente = Completer<http.Response>();
     final logs = <String>[];
     final service = VerificacaoCnhService(
+      lerCnh: (_) async => {'largura': 1000, 'altura': 800, 'linhas': []},
       registrarDiagnostico: logs.add,
       prazo: const Duration(milliseconds: 1),
       cliente: MockClient((_) => pendente.future),
     );
     final resultado = await service.enviar(
       frente,
-      verso,
       nomeCompleto: 'João Pedro da Silva',
       aceitePrivacidade: true,
     );
