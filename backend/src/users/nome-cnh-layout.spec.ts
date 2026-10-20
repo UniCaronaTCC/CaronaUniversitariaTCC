@@ -1,4 +1,4 @@
-import type { Block } from 'tesseract.js';
+import type { Block } from './ocr-cnh';
 import { nomePeloLayout } from './nome-cnh-layout';
 import { conferirDadosCnh } from './dados-cnh';
 
@@ -11,7 +11,7 @@ function linha(texto: string, x: number, y: number) {
   };
 }
 function blocos(...lines: ReturnType<typeof linha>[]): Block[] {
-  return [{ paragraphs: [{ lines }] }] as unknown as Block[];
+  return [{ paragraphs: [{ lines }] }];
 }
 
 describe('nomePeloLayout', () => {
@@ -191,7 +191,11 @@ describe('nomePeloLayout', () => {
   const texto =
     'NOME ERRADO\nCPF 529.982.247-25\nCATEGORIA B\nVALIDADE 06/10/2099\nREGISTRO 12345678901';
   it('usa somente o nome localizado e mantém a comparação integral', () => {
-    const entrada = { texto, nome: 'JOAO PEDRO DA SILVA' };
+    const entrada = {
+      texto,
+      nome: 'JOAO PEDRO DA SILVA',
+      campos: { cpf: '529.982.247-25', categoria: 'B', validade: '06/10/2099' },
+    };
     expect(
       conferirDadosCnh(entrada, 'João Pedro da Silva', '2026-10-09').dados,
     ).not.toBeNull();

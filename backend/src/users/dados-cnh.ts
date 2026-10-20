@@ -62,35 +62,6 @@ function normalizar(texto: string): string {
     .trim();
 }
 
-function campoAposRotulo(
-  linhas: string[],
-  rotulo: RegExp,
-  valor: RegExp,
-): string | null {
-  const campos: string[] = [];
-  for (let indice = 0; indice < linhas.length; indice++) {
-    const encontrado = rotulo.exec(linhas[indice]);
-    if (!encontrado) continue;
-
-    // Não deduzimos colunas a partir do texto: outro rótulo antes deste
-    // torna a associação ambígua. Aceita apenas numeração/prefixo do campo.
-    const prefixo = linhas[indice].slice(0, encontrado.index).trim();
-    if (!/^(?:N[O.]?\s*)?(?:\d{1,2}[A-E]?\s*)?$/.test(prefixo)) return null;
-    const restante = linhas[indice]
-      .slice(encontrado.index + encontrado[0].length)
-      .trim();
-    const indiceValor = restante ? indice : indice + 1;
-    const contexto = restante || linhas[indiceValor] || '';
-    // A expressão deve casar com o valor inteiro, nunca com um trecho
-    // de outro campo. Mais uma linha numérica também exige nova captura.
-    const resultado = valor.exec(contexto);
-    if (!resultado || /^[\d\s/.-]+$/.test(linhas[indiceValor + 1] ?? ''))
-      return null;
-    campos.push(resultado[1]);
-  }
-  return campos.length === 1 ? campos[0] : null;
-}
-
 export function cpfValido(cpf: string): boolean {
   if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false;
 
@@ -120,65 +91,17 @@ function dataIso(valor: string): string | null {
 }
 
 export function conferirDadosCnh(
-  entrada: string | LeituraCnh,
+  entrada: LeituraCnh,
   nomeUsuario: string,
   hoje: string,
   diagnosticarNome?: (diagnostico: DiagnosticoNomeCnh) => void,
 ): ConferenciaCnh {
-  const texto = typeof entrada === 'string' ? entrada : entrada.texto;
-  const linhas = texto.split(/\r?\n/).map(normalizar).filter(Boolean);
-
   const nome = normalizar(nomeUsuario);
-  // Junta somente linhas do nome, parando antes de outros campos.
-  const indiceNome = linhas.findIndex((linha) =>
-    /\bNOME(?: E SOBRENOME)?\b/.test(linha),
-  );
-  const partes: string[] = [];
-  const titulosEncontrados = linhas.filter((linha) =>
-    /\bNOME(?: E SOBRENOME)?\b/.test(linha),
-  ).length;
-  let parada: DiagnosticoNomeCnh['parada'] = 'TITULO_AUSENTE';
-  if (indiceNome >= 0) {
-    parada =
-      linhas.length > indiceNome + 4 ? 'LIMITE_DE_LINHAS' : 'FIM_DA_LEITURA';
-    const primeira = linhas[indiceNome]
-      .replace(/^.*?\bNOME(?: E SOBRENOME)?\b/, '')
-      .trim();
-    const candidatos = [
-      primeira,
-      ...linhas.slice(indiceNome + 1, indiceNome + 4),
-    ];
-    for (const linha of candidatos) {
-      if (!linha) continue;
-      if (
-        /\b(CPF|REGISTRO|VALIDADE|CATEGORIA|CAT|FILIACAO|NASCIMENTO|DATA|DOC|IDENTIDADE|ASSINATURA|NACIONALIDADE|PERMISSAO)\b/.test(
-          linha,
-        )
-      ) {
-        parada = 'OUTRO_CAMPO';
-        break;
-      }
-      if (!/^[A-Z]+(?:[.'’\- ]+[A-Z]+)*$/.test(linha)) {
-        parada = /\d/.test(linha)
-          ? 'DIGITOS_NA_LINHA'
-          : 'FORMATO_NAO_RECONHECIDO';
-        break;
-      }
-      partes.push(linha);
-    }
-  }
-  const porLayout = typeof entrada !== 'string';
-  const nomeDocumento = porLayout
-    ? normalizar(entrada.nome ?? '')
-    : partes.join(' ');
+  const nomeDocumento = normalizar(entrada.nome ?? '');
   diagnosticarNome?.({
-    titulosEncontrados,
-    linhasAceitas: porLayout ? (nomeDocumento ? 1 : 0) : partes.length,
-    parada: porLayout
-      ? nomeDocumento
-        ? 'REGIAO_LIDA'
-        : 'REGIAO_NAO_IDENTIFICADA'
-      : parada,
+    titulosEncontrados: nomeDocumento ? 1 : 0,
+    linhasAceitas: nomeDocumento ? 1 : 0,
+    parada: nomeDocumento ? 'REGIAO_LIDA' : 'REGIAO_NAO_IDENTIFICADA',
     resultado: !nomeDocumento
       ? 'NAO_EXTRAIDO'
       : nomeCompletoValido(nomeUsuario) && nomeDocumento === nome
@@ -186,53 +109,25 @@ export function conferirDadosCnh(
         : 'DIVERGENTE',
   });
   if (!nomeDocumento) return { dados: null, motivo: 'NOME_NAO_LIDO' };
-  if (!nomeCompletoValido(nomeUsuario) || nomeDocumento !== nome) {
+  if (!nomeCompletoValido(nomeUsuario) || nomeDocumento !== nome)
     return { dados: null, motivo: 'NOME_DIVERGENTE' };
-  }
-
-  const campos = typeof entrada === 'string' ? undefined : entrada.campos;
-  const cpfLido = campos
-    ? campos.cpf
-    : campoAposRotulo(linhas, /\bCPF\b/, /^(\d[\d .-]*\d)$/);
-  const cpf = cpfLido?.replace(/\D/g, '') ?? '';
+  const campos = entrada.campos;
+  const cpfLido = campos?.cpf;
   if (!cpfLido) return { dados: null, motivo: 'CPF_NAO_LIDO' };
+  if (!/^[\d .-]+$/.test(cpfLido))
+    return { dados: null, motivo: 'CPF_INVALIDO' };
+  const cpf = cpfLido.replace(/\D/g, '');
   if (!cpfValido(cpf)) return { dados: null, motivo: 'CPF_INVALIDO' };
-
-  const categoria = campos
-    ? campos.categoria
-    : campoAposRotulo(
-        linhas,
-        /\b(?:CATEGORIA|CAT\.?\s*HAB\.?)(?=\s|$)/,
-        /^(A?[BCDE]|A|ACC)$/,
-      );
+  const categoria = campos?.categoria;
   if (!categoria) return { dados: null, motivo: 'CATEGORIA_NAO_LIDA' };
   if (!/^A?[BCDE]$/.test(categoria))
     return { dados: null, motivo: 'CATEGORIA_INCOMPATIVEL' };
-
-  const validadeLida = campos
-    ? campos.validade
-    : campoAposRotulo(
-        linhas,
-        /\bVALIDADE\b/,
-        /^(\d{2}\s*([/.])\s*\d{2}\s*\2\s*\d{4})$/,
-      );
-  const validade = validadeLida ? dataIso(validadeLida) : null;
+  const validadeLida = campos?.validade;
+  const validade =
+    validadeLida && /^\d{2}\s*([/.])\s*\d{2}\s*\1\s*\d{4}$/.test(validadeLida)
+      ? dataIso(validadeLida)
+      : null;
   if (!validade) return { dados: null, motivo: 'VALIDADE_NAO_LIDA' };
   if (validade < hoje) return { dados: null, motivo: 'CNH_VENCIDA' };
-
-  return {
-    dados: {
-      cpf,
-      categoria,
-      validade,
-    },
-  };
-}
-
-export function extrairDadosCnh(
-  texto: string,
-  nome: string,
-  hoje: string,
-): DadosCnh | null {
-  return conferirDadosCnh(texto, nome, hoje).dados;
+  return { dados: { cpf, categoria, validade } };
 }

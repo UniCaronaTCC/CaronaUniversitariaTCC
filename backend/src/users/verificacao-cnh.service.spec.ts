@@ -13,15 +13,12 @@ import { VerificacaoCnhService } from './verificacao-cnh.service';
 import { hojeEmSaoPaulo } from './verificacao-cnh';
 
 describe('VerificacaoCnhService', () => {
-  const texto = [
-    'NOME JOAO PEDRO DA SILVA',
-    'CPF 529.982.247-25',
-    'CATEGORIA B',
-    'VALIDADE 06/10/2099',
-    'N REGISTRO 12345678901',
-  ].join('\n');
-  const frente = Buffer.from('frente');
-  const verso = Buffer.from('verso');
+  const texto = {
+    texto: '',
+    nome: 'JOAO PEDRO DA SILVA',
+    campos: { cpf: '529.982.247-25', categoria: 'B', validade: '06/10/2099' },
+  };
+  const frente = { largura: 1000, altura: 800, linhas: [] };
   let usuarios: { findOne: jest.Mock; update: jest.Mock };
   let leitura: { ler: jest.Mock };
   let service: VerificacaoCnhService;
@@ -39,7 +36,7 @@ describe('VerificacaoCnhService', () => {
       update: jest.fn().mockResolvedValue({ affected: 1 }),
     };
     leitura = {
-      ler: jest.fn().mockResolvedValue({ texto, nome: 'JOAO PEDRO DA SILVA' }),
+      ler: jest.fn().mockReturnValue(texto),
     };
     ofertas = { exists: jest.fn().mockResolvedValue(false) };
     recorrencias = { exists: jest.fn().mockResolvedValue(false) };
@@ -86,7 +83,7 @@ describe('VerificacaoCnhService', () => {
       where: { idUsuario: 1 },
       lock: { mode: 'pessimistic_write' },
     });
-    await service.verificar(1, frente, verso, 'João Pedro da Silva');
+    await service.verificar(1, frente, 'João Pedro da Silva');
     expect(leitura.ler).toHaveBeenCalledTimes(1);
   });
 
@@ -101,12 +98,12 @@ describe('VerificacaoCnhService', () => {
       Object.assign(usuario, campos);
       return Promise.resolve({ affected: 1 });
     });
-    await service.verificar(1, frente, verso, 'João Pedro da Silva');
+    await service.verificar(1, frente, 'João Pedro da Silva');
     expect(usuario.statusVerificacaoCnh).toBe('APROVADA');
     await service.reiniciarParaTeste(1);
     expect(usuario.statusVerificacaoCnh).toBe('NAO_ENVIADA');
     expect(usuario.nome).toBe('Teste');
-    await service.verificar(1, frente, verso, 'João Pedro da Silva');
+    await service.verificar(1, frente, 'João Pedro da Silva');
     expect(usuario.statusVerificacaoCnh).toBe('APROVADA');
     expect(leitura.ler).toHaveBeenCalledTimes(2);
   });
@@ -120,7 +117,7 @@ describe('VerificacaoCnhService', () => {
       ConflictException,
     );
     await expect(
-      service.verificar(1, frente, verso, 'João Pedro da Silva'),
+      service.verificar(1, frente, 'João Pedro da Silva'),
     ).rejects.toBeInstanceOf(ConflictException);
     concluir();
     await primeiro;
@@ -179,17 +176,17 @@ describe('VerificacaoCnhService', () => {
     });
   });
 
-  it('impede reset enquanto o OCR esta em andamento', async () => {
-    let concluir!: (valor: string) => void;
-    leitura.ler.mockReturnValue(
-      new Promise<string>((resolve) => (concluir = resolve)),
+  it('impede reset enquanto a verificacao esta em andamento', async () => {
+    let concluir!: (valor: object) => void;
+    usuarios.findOne.mockReturnValueOnce(
+      new Promise<object>((resolve) => (concluir = resolve)),
     );
-    const envio = service.verificar(1, frente, verso, 'João Pedro da Silva');
+    const envio = service.verificar(1, frente, 'João Pedro da Silva');
     await Promise.resolve();
     await expect(service.reiniciarParaTeste(1)).rejects.toBeInstanceOf(
       ConflictException,
     );
-    concluir(texto);
+    concluir({ idUsuario: 1, statusVerificacaoCnh: 'NAO_ENVIADA' });
     await envio;
   });
 
@@ -210,18 +207,15 @@ describe('VerificacaoCnhService', () => {
         logs.push(mensagem);
       });
     try {
-      leitura.ler.mockResolvedValue(
-        texto.replace('NOME JOAO PEDRO DA SILVA', 'NOME 1 JOAO PEDRO DA SILVA'),
-      );
+      leitura.ler.mockReturnValue({ ...texto, nome: null });
       const resposta = await service.verificar(
         1,
         frente,
-        verso,
         'João Pedro da Silva',
       );
       expect(resposta).toEqual({ status: 'RECUSADA', motivo: 'NOME_NAO_LIDO' });
       expect(logs).toContain(
-        'CNH: diagnostico_nome {"titulosEncontrados":1,"linhasAceitas":0,"parada":"DIGITOS_NA_LINHA","resultado":"NAO_EXTRAIDO"}',
+        'CNH: diagnostico_nome {"titulosEncontrados":0,"linhasAceitas":0,"parada":"REGIAO_NAO_IDENTIFICADA","resultado":"NAO_EXTRAIDO"}',
       );
       const serializado = JSON.stringify(logs);
       for (const dado of [
@@ -247,11 +241,11 @@ describe('VerificacaoCnhService', () => {
       statusVerificacaoCnh: 'NAO_ENVIADA',
     });
     await expect(
-      service.verificar(1, frente, verso, 'João Pedro da Silva'),
+      service.verificar(1, frente, 'João Pedro da Silva'),
     ).resolves.toEqual({
       status: 'APROVADA',
     });
-    expect(leitura.ler).toHaveBeenCalledWith(frente, verso);
+    expect(leitura.ler).toHaveBeenCalledWith(frente);
     const [idUsuario, alteracoes] = usuarios.update.mock.calls[0] as [
       number,
       Partial<User>,
@@ -271,7 +265,7 @@ describe('VerificacaoCnhService', () => {
   });
 
   it('exige nome completo antes de consultar o banco ou ler fotos', async () => {
-    await expect(service.verificar(1, frente, verso, 'João')).rejects.toThrow(
+    await expect(service.verificar(1, frente, 'João')).rejects.toThrow(
       'Informe seu nome completo',
     );
     expect(usuarios.findOne).not.toHaveBeenCalled();
@@ -279,9 +273,9 @@ describe('VerificacaoCnhService', () => {
   });
 
   it('recusa leitura inconclusiva e não guarda dados parciais', async () => {
-    leitura.ler.mockResolvedValue('texto ilegível');
+    leitura.ler.mockReturnValue({ ...texto, nome: null });
     await expect(
-      service.verificar(1, frente, verso, 'João Pedro da Silva'),
+      service.verificar(1, frente, 'João Pedro da Silva'),
     ).resolves.toEqual({
       status: 'RECUSADA',
       motivo: 'NOME_NAO_LIDO',
@@ -299,9 +293,11 @@ describe('VerificacaoCnhService', () => {
   });
 
   it('não muda o banco quando o OCR falha', async () => {
-    leitura.ler.mockRejectedValue(new ServiceUnavailableException());
+    leitura.ler.mockImplementation(() => {
+      throw new ServiceUnavailableException();
+    });
     await expect(
-      service.verificar(1, frente, verso, 'João Pedro da Silva'),
+      service.verificar(1, frente, 'João Pedro da Silva'),
     ).rejects.toBeInstanceOf(ServiceUnavailableException);
     expect(usuarios.update).not.toHaveBeenCalled();
   });
@@ -315,7 +311,7 @@ describe('VerificacaoCnhService', () => {
       cnhValidade: '2099-10-06',
     });
     await expect(
-      service.verificar(1, frente, verso, 'João Pedro da Silva'),
+      service.verificar(1, frente, 'João Pedro da Silva'),
     ).resolves.toEqual({
       status: 'APROVADA',
     });
@@ -331,7 +327,7 @@ describe('VerificacaoCnhService', () => {
       }),
     );
     await expect(
-      service.verificar(1, frente, verso, 'João Pedro da Silva'),
+      service.verificar(1, frente, 'João Pedro da Silva'),
     ).rejects.toBeInstanceOf(ConflictException);
   });
 });

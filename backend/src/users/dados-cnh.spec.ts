@@ -1,228 +1,75 @@
-import {
-  extrairDadosCnh,
-  conferirDadosCnh,
-  nomeCompletoValido,
-} from './dados-cnh';
+import { conferirDadosCnh, cpfValido, nomeCompletoValido } from './dados-cnh';
+import type { LeituraCnh } from './nome-cnh-layout';
 
-describe('extração de dados da CNH', () => {
-  const hoje = '2026-10-06';
-  const texto = [
-    'NOME E SOBRENOME',
-    'JOÃO PEDRO DA SILVA',
-    'CPF 529.982.247-25',
-    'CATEGORIA AB',
-    'VALIDADE 06/10/2030',
-    'Nº REGISTRO 12345678901',
-  ].join('\n');
-
-  it('extrai apenas os dados necessários de uma leitura coerente', () => {
-    expect(extrairDadosCnh(texto, 'João Pedro da Silva', hoje)).toEqual({
-      cpf: '52998224725',
-      categoria: 'AB',
-      validade: '2030-10-06',
-    });
+describe('conferência dos campos extraídos do ML Kit', () => {
+  const leitura = (): LeituraCnh => ({
+    texto: '',
+    nome: 'JOÃO PEDRO DA SILVA',
+    campos: { cpf: '529.982.247-25', categoria: 'AB', validade: '06/10/2030' },
   });
-
-  it('dispensa registro e não devolve esse dado', () => {
-    const resultado = extrairDadosCnh(
-      texto.replace(/Nº REGISTRO.*/, ''),
-      'João Pedro da Silva',
-      hoje,
-    );
-    expect(resultado).not.toBeNull();
-    expect(resultado).not.toHaveProperty('registroFinal');
-  });
-
-  it('aceita o rótulo abreviado de categoria', () => {
-    const leitura = texto.replace('CATEGORIA AB', 'CAT. HAB. AB');
+  const conferir = (l: LeituraCnh) =>
+    conferirDadosCnh(l, 'João Pedro da Silva', '2026-10-20');
+  it('persiste apenas campos necessários e normaliza nome', () => {
     expect(
-      extrairDadosCnh(leitura, 'João Pedro da Silva', hoje)?.categoria,
-    ).toBe('AB');
+      conferirDadosCnh(leitura(), '  joão   PEDRO da Silva ', '2026-10-20')
+        .dados,
+    ).toEqual({ cpf: '52998224725', categoria: 'AB', validade: '2030-10-06' });
   });
-
-  it.each([
-    ['nome divergente', texto.replace('JOÃO PEDRO DA SILVA', 'MARIA SILVA')],
-    ['CPF inválido', texto.replace('529.982.247-25', '111.111.111-11')],
-    ['CNH vencida', texto.replace('06/10/2030', '05/10/2026')],
-    ['data impossível', texto.replace('06/10/2030', '31/02/2030')],
-    ['categoria A', texto.replace('CATEGORIA AB', 'CATEGORIA A')],
-  ])('não aprova %s', (_cenario, leitura) => {
-    expect(extrairDadosCnh(leitura, 'João Pedro da Silva', hoje)).toBeNull();
-  });
-
-  it('não aprova texto vazio', () => {
-    expect(extrairDadosCnh('', 'João Pedro da Silva', hoje)).toBeNull();
-  });
-
-  it('aceita nome em duas linhas e categoria sem espaço', () => {
-    const leitura = texto
-      .replace('JOÃO PEDRO DA SILVA', 'JOÃO PEDRO\nDA SILVA')
-      .replace('CATEGORIA AB', 'CAT.HAB. AB');
-    expect(
-      extrairDadosCnh(leitura, '  João   Pedro da Silva ', hoje)?.categoria,
-    ).toBe('AB');
-  });
-
   it.each([
     'João',
-    'Pedro da Silva',
     'João Pedro',
+    'Pedro da Silva',
     'João Pedro da Silva Junior',
-  ])('não aceita nome parcial ou diferente: %s', (nome) => {
-    expect(conferirDadosCnh(texto, nome, hoje)).toEqual({
-      dados: null,
-      motivo: 'NOME_DIVERGENTE',
-    });
-  });
-
-  it('não usa o nome da filiação como nome do titular', () => {
-    const leitura = texto.replace(
-      'JOÃO PEDRO DA SILVA',
-      'MARIA SILVA\nFILIAÇÃO\nJOÃO PEDRO DA SILVA',
+  ])('recusa nome incompleto/divergente: %s', (nome) => {
+    expect(conferirDadosCnh(leitura(), nome, '2026-10-20').motivo).toBe(
+      'NOME_DIVERGENTE',
     );
-    expect(extrairDadosCnh(leitura, 'João Pedro da Silva', hoje)).toBeNull();
   });
-
   it.each([
-    ['CPF_NAO_LIDO', texto.replace('CPF 529.982.247-25', '')],
-    ['CPF_INVALIDO', texto.replace('529.982.247-25', '111.111.111-11')],
-    ['CATEGORIA_INCOMPATIVEL', texto.replace('CATEGORIA AB', 'CATEGORIA A')],
-    ['CNH_VENCIDA', texto.replace('06/10/2030', '05/10/2026')],
-  ])('explica a recusa %s sem devolver os dados lidos', (motivo, leitura) => {
-    expect(conferirDadosCnh(leitura, 'João Pedro da Silva', hoje)).toEqual({
-      dados: null,
-      motivo,
-    });
+    ['cpf', null, 'CPF_NAO_LIDO'],
+    ['cpf', '11111111111', 'CPF_INVALIDO'],
+    ['cpf', '529982247251', 'CPF_INVALIDO'],
+    ['cpf', 'REGISTRO 52998224725', 'CPF_INVALIDO'],
+    ['validade', null, 'VALIDADE_NAO_LIDA'],
+    ['validade', '31/02/2030', 'VALIDADE_NAO_LIDA'],
+    ['validade', '06/10/2030 07/10/2030', 'VALIDADE_NAO_LIDA'],
+    ['validade', '19/10/2026', 'CNH_VENCIDA'],
+    ['categoria', null, 'CATEGORIA_NAO_LIDA'],
+    ['categoria', 'A', 'CATEGORIA_INCOMPATIVEL'],
+  ] as const)('recusa campo %s inválido: %s', (campo, valor, motivo) => {
+    const l = leitura();
+    l.campos![campo] = valor;
+    expect(conferir(l).motivo).toBe(motivo);
   });
-
-  it('valida nome completo informado', () => {
-    expect(nomeCompletoValido('Henrique')).toBe(false);
+  it.each(['529.982 .247-25', '529 982 247 25'])(
+    'tolera espaços do OCR no CPF',
+    (cpf) => {
+      const l = leitura();
+      l.campos!.cpf = cpf;
+      expect(conferir(l).dados?.cpf).toBe('52998224725');
+    },
+  );
+  it.each(['06 / 10 / 2030', '06.10.2030'])(
+    'aceita data inequívoca',
+    (data) => {
+      const l = leitura();
+      l.campos!.validade = data;
+      expect(conferir(l).dados?.validade).toBe('2030-10-06');
+    },
+  );
+  it('não usa texto geral para preencher campo ausente', () => {
+    const l = leitura();
+    l.campos!.cpf = null;
+    l.texto = 'CPF 529.982.247-25';
+    expect(conferir(l).motivo).toBe('CPF_NAO_LIDO');
+    l.nome = null;
+    expect(conferir(l).motivo).toBe('NOME_NAO_LIDO');
+  });
+  it('valida nome completo e CPF', () => {
+    expect(nomeCompletoValido('João')).toBe(false);
     expect(nomeCompletoValido('123 Silva')).toBe(false);
     expect(nomeCompletoValido('João D’Ávila')).toBe(true);
+    expect(cpfValido('52998224725')).toBe(true);
+    expect(cpfValido('00000000000')).toBe(false);
   });
-
-  it('reconhece o título 2 e 1 NOME E SOBRENOME sem depender de maiúsculas', () => {
-    const diagnostico = jest.fn();
-    const leitura = texto.replace('NOME E SOBRENOME', '2 e 1 NOME E SOBRENOME');
-    expect(
-      conferirDadosCnh(leitura, 'joão pedro da silva', hoje, diagnostico).dados,
-    ).not.toBeNull();
-    expect(diagnostico).toHaveBeenCalledWith({
-      titulosEncontrados: 1,
-      linhasAceitas: 1,
-      parada: 'OUTRO_CAMPO',
-      resultado: 'CORRESPONDE',
-    });
-  });
-
-  it.each([
-    ['JOAO PEDRO DA SILVA', 'TITULO_AUSENTE', 0, 'NAO_EXTRAIDO'],
-    ['NOME\n1 JOAO PEDRO DA SILVA', 'DIGITOS_NA_LINHA', 0, 'NAO_EXTRAIDO'],
-    ['NOME JOAO PEDRO DA SILVA CPF', 'OUTRO_CAMPO', 0, 'NAO_EXTRAIDO'],
-    [
-      'NOME E SOBRENOME / NAME AND SURNAME\nJOAO PEDRO DA SILVA',
-      'FORMATO_NAO_RECONHECIDO',
-      0,
-      'NAO_EXTRAIDO',
-    ],
-    ['NOME\nMARIA SILVA', 'FIM_DA_LEITURA', 1, 'DIVERGENTE'],
-    ['NOME', 'FIM_DA_LEITURA', 0, 'NAO_EXTRAIDO'],
-  ])(
-    'diagnostica a estrutura sem retornar texto: %s',
-    (leitura, parada, linhasAceitas, resultado) => {
-      const diagnostico = jest.fn();
-      const semDiagnostico = conferirDadosCnh(
-        leitura,
-        'João Pedro da Silva',
-        hoje,
-      );
-      expect(
-        conferirDadosCnh(leitura, 'João Pedro da Silva', hoje, diagnostico),
-      ).toEqual(semDiagnostico);
-      expect(diagnostico).toHaveBeenCalledTimes(1);
-      expect(diagnostico).toHaveBeenCalledWith({
-        titulosEncontrados: leitura.includes('NOME') ? 1 : 0,
-        linhasAceitas,
-        parada,
-        resultado,
-      });
-    },
-  );
-
-  it.each(['529.982 .247-25', '529 . 982 . 247 - 25', '529 982 247 25'])(
-    'tolera espaços no CPF %s',
-    (cpf) => {
-      expect(
-        extrairDadosCnh(
-          texto.replace('529.982.247-25', cpf),
-          'João Pedro da Silva',
-          hoje,
-        )?.cpf,
-      ).toBe('52998224725');
-    },
-  );
-
-  it.each(['123 45678901', '1 2 3 4 5 6 7 8 9 0 1'])(
-    'tolera espaços no registro %s',
-    (registro) => {
-      expect(
-        extrairDadosCnh(
-          texto.replace('12345678901', registro),
-          'João Pedro da Silva',
-          hoje,
-        ),
-      ).not.toHaveProperty('registroFinal');
-    },
-  );
-
-  it.each(['06 / 10 / 2030', '06.10.2030', '\n06/10/2030'])(
-    'aceita data inequívoca %s',
-    (data) => {
-      expect(
-        extrairDadosCnh(
-          texto.replace('06/10/2030', data),
-          'João Pedro da Silva',
-          hoje,
-        )?.validade,
-      ).toBe('2030-10-06');
-    },
-  );
-
-  it.each([
-    'VALIDADE\nEXAME MEDICO 06/10/2030\n05/10/2026',
-    'DATA EMISSAO VALIDADE\n06/10/2020 06/10/2030',
-    'VALIDADE 06/10/2030 05/10/2026',
-    'VALIDADE 06/10/2030\n05/10/2026',
-    'VALIDADE 06/10/2030\nVALIDADE 05/10/2026',
-    'VALIDADE\nEMISSAO 06/10/2030',
-  ])('não escolhe uma data em leitura ambígua: %s', (campo) => {
-    expect(
-      conferirDadosCnh(
-        texto.replace('VALIDADE 06/10/2030', campo),
-        'João Pedro da Silva',
-        hoje,
-      ),
-    ).toEqual({ dados: null, motivo: 'VALIDADE_NAO_LIDA' });
-  });
-
-  it.each([
-    ['CPF 529.982.247-25', 'CPF\nREGISTRO 52998224725'],
-    ['CPF 529.982.247-25', 'CPF 529982247251'],
-    ['CPF 529.982.247-25', 'CPF 52998224725 52998224725'],
-    ['CPF 529.982.247-25', 'CPF 529.982 .247-24'],
-    ['CATEGORIA AB', 'CATEGORIA\nOBSERVACOES B'],
-    ['CATEGORIA AB', 'CATEGORIA A\nCATEGORIA B'],
-    ['VALIDADE 06/10/2030', 'VALIDADE 31 / 02 / 2030'],
-  ])(
-    'recusa número inválido ou pertencente a outro campo: %s',
-    (original, campo) => {
-      expect(
-        extrairDadosCnh(
-          texto.replace(original, campo),
-          'João Pedro da Silva',
-          hoje,
-        ),
-      ).toBeNull();
-    },
-  );
 });

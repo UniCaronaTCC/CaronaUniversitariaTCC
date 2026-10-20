@@ -15,7 +15,6 @@ typedef CapturarFotoCnh = Future<XFile?> Function();
 typedef EnviarFotosCnh =
     Future<Map<String, dynamic>> Function(
       Uint8List frente,
-      Uint8List verso,
       bool aceite,
       String nomeCompleto,
     );
@@ -47,7 +46,6 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
     AuthService.usuarioLogado ?? {},
   );
   Uint8List? frente;
-  Uint8List? verso;
   bool aceite = false;
   bool carregando = true;
   bool capturando = false;
@@ -146,10 +144,7 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
     }
   }
 
-  Future<void> fotografar(
-    bool fotografarFrente, {
-    ImageSource origem = ImageSource.camera,
-  }) async {
+  Future<void> fotografar({ImageSource origem = ImageSource.camera}) async {
     if (!aceite || ocupada) return;
     setState(() {
       capturando = true;
@@ -159,7 +154,7 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
     try {
       bytes = await selecionarFotoCnh(
         context,
-        lado: fotografarFrente ? 'Frente da CNH' : 'Verso da CNH',
+        lado: 'Frente da CNH',
         origem: origem,
         capturar: widget.capturarFoto,
         escolher: widget.escolherFoto,
@@ -170,13 +165,9 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
         bytes.fillRange(0, bytes.length, 0);
         return;
       }
-      final anterior = fotografarFrente ? frente : verso;
+      final anterior = frente;
       anterior?.fillRange(0, anterior.length, 0);
-      if (fotografarFrente) {
-        frente = bytes;
-      } else {
-        verso = bytes;
-      }
+      frente = bytes;
     } on FormatException catch (e) {
       if (mounted) erro = e.message;
     } catch (_) {
@@ -191,13 +182,11 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
 
   void descartarImagens() {
     frente?.fillRange(0, frente!.length, 0);
-    verso?.fillRange(0, verso!.length, 0);
     frente = null;
-    verso = null;
   }
 
   Future<void> enviar() async {
-    if (ocupada || !aceite || frente == null || verso == null) return;
+    if (ocupada || !aceite || frente == null) return;
     if (nomeCompleto.text.trim().split(RegExp(r'\s+')).length < 2) {
       setState(() => erro = 'Informe seu nome completo conforme a CNH');
       return;
@@ -210,13 +199,11 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
       final resultado =
           await (widget.enviarFotos?.call(
                 frente!,
-                verso!,
                 aceite,
                 nomeCompleto.text.trim(),
               ) ??
               const VerificacaoCnhService().enviar(
                 frente!,
-                verso!,
                 aceitePrivacidade: aceite,
                 nomeCompleto: nomeCompleto.text.trim(),
               ));
@@ -297,7 +284,7 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'Conferimos o nome completo informado com a foto, sem alterar seu nome de perfil. Guardamos CPF, categoria e validade. O nome informado é usado somente na conferência e as fotos são descartadas após a leitura.',
+                  'A foto é lida no seu celular. Enviamos o texto e as posições das palavras para conferir nome, CPF, categoria e validade. Guardamos CPF, categoria e validade; a foto e o texto da leitura não são armazenados.',
                   style: TextStyle(height: 1.4),
                 ),
                 CheckboxListTile(
@@ -329,23 +316,14 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
                   titulo: 'Frente da CNH',
                   bytes: frente,
                   habilitada: aceite && !ocupada,
-                  onFotografar: () => fotografar(true),
+                  onFotografar: () => fotografar(),
                   onEscolherGaleria: () =>
-                      fotografar(true, origem: ImageSource.gallery),
+                      fotografar(origem: ImageSource.gallery),
                 ),
                 const SizedBox(height: 16),
-                FotoCnh(
-                  titulo: 'Verso da CNH',
-                  bytes: verso,
-                  habilitada: aceite && !ocupada,
-                  onFotografar: () => fotografar(false),
-                  onEscolherGaleria: () =>
-                      fotografar(false, origem: ImageSource.gallery),
-                ),
                 const SizedBox(height: 24),
                 FilledButton.icon(
-                  onPressed:
-                      ocupada || !aceite || frente == null || verso == null
+                  onPressed: ocupada || !aceite || frente == null
                       ? null
                       : enviar,
                   icon: enviando
@@ -356,7 +334,9 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
                         )
                       : const Icon(Icons.fact_check_outlined),
                   label: Text(
-                    enviando ? 'Conferindo CNH...' : 'Enviar para verificação',
+                    enviando
+                        ? 'Lendo e conferindo CNH...'
+                        : 'Enviar para verificação',
                   ),
                 ),
               ],

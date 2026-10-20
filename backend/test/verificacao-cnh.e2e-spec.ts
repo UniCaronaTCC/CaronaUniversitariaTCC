@@ -1,6 +1,5 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import sharp from 'sharp';
 import request from 'supertest';
 import { App } from 'supertest/types';
 
@@ -11,18 +10,7 @@ import { VerificacaoCnhService } from '../src/users/verificacao-cnh.service';
 
 describe('VerificacaoCnhController (HTTP)', () => {
   let app: INestApplication<App>;
-  const recebidos: Array<{ idUsuario: number; frente: Buffer; verso: Buffer }> =
-    [];
-  const verificar = jest.fn(
-    (idUsuario: number, frente: Buffer, verso: Buffer) => {
-      recebidos.push({
-        idUsuario,
-        frente: Buffer.from(frente),
-        verso: Buffer.from(verso),
-      });
-      return Promise.resolve({ status: 'APROVADA' });
-    },
-  );
+  const verificar = jest.fn().mockResolvedValue({ status: 'APROVADA' });
   const reiniciarParaTeste = jest
     .fn()
     .mockResolvedValue({ status: 'NAO_ENVIADA' });
@@ -65,7 +53,6 @@ describe('VerificacaoCnhController (HTTP)', () => {
   afterAll(async () => app.close());
   beforeEach(() => {
     verificar.mockClear();
-    recebidos.length = 0;
     reiniciarParaTeste.mockClear();
   });
 
@@ -90,31 +77,28 @@ describe('VerificacaoCnhController (HTTP)', () => {
     },
   );
 
-  it('recebe duas fotos e o aceite sem persistir arquivos', async () => {
-    const foto = await sharp({
-      create: {
-        width: 900,
-        height: 600,
-        channels: 3,
-        background: '#ffffff',
-      },
-    })
-      .png()
-      .toBuffer();
-
+  it('recebe OCR em JSON sem arquivos e usa conta autenticada', async () => {
+    const leitura = { largura: 1000, altura: 800, linhas: [] };
+    await request(app.getHttpServer())
+      .post('/usuarios/cnh/verificar-mlkit')
+      .set('Authorization', 'Bearer token-teste')
+      .send({
+        versaoLeitura: 'mlkit-v1',
+        aceitePrivacidade: true,
+        nomeCompleto: 'Maria Silva',
+        leitura,
+        idUsuario: 1,
+      })
+      .expect(201);
+    expect(verificar).toHaveBeenCalledWith(42, leitura, 'Maria Silva');
+  });
+  it('informa atualização para o contrato antigo', async () => {
     await request(app.getHttpServer())
       .post('/usuarios/cnh/verificar')
       .set('Authorization', 'Bearer token-teste')
       .field('aceitePrivacidade', 'true')
-      .field('nomeCompleto', 'João Pedro da Silva')
-      .attach('frente', foto, 'frente.png')
-      .attach('verso', foto, 'verso.png')
-      .expect(201)
-      .expect(({ body }: { body: { dados: { status: string } } }) => {
-        expect(body.dados.status).toBe('APROVADA');
-      });
-
-    expect(verificar).toHaveBeenCalledTimes(1);
-    expect(recebidos).toEqual([{ idUsuario: 42, frente: foto, verso: foto }]);
+      .attach('frente', Buffer.from('foto'), 'foto.jpg')
+      .expect(400);
+    expect(verificar).not.toHaveBeenCalled();
   });
 });

@@ -13,12 +13,3 @@ export type MotivoCampoCnh =
   | 'CPF_INVALIDO';
 
 export type RelatarCampoCnh = (motivo: MotivoCampoCnh) => void;
-export interface DiagnosticoCampoCnh {
-  campo: 'nome' | 'cpf' | 'validade' | 'categoria';
-  etapa: 'LEITURA_INICIAL' | 'LOCALIZACAO_RECORTE' | 'RELEITURA';
-  motivo:
-    | MotivoCampoCnh
-    | 'EXCESSO_DE_LINHAS'
-    | 'NOME_DISTANTE'
-    | 'REGIAO_LIDA';
-}
