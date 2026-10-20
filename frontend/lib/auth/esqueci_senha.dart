@@ -73,8 +73,8 @@ class _EsqueciSenhaTelaState extends State<EsqueciSenhaTela> {
     final codigo = codigoController.text.trim();
     final senha = senhaController.text;
 
-    if (!RegExp(r'^\d{8}$').hasMatch(codigo)) {
-      mostrarMensagem('Informe o código de 8 dígitos');
+    if (!RegExp(r'^\d{6}$').hasMatch(codigo)) {
+      mostrarMensagem('Informe o código de 6 dígitos');
       return;
     }
 
@@ -178,7 +178,7 @@ class _EsqueciSenhaTelaState extends State<EsqueciSenhaTela> {
                     controller: codigoController,
                     keyboardType: TextInputType.number,
                     textAlign: TextAlign.center,
-                    maxLength: 8,
+                    maxLength: 6,
                     inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     style: const TextStyle(
                       fontSize: 22,
@@ -187,7 +187,7 @@ class _EsqueciSenhaTelaState extends State<EsqueciSenhaTela> {
                     ),
                     decoration: InputDecoration(
                       counterText: '',
-                      hintText: '00000000',
+                      hintText: '000000',
                       filled: true,
                       fillColor: Colors.white,
                       border: OutlineInputBorder(

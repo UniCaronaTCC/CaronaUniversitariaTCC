@@ -56,8 +56,8 @@ class _ConfirmarEmailTelaState extends State<ConfirmarEmailTela> {
   Future<void> confirmar() async {
     final codigo = codigoController.text.trim();
 
-    if (!RegExp(r'^\d{8}$').hasMatch(codigo)) {
-      mostrarMensagem('Informe o código de 8 dígitos');
+    if (!RegExp(r'^\d{6}$').hasMatch(codigo)) {
+      mostrarMensagem('Informe o código de 6 dígitos');
       return;
     }
 
@@ -164,7 +164,7 @@ class _ConfirmarEmailTelaState extends State<ConfirmarEmailTela> {
                 ),
                 const SizedBox(height: 12),
                 Text(
-                  'Enviamos um código de 8 dígitos para\n${widget.email}',
+                  'Enviamos um código de 6 dígitos para\n${widget.email}',
                   textAlign: TextAlign.center,
                   style: const TextStyle(
                     color: Colors.white70,
@@ -176,7 +176,7 @@ class _ConfirmarEmailTelaState extends State<ConfirmarEmailTela> {
                   controller: codigoController,
                   keyboardType: TextInputType.number,
                   textAlign: TextAlign.center,
-                  maxLength: 8,
+                  maxLength: 6,
                   inputFormatters: [
                     FilteringTextInputFormatter.digitsOnly,
                   ],
@@ -192,7 +192,7 @@ class _ConfirmarEmailTelaState extends State<ConfirmarEmailTela> {
                   ),
                   decoration: const InputDecoration(
                     counterText: '',
-                    hintText: '00000000',
+                    hintText: '000000',
                     filled: true,
                     fillColor: Colors.white,
                     border: OutlineInputBorder(
