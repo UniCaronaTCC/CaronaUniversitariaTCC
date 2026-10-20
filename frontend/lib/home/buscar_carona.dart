@@ -37,6 +37,7 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
 
   bool carregando = true;
   String? mensagemErro;
+  Future<void>? _consultaEmAndamento;
 
   bool get filtrosAtivos {
     return destinoController.text.isNotEmpty ||
@@ -53,36 +54,40 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
   }
 
   // Busca as ofertas ativas no backend.
-  Future<void> carregarCaronas() async {
+  Future<void> carregarCaronas() {
+    return _consultaEmAndamento ??= _carregarCaronas().whenComplete(() {
+      _consultaEmAndamento = null;
+    });
+  }
+
+  Future<void> _carregarCaronas() async {
     setState(() {
       carregando = true;
       mensagemErro = null;
     });
 
-    final resultado = await CaronaService.listarCaronas();
-
-    if (!mounted) {
-      return;
-    }
-
-    if (resultado['sucesso'] == true) {
+    try {
+      final resultado = await CaronaService.listarCaronas();
+      if (!mounted) return;
       final dados = resultado['dados'];
-      final caronas = dados is List<Carona> ? dados : <Carona>[];
-
+      if (resultado['sucesso'] == true && dados is List<Carona>) {
+        setState(() => todasCaronas = dados);
+        aplicarFiltros();
+      } else {
+        setState(() {
+          mensagemErro =
+              resultado['mensagem']?.toString() ??
+              'Não foi possível carregar as caronas. Tente novamente';
+        });
+      }
+    } catch (_) {
+      if (!mounted) return;
       setState(() {
-        todasCaronas = caronas;
-        carregando = false;
+        mensagemErro = 'Não foi possível carregar as caronas. Tente novamente';
       });
-
-      aplicarFiltros();
-      return;
+    } finally {
+      if (mounted) setState(() => carregando = false);
     }
-
-    setState(() {
-      carregando = false;
-      mensagemErro =
-          resultado['mensagem']?.toString() ?? 'Erro ao carregar caronas';
-    });
   }
 
   // Filtra localmente sem fazer uma nova chamada ao backend.
@@ -249,7 +254,8 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
                       ),
                     ),
                   ),
-                  if (!carregando && mensagemErro == null)
+                  if ((!carregando && mensagemErro == null) ||
+                      caronasFiltradas.isNotEmpty)
                     Text(
                       '${caronasFiltradas.length}',
                       style: const TextStyle(
@@ -262,14 +268,14 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
               ),
               const SizedBox(height: 14),
 
-              if (carregando)
+              if (carregando && todasCaronas.isEmpty)
                 const EstadoConteudoPadrao(
                   carregando: true,
                   mensagem: 'Carregando caronas...',
                   espacamentoVertical: 36,
                   espacamentoMensagem: 14,
                 )
-              else if (mensagemErro != null)
+              else if (mensagemErro != null && caronasFiltradas.isEmpty)
                 EstadoConteudoPadrao(
                   mensagem: mensagemErro!,
                   icone: Icons.cloud_off_outlined,
@@ -279,33 +285,52 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
                   tamanhoIcone: 44,
                   espacamentoMensagem: 14,
                 )
-              else if (caronasFiltradas.isEmpty)
-                EstadoConteudoPadrao(
-                  mensagem: filtrosAtivos
-                      ? 'Nenhuma carona corresponde aos filtros'
-                      : 'Nenhuma carona disponível',
-                  icone: Icons.search_off,
-                  textoBotao: filtrosAtivos ? 'Limpar filtros' : null,
-                  onPressed: filtrosAtivos ? limparFiltros : null,
-                  espacamentoVertical: 36,
-                  tamanhoIcone: 44,
-                  espacamentoMensagem: 14,
-                )
-              else
-                ListView.separated(
-                  itemCount: caronasFiltradas.length,
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  separatorBuilder: (_, _) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final carona = caronasFiltradas[index];
+              else ...[
+                if (carregando) ...[
+                  const LinearProgressIndicator(
+                    semanticsLabel: 'Atualizando caronas',
+                  ),
+                  const SizedBox(height: 14),
+                ],
+                if (mensagemErro != null)
+                  EstadoConteudoPadrao(
+                    titulo: 'Não foi possível atualizar',
+                    mensagem:
+                        '$mensagemErro\nExibindo os resultados da última consulta.',
+                    icone: Icons.cloud_off_outlined,
+                    textoBotao: 'Tentar novamente',
+                    onPressed: carregarCaronas,
+                    espacamentoVertical: 12,
+                    tamanhoIcone: 32,
+                  ),
+                if (caronasFiltradas.isEmpty)
+                  EstadoConteudoPadrao(
+                    mensagem: filtrosAtivos
+                        ? 'Nenhuma carona corresponde aos filtros'
+                        : 'Nenhuma carona disponível',
+                    icone: Icons.search_off,
+                    textoBotao: filtrosAtivos ? 'Limpar filtros' : null,
+                    onPressed: filtrosAtivos ? limparFiltros : null,
+                    espacamentoVertical: 36,
+                    tamanhoIcone: 44,
+                    espacamentoMensagem: 14,
+                  )
+                else
+                  ListView.separated(
+                    itemCount: caronasFiltradas.length,
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    separatorBuilder: (_, _) => const SizedBox(height: 12),
+                    itemBuilder: (context, index) {
+                      final carona = caronasFiltradas[index];
 
-                    return CardCaronaDisponivel(
-                      carona: carona,
-                      onTap: () => abrirDetalhes(carona),
-                    );
-                  },
-                ),
+                      return CardCaronaDisponivel(
+                        carona: carona,
+                        onTap: () => abrirDetalhes(carona),
+                      );
+                    },
+                  ),
+              ],
             ],
           ),
         ),

@@ -12,8 +12,81 @@ import 'cliente_http_com_prazo.dart';
 
 class CaronaService {
   // Busca e converte as caronas ativas.
-  static Future<Map<String, dynamic>> listarCaronas() {
-    return _listarCaronas('caronas');
+  static Future<Map<String, dynamic>> listarCaronas({
+    Duration prazo = const Duration(seconds: 20),
+  }) async {
+    final cliente = ClienteHttpComPrazo(prazo: prazo);
+    var encerrada = false;
+    try {
+      final resposta = await AuthService.enviarComToken((token) {
+        if (encerrada) throw TimeoutException('Consulta encerrada');
+        return cliente.get(
+          Uri.parse('${ApiConfig.baseUrl}/caronas'),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+      }).timeout(prazo);
+
+      if (resposta == null) {
+        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+      }
+      if (resposta.statusCode == 401) {
+        await AuthService.sair();
+        return {
+          'sucesso': false,
+          'mensagem': 'Sua sessão expirou. Entre novamente.',
+        };
+      }
+      if (resposta.statusCode >= 500) {
+        return {
+          'sucesso': false,
+          'mensagem':
+              'O servidor está indisponível no momento. Tente novamente',
+        };
+      }
+      if (resposta.statusCode == 429) {
+        return {
+          'sucesso': false,
+          'mensagem': 'Aguarde um pouco antes de tentar novamente',
+        };
+      }
+
+      final corpo = _decodificarResposta(resposta);
+      if (resposta.statusCode != 200) {
+        return {
+          'sucesso': false,
+          'mensagem': _obterMensagem(corpo, 'Não foi possível buscar caronas'),
+        };
+      }
+      final dados = corpo['dados'];
+      if (corpo['sucesso'] == false || dados is! List) {
+        throw const FormatException('Lista de caronas invalida');
+      }
+      final caronas = dados.map((item) {
+        if (item is! Map) throw const FormatException('Carona invalida');
+        return Carona.fromJson(Map<String, dynamic>.from(item));
+      }).toList();
+      return {'sucesso': true, 'dados': caronas};
+    } on TimeoutException {
+      return {
+        'sucesso': false,
+        'mensagem': 'A busca demorou para responder. Tente novamente',
+      };
+    } on FormatException {
+      return {
+        'sucesso': false,
+        'mensagem':
+            'Não foi possível carregar as caronas: resposta inválida do servidor',
+      };
+    } catch (_) {
+      return {
+        'sucesso': false,
+        'mensagem':
+            'Não foi possível carregar as caronas. Confira a conexão e tente novamente',
+      };
+    } finally {
+      encerrada = true;
+      cliente.close();
+    }
   }
 
   // Busca as ofertas publicadas pelo usuario logado.
