@@ -15,6 +15,26 @@ function blocos(...lines: ReturnType<typeof linha>[]): Block[] {
 }
 
 describe('nomePeloLayout', () => {
+  it('usa a numeração do título mesmo quando o ML Kit a separa em outro bloco', () => {
+    const entrada = blocos(
+      linha('NOME E SOBRENOME', 310, 10),
+      linha('2 E 1', 100, 10),
+      linha('MARIA CLARA SILVA', 100, 40),
+      linha('CPF', 100, 80),
+    );
+    expect(nomePeloLayout(entrada)).toBe('MARIA CLARA SILVA');
+  });
+  it('não usa números de outra linha para ampliar a região do nome', () => {
+    expect(
+      nomePeloLayout(
+        blocos(
+          linha('NOME', 310, 10),
+          linha('2 E 1', 100, 140),
+          linha('MARIA CLARA SILVA', 280, 40),
+        ),
+      ),
+    ).toBeNull();
+  });
   it('lê o nome quando o ML Kit agrupa título e valor na mesma TextLine', () => {
     const unificada = linha('NOME E SOBRENOME', 100, 10);
     unificada.words.push(...linha('MARIA CLARA SILVA', 100, 40).words);

@@ -57,12 +57,40 @@ export function nomePeloLayout(
   if (titulos.length > 1) return concluir('TITULO_DUPLICADO');
   const titulo = titulos[0];
   const linhaTitulo = linhas.find((linha) => linha.words.includes(titulo))!;
-  const prefixo = linhaTitulo.words.filter((p) => p.bbox.x1 <= titulo.bbox.x0);
-  const inicio = /^[\d\sEe./-]*$/.test(prefixo.map((p) => p.text).join(' '))
-    ? Math.min(titulo.bbox.x0, ...prefixo.map((p) => p.bbox.x0))
-    : titulo.bbox.x0;
   const altura = titulo.bbox.y1 - titulo.bbox.y0;
   if (altura <= 0) return concluir('ALTURA_INVALIDA');
+  // A numeração "2 e 1" pode vir em outro bloco do ML Kit. Ela faz
+  // parte do cabeçalho da mesma célula, mesmo sem compartilhar TextLine.
+  const prefixo: (typeof palavras)[number][] = [];
+  let esquerda = titulo.bbox.x0;
+  const anteriores = palavras
+    .filter(
+      (p) =>
+        p !== titulo &&
+        p.bbox.x1 <= titulo.bbox.x0 &&
+        Math.abs(
+          (p.bbox.y0 + p.bbox.y1 - titulo.bbox.y0 - titulo.bbox.y1) / 2,
+        ) <=
+          altura / 2,
+    )
+    .sort((a, b) => b.bbox.x1 - a.bbox.x1);
+  for (const p of anteriores) {
+    if (
+      prefixo.length === 3 ||
+      esquerda - p.bbox.x1 > altura * 2 ||
+      !/^(?:\d{1,2}|E|\d{1,2}\s*E\s*\d{1,2})$/.test(normalizar(p.text))
+    )
+      break;
+    prefixo.unshift(p);
+    esquerda = p.bbox.x0;
+  }
+  if (
+    !/^\d{1,2}(?:\s*E\s*\d{1,2})?$/.test(
+      prefixo.map((p) => normalizar(p.text)).join(' '),
+    )
+  )
+    prefixo.length = 0;
+  const inicio = Math.min(titulo.bbox.x0, ...prefixo.map((p) => p.bbox.x0));
   // O ML Kit pode agrupar título e valor em uma só TextLine. Excluir
   // a linha inteira descartaria também o nome, mesmo estando abaixo.
   const palavrasTitulo = new Set([
