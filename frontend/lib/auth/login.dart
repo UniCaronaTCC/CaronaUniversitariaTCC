@@ -8,7 +8,10 @@ import 'cadastro.dart';
 import 'esqueci_senha.dart';
 
 class LoginTela extends StatefulWidget {
-  const LoginTela({super.key});
+  final Future<Map<String, dynamic>> Function(String email, String senha)?
+  autenticar;
+
+  const LoginTela({super.key, this.autenticar});
 
   @override
   State<LoginTela> createState() => _LoginTelaState();
@@ -20,6 +23,7 @@ class _LoginTelaState extends State<LoginTela> {
   bool carregando = false;
 
   Future<void> fazerLogin() async {
+    if (carregando) return;
     if (emailController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -38,36 +42,45 @@ class _LoginTelaState extends State<LoginTela> {
       carregando = true;
     });
 
-    final resultado = await AuthService.fazerLogin(
-      emailController.text,
-      senhaController.text,
-    );
+    try {
+      final resultado = await (widget.autenticar ?? AuthService.fazerLogin)(
+        emailController.text.trim(),
+        senhaController.text,
+      );
 
-    if (!mounted) {
-      return;
-    }
+      if (!mounted) return;
 
-    setState(() {
-      carregando = false;
-    });
-
-    if (resultado['sucesso'] == true) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(resultado['dados']['mensagem'])));
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => TelaInicial(
-            nomeUsuario: resultado['dados']['usuario']['nome'].toString(),
+      if (resultado['sucesso'] == true) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(resultado['dados']['mensagem'])));
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TelaInicial(
+              nomeUsuario: resultado['dados']['usuario']['nome'].toString(),
+            ),
           ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              resultado['mensagem']?.toString() ??
+                  'Não foi possível entrar. Tente novamente',
+            ),
+          ),
+        );
+      }
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível entrar. Tente novamente'),
         ),
       );
-    } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(resultado['mensagem'])));
+    } finally {
+      if (mounted) setState(() => carregando = false);
     }
   }
 

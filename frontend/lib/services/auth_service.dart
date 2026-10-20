@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -10,11 +11,13 @@ import 'supabase_auth_service.dart';
 class AuthService {
   static String? _tokenUsuarioLogado;
   static Map<String, dynamic>? usuarioLogado;
+  static int _versaoSessao = 0;
 
   static String? get tokenUsuarioLogado =>
       SupabaseAuthService.tokenAtual ?? _tokenUsuarioLogado;
 
   static set tokenUsuarioLogado(String? token) {
+    if (token == null) _versaoSessao++;
     _tokenUsuarioLogado = token;
   }
 
@@ -44,6 +47,7 @@ class AuthService {
   }
 
   static Future<void> sair() async {
+    _versaoSessao++;
     try {
       await SupabaseAuthService.sair();
     } finally {
@@ -54,7 +58,10 @@ class AuthService {
   }
 
   static Future<String?> renovarSessao() async {
+    final versao = _versaoSessao;
     final novoToken = await SupabaseAuthService.renovarSessao();
+
+    if (versao != _versaoSessao) return null;
 
     if (novoToken == null) {
       return null;
@@ -73,6 +80,7 @@ class AuthService {
   static Future<http.Response?> enviarComToken(
     Future<http.Response> Function(String token) enviar,
   ) async {
+    final versao = _versaoSessao;
     final token = tokenUsuarioLogado;
 
     if (token == null) {
@@ -81,17 +89,20 @@ class AuthService {
 
     var resposta = await enviar(token);
 
+    if (versao != _versaoSessao) return null;
+
     if (resposta.statusCode != 401) {
       return resposta;
     }
 
     final novoToken = await renovarSessao();
+    if (versao != _versaoSessao) return null;
     if (novoToken == null) {
       return resposta;
     }
 
     resposta = await enviar(novoToken);
-    return resposta;
+    return versao == _versaoSessao ? resposta : null;
   }
 
   static Future<Map<String, dynamic>> fazerLogin(
@@ -106,6 +117,7 @@ class AuthService {
     }
 
     try {
+      _versaoSessao++;
       final resposta = await SupabaseAuthService.entrar(email, senha);
       tokenUsuarioLogado = resposta.session?.accessToken;
 
@@ -128,6 +140,11 @@ class AuthService {
           'mensagem': 'Login realizado com sucesso',
           'usuario': perfil['dados'],
         },
+      };
+    } on TimeoutException {
+      return {
+        'sucesso': false,
+        'mensagem': 'O acesso demorou demais. Tente novamente',
       };
     } on AuthException catch (erro) {
       return {'sucesso': false, 'mensagem': _mensagemErroSupabase(erro)};
@@ -168,6 +185,9 @@ class AuthService {
   }
 
   static String _mensagemErroSupabase(AuthException erro) {
+    if (erro is AuthRetryableFetchException) {
+      return 'Não foi possível acessar o serviço agora. Confira a conexão e tente novamente';
+    }
     switch (erro.code) {
       case 'invalid_credentials':
         return 'E-mail ou senha inválidos';
@@ -207,204 +227,159 @@ class AuthService {
     return erro.message;
   }
 
-  static Future<Map<String, dynamic>> buscarPerfil() async {
-    try {
-      final url = Uri.parse('${ApiConfig.baseUrl}/usuarios/perfil');
-      final resposta = await enviarComToken(
-        (token) => http.get(
-          url,
-          headers: {'Authorization': 'Bearer $token'},
-        ),
-      );
-
-      if (resposta == null) {
-        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
-      }
-
-      final Map<String, dynamic> respostaJson = resposta.body.isNotEmpty
-          ? jsonDecode(resposta.body)
-          : {};
-
-      if (resposta.statusCode == 200 &&
-          respostaJson['dados'] is Map<String, dynamic>) {
-        usuarioLogado = Map<String, dynamic>.from(respostaJson['dados']);
-        await SessaoService.salvar(tokenUsuarioLogado!, usuarioLogado!);
-
-        return {'sucesso': true, 'dados': usuarioLogado};
-      }
-
-      if (resposta.statusCode == 401) {
-        await sair();
-      }
-
-      return {
-        'sucesso': false,
-        'mensagem':
-            respostaJson['mensagem'] ??
-            respostaJson['message'] ??
-            'Erro ao buscar perfil',
-      };
-    } catch (erro) {
-      return {
-        'sucesso': false,
-        'mensagem': 'Não foi possível conectar ao servidor',
-      };
-    }
+  static Future<Map<String, dynamic>> buscarPerfil({
+    Duration prazo = const Duration(seconds: 20),
+  }) {
+    return _requisicaoPerfil(
+      (cliente, token) => cliente.get(
+        Uri.parse('${ApiConfig.baseUrl}/usuarios/perfil'),
+        headers: {'Authorization': 'Bearer $token'},
+      ),
+      prazo: prazo,
+    );
   }
 
   static Future<Map<String, dynamic>> atualizarPerfil(
     int idInstituicao,
     String campus,
-  ) async {
-    final token = tokenUsuarioLogado;
-
-    if (token == null) {
-      return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
-    }
-
-    try {
-      final url = Uri.parse('${ApiConfig.baseUrl}/usuarios/perfil');
-      final resposta = await http.patch(
-        url,
+  ) {
+    return _requisicaoPerfil(
+      (cliente, token) => cliente.patch(
+        Uri.parse('${ApiConfig.baseUrl}/usuarios/perfil'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({'idInstituicao': idInstituicao, 'campus': campus}),
-      );
-
-      final Map<String, dynamic> respostaJson = resposta.body.isNotEmpty
-          ? jsonDecode(resposta.body)
-          : {};
-
-      if (resposta.statusCode == 200 &&
-          respostaJson['dados'] is Map<String, dynamic>) {
-        usuarioLogado = Map<String, dynamic>.from(respostaJson['dados']);
-        await SessaoService.salvar(token, usuarioLogado!);
-
-        return {
-          'sucesso': true,
-          'mensagem': respostaJson['mensagem'],
-          'dados': usuarioLogado,
-        };
-      }
-
-      return {
-        'sucesso': false,
-        'mensagem':
-            respostaJson['mensagem'] ??
-            respostaJson['message'] ??
-            'Erro ao atualizar perfil',
-      };
-    } catch (erro) {
-      return {
-        'sucesso': false,
-        'mensagem': 'Não foi possível conectar ao servidor',
-      };
-    }
+      ),
+      alteracao: true,
+    );
   }
 
-  static Future<Map<String, dynamic>> atualizarFotoPerfil(
-    String caminhoFoto,
-  ) async {
-    final token = tokenUsuarioLogado;
+  static Future<Map<String, dynamic>> atualizarFotoPerfil(String caminhoFoto) {
+    return _requisicaoPerfil(
+      (cliente, token) async {
+        final requisicao = http.MultipartRequest(
+          'PATCH',
+          Uri.parse('${ApiConfig.baseUrl}/usuarios/perfil/foto'),
+        );
 
-    if (token == null) {
-      return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
-    }
+        requisicao.headers['Authorization'] = 'Bearer $token';
+        requisicao.files.add(
+          await http.MultipartFile.fromPath('foto', caminhoFoto),
+        );
 
-    try {
-      final requisicao = http.MultipartRequest(
-        'PATCH',
-        Uri.parse('${ApiConfig.baseUrl}/usuarios/perfil/foto'),
-      );
-
-      requisicao.headers['Authorization'] = 'Bearer $token';
-      requisicao.files.add(
-        await http.MultipartFile.fromPath('foto', caminhoFoto),
-      );
-
-      final respostaStream = await requisicao.send();
-      final resposta = await http.Response.fromStream(respostaStream);
-      final Map<String, dynamic> respostaJson = resposta.body.isNotEmpty
-          ? jsonDecode(resposta.body)
-          : {};
-
-      if (resposta.statusCode == 200 &&
-          respostaJson['dados'] is Map<String, dynamic>) {
-        usuarioLogado = Map<String, dynamic>.from(respostaJson['dados']);
-        await SessaoService.salvar(token, usuarioLogado!);
-
-        return {
-          'sucesso': true,
-          'mensagem': respostaJson['mensagem'],
-          'dados': usuarioLogado,
-        };
-      }
-
-      return {
-        'sucesso': false,
-        'mensagem':
-            respostaJson['mensagem'] ??
-            respostaJson['message'] ??
-            'Erro ao atualizar foto',
-      };
-    } catch (erro) {
-      return {'sucesso': false, 'mensagem': 'Não foi possível enviar a foto'};
-    }
+        return http.Response.fromStream(await cliente.send(requisicao));
+      },
+      alteracao: true,
+      prazo: const Duration(seconds: 45),
+    );
   }
 
   static Future<Map<String, dynamic>> salvarVeiculo(
     String modelo,
     String cor,
     String placa,
-  ) async {
-    final token = tokenUsuarioLogado;
-
-    if (token == null) {
-      return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
-    }
-
-    try {
-      final resposta = await http.put(
+  ) {
+    return _requisicaoPerfil(
+      (cliente, token) => cliente.put(
         Uri.parse('${ApiConfig.baseUrl}/usuarios/perfil/veiculo'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
         body: jsonEncode({'modelo': modelo, 'cor': cor, 'placa': placa}),
-      );
-      final Map<String, dynamic> respostaJson = resposta.body.isNotEmpty
-          ? jsonDecode(resposta.body)
-          : {};
+      ),
+      alteracao: true,
+      veiculo: true,
+    );
+  }
 
-      if (resposta.statusCode == 200 && respostaJson['dados'] is Map) {
-        final veiculo = Map<String, dynamic>.from(respostaJson['dados']);
-
-        if (usuarioLogado != null) {
-          usuarioLogado = {...usuarioLogado!, 'veiculo': veiculo};
-          await SessaoService.salvar(token, usuarioLogado!);
-        }
-
-        return {
-          'sucesso': true,
-          'mensagem': respostaJson['mensagem'],
-          'dados': veiculo,
-        };
+  static Future<Map<String, dynamic>> _requisicaoPerfil(
+    Future<http.Response> Function(http.Client cliente, String token) enviar, {
+    Duration prazo = const Duration(seconds: 20),
+    bool alteracao = false,
+    bool veiculo = false,
+  }) async {
+    final cliente = http.Client();
+    final versao = _versaoSessao;
+    var encerrada = false;
+    Map<String, dynamic> falha(String mensagem) => {
+      'sucesso': false,
+      'mensagem': mensagem,
+    };
+    try {
+      final resposta = await enviarComToken((token) {
+        // Um refresh tardio nao deve reenviar uma operacao cujo prazo acabou.
+        if (encerrada) throw TimeoutException('Requisicao encerrada');
+        return enviar(cliente, token);
+      }).timeout(prazo);
+      if (resposta == null || versao != _versaoSessao) {
+        return falha('Usuário não está logado');
       }
-
+      if (resposta.statusCode == 401) {
+        await sair();
+        return falha('Sua sessão expirou. Entre novamente');
+      }
+      Map<String, dynamic>? corpo;
+      try {
+        final json = jsonDecode(resposta.body);
+        if (json is Map<String, dynamic>) corpo = json;
+      } on FormatException {
+        // Proxies podem responder HTML; o status HTTP ainda deve ser tratado.
+      }
+      if (resposta.statusCode >= 500) {
+        return falha(
+          'O servidor está indisponível no momento. Tente novamente',
+        );
+      }
+      if (resposta.statusCode == 429) {
+        return falha('Aguarde um pouco antes de tentar novamente');
+      }
+      if (resposta.statusCode != 200) {
+        final mensagem = corpo?['mensagem'] ?? corpo?['message'];
+        return falha(
+          mensagem is List
+              ? mensagem.join('\n')
+              : mensagem?.toString() ?? 'Não foi possível concluir a operação',
+        );
+      }
+      final dados = corpo?['dados'];
+      if (dados is! Map<String, dynamic>) {
+        return falha(
+          'O servidor retornou uma resposta inválida. Tente novamente',
+        );
+      }
+      final perfil = veiculo
+          ? (usuarioLogado == null
+                ? null
+                : {...usuarioLogado!, 'veiculo': dados})
+          : Map<String, dynamic>.from(dados);
+      if (perfil != null) {
+        usuarioLogado = perfil;
+        await SessaoService.salvar(tokenUsuarioLogado!, perfil);
+      }
+      return {'sucesso': true, 'dados': dados, 'mensagem': corpo?['mensagem']};
+    } on TimeoutException {
+      return falha(
+        alteracao
+            ? 'Não foi possível confirmar a alteração a tempo. Atualize o perfil antes de tentar novamente'
+            : 'O servidor demorou para responder. Tente novamente',
+      );
+    } on AuthException {
+      return falha(
+        'Não foi possível renovar o acesso agora. Confira a conexão e tente novamente',
+      );
+    } catch (_) {
       return {
         'sucesso': false,
-        'mensagem':
-            respostaJson['mensagem'] ??
-            respostaJson['message'] ??
-            'Erro ao salvar veículo',
+        'mensagem': alteracao
+            ? 'Não foi possível confirmar a alteração. Confira a conexão e atualize o perfil antes de tentar novamente'
+            : 'Não foi possível conectar ao servidor. Confira a conexão e tente novamente',
       };
-    } catch (erro) {
-      return {
-        'sucesso': false,
-        'mensagem': 'Não foi possível conectar ao servidor',
-      };
+    } finally {
+      encerrada = true;
+      cliente.close();
     }
   }
 }

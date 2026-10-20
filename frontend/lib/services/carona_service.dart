@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
@@ -7,6 +8,7 @@ import '../models/carona.dart';
 import '../models/ponto_embarque.dart';
 import '../models/posicao_atual_carona.dart';
 import 'auth_service.dart';
+import 'cliente_http_com_prazo.dart';
 
 class CaronaService {
   // Busca e converte as caronas ativas.
@@ -269,24 +271,25 @@ class CaronaService {
     double? direcao,
   }) async {
     try {
-      final token = AuthService.tokenUsuarioLogado;
-      if (token == null) return false;
+      final resposta = await AuthService.enviarComToken(
+        (token) => http
+            .put(
+              Uri.parse('${ApiConfig.baseUrl}/caronas/$idCarona/posicao'),
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer $token',
+              },
+              body: jsonEncode({
+                'latitude': latitude,
+                'longitude': longitude,
+                'direcao': direcao,
+                'precisao': precisao,
+              }),
+            )
+            .timeout(const Duration(seconds: 4)),
+      );
 
-      final resposta = await http
-          .put(
-            Uri.parse('${ApiConfig.baseUrl}/caronas/$idCarona/posicao'),
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': 'Bearer $token',
-            },
-            body: jsonEncode({
-              'latitude': latitude,
-              'longitude': longitude,
-              'direcao': direcao,
-              'precisao': precisao,
-            }),
-          )
-          .timeout(const Duration(seconds: 4));
+      if (resposta == null) return false;
 
       if (resposta.statusCode == 401) {
         await AuthService.sair();
@@ -300,17 +303,17 @@ class CaronaService {
 
   static Future<Map<String, dynamic>> buscarPosicaoAtual(int idCarona) async {
     try {
-      final token = AuthService.tokenUsuarioLogado;
-      if (token == null) {
+      final resposta = await AuthService.enviarComToken(
+        (token) => http
+            .get(
+              Uri.parse('${ApiConfig.baseUrl}/caronas/$idCarona/posicao'),
+              headers: {'Authorization': 'Bearer $token'},
+            )
+            .timeout(const Duration(seconds: 4)),
+      );
+      if (resposta == null) {
         return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
       }
-
-      final resposta = await http
-          .get(
-            Uri.parse('${ApiConfig.baseUrl}/caronas/$idCarona/posicao'),
-            headers: {'Authorization': 'Bearer $token'},
-          )
-          .timeout(const Duration(seconds: 4));
       final corpo = _decodificarResposta(resposta);
 
       if (resposta.statusCode == 200) {
@@ -361,16 +364,17 @@ class CaronaService {
     int idCarona,
     String acao,
   ) async {
+    final cliente = ClienteHttpComPrazo();
     try {
-      final token = AuthService.tokenUsuarioLogado;
-      if (token == null) {
+      final resposta = await AuthService.enviarComToken(
+        (token) => cliente.patch(
+          Uri.parse('${ApiConfig.baseUrl}/caronas/$idCarona/$acao'),
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      );
+      if (resposta == null) {
         return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
       }
-
-      final resposta = await http.patch(
-        Uri.parse('${ApiConfig.baseUrl}/caronas/$idCarona/$acao'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
       final corpo = _decodificarResposta(resposta);
 
       if (resposta.statusCode == 200 || resposta.statusCode == 201) {
@@ -401,11 +405,20 @@ class CaronaService {
               : 'Não foi possível finalizar a corrida',
         ),
       };
+    } on TimeoutException {
+      return {
+        'sucesso': false,
+        'mensagem':
+            'Não foi possível confirmar a operação a tempo. Atualize a carona antes de tentar novamente',
+      };
     } catch (_) {
       return {
         'sucesso': false,
-        'mensagem': 'Não foi possível conectar ao servidor',
+        'mensagem':
+            'Não foi possível confirmar a operação. Confira a conexão e atualize a carona antes de tentar novamente',
       };
+    } finally {
+      cliente.close();
     }
   }
 
