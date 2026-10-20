@@ -131,7 +131,13 @@ export class VerificacaoCnhService {
           cnhVerificadaEm: null,
           privacidadeAceitaEm,
         });
-        return { status: 'RECUSADA' as const, motivo: conferencia.motivo };
+        return {
+          status: 'RECUSADA' as const,
+          motivo: conferencia.motivo,
+          ...(conferencia.motivo === 'NOME_NAO_LIDO' && texto.diagnosticoNome
+            ? { detalheLeitura: texto.diagnosticoNome.motivo }
+            : {}),
+        };
       }
 
       try {

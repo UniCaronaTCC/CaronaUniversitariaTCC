@@ -15,6 +15,16 @@ function blocos(...lines: ReturnType<typeof linha>[]): Block[] {
 }
 
 describe('nomePeloLayout', () => {
+  it('lê o nome quando o ML Kit agrupa título e valor na mesma TextLine', () => {
+    const unificada = linha('NOME E SOBRENOME', 100, 10);
+    unificada.words.push(...linha('MARIA CLARA SILVA', 100, 40).words);
+    expect(nomePeloLayout(blocos(unificada))).toBe('MARIA CLARA SILVA');
+  });
+  it('não encurta o nome ao agrupar título com palavra fora da região', () => {
+    const unificada = linha('NOME E SOBRENOME', 100, 10);
+    unificada.words.push(...linha('MARIA CLARA SILVA', 60, 40).words);
+    expect(nomePeloLayout(blocos(unificada))).toBeNull();
+  });
   it('preserva palavra com caixa ampliada por moldura quando a linha de base confirma o nome', () => {
     const nome = linha('MARIA CLARA SILVA', 100, 24);
     for (const p of nome.words) p.bbox.y1 = 40;

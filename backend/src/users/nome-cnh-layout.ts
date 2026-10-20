@@ -5,6 +5,7 @@ export interface LeituraCnh {
   texto: string;
   nome: string | null;
   campos?: CamposCnh;
+  diagnosticoNome?: DiagnosticoRegiaoNome;
 }
 
 const normalizar = (texto: string) =>
@@ -62,6 +63,18 @@ export function nomePeloLayout(
     : titulo.bbox.x0;
   const altura = titulo.bbox.y1 - titulo.bbox.y0;
   if (altura <= 0) return concluir('ALTURA_INVALIDA');
+  // O ML Kit pode agrupar título e valor em uma só TextLine. Excluir
+  // a linha inteira descartaria também o nome, mesmo estando abaixo.
+  const palavrasTitulo = new Set([
+    titulo,
+    ...prefixo,
+    ...linhaTitulo.words.filter(
+      (p) =>
+        p.bbox.x0 >= titulo.bbox.x1 &&
+        p.bbox.y0 <= titulo.bbox.y1 &&
+        /^(?:E|SOBRENOME|\/|NAME|AND|SURNAME)$/.test(normalizar(p.text)),
+    ),
+  ]);
   const vizinhos = palavras.filter(
     (p) =>
       p.bbox.x0 > titulo.bbox.x1 &&
@@ -88,7 +101,7 @@ export function nomePeloLayout(
   // do título. Só toleramos essa sobreposição se o centro estiver abaixo.
   const abaixoDoTitulo = (p: (typeof palavras)[number]) => {
     const centro = (p.bbox.y0 + p.bbox.y1) / 2;
-    if (linhaTitulo.words.includes(p) || centro <= regiao.y0) return false;
+    if (palavrasTitulo.has(p) || centro <= regiao.y0) return false;
     if (p.bbox.y0 >= regiao.y0 - altura / 2) return true;
     if (p.bbox.y0 < regiao.y0 - altura) return false;
     // Uma moldura pode aumentar a caixa de uma palavra. Só toleramos isso
@@ -121,7 +134,7 @@ export function nomePeloLayout(
   // isso poderia transformar um nome completo em outro nome mais curto.
   const cortada = palavras.some(
     (p) =>
-      !linhaTitulo.words.includes(p) &&
+      !palavrasTitulo.has(p) &&
       !outroCampo.test(normalizar(p.text)) &&
       !(
         vizinhos.length &&

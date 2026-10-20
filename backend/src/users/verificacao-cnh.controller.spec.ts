@@ -43,4 +43,22 @@ describe('VerificacaoCnhController ML Kit', () => {
     await controller.reiniciarTeste(req);
     expect(reiniciarParaTeste).toHaveBeenCalledWith(7);
   });
+  it('explica a etapa que falhou sem expor o nome lido', async () => {
+    verificar.mockResolvedValueOnce({
+      status: 'RECUSADA',
+      motivo: 'NOME_NAO_LIDO',
+      detalheLeitura: 'TITULO_AUSENTE',
+    });
+    const resposta = await controller.verificar(
+      {
+        versaoLeitura: 'mlkit-v1',
+        aceitePrivacidade: true,
+        nomeCompleto: 'Maria Silva',
+        leitura: {},
+      },
+      req,
+    );
+    expect(resposta.mensagem).toContain('título NOME');
+    expect(resposta.mensagem).not.toContain('Maria Silva');
+  });
 });

@@ -1,5 +1,9 @@
 import { BadRequestException, Injectable, Logger } from '@nestjs/common';
-import { nomePeloLayout, type LeituraCnh } from './nome-cnh-layout';
+import {
+  nomePeloLayout,
+  type LeituraCnh,
+  type DiagnosticoRegiaoNome,
+} from './nome-cnh-layout';
 import { valorDoCampo } from './campos-cnh-layout';
 import type { Block, Word } from './ocr-cnh';
 const objeto = (valor: unknown): valor is Record<string, unknown> =>
@@ -71,7 +75,11 @@ export class LeituraCnhService {
       return { words };
     });
     const blocos: Block[] = [{ paragraphs: [{ lines: linhas }] }];
-    const nome = nomePeloLayout(blocos);
+    let diagnosticoNome: DiagnosticoRegiaoNome | undefined;
+    const nome = nomePeloLayout(blocos, (diagnostico) => {
+      diagnosticoNome = diagnostico;
+      this.logger.log(`CNH: regiao_nome ${JSON.stringify(diagnostico)}`);
+    });
     const campos = {
       cpf: valorDoCampo(blocos, 'cpf', largura, altura),
       validade: valorDoCampo(blocos, 'validade', largura, altura),
@@ -86,6 +94,6 @@ export class LeituraCnhService {
           categoria: !!campos.categoria,
         }),
     );
-    return { texto: '', nome, campos };
+    return { texto: '', nome, campos, diagnosticoNome };
   }
 }
