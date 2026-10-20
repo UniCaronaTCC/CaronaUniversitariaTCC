@@ -50,6 +50,7 @@ class _TelaInicialState extends State<TelaInicial> {
   String? mensagemErroMinhasCaronas;
   LocalizacaoSelecionada? destinoSelecionado;
   String? cidadeAtual;
+  LocalizacaoSelecionada? localizacaoAtual;
   late final Future<void> carregamentoDestino;
   late final int? idUsuario;
   bool escolhendoDestino = false;
@@ -99,6 +100,7 @@ class _TelaInicialState extends State<TelaInicial> {
 
       setState(() {
         cidadeAtual = localizacao!.cidade;
+        localizacaoAtual = localizacao;
       });
     } catch (erro) {
       debugPrint('Não foi possível identificar a cidade atual: $erro');
@@ -211,8 +213,10 @@ class _TelaInicialState extends State<TelaInicial> {
       final resultado = await Navigator.push<LocalizacaoSelecionada>(
         context,
         MaterialPageRoute(
-          builder: (context) =>
-              SelecionarDestinoTela(destinoInicial: destinoSelecionado),
+          builder: (context) => SelecionarDestinoTela(
+            destinoInicial: destinoSelecionado,
+            localizacaoReferencia: localizacaoAtual,
+          ),
         ),
       );
 

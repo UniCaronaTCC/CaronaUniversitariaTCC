@@ -2,15 +2,20 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
-import '../mapa/widgets/barra_pesquisa_endereco.dart';
 import '../navigation/navegacao_principal.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/componentes_padrao.dart';
+import '../widgets/campo_destino_campus.dart';
 
 class SelecionarDestinoTela extends StatefulWidget {
   final LocalizacaoSelecionada? destinoInicial;
+  final LocalizacaoSelecionada? localizacaoReferencia;
 
-  const SelecionarDestinoTela({super.key, this.destinoInicial});
+  const SelecionarDestinoTela({
+    super.key,
+    this.destinoInicial,
+    this.localizacaoReferencia,
+  });
 
   @override
   State<SelecionarDestinoTela> createState() => _SelecionarDestinoTelaState();
@@ -62,15 +67,12 @@ class _SelecionarDestinoTelaState extends State<SelecionarDestinoTela> {
               style: TextStyle(color: AppColors.text, fontSize: 17),
             ),
             const SizedBox(height: 24),
-            BarraPesquisaEndereco(
-              label: 'Destino',
-              icone: Icons.location_on_outlined,
+            CampoDestinoCampus(
               controller: destinoController,
               onSelecionado: selecionarDestino,
-              padding: EdgeInsets.zero,
-              elevacao: 0,
-              borderRadius: 16,
-              usarLabelComoHint: false,
+              referenciaInicial:
+                  widget.localizacaoReferencia ?? widget.destinoInicial,
+              mostrarAoAbrir: true,
             ),
           ],
         ),

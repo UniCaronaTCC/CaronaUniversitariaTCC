@@ -6,6 +6,55 @@ import { InstituicoesService } from './instituicoes.service';
 export class InstituicoesController {
   constructor(private readonly instituicoesService: InstituicoesService) {}
 
+  @Get('destinos')
+  async listarDestinos(
+    @Query('cidade') cidadeRecebida?: string,
+    @Query('uf') ufRecebida?: string,
+  ) {
+    const cidade =
+      typeof cidadeRecebida === 'string'
+        ? cidadeRecebida.trim().replace(/\s+/g, ' ')
+        : '';
+    const uf =
+      typeof ufRecebida === 'string' ? ufRecebida.trim().toUpperCase() : '';
+    const ufs = new Set([
+      'AC',
+      'AL',
+      'AP',
+      'AM',
+      'BA',
+      'CE',
+      'DF',
+      'ES',
+      'GO',
+      'MA',
+      'MT',
+      'MS',
+      'MG',
+      'PA',
+      'PB',
+      'PR',
+      'PE',
+      'PI',
+      'RJ',
+      'RN',
+      'RS',
+      'RO',
+      'RR',
+      'SC',
+      'SP',
+      'SE',
+      'TO',
+    ]);
+    if (cidade.length < 2 || cidade.length > 100 || !ufs.has(uf)) {
+      throw new BadRequestException('Informe uma cidade e uma UF válidas');
+    }
+    return {
+      sucesso: true,
+      dados: await this.instituicoesService.listarDestinos(cidade, uf),
+    };
+  }
+
   @Get()
   async buscar(
     @Query('busca') buscaRecebida?: string,

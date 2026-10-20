@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ILike, In, Repository } from 'typeorm';
+import { ILike, In, Raw, Repository } from 'typeorm';
 
 import { InstituicaoCampus } from './instituicao-campus.entity';
 import { Instituicao } from './instituicao.entity';
@@ -131,6 +131,72 @@ export class InstituicoesService {
     return this.instituicoesRepository.findOne({
       where: { idInstituicao, ativa: true },
     });
+  }
+
+  async listarDestinos(cidade: string, uf: string) {
+    const campi = await this.campiRepository.find({
+      where: {
+        ativo: true,
+        uf,
+        municipio: Raw(
+          (coluna) =>
+            `translate(lower(trim(${coluna})), 'áàâãäéèêëíìîïóòôõöúùûüç', 'aaaaaeeeeiiiiooooouuuuc') = :cidade`,
+          { cidade: this.normalizar(cidade) },
+        ),
+      },
+    });
+    if (campi.length === 0) return [];
+
+    const instituicoes = await this.instituicoesRepository.find({
+      where: {
+        idInstituicao: In([
+          ...new Set(campi.map((item) => item.idInstituicao)),
+        ]),
+        ativa: true,
+      },
+    });
+    const porId = new Map(
+      instituicoes.map((instituicao) => [
+        instituicao.idInstituicao,
+        instituicao,
+      ]),
+    );
+
+    return campi
+      .flatMap((campus) => {
+        const instituicao = porId.get(campus.idInstituicao);
+        if (!instituicao) return [];
+        const latitude = Number(campus.latitude);
+        const longitude = Number(campus.longitude);
+        const coordenadasValidas =
+          campus.latitude != null &&
+          campus.longitude != null &&
+          Number.isFinite(latitude) &&
+          Number.isFinite(longitude) &&
+          latitude >= -90 &&
+          latitude <= 90 &&
+          longitude >= -180 &&
+          longitude <= 180;
+        return [
+          {
+            idCampus: campus.idCampus,
+            idInstituicao: instituicao.idInstituicao,
+            nome: instituicao.nome,
+            sigla: instituicao.sigla,
+            campus: campus.nome,
+            municipio: campus.municipio,
+            uf: campus.uf,
+            latitude: coordenadasValidas ? latitude : null,
+            longitude: coordenadasValidas ? longitude : null,
+          },
+        ];
+      })
+      .sort(
+        (a, b) =>
+          (a.sigla || a.nome).localeCompare(b.sigla || b.nome, 'pt-BR') ||
+          a.campus.localeCompare(b.campus, 'pt-BR') ||
+          a.idCampus - b.idCampus,
+      );
   }
 
   async campusValido(

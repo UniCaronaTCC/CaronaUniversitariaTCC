@@ -2,13 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
-import '../mapa/widgets/barra_pesquisa_endereco.dart';
 import '../models/ponto_embarque.dart';
 import '../utils/formatador_moeda.dart';
 import 'botao_acao_home.dart';
 import 'campo_recorrencia_carona.dart';
 import 'campo_texto_carona.dart';
 import 'seletor_quantidade_passageiros.dart';
+import 'campo_destino_campus.dart';
 
 class FormularioOfertarCarona extends StatelessWidget {
   final String titulo;
@@ -203,22 +203,18 @@ class FormularioOfertarCarona extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: BarraPesquisaEndereco(
-                label: 'Destino',
-                icone: Icons.location_on_outlined,
+              child: CampoDestinoCampus(
                 controller: destinoController,
                 onChanged: onDestinoChanged,
                 onSelecionado: onDestinoSelecionado,
-                padding: EdgeInsets.zero,
-                elevacao: 0,
-                borderRadius: 16,
-                usarLabelComoHint: false,
+                referenciaInicial: origemSelecionada,
               ),
             ),
 
             const SizedBox(width: 8),
 
             IconButton(
+              tooltip: 'Escolher destino no mapa',
               onPressed: onSelecionarDestino,
               icon: const Icon(Icons.map_outlined, color: AppColors.primary),
             ),

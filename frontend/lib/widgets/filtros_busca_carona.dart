@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
-import '../mapa/widgets/barra_pesquisa_endereco.dart';
+import 'campo_destino_campus.dart';
 import 'campo_texto_carona.dart';
 
 class FiltrosBuscaCarona extends StatelessWidget {
@@ -59,16 +59,10 @@ class FiltrosBuscaCarona extends StatelessWidget {
         const SizedBox(height: 12),
 
         // Filtra imediatamente as caronas ja carregadas.
-        BarraPesquisaEndereco(
-          label: 'Destino',
-          icone: Icons.location_on_outlined,
+        CampoDestinoCampus(
           controller: destinoController,
           onChanged: onDestinoChanged,
           onSelecionado: onDestinoSelecionado,
-          padding: EdgeInsets.zero,
-          elevacao: 0,
-          borderRadius: 16,
-          usarLabelComoHint: false,
         ),
         const SizedBox(height: 12),
 
