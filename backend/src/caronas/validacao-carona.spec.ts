@@ -15,6 +15,9 @@ describe('Validação de programação', () => {
     origemLongitude: -50,
     destinoLatitude: -21,
     destinoLongitude: -50,
+    pontosEmbarque: [
+      { endereco: 'Rua A, 10', latitude: -21.1, longitude: -50.1 },
+    ],
   };
   it.each([
     { diasSemana: [] },
@@ -22,7 +25,7 @@ describe('Validação de programação', () => {
     { dataInicio: '2026-02-30' },
     { horario: '25:00:00' },
     { dataFim: '2026-09-27' },
-    { origemLatitude: null },
+    { destinoLatitude: null },
   ])('rejeita configuração inválida %j', (alteracao) => {
     expect(() =>
       validacao.validarDadosCarona({ ...dados, ...alteracao }, 1),

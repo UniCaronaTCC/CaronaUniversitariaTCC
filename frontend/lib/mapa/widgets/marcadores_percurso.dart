@@ -108,8 +108,7 @@ class MarcadoresPercurso {
   }
 
   List<Marker> construir() {
-    if (!navegacao &&
-        !(mostrarMarcadorMotorista && carona.pontosEmbarque.isNotEmpty)) {
+    if (!navegacao && carona.pontosEmbarque.isEmpty) {
       final marcadores = List.generate(paradas.length, _marcadorParada);
       if (mostrarMarcadorMotorista && localizacaoMotorista != null) {
         marcadores.removeAt(0);

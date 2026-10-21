@@ -4,6 +4,7 @@ import 'package:latlong2/latlong.dart';
 import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
 import '../mapa/screens/mapa_screen.dart';
+import '../mapa/utils/rota_mapa_utils.dart';
 import '../models/carona.dart';
 import '../models/capacidade_carona.dart';
 import '../models/ponto_embarque.dart';
@@ -25,6 +26,7 @@ class OfertarCaronaTela extends StatefulWidget {
   final int indiceNavegacao;
   final Future<Map<String, dynamic>> Function()? carregarPerfil;
   final Future<Map<String, dynamic>> Function()? carregarCapacidade;
+  final Future<LocalizacaoSelecionada?> Function()? selecionarPontoEmbarque;
 
   const OfertarCaronaTela({
     super.key,
@@ -34,6 +36,7 @@ class OfertarCaronaTela extends StatefulWidget {
     this.indiceNavegacao = 0,
     this.carregarPerfil,
     this.carregarCapacidade,
+    this.selecionarPontoEmbarque,
   });
 
   @override
@@ -41,7 +44,6 @@ class OfertarCaronaTela extends StatefulWidget {
 }
 
 class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
-  final origemController = TextEditingController();
   final destinoController = TextEditingController();
   final dataController = TextEditingController();
   final horarioController = TextEditingController();
@@ -49,7 +51,6 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   final valorController = TextEditingController();
   final observacoesController = TextEditingController();
 
-  LocalizacaoSelecionada? origemSelecionada;
   LocalizacaoSelecionada? destinoSelecionado;
 
   DateTime? dataSelecionada;
@@ -72,6 +73,27 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   bool get edicaoIndividual => editando && widget.idRecorrencia == null;
   bool get edicaoLimitada => edicaoIndividual && (capacidade?.aceitos ?? 0) > 0;
   bool get precisaCnh => !editando || widget.idRecorrencia != null;
+
+  LocalizacaoSelecionada? get inicioDaOferta {
+    if (edicaoIndividual) {
+      final carona = widget.caronaParaEditar!;
+      if (!coordenadaValida(carona.origemLatitude, carona.origemLongitude)) {
+        return null;
+      }
+      return LocalizacaoSelecionada(
+        ponto: LatLng(carona.origemLatitude!, carona.origemLongitude!),
+        endereco: carona.origem,
+        cidade: carona.origemCidade,
+      );
+    }
+    if (pontosEmbarque.isEmpty) return null;
+    final primeiro = pontosEmbarque.first;
+    if (!coordenadaValida(primeiro.latitude, primeiro.longitude)) return null;
+    return LocalizacaoSelecionada(
+      ponto: LatLng(primeiro.latitude, primeiro.longitude),
+      endereco: primeiro.endereco,
+    );
+  }
 
   bool get possuiVeiculo =>
       editando ||
@@ -133,7 +155,6 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   }
 
   void _preencherEdicao(Carona carona) {
-    origemController.text = carona.origem;
     destinoController.text = carona.destino;
 
     dataSelecionada = carona.dataInicio;
@@ -157,16 +178,9 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     diasSelecionados.addAll(carona.diasSemana);
 
     // Carrega os pontos que já pertencem a essa carona.
-    pontosEmbarque.addAll(carona.pontosEmbarque);
-
-    if (carona.origemLatitude != null && carona.origemLongitude != null) {
-      origemSelecionada = LocalizacaoSelecionada(
-        ponto: LatLng(carona.origemLatitude!, carona.origemLongitude!),
-        endereco: carona.origem,
-        cidade: carona.origemCidade,
-        pontoEspecifico: _origemExistentePareceEspecifica(carona),
-      );
-    }
+    pontosEmbarque.addAll(
+      [...carona.pontosEmbarque]..sort((a, b) => a.ordem.compareTo(b.ordem)),
+    );
 
     if (carona.destinoLatitude != null && carona.destinoLongitude != null) {
       destinoSelecionado = LocalizacaoSelecionada(
@@ -175,15 +189,6 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
         cidade: carona.destinoCidade,
       );
     }
-  }
-
-  bool _origemExistentePareceEspecifica(Carona carona) {
-    final partes = carona.origem
-        .split(',')
-        .map((parte) => parte.trim())
-        .where((parte) => parte.isNotEmpty)
-        .toList();
-    return partes.length >= 4 || RegExp(r'\d').hasMatch(carona.origem);
   }
 
   Future<void> atualizarCapacidade() async {
@@ -233,26 +238,6 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     return TimeOfDay(hour: hora, minute: minuto);
   }
 
-  // Abre o mapa para escolher a origem.
-  Future<void> escolherOrigemNoMapa() async {
-    final resultado = await Navigator.push<LocalizacaoSelecionada>(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            TesteMapa(indiceNavegacao: widget.indiceNavegacao),
-      ),
-    );
-
-    if (!mounted || resultado == null) {
-      return;
-    }
-
-    setState(() {
-      origemSelecionada = resultado;
-      origemController.text = resultado.endereco;
-    });
-  }
-
   Future<void> escolherDestinoNoMapa() async {
     final resultado = await Navigator.push<LocalizacaoSelecionada>(
       context,
@@ -282,19 +267,30 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       return;
     }
 
-    final resultado = await Navigator.push<LocalizacaoSelecionada>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => TesteMapa(
-          indiceNavegacao: widget.indiceNavegacao,
-          titulo: 'Ponto de embarque',
-          instrucao: 'Escolha onde os passageiros poderão embarcar',
-          textoBotao: 'ADICIONAR PONTO',
-        ),
-      ),
-    );
+    final resultado =
+        await (widget.selecionarPontoEmbarque?.call() ??
+            Navigator.push<LocalizacaoSelecionada>(
+              context,
+              MaterialPageRoute(
+                builder: (context) => TesteMapa(
+                  indiceNavegacao: widget.indiceNavegacao,
+                  titulo: 'Ponto de encontro',
+                  instrucao: 'Escolha onde os passageiros poderão embarcar',
+                  textoBotao: 'ADICIONAR PONTO',
+                ),
+              ),
+            ));
 
     if (!mounted || resultado == null) {
+      return;
+    }
+
+    if (!resultado.coordenadasValidas ||
+        !resultado.pontoEspecifico ||
+        resultado.endereco.trim().isEmpty) {
+      mostrarMensagem(
+        'Escolha um ponto de encontro específico com endereço válido',
+      );
       return;
     }
 
@@ -305,7 +301,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     );
 
     if (pontoJaExiste) {
-      mostrarMensagem('Esse ponto de embarque já foi adicionado');
+      mostrarMensagem('Esse ponto de encontro já foi adicionado');
       return;
     }
 
@@ -331,6 +327,18 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
     setState(() {
       pontosEmbarque.removeAt(indice);
+      for (var i = indice; i < pontosEmbarque.length; i++) {
+        final ponto = pontosEmbarque[i];
+        pontosEmbarque[i] = PontoEmbarque(
+          id: ponto.id,
+          nome: ponto.nome,
+          endereco: ponto.endereco,
+          latitude: ponto.latitude,
+          longitude: ponto.longitude,
+          ordem: i + 1,
+          percorridoEm: ponto.percorridoEm,
+        );
+      }
     });
   }
 
@@ -445,7 +453,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       enviandoCarona = true;
     });
 
-    final origem = origemSelecionada!;
+    final origem = inicioDaOferta!;
     final destino = destinoSelecionado!;
     final observacoes = observacoesController.text.trim();
 
@@ -454,7 +462,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       idRecorrencia: widget.idRecorrencia,
 
       origem: origem.endereco,
-      origemCidade: origem.cidade ?? widget.caronaParaEditar?.origemCidade,
+      origemCidade: origem.cidade,
       origemLatitude: origem.ponto.latitude,
       origemLongitude: origem.ponto.longitude,
 
@@ -529,7 +537,6 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       return 'Confira a capacidade da carona antes de salvar';
     }
     final camposObrigatorios = [
-      origemController.text,
       destinoController.text,
       dataController.text,
       horarioController.text,
@@ -541,24 +548,22 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       return 'Preencha todos os campos obrigatórios';
     }
 
-    if (origemSelecionada == null) {
-      return 'Confirme a origem pelo mapa';
-    }
-
-    if (!origemSelecionada!.coordenadasValidas) {
-      return 'A origem selecionada possui coordenadas inválidas';
-    }
-
-    if (!origemSelecionada!.pontoEspecifico) {
-      return 'Escolha uma rua, estabelecimento ou ponto exato para a origem';
-    }
-
     if (destinoSelecionado == null) {
       return 'Busque e selecione o destino';
     }
 
     if ((!editando || widget.idRecorrencia != null) && pontosEmbarque.isEmpty) {
-      return 'Adicione pelo menos um ponto de embarque';
+      return 'Adicione pelo menos um ponto de encontro';
+    }
+    if (pontosEmbarque.any(
+      (ponto) =>
+          !coordenadaValida(ponto.latitude, ponto.longitude) ||
+          ponto.endereco.trim().isEmpty,
+    )) {
+      return 'Confira o endereço e as coordenadas dos pontos de encontro';
+    }
+    if (inicioDaOferta == null || inicioDaOferta!.endereco.trim().isEmpty) {
+      return 'Não foi possível conferir o início da carona';
     }
 
     if (dataSelecionada == null || horarioSelecionado == null) {
@@ -602,7 +607,6 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
   @override
   void dispose() {
-    origemController.dispose();
     destinoController.dispose();
     dataController.dispose();
     horarioController.dispose();
@@ -705,7 +709,6 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
                   textoBotao: editando ? 'SALVAR ALTERAÇÕES' : 'OFERTAR CARONA',
                   textoCarregando: editando ? 'SALVANDO...' : 'ENVIANDO...',
 
-                  origemController: origemController,
                   destinoController: destinoController,
                   dataController: dataController,
                   horarioController: horarioController,
@@ -722,13 +725,12 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
                   diasSelecionados: diasSelecionados,
 
                   pontosEmbarque: pontosEmbarque,
-                  origemSelecionada: origemSelecionada,
+                  referenciaDestino: destinoSelecionado,
                   pontosEmbarqueEditaveis:
                       !editando || widget.idRecorrencia != null,
                   mostrarRecorrencia: !editando || widget.idRecorrencia != null,
                   possuiVeiculo: possuiVeiculo,
 
-                  onSelecionarOrigem: escolherOrigemNoMapa,
                   onSelecionarDestino: escolherDestinoNoMapa,
                   onAdicionarPontoEmbarque: adicionarPontoEmbarque,
                   onRemoverPontoEmbarque: removerPontoEmbarque,

@@ -16,7 +16,6 @@ class FormularioOfertarCarona extends StatelessWidget {
   final String textoBotao;
   final String textoCarregando;
 
-  final TextEditingController origemController;
   final TextEditingController destinoController;
   final TextEditingController dataController;
   final TextEditingController horarioController;
@@ -34,9 +33,7 @@ class FormularioOfertarCarona extends StatelessWidget {
 
   final List<String> diasSelecionados;
   final List<PontoEmbarque> pontosEmbarque;
-  final LocalizacaoSelecionada? origemSelecionada;
-
-  final VoidCallback onSelecionarOrigem;
+  final LocalizacaoSelecionada? referenciaDestino;
   final VoidCallback onSelecionarDestino;
   final VoidCallback onSelecionarData;
   final VoidCallback onSelecionarHorario;
@@ -57,7 +54,6 @@ class FormularioOfertarCarona extends StatelessWidget {
     this.textoBotao = 'OFERTAR CARONA',
     this.textoCarregando = 'ENVIANDO...',
     this.mostrarRecorrencia = true,
-    required this.origemController,
     required this.destinoController,
     required this.dataController,
     required this.horarioController,
@@ -69,10 +65,9 @@ class FormularioOfertarCarona extends StatelessWidget {
     required this.caronaRecorrente,
     required this.diasSelecionados,
     required this.pontosEmbarque,
-    required this.origemSelecionada,
+    this.referenciaDestino,
     required this.pontosEmbarqueEditaveis,
     required this.possuiVeiculo,
-    required this.onSelecionarOrigem,
     required this.onSelecionarDestino,
     required this.onSelecionarData,
     required this.onSelecionarHorario,
@@ -147,67 +142,6 @@ class FormularioOfertarCarona extends StatelessWidget {
           const SizedBox(height: 24),
         ],
 
-        // A origem pode ser ajustada no mapa.
-        CampoTextoCarona(
-          label: 'Origem',
-          icone: Icons.my_location,
-          controller: origemController,
-          somenteLeitura: true,
-          onTap: edicaoLimitada ? null : onSelecionarOrigem,
-          suffixIcon: Icon(
-            edicaoLimitada ? Icons.lock_outline : Icons.map_outlined,
-            color: AppColors.primary,
-          ),
-        ),
-
-        const SizedBox(height: 8),
-
-        if (origemSelecionada == null)
-          OutlinedButton.icon(
-            onPressed: edicaoLimitada ? null : onSelecionarOrigem,
-            icon: const Icon(Icons.gps_fixed),
-            label: const Text('ESCOLHER NO MAPA OU USAR GPS'),
-          )
-        else
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: Colors.green.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.green.withValues(alpha: 0.25)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.check_circle, color: Colors.green),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Origem confirmada',
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      Text(
-                        origemSelecionada!.descricaoCompleta,
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-                if (!edicaoLimitada)
-                  IconButton(
-                    tooltip: 'Alterar origem',
-                    onPressed: onSelecionarOrigem,
-                    icon: const Icon(Icons.edit_location_alt_outlined),
-                  ),
-              ],
-            ),
-          ),
-
-        const SizedBox(height: 16),
-
         // O destino pode ser pesquisado ou marcado direto no mapa.
         if (edicaoLimitada)
           CampoTextoCarona(
@@ -226,7 +160,7 @@ class FormularioOfertarCarona extends StatelessWidget {
                   controller: destinoController,
                   onChanged: onDestinoChanged,
                   onSelecionado: onDestinoSelecionado,
-                  referenciaInicial: origemSelecionada,
+                  referenciaInicial: referenciaDestino,
                 ),
               ),
 
@@ -260,7 +194,7 @@ class FormularioOfertarCarona extends StatelessWidget {
         const SizedBox(height: 16),
 
         CampoTextoCarona(
-          label: 'Horário',
+          label: 'Horário do primeiro encontro',
           icone: Icons.access_time,
           controller: horarioController,
           somenteLeitura: true,
@@ -325,7 +259,7 @@ class FormularioOfertarCarona extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Pontos de embarque',
+          'Pontos de encontro',
           style: TextStyle(
             color: AppColors.text,
             fontSize: 18,
@@ -361,7 +295,7 @@ class FormularioOfertarCarona extends StatelessWidget {
                 SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    'Nenhum ponto de embarque adicionado.',
+                    'Nenhum ponto de encontro adicionado.',
                     style: TextStyle(color: Colors.black54),
                   ),
                 ),
@@ -415,7 +349,7 @@ class FormularioOfertarCarona extends StatelessWidget {
                           Text(
                             nome != null && nome.isNotEmpty
                                 ? nome
-                                : 'Ponto de embarque ${indice + 1}',
+                                : 'Ponto de encontro ${indice + 1}',
                             style: const TextStyle(
                               color: AppColors.text,
                               fontSize: 15,
@@ -461,7 +395,7 @@ class FormularioOfertarCarona extends StatelessWidget {
                 ? onAdicionarPontoEmbarque
                 : null,
             icon: const Icon(Icons.add_location_alt_outlined),
-            label: const Text('ADICIONAR PONTO DE EMBARQUE'),
+            label: const Text('ADICIONAR PONTO DE ENCONTRO'),
           ),
         ),
 

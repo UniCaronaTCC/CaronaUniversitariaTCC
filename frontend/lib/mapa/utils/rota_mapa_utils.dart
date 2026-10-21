@@ -24,13 +24,16 @@ List<PontoEmbarque> pontosOrdenados(Carona carona) {
 
 List<LatLng>? paradasDaCarona(Carona carona) {
   final pontos = pontosOrdenados(carona);
-  if (!coordenadaValida(carona.origemLatitude, carona.origemLongitude) ||
-      !coordenadaValida(carona.destinoLatitude, carona.destinoLongitude) ||
+  if (!coordenadaValida(carona.destinoLatitude, carona.destinoLongitude) ||
       pontos.any((p) => !coordenadaValida(p.latitude, p.longitude))) {
     return null;
   }
+  if (pontos.isEmpty &&
+      !coordenadaValida(carona.origemLatitude, carona.origemLongitude)) {
+    return null;
+  }
   return [
-    LatLng(carona.origemLatitude!, carona.origemLongitude!),
+    if (pontos.isEmpty) LatLng(carona.origemLatitude!, carona.origemLongitude!),
     ...pontos.map((p) => LatLng(p.latitude, p.longitude)),
     LatLng(carona.destinoLatitude!, carona.destinoLongitude!),
   ];

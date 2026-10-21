@@ -15,6 +15,7 @@ class TesteMapa extends StatefulWidget {
   final String instrucao;
   final String textoBotao;
   final int indiceNavegacao;
+  final EnderecoService? enderecoService;
 
   const TesteMapa({
     super.key,
@@ -22,6 +23,7 @@ class TesteMapa extends StatefulWidget {
     this.instrucao = 'Confira sua origem',
     this.textoBotao = 'CONFIRMAR ORIGEM',
     this.indiceNavegacao = 0,
+    this.enderecoService,
   });
 
   @override
@@ -30,7 +32,8 @@ class TesteMapa extends StatefulWidget {
 
 class _TesteMapaState extends State<TesteMapa> {
   final LocalizacaoService _localizacaoService = LocalizacaoService();
-  final EnderecoService _enderecoService = EnderecoService();
+  late final EnderecoService _enderecoService =
+      widget.enderecoService ?? EnderecoService();
   final MapController _mapController = MapController();
 
   LatLng? _localizacaoAtual;
@@ -44,6 +47,7 @@ class _TesteMapaState extends State<TesteMapa> {
   bool _buscandoLocalizacao = true;
   bool _buscandoEndereco = false;
   bool _pontoEspecifico = true;
+  int _consultaEndereco = 0;
 
   @override
   void initState() {
@@ -54,7 +58,9 @@ class _TesteMapaState extends State<TesteMapa> {
   // Obtém a localização atual e centraliza o mapa.
   Future<void> _obterLocalizacao() async {
     try {
-      final posicao = await _localizacaoService.obterLocalizacaoAtual();
+      final posicao = await _localizacaoService.obterLocalizacaoAtual().timeout(
+        const Duration(seconds: 8),
+      );
 
       if (!mounted) {
         return;
@@ -89,6 +95,7 @@ class _TesteMapaState extends State<TesteMapa> {
 
   // Busca o endereço correspondente ao ponto escolhido.
   Future<void> _buscarEnderecoDoPonto(LatLng ponto) async {
+    final consulta = ++_consultaEndereco;
     setState(() {
       _buscandoEndereco = true;
       _enderecoPontoEncontro = null;
@@ -102,7 +109,7 @@ class _TesteMapaState extends State<TesteMapa> {
       ponto.longitude,
     );
 
-    if (!mounted) {
+    if (!mounted || consulta != _consultaEndereco) {
       return;
     }
 
@@ -130,6 +137,7 @@ class _TesteMapaState extends State<TesteMapa> {
 
   // Move o mapa para o resultado selecionado na pesquisa.
   void _selecionarEnderecoPesquisado(LocalizacaoSelecionada local) {
+    _consultaEndereco++;
     setState(() {
       _pontoEncontro = local.ponto;
 
@@ -333,7 +341,7 @@ class _TesteMapaState extends State<TesteMapa> {
                           ? '$_nomePontoEncontro - '
                                 '${_enderecoPontoEncontro ?? ''}'
                           : _enderecoPontoEncontro ??
-                                'Toque no mapa para ajustar a origem',
+                                'Toque no mapa para escolher o ponto',
                     ),
 
                   const SizedBox(height: 12),

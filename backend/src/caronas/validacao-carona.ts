@@ -31,9 +31,10 @@ export class ValidacaoCarona {
         );
       }
     }
-    const { vagas: _vagas, ...dados } = this.validarDadosCarona(
+    const { vagas: _vagas, ...dados } = this.validarDadosRecebidos(
       { ...body, vagas: capacidadePassageiros },
       idUsuario,
+      false,
     );
     void _vagas;
     return {
@@ -47,16 +48,40 @@ export class ValidacaoCarona {
     body: DadosCaronaRecebidos,
     idUsuario: number,
   ): DadosCriacaoCarona {
-    const dados = body ?? {};
+    return this.validarDadosRecebidos(body, idUsuario, true);
+  }
 
-    const origem = dados.origem?.toString().trim() ?? '';
+  private validarDadosRecebidos(
+    body: DadosCaronaRecebidos,
+    idUsuario: number,
+    inicioPeloEncontro: boolean,
+  ): DadosCriacaoCarona {
+    const dados = body ?? {};
+    const pontosEmbarque = this.validarPontosEmbarque(dados.pontosEmbarque);
+    const primeiroEncontro = inicioPeloEncontro ? pontosEmbarque[0] : undefined;
+    if (inicioPeloEncontro && !primeiroEncontro) {
+      throw new BadRequestException('Adicione pelo menos um ponto de encontro');
+    }
+    if (inicioPeloEncontro) {
+      const coordenadas = pontosEmbarque.map((ponto) =>
+        JSON.stringify([ponto.latitude, ponto.longitude]),
+      );
+      if (new Set(coordenadas).size !== coordenadas.length) {
+        throw new BadRequestException('Há pontos de encontro duplicados');
+      }
+    }
+
+    const origem =
+      primeiroEncontro?.endereco ?? dados.origem?.toString().trim() ?? '';
     const destino = dados.destino?.toString().trim() ?? '';
     const dataInicio = dados.dataInicio?.toString().trim() ?? '';
     const horario = dados.horario?.toString().trim() ?? '';
 
     if (!origem || !destino || !dataInicio || !horario) {
       throw new BadRequestException(
-        'Origem, destino, data e horário são obrigatórios',
+        inicioPeloEncontro
+          ? 'Destino, data e horário são obrigatórios'
+          : 'Origem, destino, data e horário são obrigatórios',
       );
     }
 
@@ -100,28 +125,32 @@ export class ValidacaoCarona {
       throw new BadRequestException('Dia da semana inválido');
     }
 
-    const pontosEmbarque = this.validarPontosEmbarque(dados.pontosEmbarque);
-
     return {
       idUsuario,
 
       origem,
 
-      origemCidade: this.textoOpcional(dados.origemCidade, 100),
+      origemCidade: primeiroEncontro
+        ? null
+        : this.textoOpcional(dados.origemCidade, 100),
 
-      origemLatitude: this.validarCoordenada(
-        dados.origemLatitude,
-        -90,
-        90,
-        'Latitude da origem',
-      ),
+      origemLatitude:
+        primeiroEncontro?.latitude ??
+        this.validarCoordenada(
+          dados.origemLatitude,
+          -90,
+          90,
+          'Latitude da origem',
+        ),
 
-      origemLongitude: this.validarCoordenada(
-        dados.origemLongitude,
-        -180,
-        180,
-        'Longitude da origem',
-      ),
+      origemLongitude:
+        primeiroEncontro?.longitude ??
+        this.validarCoordenada(
+          dados.origemLongitude,
+          -180,
+          180,
+          'Longitude da origem',
+        ),
 
       destino,
 

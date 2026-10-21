@@ -131,7 +131,10 @@ class _MapaRotaCaronaState extends State<MapaRotaCarona> {
                 onTentarNovamente: _carregarRota,
               ),
             ),
-            _ResumoRota(rota: rota, quantidadeParadas: _paradas!.length),
+            _ResumoRota(
+              rota: rota,
+              possuiEncontros: widget.carona.pontosEmbarque.isNotEmpty,
+            ),
           ],
         ],
       ),
@@ -186,9 +189,9 @@ class _ErroRota extends StatelessWidget {
 
 class _ResumoRota extends StatelessWidget {
   final RotaResultado rota;
-  final int quantidadeParadas;
+  final bool possuiEncontros;
 
-  const _ResumoRota({required this.rota, required this.quantidadeParadas});
+  const _ResumoRota({required this.rota, required this.possuiEncontros});
 
   @override
   Widget build(BuildContext context) {
@@ -230,11 +233,15 @@ class _ResumoRota extends StatelessWidget {
             spacing: 12,
             runSpacing: 6,
             children: [
-              Text('● Origem', style: TextStyle(color: Colors.green.shade700)),
-              if (quantidadeParadas > 2)
+              if (possuiEncontros)
                 Text(
-                  '● Embarques numerados',
+                  '● Encontros numerados',
                   style: TextStyle(color: Colors.blue.shade700),
+                )
+              else
+                Text(
+                  '● Origem',
+                  style: TextStyle(color: Colors.green.shade700),
                 ),
               const Text(
                 '⚑ Destino',

@@ -9,6 +9,7 @@ import 'package:http/testing.dart';
 import 'package:uni_carona/home/ofertar_carona.dart';
 import 'package:uni_carona/models/capacidade_carona.dart';
 import 'package:uni_carona/models/carona.dart';
+import 'package:uni_carona/models/ponto_embarque.dart';
 import 'package:uni_carona/services/auth_service.dart';
 import 'package:uni_carona/services/mensagem_service.dart';
 import 'package:uni_carona/services/solicitacao_service.dart';
@@ -33,6 +34,15 @@ Carona carona({int vagas = 0}) => Carona(
   motorista: 'Motorista',
   idMotorista: 7,
   status: 'LOTADA',
+  pontosEmbarque: const [
+    PontoEmbarque(
+      id: 20,
+      endereco: 'Encontro diferente da origem',
+      latitude: -21.2,
+      longitude: -50.2,
+      ordem: 1,
+    ),
+  ],
 );
 
 void main() {
@@ -99,6 +109,13 @@ void main() {
             expect(body['observacoes'], 'Observacao de teste');
             expect(body['horario'], '18:00:37');
             expect(body['valor'], 5.9);
+            expect(body['origem'], 'Rua A, 10');
+            expect(body['origemLatitude'], -21);
+            expect(body['origemLongitude'], -50);
+            expect(
+              (body['pontosEmbarque'] as List).first['endereco'],
+              'Encontro diferente da origem',
+            );
             return http.Response.bytes(
               utf8.encode(
                 jsonEncode(
@@ -154,11 +171,7 @@ void main() {
       expect(form.edicaoLimitada, aceitos > 0);
       expect(campo(form.valorController).readOnly, aceitos > 0);
       expect(campo(form.observacoesController).readOnly, isFalse);
-      for (final controller in [
-        form.origemController,
-        form.dataController,
-        form.horarioController,
-      ]) {
+      for (final controller in [form.dataController, form.horarioController]) {
         expect(campo(controller).onTap == null, aceitos > 0);
       }
       expect(

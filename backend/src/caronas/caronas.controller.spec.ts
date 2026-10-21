@@ -55,6 +55,13 @@ describe('CaronasController', () => {
         vagas: carona.vagas,
         valor: carona.valor,
         recorrente: false,
+        pontosEmbarque: [
+          {
+            endereco: carona.origem,
+            latitude: carona.origemLatitude,
+            longitude: carona.origemLongitude,
+          },
+        ],
       },
       { usuario: { sub: 1 } } as never,
     );
@@ -89,6 +96,9 @@ describe('CaronasController', () => {
           vagas: 5,
           valor: 8.5,
           recorrente: false,
+          pontosEmbarque: [
+            { endereco: 'Rua A', latitude: -21.2, longitude: -50.4 },
+          ],
         },
         { usuario: { sub: 1 } } as never,
       ),
