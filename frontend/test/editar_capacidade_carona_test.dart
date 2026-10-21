@@ -14,6 +14,7 @@ import 'package:uni_carona/services/mensagem_service.dart';
 import 'package:uni_carona/services/solicitacao_service.dart';
 import 'package:uni_carona/widgets/formulario_ofertar_carona.dart';
 import 'package:uni_carona/widgets/seletor_quantidade_passageiros.dart';
+import 'package:uni_carona/widgets/campo_destino_campus.dart';
 
 Carona carona({int vagas = 0}) => Carona(
   id: 10,
@@ -24,9 +25,9 @@ Carona carona({int vagas = 0}) => Carona(
   destinoLatitude: -21.1,
   destinoLongitude: -50.1,
   dataInicio: DateTime(2099, 12, 1),
-  horario: '18:00:00',
+  horario: '18:00:37',
   vagas: vagas,
-  valor: 5,
+  valor: 5.9,
   recorrente: false,
   diasSemana: [],
   motorista: 'Motorista',
@@ -96,6 +97,8 @@ void main() {
             expect(body['capacidadeAnterior'], 4);
             expect(body.containsKey('vagas'), isFalse);
             expect(body['observacoes'], 'Observacao de teste');
+            expect(body['horario'], '18:00:37');
+            expect(body['valor'], 5.9);
             return http.Response.bytes(
               utf8.encode(
                 jsonEncode(
@@ -118,6 +121,103 @@ void main() {
       );
     });
   }
+
+  for (final aceitos in [0, 1]) {
+    testWidgets('campos da viagem com $aceitos passageiros aceitos', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: OfertarCaronaTela(
+            caronaParaEditar: carona(vagas: 3 - aceitos),
+            carregarCapacidade: () async => {
+              'sucesso': true,
+              'dados': CapacidadeCarona(
+                total: 3,
+                aceitos: aceitos,
+                livres: 3 - aceitos,
+              ),
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final form = tester.widget<FormularioOfertarCarona>(
+        find.byType(FormularioOfertarCarona),
+      );
+      TextField campo(TextEditingController controller) =>
+          tester.widget<TextField>(
+            find.byWidgetPredicate(
+              (w) => w is TextField && identical(w.controller, controller),
+            ),
+          );
+      expect(form.edicaoLimitada, aceitos > 0);
+      expect(campo(form.valorController).readOnly, aceitos > 0);
+      expect(campo(form.observacoesController).readOnly, isFalse);
+      for (final controller in [
+        form.origemController,
+        form.dataController,
+        form.horarioController,
+      ]) {
+        expect(campo(controller).onTap == null, aceitos > 0);
+      }
+      expect(
+        find.byType(CampoDestinoCampus),
+        aceitos > 0 ? findsNothing : findsOneWidget,
+      );
+      if (aceitos > 0) {
+        expect(campo(form.destinoController).readOnly, isTrue);
+        expect(find.byTooltip('Alterar origem'), findsNothing);
+        expect(find.byTooltip('Escolher destino no mapa'), findsNothing);
+      }
+      final seletor = tester.widget<SegmentedButton<int>>(
+        find.byType(SegmentedButton<int>),
+      );
+      expect(
+        seletor.segments.map((s) => s.enabled).toList(),
+        aceitos > 0 ? [false, false, true, true] : [true, true, true, true],
+      );
+      await tester.ensureVisible(find.text('2'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('2'));
+      await tester.pump();
+      expect(form.vagasController.text, aceitos > 0 ? '3' : '2');
+      await tester.tap(find.text('4'));
+      await tester.pump();
+      expect(form.vagasController.text, '4');
+      expect(tester.takeException(), isNull);
+    });
+  }
+
+  testWidgets('validacao da tela rejeita reducao de capacidade com aceitos', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OfertarCaronaTela(
+          caronaParaEditar: carona(vagas: 2),
+          carregarCapacidade: () async => {
+            'sucesso': true,
+            'dados': const CapacidadeCarona(total: 3, aceitos: 1, livres: 2),
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final form = tester.widget<FormularioOfertarCarona>(
+      find.byType(FormularioOfertarCarona),
+    );
+    form.vagasController.text = '2';
+    await tester.ensureVisible(find.text('SALVAR ALTERAÇÕES'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('SALVAR ALTERAÇÕES'));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Com passageiros aceitos, a capacidade só pode ser aumentada'),
+      findsOneWidget,
+    );
+    expect(find.byType(FormularioOfertarCarona), findsOneWidget);
+  });
 
   testWidgets('edicao da programacao nao consulta ocupacao das ocorrencias', (
     tester,

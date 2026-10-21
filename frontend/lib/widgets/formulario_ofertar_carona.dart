@@ -22,6 +22,7 @@ class FormularioOfertarCarona extends StatelessWidget {
   final TextEditingController horarioController;
   final TextEditingController vagasController;
   final int? passageirosAceitos;
+  final int capacidadeMinima;
   final TextEditingController valorController;
   final TextEditingController observacoesController;
 
@@ -62,6 +63,7 @@ class FormularioOfertarCarona extends StatelessWidget {
     required this.horarioController,
     required this.vagasController,
     this.passageirosAceitos,
+    this.capacidadeMinima = 1,
     required this.valorController,
     required this.observacoesController,
     required this.caronaRecorrente,
@@ -84,6 +86,8 @@ class FormularioOfertarCarona extends StatelessWidget {
     required this.onDiaSelecionado,
     required this.enviandoCarona,
   });
+
+  bool get edicaoLimitada => (passageirosAceitos ?? 0) > 0;
 
   @override
   Widget build(BuildContext context) {
@@ -149,15 +153,18 @@ class FormularioOfertarCarona extends StatelessWidget {
           icone: Icons.my_location,
           controller: origemController,
           somenteLeitura: true,
-          onTap: onSelecionarOrigem,
-          suffixIcon: const Icon(Icons.map_outlined, color: AppColors.primary),
+          onTap: edicaoLimitada ? null : onSelecionarOrigem,
+          suffixIcon: Icon(
+            edicaoLimitada ? Icons.lock_outline : Icons.map_outlined,
+            color: AppColors.primary,
+          ),
         ),
 
         const SizedBox(height: 8),
 
         if (origemSelecionada == null)
           OutlinedButton.icon(
-            onPressed: onSelecionarOrigem,
+            onPressed: edicaoLimitada ? null : onSelecionarOrigem,
             icon: const Icon(Icons.gps_fixed),
             label: const Text('ESCOLHER NO MAPA OU USAR GPS'),
           )
@@ -189,11 +196,12 @@ class FormularioOfertarCarona extends StatelessWidget {
                     ],
                   ),
                 ),
-                IconButton(
-                  tooltip: 'Alterar origem',
-                  onPressed: onSelecionarOrigem,
-                  icon: const Icon(Icons.edit_location_alt_outlined),
-                ),
+                if (!edicaoLimitada)
+                  IconButton(
+                    tooltip: 'Alterar origem',
+                    onPressed: onSelecionarOrigem,
+                    icon: const Icon(Icons.edit_location_alt_outlined),
+                  ),
               ],
             ),
           ),
@@ -201,27 +209,36 @@ class FormularioOfertarCarona extends StatelessWidget {
         const SizedBox(height: 16),
 
         // O destino pode ser pesquisado ou marcado direto no mapa.
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: CampoDestinoCampus(
-                controller: destinoController,
-                onChanged: onDestinoChanged,
-                onSelecionado: onDestinoSelecionado,
-                referenciaInicial: origemSelecionada,
+        if (edicaoLimitada)
+          CampoTextoCarona(
+            label: 'Destino',
+            icone: Icons.place_outlined,
+            controller: destinoController,
+            somenteLeitura: true,
+            suffixIcon: const Icon(Icons.lock_outline),
+          )
+        else
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: CampoDestinoCampus(
+                  controller: destinoController,
+                  onChanged: onDestinoChanged,
+                  onSelecionado: onDestinoSelecionado,
+                  referenciaInicial: origemSelecionada,
+                ),
               ),
-            ),
 
-            const SizedBox(width: 8),
+              const SizedBox(width: 8),
 
-            IconButton(
-              tooltip: 'Escolher destino no mapa',
-              onPressed: onSelecionarDestino,
-              icon: const Icon(Icons.map_outlined, color: AppColors.primary),
-            ),
-          ],
-        ),
+              IconButton(
+                tooltip: 'Escolher destino no mapa',
+                onPressed: onSelecionarDestino,
+                icon: const Icon(Icons.map_outlined, color: AppColors.primary),
+              ),
+            ],
+          ),
 
         const SizedBox(height: 24),
 
@@ -234,8 +251,10 @@ class FormularioOfertarCarona extends StatelessWidget {
           icone: Icons.calendar_today_outlined,
           controller: dataController,
           somenteLeitura: true,
-          onTap: onSelecionarData,
-          suffixIcon: const Icon(Icons.arrow_drop_down),
+          onTap: edicaoLimitada ? null : onSelecionarData,
+          suffixIcon: Icon(
+            edicaoLimitada ? Icons.lock_outline : Icons.arrow_drop_down,
+          ),
         ),
 
         const SizedBox(height: 16),
@@ -245,8 +264,10 @@ class FormularioOfertarCarona extends StatelessWidget {
           icone: Icons.access_time,
           controller: horarioController,
           somenteLeitura: true,
-          onTap: onSelecionarHorario,
-          suffixIcon: const Icon(Icons.arrow_drop_down),
+          onTap: edicaoLimitada ? null : onSelecionarHorario,
+          suffixIcon: Icon(
+            edicaoLimitada ? Icons.lock_outline : Icons.arrow_drop_down,
+          ),
         ),
 
         const SizedBox(height: 16),
@@ -254,6 +275,7 @@ class FormularioOfertarCarona extends StatelessWidget {
         SeletorQuantidadePassageiros(
           controller: vagasController,
           passageirosAceitos: passageirosAceitos,
+          capacidadeMinima: capacidadeMinima,
         ),
 
         const SizedBox(height: 16),
@@ -262,13 +284,15 @@ class FormularioOfertarCarona extends StatelessWidget {
           label: 'Valor por passageiro',
           icone: Icons.payments_outlined,
           controller: valorController,
+          somenteLeitura: edicaoLimitada,
+          suffixIcon: edicaoLimitada ? const Icon(Icons.lock_outline) : null,
           keyboardType: TextInputType.number,
           inputFormatters: [FormatadorMoedaReal()],
         ),
 
         const SizedBox(height: 16),
 
-        if (mostrarRecorrencia)
+        if (mostrarRecorrencia && !edicaoLimitada)
           CampoRecorrenciaCarona(
             caronaRecorrente: caronaRecorrente,
             diasSelecionados: diasSelecionados,
@@ -311,8 +335,10 @@ class FormularioOfertarCarona extends StatelessWidget {
 
         const SizedBox(height: 6),
 
-        const Text(
-          'Adicione os locais onde os passageiros poderão embarcar.',
+        Text(
+          edicaoLimitada
+              ? 'Locais de embarque confirmados.'
+              : 'Adicione os locais onde os passageiros poderão embarcar.',
           style: TextStyle(color: Colors.black54, fontSize: 14),
         ),
 
@@ -411,7 +437,7 @@ class FormularioOfertarCarona extends StatelessWidget {
                       ),
                     ),
 
-                    if (pontosEmbarqueEditaveis)
+                    if (pontosEmbarqueEditaveis && !edicaoLimitada)
                       IconButton(
                         tooltip: 'Remover ponto',
                         onPressed: () => onRemoverPontoEmbarque(indice),
@@ -431,7 +457,7 @@ class FormularioOfertarCarona extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: OutlinedButton.icon(
-            onPressed: pontosEmbarqueEditaveis
+            onPressed: pontosEmbarqueEditaveis && !edicaoLimitada
                 ? onAdicionarPontoEmbarque
                 : null,
             icon: const Icon(Icons.add_location_alt_outlined),
@@ -441,9 +467,11 @@ class FormularioOfertarCarona extends StatelessWidget {
 
         if (!pontosEmbarqueEditaveis) ...[
           const SizedBox(height: 8),
-          const Text(
-            'A edição dos pontos de embarque será adicionada depois.',
-            style: TextStyle(color: Colors.black45, fontSize: 12),
+          Text(
+            edicaoLimitada
+                ? 'Pontos mantidos para os passageiros confirmados.'
+                : 'A edição dos pontos de embarque será adicionada depois.',
+            style: const TextStyle(color: Colors.black45, fontSize: 12),
           ),
         ],
       ],

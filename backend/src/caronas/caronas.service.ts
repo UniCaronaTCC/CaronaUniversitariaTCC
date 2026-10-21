@@ -156,10 +156,56 @@ export class CaronasService {
           'A capacidade não pode ser menor que a quantidade de passageiros aceitos. Reabra a carona para conferir as reservas',
         );
       }
-      aplicarDadosCarona(carona, {
-        ...dados,
-        vagas: dados.capacidadePassageiros - capacidade.passageirosAceitos,
-      });
+      if (capacidade.passageirosAceitos > 0) {
+        if (dados.capacidadePassageiros < capacidade.capacidadePassageiros) {
+          throw new ConflictException(
+            'Com passageiros aceitos, a capacidade só pode ser aumentada',
+          );
+        }
+        const camposFixos = [
+          'origem',
+          'origemCidade',
+          'origemLatitude',
+          'origemLongitude',
+          'destino',
+          'destinoCidade',
+          'destinoLatitude',
+          'destinoLongitude',
+          'dataInicio',
+          'dataFim',
+          'horario',
+          'valor',
+        ] as const;
+        const pontos = await manager.getRepository(PontoEmbarque).find({
+          where: { carona: { idCarona } },
+          order: { ordem: 'ASC', idPontoEmbarque: 'ASC' },
+        });
+        const pontosAlterados =
+          pontos.length !== dados.pontosEmbarque.length ||
+          pontos.some((ponto, indice) => {
+            const recebido = dados.pontosEmbarque[indice];
+            return (
+              ['nome', 'endereco', 'latitude', 'longitude', 'ordem'] as const
+            ).some((campo) => ponto[campo] !== recebido[campo]);
+          });
+        if (
+          camposFixos.some((campo) => carona[campo] !== dados[campo]) ||
+          pontosAlterados
+        ) {
+          throw new ConflictException(
+            'Há passageiros aceitos. Apenas observações e aumento de capacidade são permitidos. Reabra a carona para conferir as reservas',
+          );
+        }
+        // Nao regrava os dados da viagem ja confirmados pelos passageiros.
+        carona.vagas =
+          dados.capacidadePassageiros - capacidade.passageirosAceitos;
+        carona.observacoes = dados.observacoes?.trim() || null;
+      } else {
+        aplicarDadosCarona(carona, {
+          ...dados,
+          vagas: dados.capacidadePassageiros,
+        });
+      }
       carona.status = carona.vagas === 0 ? 'LOTADA' : 'ATIVA';
       const repository = manager.getRepository(Carona);
       await repository.save(carona);

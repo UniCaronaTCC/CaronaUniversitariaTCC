@@ -70,6 +70,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
   bool get editando => widget.caronaParaEditar != null;
   bool get edicaoIndividual => editando && widget.idRecorrencia == null;
+  bool get edicaoLimitada => edicaoIndividual && (capacidade?.aceitos ?? 0) > 0;
   bool get precisaCnh => !editando || widget.idRecorrencia != null;
 
   bool get possuiVeiculo =>
@@ -470,13 +471,17 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
           : DataHoraUtils.formatarDataBackend(
               widget.caronaParaEditar!.dataFim!,
             ),
-      horario: '${DataHoraUtils.formatarHorario(horarioSelecionado!)}:00',
+      horario: edicaoLimitada
+          ? widget.caronaParaEditar!.horario
+          : '${DataHoraUtils.formatarHorario(horarioSelecionado!)}:00',
       vagas: int.parse(vagasController.text),
       capacidadePassageiros: edicaoIndividual
           ? int.parse(vagasController.text)
           : null,
       capacidadeAnterior: edicaoIndividual ? capacidade?.total : null,
-      valor: converterMoedaRealParaDouble(valorController.text),
+      valor: edicaoLimitada
+          ? widget.caronaParaEditar!.valor
+          : converterMoedaRealParaDouble(valorController.text),
       recorrente: caronaRecorrente,
       diasSemana: caronaRecorrente ? List<String>.from(diasSelecionados) : null,
       observacoes: observacoes.isEmpty ? null : observacoes,
@@ -567,6 +572,9 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     }
     if (edicaoIndividual && vagas < capacidade!.aceitos) {
       return 'A capacidade não pode ser menor que a quantidade de passageiros aceitos';
+    }
+    if (edicaoLimitada && vagas < capacidade!.total) {
+      return 'Com passageiros aceitos, a capacidade só pode ser aumentada';
     }
 
     if (caronaRecorrente && diasSelecionados.isEmpty) {
@@ -689,6 +697,8 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
                       : 'Ofertar carona',
                   descricao: widget.idRecorrencia != null
                       ? 'Alterações valem para novas datas. Caronas já publicadas são mantidas.'
+                      : edicaoLimitada
+                      ? 'Passageiros confirmados. Dados da viagem bloqueados.'
                       : editando
                       ? 'Atualize os dados da viagem'
                       : 'Informe os dados da viagem',
@@ -703,6 +713,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
                   passageirosAceitos: edicaoIndividual
                       ? capacidade?.aceitos
                       : null,
+                  capacidadeMinima: edicaoLimitada ? capacidade!.total : 1,
                   valorController: valorController,
                   observacoesController: observacoesController,
 

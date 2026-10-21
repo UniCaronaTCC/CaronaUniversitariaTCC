@@ -5,11 +5,13 @@ import '../config/app_colors.dart';
 class SeletorQuantidadePassageiros extends StatelessWidget {
   final TextEditingController controller;
   final int? passageirosAceitos;
+  final int capacidadeMinima;
 
   const SeletorQuantidadePassageiros({
     super.key,
     required this.controller,
     this.passageirosAceitos,
+    this.capacidadeMinima = 1,
   });
 
   @override
@@ -53,7 +55,9 @@ class SeletorQuantidadePassageiros extends StatelessWidget {
                     ButtonSegment(
                       value: valor,
                       label: Text('$valor'),
-                      enabled: valor >= (passageirosAceitos ?? 0),
+                      enabled:
+                          valor >= (passageirosAceitos ?? 0) &&
+                          valor >= capacidadeMinima,
                     ),
                 ],
                 selected:

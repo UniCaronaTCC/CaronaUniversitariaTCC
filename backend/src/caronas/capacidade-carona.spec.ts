@@ -32,19 +32,39 @@ describe('Edicao de capacidade com reservas', () => {
     valor: 5,
     recorrente: false,
     diasSemana: null,
-    pontosEmbarque: [],
+    pontosEmbarque: [
+      {
+        nome: 'Portaria',
+        endereco: 'Rua A, 10',
+        latitude: -21,
+        longitude: -50,
+        ordem: 1,
+      },
+      {
+        nome: null,
+        endereco: 'Rua B, 20',
+        latitude: -21.1,
+        longitude: -50.1,
+        ordem: 2,
+      },
+    ],
     observacoes: 'Nova observacao',
   };
 
   function preparar(livres = 2, aceitos = 2) {
     const eventos: string[] = [];
     const carona = Object.assign(new Carona(), {
+      ...dados,
       idCarona: 10,
       vagas: livres,
       status: livres ? 'ATIVA' : 'LOTADA',
       dataInicio: dados.dataInicio,
       recorrente: false,
-      pontosEmbarque: [{ ordem: 2 }, { ordem: 1 }],
+      pontosEmbarque: dados.pontosEmbarque
+        .map((p, i) =>
+          Object.assign(new PontoEmbarque(), p, { idPontoEmbarque: i + 1 }),
+        )
+        .reverse(),
     });
     const getOne = jest
       .fn<Promise<Carona | null>, []>()
@@ -73,7 +93,20 @@ describe('Edicao de capacidade com reservas', () => {
         .mockResolvedValue(carona),
     };
     const manager = {
-      getRepository: (e: unknown) => (e === Carona ? repo : { count }),
+      getRepository: (e: unknown) =>
+        e === Carona
+          ? repo
+          : e === PontoEmbarque
+            ? {
+                find: jest
+                  .fn()
+                  .mockResolvedValue(
+                    [...carona.pontosEmbarque].sort(
+                      (a, b) => a.ordem - b.ordem,
+                    ),
+                  ),
+              }
+            : { count },
     } as unknown as EntityManager;
     const transaction = jest
       .fn<Promise<unknown>, [(m: EntityManager) => Promise<unknown>]>()
@@ -92,8 +125,8 @@ describe('Edicao de capacidade com reservas', () => {
 
   it.each([
     [2, 2, 4, 2, 'ATIVA'],
-    [2, 2, 3, 1, 'ATIVA'],
-    [2, 2, 2, 0, 'LOTADA'],
+    [1, 2, 4, 2, 'ATIVA'],
+    [4, 0, 2, 2, 'ATIVA'],
     [0, 4, 4, 0, 'LOTADA'],
     [0, 2, 4, 2, 'ATIVA'],
     [1, 0, 1, 1, 'ATIVA'],
@@ -195,10 +228,10 @@ describe('Edicao de capacidade com reservas', () => {
     const h = preparar(1, 3);
     const r = await h.service.atualizarCarona(10, {
       ...dados,
-      capacidadePassageiros: 3,
+      capacidadePassageiros: 4,
     });
-    expect(r.vagas).toBe(0);
-    expect(r.status).toBe('LOTADA');
+    expect(r.vagas).toBe(1);
+    expect(r.status).toBe('ATIVA');
   });
 
   it('recusa reducao quando novos aceites ultrapassam a capacidade escolhida', async () => {
@@ -216,9 +249,9 @@ describe('Edicao de capacidade com reservas', () => {
       const h = preparar(3, 1);
       const r = await h.service.atualizarCarona(10, {
         ...dados,
-        capacidadePassageiros: 2,
+        capacidadePassageiros: 4,
       });
-      expect(r.vagas).toBe(1);
+      expect(r.vagas).toBe(3);
     },
   );
 
@@ -231,7 +264,7 @@ describe('Edicao de capacidade com reservas', () => {
   });
 
   it('duas edicoes concorrentes em transacoes serializadas nao se sobrescrevem', async () => {
-    const h = preparar();
+    const h = preparar(1, 1);
     // Simula a serializacao do bloqueio de linha, sem usar o banco real.
     let fila = Promise.resolve();
     h.transaction.mockImplementation((executar) => {
@@ -245,12 +278,14 @@ describe('Edicao de capacidade com reservas', () => {
     const primeira = h.service.atualizarCarona(10, {
       ...dados,
       capacidadePassageiros: 3,
+      capacidadeAnterior: 2,
     });
     const segunda = h.service.atualizarCarona(10, {
       ...dados,
-      capacidadePassageiros: 2,
+      capacidadePassageiros: 4,
+      capacidadeAnterior: 2,
     });
-    await expect(primeira).resolves.toMatchObject({ vagas: 1 });
+    await expect(primeira).resolves.toMatchObject({ vagas: 2 });
     await expect(segunda).rejects.toThrow('outra edição');
     expect(h.save).toHaveBeenCalledTimes(1);
   });
@@ -271,5 +306,109 @@ describe('Edicao de capacidade com reservas', () => {
       h.service.atualizarCarona(10, { ...dados, dataInicio: '2099-12-02' }),
     ).rejects.toThrow('programação');
     expect(h.save).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { origem: 'Outra rua' },
+    { origemCidade: 'Outra cidade' },
+    { origemLatitude: -22 },
+    { origemLongitude: -51 },
+    { destino: 'Outro campus' },
+    { destinoCidade: 'Outra cidade' },
+    { destinoLatitude: -22 },
+    { destinoLongitude: -51 },
+    { dataInicio: '2099-12-02' },
+    { dataFim: '2099-12-02' },
+    { horario: '19:00:00' },
+    { valor: 10 },
+    { pontosEmbarque: [] },
+    { pontosEmbarque: [...dados.pontosEmbarque].reverse() },
+    {
+      pontosEmbarque: dados.pontosEmbarque.map((p) => ({
+        ...p,
+        nome: 'Outro ponto',
+      })),
+    },
+    {
+      pontosEmbarque: dados.pontosEmbarque.map((p) => ({
+        ...p,
+        endereco: 'Outro endereco',
+      })),
+    },
+    {
+      pontosEmbarque: dados.pontosEmbarque.map((p) => ({
+        ...p,
+        latitude: -22,
+      })),
+    },
+    {
+      pontosEmbarque: dados.pontosEmbarque.map((p) => ({
+        ...p,
+        longitude: -51,
+      })),
+    },
+  ])('bloqueia alteracao de dados confirmados: %j', async (alteracao) => {
+    const h = preparar();
+    await expect(
+      h.service.atualizarCarona(10, { ...dados, ...alteracao }),
+    ).rejects.toThrow('Apenas observações');
+    expect(h.save).not.toHaveBeenCalled();
+    expect(h.carona.vagas).toBe(2);
+    expect(h.carona.valor).toBe(5);
+  });
+
+  it.each([2, 3])(
+    'com aceitos nao permite reduzir capacidade para %i mesmo havendo vagas',
+    async (total) => {
+      const h = preparar();
+      await expect(
+        h.service.atualizarCarona(10, {
+          ...dados,
+          capacidadePassageiros: total,
+        }),
+      ).rejects.toThrow('só pode ser aumentada');
+      expect(h.save).not.toHaveBeenCalled();
+    },
+  );
+
+  it('sem aceitos permite editar os dados da viagem e reduzir capacidade', async () => {
+    const h = preparar(4, 0);
+    const r = await h.service.atualizarCarona(10, {
+      ...dados,
+      destino: 'Outro campus',
+      horario: '19:00:00',
+      valor: 10,
+      capacidadePassageiros: 1,
+    });
+    expect(r.destino).toBe('Outro campus');
+    expect(r.horario).toBe('19:00:00');
+    expect(r.valor).toBe(10);
+    expect(r.vagas).toBe(1);
+  });
+
+  it('novo aceite durante a edicao bloqueia mudanca de preco', async () => {
+    const h = preparar(4, 0);
+    await expect(h.service.buscarCapacidade(10, 7)).resolves.toMatchObject({
+      passageirosAceitos: 0,
+    });
+    h.carona.vagas = 3;
+    h.count.mockResolvedValue(1);
+    await expect(
+      h.service.atualizarCarona(10, { ...dados, valor: 10 }),
+    ).rejects.toThrow('Reabra a carona');
+    expect(h.carona.valor).toBe(5);
+    expect(h.save).not.toHaveBeenCalled();
+  });
+
+  it('novo aceite durante a edicao permite observacoes sem mudar os dados confirmados', async () => {
+    const h = preparar(4, 0);
+    await h.service.buscarCapacidade(10, 7);
+    h.carona.vagas = 3;
+    h.count.mockResolvedValue(1);
+    const r = await h.service.atualizarCarona(10, dados);
+    expect(r.vagas).toBe(3);
+    expect(r.observacoes).toBe(dados.observacoes);
+    expect(r.destino).toBe(dados.destino);
+    expect(r.valor).toBe(5);
   });
 });
