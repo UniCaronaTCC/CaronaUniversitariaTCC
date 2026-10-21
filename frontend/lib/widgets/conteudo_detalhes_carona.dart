@@ -76,9 +76,17 @@ class ConteudoDetalhesCarona extends StatelessWidget {
               SizedBox(
                 width: 150,
                 child: _SecaoDetalhe(
-                  titulo: 'Data e horário',
+                  titulo: 'Data',
                   icone: Icons.access_time,
-                  conteudo: '${_textoData()}\n${carona.horarioFormatado}',
+                  conteudo: _textoData(),
+                ),
+              ),
+              SizedBox(
+                width: 150,
+                child: _SecaoDetalhe(
+                  titulo: carona.rotuloHorario,
+                  icone: Icons.schedule,
+                  conteudo: carona.horarioFormatado,
                 ),
               ),
               SizedBox(
@@ -92,15 +100,16 @@ class ConteudoDetalhesCarona extends StatelessWidget {
             ],
           ),
           const Divider(height: 32),
-          if (carona.origem.trim().isNotEmpty) ...[
+          if (carona.pontosEmbarque.isEmpty &&
+              carona.origem.trim().isNotEmpty) ...[
             _SecaoDetalhe(
-              titulo: 'Origem',
+              titulo: 'Saída cadastrada',
               icone: Icons.trip_origin,
               conteudo: carona.origem.trim(),
             ),
             const SizedBox(height: 22),
           ],
-          _SecaoPontosEmbarque(pontos: carona.pontosEmbarque),
+          _SecaoPontosEmbarque(pontos: carona.pontosEmbarqueOrdenados),
           const SizedBox(height: 22),
           _SecaoDetalhe(
             titulo: 'Destino',
@@ -203,7 +212,7 @@ class _SecaoPontosEmbarque extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Pontos de embarque',
+          'Pontos de encontro',
           style: TextStyle(color: Colors.black54, fontSize: 13),
         ),
 
@@ -221,7 +230,7 @@ class _SecaoPontosEmbarque extends StatelessWidget {
               SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Nenhum ponto de embarque cadastrado',
+                  'Nenhum ponto de encontro cadastrado',
                   style: TextStyle(
                     color: AppColors.text,
                     fontSize: 16,
@@ -265,7 +274,19 @@ class _ItemPontoEmbarque extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              if (nome != null && nome.isNotEmpty) ...[
+              Text(
+                'Encontro ${ponto.ordem}',
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 2),
+              if (nome != null &&
+                  nome.isNotEmpty &&
+                  nome.toLowerCase() !=
+                      ponto.endereco.trim().toLowerCase()) ...[
                 Text(
                   nome,
                   style: const TextStyle(

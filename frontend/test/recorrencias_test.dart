@@ -83,4 +83,82 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.textContaining('Nenhuma programação'), findsOneWidget);
   });
+
+  testWidgets('recorrencia usa primeiro encontro e nao a origem antiga', (
+    tester,
+  ) async {
+    final programacao = RecorrenciaCarona.fromJson({
+      'idRecorrencia': 7,
+      'ativa': true,
+      'dados': {
+        ...dados,
+        'pontosEmbarque': [
+          {
+            'endereco': 'Rua B, 20',
+            'latitude': -21.3,
+            'longitude': -50.5,
+            'ordem': 2,
+          },
+          {
+            'nome': 'Praca central',
+            'endereco': 'Rua do encontro, 100',
+            'latitude': -21.2,
+            'longitude': -50.4,
+            'ordem': 1,
+          },
+        ],
+      },
+    });
+    await tester.pumpWidget(
+      MaterialApp(home: RecorrenciasTela(carregar: () async => [programacao])),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Primeiro encontro: Praca central • Rua do encontro, 100'),
+      findsOneWidget,
+    );
+    expect(find.text('Horário do primeiro encontro: 18:00'), findsOneWidget);
+    expect(find.textContaining('Rua A, 10'), findsNothing);
+    expect(find.text('Faculdade'), findsOneWidget);
+    expect(find.text('EDITAR'), findsOneWidget);
+    expect(find.text('PAUSAR'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('recorrencia antiga mantem saida cadastrada sem encontro falso', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      MaterialApp(
+        home: RecorrenciasTela(carregar: () async => [modelo(false)]),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Saída cadastrada: Rua A, 10'), findsOneWidget);
+    expect(find.text('Horário: 18:00'), findsOneWidget);
+    expect(find.textContaining('Primeiro encontro'), findsNothing);
+  });
+
+  testWidgets('recorrencia cabe em tela estreita com fonte ampliada', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 800);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await tester.pumpWidget(
+      MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: const TextScaler.linear(1.5)),
+          child: child!,
+        ),
+        home: RecorrenciasTela(carregar: () async => [modelo(true)]),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.scrollUntilVisible(find.text('PAUSAR'), 200);
+    expect(tester.takeException(), isNull);
+  });
 }

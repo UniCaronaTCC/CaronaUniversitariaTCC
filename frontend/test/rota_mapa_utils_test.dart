@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:uni_carona/mapa/utils/rota_mapa_utils.dart';
 import 'package:uni_carona/models/carona.dart';
@@ -74,7 +75,7 @@ void main() {
     );
   });
   test('marcadores da previa incluem cada encontro uma unica vez', () {
-    final carona = viagem([primeiro, segundo]);
+    final carona = viagem([segundo, primeiro]);
     final marcadores = MarcadoresPercurso(
       carona: carona,
       paradas: paradasDaCarona(carona)!,
@@ -88,6 +89,48 @@ void main() {
       const LatLng(-21.2, -50.2),
       const LatLng(-21.1, -50.1),
       const LatLng(-21, -50),
+    ]);
+    expect(marcadores.map((m) => (m.child as Tooltip).message), [
+      'Encontro 1',
+      'Encontro 2',
+      'Destino',
+    ]);
+  });
+  test(
+    'marcadores preservam encontro alcancado e localizacao do motorista',
+    () {
+      final carona = viagem([segundo, primeiro]);
+      final marcadores = MarcadoresPercurso(
+        carona: carona,
+        paradas: paradasDaCarona(carona)!,
+        navegacao: true,
+        mostrarMarcadorMotorista: true,
+        localizacaoMotorista: const LatLng(-21.5, -50.5),
+        direcaoMotorista: 0,
+        embarquesConcluidos: {10},
+      ).construir();
+      expect(marcadores.map((m) => (m.child as Tooltip).message), [
+        'Encontro 1 alcançado',
+        'Encontro 2',
+        'Destino',
+        'Motorista',
+      ]);
+    },
+  );
+  test('mapa legado identifica saida cadastrada sem inventar encontro', () {
+    final carona = viagem([]);
+    final marcadores = MarcadoresPercurso(
+      carona: carona,
+      paradas: paradasDaCarona(carona)!,
+      navegacao: false,
+      mostrarMarcadorMotorista: false,
+      localizacaoMotorista: null,
+      direcaoMotorista: 0,
+      embarquesConcluidos: {},
+    ).construir();
+    expect(marcadores.map((m) => (m.child as Tooltip).message), [
+      'Saída cadastrada',
+      'Destino',
     ]);
   });
   test(

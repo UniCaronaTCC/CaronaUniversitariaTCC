@@ -38,14 +38,16 @@ void main() {
     expect(find.text('Detalhes da carona'), findsOneWidget);
     expect(find.text('João'), findsOneWidget);
     expect(find.text('R\$ 5,50'), findsOneWidget);
-    expect(find.text('22/07/2026\n19:00'), findsOneWidget);
+    expect(find.text('22/07/2026'), findsOneWidget);
+    expect(find.text('19:00'), findsOneWidget);
+    expect(find.text('Horário do primeiro encontro'), findsNothing);
     expect(find.text('SEG, QUA, SEX'), findsOneWidget);
     expect(
-      tester.getTopLeft(find.text('Origem')).dy,
-      lessThan(tester.getTopLeft(find.text('Pontos de embarque')).dy),
+      tester.getTopLeft(find.text('Saída cadastrada')).dy,
+      lessThan(tester.getTopLeft(find.text('Pontos de encontro')).dy),
     );
     expect(
-      tester.getTopLeft(find.text('Pontos de embarque')).dy,
+      tester.getTopLeft(find.text('Pontos de encontro')).dy,
       lessThan(tester.getTopLeft(find.text('Destino')).dy),
     );
     expect(find.text('UniSalesiano, Araçatuba, SP'), findsOneWidget);
@@ -113,7 +115,8 @@ void main() {
         ),
       );
       expect(find.text('Detalhes da carona'), findsOneWidget);
-      expect(find.text('22/09/2026\n19:00'), findsOneWidget);
+      expect(find.text('22/09/2026'), findsOneWidget);
+      expect(find.text('19:00'), findsOneWidget);
       expect(find.text('SEG, TER'), findsOneWidget);
       expect(find.text('Gerenciar carona'), findsNothing);
       expect(find.text('EDITAR'), findsNothing);

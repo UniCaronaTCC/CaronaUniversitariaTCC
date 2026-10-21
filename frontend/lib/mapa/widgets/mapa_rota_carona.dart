@@ -240,7 +240,7 @@ class _ResumoRota extends StatelessWidget {
                 )
               else
                 Text(
-                  '● Origem',
+                  '● Saída cadastrada',
                   style: TextStyle(color: Colors.green.shade700),
                 ),
               const Text(

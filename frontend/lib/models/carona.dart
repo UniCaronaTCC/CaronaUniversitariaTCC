@@ -149,6 +149,29 @@ class Carona {
   // Formata o valor no padrao brasileiro.
   String get valorFormatado => formatarDoubleComoMoedaReal(valor);
 
+  List<PontoEmbarque> get pontosEmbarqueOrdenados =>
+      [...pontosEmbarque]..sort((a, b) => a.ordem.compareTo(b.ordem));
+
+  String get rotuloHorario =>
+      pontosEmbarque.isEmpty ? 'Horário' : 'Horário do primeiro encontro';
+
+  String get resumoInicio {
+    if (pontosEmbarque.isEmpty) {
+      final saida = origem.trim();
+      return saida.isEmpty
+          ? 'Ponto de encontro não informado'
+          : 'Saída cadastrada: $saida';
+    }
+    final primeiro = pontosEmbarqueOrdenados.first;
+    final nome = primeiro.nome?.trim() ?? '';
+    final endereco = primeiro.endereco.trim();
+    final local = [
+      if (nome.isNotEmpty && nome.toLowerCase() != endereco.toLowerCase()) nome,
+      if (endereco.isNotEmpty) endereco,
+    ].join(' • ');
+    return 'Primeiro encontro: ${local.isEmpty ? 'Local não informado' : local}';
+  }
+
   bool get finalizada => status == 'FINALIZADA';
   bool get emAndamento => status == 'EM_ANDAMENTO';
 

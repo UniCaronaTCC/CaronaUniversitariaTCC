@@ -119,9 +119,12 @@ class _RecorrenciasTelaState extends State<RecorrenciasTela> {
                         modelo.configuracao.destino,
                         style: const TextStyle(fontWeight: FontWeight.bold),
                       ),
-                      Text('Saída: ${modelo.configuracao.origem}'),
+                      const SizedBox(height: 6),
+                      Text(modelo.configuracao.resumoInicio),
+                      const SizedBox(height: 6),
+                      Text(modelo.configuracao.diasSemana.join(', ')),
                       Text(
-                        '${modelo.configuracao.diasSemana.join(', ')} • ${modelo.configuracao.horarioFormatado}',
+                        '${modelo.configuracao.rotuloHorario}: ${modelo.configuracao.horarioFormatado}',
                       ),
                       Text(
                         modelo.ativa

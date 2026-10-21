@@ -19,9 +19,9 @@ class TesteMapa extends StatefulWidget {
 
   const TesteMapa({
     super.key,
-    this.titulo = 'Confirmar origem',
-    this.instrucao = 'Confira sua origem',
-    this.textoBotao = 'CONFIRMAR ORIGEM',
+    this.titulo = 'Confirmar local',
+    this.instrucao = 'Confira o local selecionado',
+    this.textoBotao = 'CONFIRMAR LOCAL',
     this.indiceNavegacao = 0,
     this.enderecoService,
   });

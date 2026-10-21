@@ -38,10 +38,10 @@ class MarcadoresPercurso {
       ponto: paradas[indice],
       cor: cor,
       titulo: origem
-          ? 'Origem'
+          ? 'Saída cadastrada'
           : destino
           ? 'Destino'
-          : 'Embarque $indice',
+          : 'Encontro $indice',
       child: origem || destino
           ? Icon(
               origem ? Icons.trip_origin : Icons.flag,
@@ -64,8 +64,8 @@ class MarcadoresPercurso {
       ponto: LatLng(ponto.latitude, ponto.longitude),
       cor: concluido ? Colors.green.shade700 : Colors.blue.shade700,
       titulo: concluido
-          ? 'Embarque ${ponto.ordem} alcançado'
-          : 'Embarque ${ponto.ordem}',
+          ? 'Encontro ${ponto.ordem} alcançado'
+          : 'Encontro ${ponto.ordem}',
       rotacionar: true,
       child: concluido
           ? const Icon(Icons.check, size: 20, color: Colors.white)
@@ -117,7 +117,7 @@ class MarcadoresPercurso {
       return marcadores;
     }
     return [
-      ...carona.pontosEmbarque.map(_marcadorEmbarque),
+      ...pontosOrdenados(carona).map(_marcadorEmbarque),
       _marcadorCircular(
         ponto: LatLng(carona.destinoLatitude!, carona.destinoLongitude!),
         cor: AppColors.primary,

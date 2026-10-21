@@ -19,7 +19,7 @@ bool coordenadaValida(double? latitude, double? longitude) {
 int chavePontoEmbarque(PontoEmbarque ponto) => ponto.id ?? -ponto.ordem;
 
 List<PontoEmbarque> pontosOrdenados(Carona carona) {
-  return [...carona.pontosEmbarque]..sort((a, b) => a.ordem.compareTo(b.ordem));
+  return carona.pontosEmbarqueOrdenados;
 }
 
 List<LatLng>? paradasDaCarona(Carona carona) {

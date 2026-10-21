@@ -68,34 +68,44 @@ class CardCaronaDisponivel extends StatelessWidget {
 
               const SizedBox(height: 20),
 
+              Text(
+                carona.rotuloHorario,
+                style: const TextStyle(color: Colors.black54, fontSize: 12),
+              ),
+              const SizedBox(height: 5),
+
               // Horario recebe o maior destaque do card.
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 14,
+                runSpacing: 8,
                 children: [
-                  const Icon(
-                    Icons.access_time,
-                    color: AppColors.primary,
-                    size: 28,
-                  ),
-                  const SizedBox(width: 10),
-                  Text(
-                    carona.horarioFormatado,
-                    style: const TextStyle(
-                      color: AppColors.primary,
-                      fontSize: 28,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(
-                      _textoData(),
-                      textAlign: TextAlign.right,
-                      style: const TextStyle(
-                        color: Colors.black54,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.access_time,
+                        color: AppColors.primary,
+                        size: 28,
                       ),
+                      const SizedBox(width: 10),
+                      Text(
+                        carona.horarioFormatado,
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Text(
+                    _textoData(),
+                    style: const TextStyle(
+                      color: Colors.black54,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ],
@@ -143,61 +153,77 @@ class CardCaronaDisponivel extends StatelessWidget {
                 ],
               ),
 
-              // Mostra somente uma origem aproximada, quando existir.
-              if (carona.origem.isNotEmpty) ...[
-                const SizedBox(height: 12),
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(
-                      Icons.trip_origin,
-                      color: Colors.black45,
-                      size: 17,
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: Text(
-                        'Saída em ${carona.origem}',
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: Colors.black54,
-                          fontSize: 13,
-                        ),
+              const SizedBox(height: 12),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    Icons.person_pin_circle_outlined,
+                    color: Colors.black45,
+                    size: 17,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      carona.resumoInicio,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 13,
                       ),
                     ),
-                  ],
-                ),
-              ],
+                  ),
+                ],
+              ),
 
               const Divider(height: 28),
 
-              Row(
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                spacing: 12,
+                runSpacing: 8,
                 children: [
-                  const Icon(
-                    Icons.people_outline,
-                    color: Colors.black54,
-                    size: 19,
-                  ),
-                  const SizedBox(width: 7),
-                  Text(
-                    '${carona.vagas} vagas',
-                    style: const TextStyle(color: Colors.black54, fontSize: 14),
-                  ),
-                  const Spacer(),
-                  if (carona.status != 'ATIVA') ...[
-                    Text(
-                      carona.status,
-                      style: const TextStyle(
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.people_outline,
                         color: Colors.black54,
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
+                        size: 19,
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  if (onTap != null)
-                    const Icon(Icons.chevron_right, color: AppColors.primary),
+                      const SizedBox(width: 7),
+                      Text(
+                        '${carona.vagas} vagas',
+                        style: const TextStyle(
+                          color: Colors.black54,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (carona.status != 'ATIVA') ...[
+                        Text(
+                          carona.status,
+                          style: const TextStyle(
+                            color: Colors.black54,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                      ],
+                      if (onTap != null)
+                        const Icon(
+                          Icons.chevron_right,
+                          color: AppColors.primary,
+                        ),
+                    ],
+                  ),
                 ],
               ),
             ],
