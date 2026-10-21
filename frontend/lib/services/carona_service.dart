@@ -5,12 +5,61 @@ import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
 import '../models/carona.dart';
+import '../models/capacidade_carona.dart';
 import '../models/ponto_embarque.dart';
 import '../models/posicao_atual_carona.dart';
 import 'auth_service.dart';
 import 'cliente_http_com_prazo.dart';
 
 class CaronaService {
+  static Future<Map<String, dynamic>> buscarCapacidade(
+    int idCarona, {
+    Duration prazo = const Duration(seconds: 20),
+  }) async {
+    final cliente = ClienteHttpComPrazo(prazo: prazo);
+    var encerrada = false;
+    try {
+      final resposta = await AuthService.enviarComToken((token) {
+        if (encerrada) throw TimeoutException('Consulta encerrada');
+        return cliente.get(
+          Uri.parse('${ApiConfig.baseUrl}/caronas/$idCarona/capacidade'),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+      }).timeout(prazo);
+      if (resposta == null) {
+        return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
+      }
+      if (resposta.statusCode >= 500) {
+        return {
+          'sucesso': false,
+          'mensagem': 'O servidor está indisponível. Tente novamente',
+        };
+      }
+      final corpo = _decodificarResposta(resposta);
+      final dados = corpo['dados'];
+      if (resposta.statusCode == 200 &&
+          corpo['sucesso'] == true &&
+          dados is Map<String, dynamic>) {
+        return {'sucesso': true, 'dados': CapacidadeCarona.fromJson(dados)};
+      }
+      return {
+        'sucesso': false,
+        'mensagem': _obterMensagem(
+          corpo,
+          'Não foi possível conferir as vagas. Tente novamente',
+        ),
+      };
+    } catch (_) {
+      return {
+        'sucesso': false,
+        'mensagem': 'Não foi possível conferir as vagas. Tente novamente',
+      };
+    } finally {
+      encerrada = true;
+      cliente.close();
+    }
+  }
+
   // Busca e converte as caronas ativas.
   static Future<Map<String, dynamic>> listarCaronas({
     Duration prazo = const Duration(seconds: 20),
@@ -209,11 +258,22 @@ class CaronaService {
     String? dataFim,
     required String horario,
     required int vagas,
+    int? capacidadePassageiros,
+    int? capacidadeAnterior,
     required double valor,
     required bool recorrente,
     List<String>? diasSemana,
     String? observacoes,
   }) async {
+    final edicaoIndividual = idCarona != null && idRecorrencia == null;
+    if (edicaoIndividual &&
+        (capacidadePassageiros == null || capacidadeAnterior == null)) {
+      return {
+        'sucesso': false,
+        'mensagem':
+            'Reabra a carona para conferir a capacidade antes de editar',
+      };
+    }
     try {
       final url = Uri.parse(
         idRecorrencia != null
@@ -240,7 +300,11 @@ class CaronaService {
         'dataInicio': dataInicio,
         'dataFim': dataFim,
         'horario': horario,
-        'vagas': vagas,
+        if (edicaoIndividual) ...{
+          'capacidadePassageiros': capacidadePassageiros,
+          'capacidadeAnterior': capacidadeAnterior,
+        } else
+          'vagas': vagas,
         'valor': valor,
         'recorrente': recorrente,
         'diasSemana': diasSemana,

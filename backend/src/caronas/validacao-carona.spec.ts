@@ -36,4 +36,52 @@ describe('Validação de programação', () => {
     expect(resultado.idUsuario).toBe(1);
     expect(resultado.diasSemana).toEqual(['SEG', 'TER']);
   });
+
+  it.each([undefined, {}, { vagas: 4 }])(
+    'recusa contrato antigo de edicao %j',
+    (body) => {
+      expect(() => validacao.validarEdicaoCarona(body, 1)).toThrow(
+        'Atualize o aplicativo',
+      );
+    },
+  );
+
+  it.each([null, '', '3', true, 0, -1, 5, 1.5])(
+    'recusa capacidade de edicao invalida %j',
+    (valor) => {
+      for (const campo of ['capacidadePassageiros', 'capacidadeAnterior']) {
+        expect(() =>
+          validacao.validarEdicaoCarona(
+            {
+              ...dados,
+              capacidadePassageiros: 3,
+              capacidadeAnterior: 4,
+              [campo]: valor,
+            },
+            1,
+          ),
+        ).toThrow('capacidade');
+      }
+    },
+  );
+
+  it('usa capacidade explicita e ignora vagas livres e identidade enviados pelo cliente', () => {
+    const resultado = validacao.validarEdicaoCarona(
+      {
+        ...dados,
+        recorrente: false,
+        idUsuario: 999,
+        vagas: 99,
+        capacidadePassageiros: 3,
+        capacidadeAnterior: 4,
+      },
+      1,
+    );
+    expect(resultado).toMatchObject({
+      idUsuario: 1,
+      capacidadePassageiros: 3,
+      capacidadeAnterior: 4,
+    });
+    expect(resultado).not.toHaveProperty('vagas');
+  });
 });

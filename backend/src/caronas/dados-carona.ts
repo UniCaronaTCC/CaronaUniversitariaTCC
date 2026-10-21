@@ -40,6 +40,11 @@ export interface DadosPosicaoAtualCarona {
   precisao: number;
 }
 
+export type DadosEdicaoCarona = Omit<DadosCriacaoCarona, 'vagas'> & {
+  capacidadePassageiros: number;
+  capacidadeAnterior: number;
+};
+
 export function aplicarDadosCarona(
   carona: Carona,
   dados: DadosCriacaoCarona,

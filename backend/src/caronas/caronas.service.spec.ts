@@ -4,7 +4,7 @@ import {
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 
 import { Carona } from './carona.entity';
 import { CaronasService, DadosCriacaoCarona } from './caronas.service';
@@ -63,6 +63,34 @@ describe('CaronasService', () => {
     diasSemana: null,
     pontosEmbarque: [],
   };
+  const dadosEdicao = {
+    ...dados,
+    capacidadePassageiros: 3,
+    capacidadeAnterior: 3,
+  };
+
+  function prepararEdicao(carona: Partial<Carona> | null) {
+    const bloqueio = {
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      getOne: jest.fn().mockResolvedValue(carona),
+    };
+    repository.createQueryBuilder.mockReturnValue(bloqueio);
+    const manager = {
+      getRepository: (entidade: unknown) =>
+        entidade === Carona
+          ? {
+              ...repository,
+              findOneOrFail: jest.fn().mockResolvedValue(carona),
+            }
+          : { count: jest.fn().mockResolvedValue(0) },
+    } as unknown as EntityManager;
+    dataSource.transaction.mockImplementation(
+      (executar: (m: EntityManager) => Promise<unknown>) => executar(manager),
+    );
+    return bloqueio;
+  }
 
   beforeEach(() => {
     queryBuilder = {
@@ -188,13 +216,14 @@ describe('CaronasService', () => {
   });
 
   it('atualiza uma carona pertencente ao usuário', async () => {
-    repository.findOne.mockResolvedValue({
+    prepararEdicao({
       idCarona: 5,
       usuario: { idUsuario: 1 },
       status: 'LOTADA',
+      vagas: 3,
     });
 
-    const resultado = await service.atualizarCarona(5, dados);
+    const resultado = await service.atualizarCarona(5, dadosEdicao);
 
     expect(resultado.destino).toBe('UniSalesiano');
     expect(resultado.status).toBe('ATIVA');
@@ -202,15 +231,16 @@ describe('CaronasService', () => {
   });
 
   it('não permite atualizar carona de outro usuário', async () => {
-    repository.findOne.mockResolvedValue({
-      idCarona: 5,
-      usuario: { idUsuario: 2 },
-    });
+    const bloqueio = prepararEdicao(null);
 
-    await expect(service.atualizarCarona(5, dados)).rejects.toBeInstanceOf(
-      NotFoundException,
-    );
+    await expect(
+      service.atualizarCarona(5, dadosEdicao),
+    ).rejects.toBeInstanceOf(NotFoundException);
     expect(repository.save).not.toHaveBeenCalled();
+    expect(bloqueio.andWhere).toHaveBeenCalledWith(
+      'carona.id_usuario = :idUsuario',
+      { idUsuario: 1 },
+    );
   });
 
   it('cancela a carona sem apagar o histórico', async () => {
@@ -399,15 +429,15 @@ describe('CaronasService', () => {
   });
 
   it('não edita uma corrida em andamento', async () => {
-    repository.findOne.mockResolvedValue({
+    prepararEdicao({
       idCarona: 5,
       usuario: { idUsuario: 1 },
       status: 'EM_ANDAMENTO',
       pontosEmbarque: [],
     });
 
-    await expect(service.atualizarCarona(5, dados)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
+    await expect(
+      service.atualizarCarona(5, dadosEdicao),
+    ).rejects.toBeInstanceOf(ConflictException);
   });
 });

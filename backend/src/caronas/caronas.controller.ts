@@ -51,7 +51,7 @@ export class CaronasController {
   ) {
     const carona = await this.caronasService.atualizarCarona(
       this.validarIdCarona(idRecebido),
-      new ValidacaoCarona().validarDadosCarona(body, request.usuario.sub),
+      new ValidacaoCarona().validarEdicaoCarona(body, request.usuario.sub),
     );
 
     return {
@@ -182,6 +182,20 @@ export class CaronasController {
       request.usuario.sub,
     );
     return { sucesso: true, dados: this.formatarCarona(carona) };
+  }
+
+  @Get(':idCarona/capacidade')
+  async buscarCapacidade(
+    @Param('idCarona') idRecebido: string,
+    @Req() request: RequisicaoComUsuario,
+  ) {
+    return {
+      sucesso: true,
+      dados: await this.caronasService.buscarCapacidade(
+        this.validarIdCarona(idRecebido),
+        request.usuario.sub,
+      ),
+    };
   }
 
   private validarPosicaoAtual(

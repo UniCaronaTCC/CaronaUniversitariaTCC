@@ -21,6 +21,7 @@ class FormularioOfertarCarona extends StatelessWidget {
   final TextEditingController dataController;
   final TextEditingController horarioController;
   final TextEditingController vagasController;
+  final int? passageirosAceitos;
   final TextEditingController valorController;
   final TextEditingController observacoesController;
 
@@ -60,6 +61,7 @@ class FormularioOfertarCarona extends StatelessWidget {
     required this.dataController,
     required this.horarioController,
     required this.vagasController,
+    this.passageirosAceitos,
     required this.valorController,
     required this.observacoesController,
     required this.caronaRecorrente,
@@ -249,7 +251,10 @@ class FormularioOfertarCarona extends StatelessWidget {
 
         const SizedBox(height: 16),
 
-        SeletorQuantidadePassageiros(controller: vagasController),
+        SeletorQuantidadePassageiros(
+          controller: vagasController,
+          passageirosAceitos: passageirosAceitos,
+        ),
 
         const SizedBox(height: 16),
 

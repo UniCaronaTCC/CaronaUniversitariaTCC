@@ -1,9 +1,48 @@
-import { BadRequestException } from '@nestjs/common';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import type { DadosCriacaoCarona } from './caronas.service';
 import { DIAS_SEMANA, validarData } from './datas-recorrencia';
+import type { DadosEdicaoCarona } from './dados-carona';
 type DadosCaronaRecebidos = Record<string, unknown> | undefined;
 
 export class ValidacaoCarona {
+  validarEdicaoCarona(
+    body: DadosCaronaRecebidos,
+    idUsuario: number,
+  ): DadosEdicaoCarona {
+    if (
+      body?.capacidadePassageiros === undefined ||
+      body?.capacidadeAnterior === undefined
+    ) {
+      throw new ConflictException(
+        'Atualize o aplicativo para editar a capacidade desta carona',
+      );
+    }
+    const capacidadePassageiros = body.capacidadePassageiros;
+    const capacidadeAnterior = body.capacidadeAnterior;
+    for (const capacidade of [capacidadePassageiros, capacidadeAnterior]) {
+      if (
+        typeof capacidade !== 'number' ||
+        !Number.isInteger(capacidade) ||
+        capacidade < 1 ||
+        capacidade > 4
+      ) {
+        throw new BadRequestException(
+          'Informe capacidade entre 1 e 4 passageiros',
+        );
+      }
+    }
+    const { vagas: _vagas, ...dados } = this.validarDadosCarona(
+      { ...body, vagas: capacidadePassageiros },
+      idUsuario,
+    );
+    void _vagas;
+    return {
+      ...dados,
+      capacidadePassageiros: capacidadePassageiros as number,
+      capacidadeAnterior: capacidadeAnterior as number,
+    };
+  }
+
   validarDadosCarona(
     body: DadosCaronaRecebidos,
     idUsuario: number,

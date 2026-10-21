@@ -4,8 +4,13 @@ import '../config/app_colors.dart';
 
 class SeletorQuantidadePassageiros extends StatelessWidget {
   final TextEditingController controller;
+  final int? passageirosAceitos;
 
-  const SeletorQuantidadePassageiros({super.key, required this.controller});
+  const SeletorQuantidadePassageiros({
+    super.key,
+    required this.controller,
+    this.passageirosAceitos,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -17,16 +22,24 @@ class SeletorQuantidadePassageiros extends StatelessWidget {
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.people_outline, color: AppColors.primary, size: 20),
-                SizedBox(width: 8),
-                Text(
-                  'Quantidade de passageiros',
-                  style: TextStyle(
-                    color: AppColors.text,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                const Icon(
+                  Icons.people_outline,
+                  color: AppColors.primary,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    passageirosAceitos == null
+                        ? 'Quantidade de passageiros'
+                        : 'Capacidade de passageiros',
+                    style: const TextStyle(
+                      color: AppColors.text,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ],
@@ -35,11 +48,13 @@ class SeletorQuantidadePassageiros extends StatelessWidget {
             SizedBox(
               width: double.infinity,
               child: SegmentedButton<int>(
-                segments: const [
-                  ButtonSegment(value: 1, label: Text('1')),
-                  ButtonSegment(value: 2, label: Text('2')),
-                  ButtonSegment(value: 3, label: Text('3')),
-                  ButtonSegment(value: 4, label: Text('4')),
+                segments: [
+                  for (var valor = 1; valor <= 4; valor++)
+                    ButtonSegment(
+                      value: valor,
+                      label: Text('$valor'),
+                      enabled: valor >= (passageirosAceitos ?? 0),
+                    ),
                 ],
                 selected:
                     quantidade != null && quantidade >= 1 && quantidade <= 4
@@ -60,6 +75,10 @@ class SeletorQuantidadePassageiros extends StatelessWidget {
               'Sem contar o motorista.',
               style: TextStyle(color: Colors.black54, fontSize: 12),
             ),
+            if (passageirosAceitos != null && quantidade != null)
+              Text(
+                '$passageirosAceitos ${passageirosAceitos == 1 ? 'passageiro aceito' : 'passageiros aceitos'} · ${quantidade - passageirosAceitos!} ${quantidade - passageirosAceitos! == 1 ? 'vaga livre' : 'vagas livres'}',
+              ),
           ],
         );
       },

@@ -3,6 +3,7 @@ import {
   aplicarDadosCarona,
   DadosCriacaoCarona,
   DadosPosicaoAtualCarona,
+  DadosEdicaoCarona,
 } from './dados-carona';
 export type {
   DadosCriacaoCarona,
@@ -17,7 +18,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 
 import { Carona } from './carona.entity';
 import { PontoEmbarque } from './ponto-embarque.entity';
@@ -117,40 +118,115 @@ export class CaronasService {
 
   async atualizarCarona(
     idCarona: number,
-    dados: DadosCriacaoCarona,
+    dados: DadosEdicaoCarona,
   ): Promise<Carona> {
-    const carona = await this.buscarCaronaDoUsuario(idCarona, dados.idUsuario);
-
-    if (dados.recorrente || carona.recorrente) {
-      throw new BadRequestException(
-        'Gerencie a programação em Recorrências. Para uma carona antiga, cadastre uma nova programação.',
+    return this.dataSource.transaction(async (manager) => {
+      const carona = await this.bloquearCaronaEditavel(
+        manager,
+        idCarona,
+        dados.idUsuario,
       );
-    }
-    if (carona.idRecorrencia && dados.dataInicio !== carona.dataInicio) {
-      throw new BadRequestException(
-        'A data desta carona pertence à programação. Cancele este dia e publique uma carona avulsa para outra data.',
+      if (dados.recorrente || carona.recorrente) {
+        throw new BadRequestException(
+          'Gerencie a programação em Recorrências. Para uma carona antiga, cadastre uma nova programação.',
+        );
+      }
+      if (carona.idRecorrencia && dados.dataInicio !== carona.dataInicio) {
+        throw new BadRequestException(
+          'A data desta carona pertence à programação. Cancele este dia e publique uma carona avulsa para outra data.',
+        );
+      }
+      const capacidade = await this.calcularCapacidade(manager, carona);
+      if (dados.capacidadeAnterior !== capacidade.capacidadePassageiros) {
+        throw new ConflictException(
+          'A capacidade foi alterada em outra edição. Reabra a carona antes de salvar',
+        );
+      }
+      if (
+        !Number.isInteger(dados.capacidadePassageiros) ||
+        dados.capacidadePassageiros < 1 ||
+        dados.capacidadePassageiros > 4
+      ) {
+        throw new BadRequestException(
+          'Informe capacidade entre 1 e 4 passageiros',
+        );
+      }
+      if (dados.capacidadePassageiros < capacidade.passageirosAceitos) {
+        throw new ConflictException(
+          'A capacidade não pode ser menor que a quantidade de passageiros aceitos. Reabra a carona para conferir as reservas',
+        );
+      }
+      aplicarDadosCarona(carona, {
+        ...dados,
+        vagas: dados.capacidadePassageiros - capacidade.passageirosAceitos,
+      });
+      carona.status = carona.vagas === 0 ? 'LOTADA' : 'ATIVA';
+      const repository = manager.getRepository(Carona);
+      await repository.save(carona);
+      const atualizada = await repository.findOneOrFail({
+        where: { idCarona },
+        relations: { usuario: { veiculo: true }, pontosEmbarque: true },
+      });
+      atualizada.pontosEmbarque = (atualizada.pontosEmbarque ?? []).sort(
+        (a, b) => a.ordem - b.ordem,
       );
-    }
+      return atualizada;
+    });
+  }
 
-    if (carona.status === 'EM_ANDAMENTO') {
+  async buscarCapacidade(idCarona: number, idUsuario: number) {
+    return this.dataSource.transaction(async (manager) => {
+      const carona = await this.bloquearCaronaEditavel(
+        manager,
+        idCarona,
+        idUsuario,
+      );
+      return this.calcularCapacidade(manager, carona);
+    });
+  }
+
+  private async bloquearCaronaEditavel(
+    manager: EntityManager,
+    idCarona: number,
+    idUsuario: number,
+  ) {
+    // O aceite, cancelamento e expiracao tambem bloqueiam esta mesma linha.
+    const carona = await manager
+      .getRepository(Carona)
+      .createQueryBuilder('carona')
+      .where('carona.idCarona = :idCarona', { idCarona })
+      .andWhere('carona.id_usuario = :idUsuario', { idUsuario })
+      .setLock('pessimistic_write')
+      .getOne();
+    if (!carona) throw new NotFoundException('Carona não encontrada');
+    if (!['ATIVA', 'LOTADA'].includes(carona.status)) {
       throw new ConflictException(
-        'Não é possível editar uma corrida em andamento',
+        'Só é possível editar caronas ativas ou lotadas, antes do início da corrida',
       );
     }
-
-    aplicarDadosCarona(carona, dados);
-
-    if (carona.status === 'LOTADA' && carona.vagas > 0) {
-      carona.status = 'ATIVA';
-    }
-
-    await this.caronasRepository.save(carona);
-
-    /*
-     * Por enquanto não vamos substituir os pontos na edição.
-     * Primeiro vamos terminar o cadastro deles no Flutter.
-     */
     return carona;
+  }
+
+  private async calcularCapacidade(manager: EntityManager, carona: Carona) {
+    const passageirosAceitos = await manager.getRepository(Solicitacao).count({
+      where: { carona: { idCarona: carona.idCarona }, status: 'ACEITA' },
+    });
+    const capacidadePassageiros = carona.vagas + passageirosAceitos;
+    if (
+      !Number.isInteger(carona.vagas) ||
+      carona.vagas < 0 ||
+      capacidadePassageiros < 1 ||
+      capacidadePassageiros > 4
+    ) {
+      throw new ConflictException(
+        'As vagas desta carona estão inconsistentes. Não foi feita nenhuma alteração',
+      );
+    }
+    return {
+      capacidadePassageiros,
+      passageirosAceitos,
+      vagasDisponiveis: carona.vagas,
+    };
   }
 
   async excluirCarona(idCarona: number, idUsuario: number): Promise<void> {

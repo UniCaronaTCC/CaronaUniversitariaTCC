@@ -5,6 +5,7 @@ import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
 import '../mapa/screens/mapa_screen.dart';
 import '../models/carona.dart';
+import '../models/capacidade_carona.dart';
 import '../models/ponto_embarque.dart';
 import '../models/verificacao_cnh.dart';
 import '../navigation/navegacao_principal.dart';
@@ -23,6 +24,7 @@ class OfertarCaronaTela extends StatefulWidget {
   final int? idRecorrencia;
   final int indiceNavegacao;
   final Future<Map<String, dynamic>> Function()? carregarPerfil;
+  final Future<Map<String, dynamic>> Function()? carregarCapacidade;
 
   const OfertarCaronaTela({
     super.key,
@@ -31,6 +33,7 @@ class OfertarCaronaTela extends StatefulWidget {
     this.idRecorrencia,
     this.indiceNavegacao = 0,
     this.carregarPerfil,
+    this.carregarCapacidade,
   });
 
   @override
@@ -55,6 +58,9 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   bool caronaRecorrente = false;
   bool enviandoCarona = false;
   bool carregandoCnh = false;
+  bool carregandoCapacidade = false;
+  String? erroCapacidade;
+  CapacidadeCarona? capacidade;
   String? erroCnh;
   Map<String, dynamic>? perfilOferta;
   VerificacaoCnh verificacaoCnh = const VerificacaoCnh();
@@ -63,6 +69,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   final List<PontoEmbarque> pontosEmbarque = [];
 
   bool get editando => widget.caronaParaEditar != null;
+  bool get edicaoIndividual => editando && widget.idRecorrencia == null;
   bool get precisaCnh => !editando || widget.idRecorrencia != null;
 
   bool get possuiVeiculo =>
@@ -136,7 +143,12 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
         ? carona.horario
         : DataHoraUtils.formatarHorario(horarioSelecionado!);
 
-    vagasController.text = carona.vagas.toString();
+    if (edicaoIndividual) {
+      vagasController.clear();
+      atualizarCapacidade();
+    } else {
+      vagasController.text = carona.vagas.toString();
+    }
     valorController.text = formatarDoubleComoMoedaReal(carona.valor);
     observacoesController.text = carona.observacoes ?? '';
 
@@ -171,6 +183,36 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
         .where((parte) => parte.isNotEmpty)
         .toList();
     return partes.length >= 4 || RegExp(r'\d').hasMatch(carona.origem);
+  }
+
+  Future<void> atualizarCapacidade() async {
+    if (carregandoCapacidade) return;
+    setState(() {
+      carregandoCapacidade = true;
+      erroCapacidade = null;
+    });
+    try {
+      final resultado =
+          await (widget.carregarCapacidade?.call() ??
+                  CaronaService.buscarCapacidade(widget.caronaParaEditar!.id))
+              .timeout(const Duration(seconds: 20));
+      if (!mounted) return;
+      final dados = resultado['dados'];
+      if (resultado['sucesso'] == true && dados is CapacidadeCarona) {
+        capacidade = dados;
+        vagasController.text = dados.total.toString();
+      } else {
+        erroCapacidade =
+            resultado['mensagem']?.toString() ??
+            'Não foi possível conferir as vagas';
+      }
+    } catch (_) {
+      if (mounted) {
+        erroCapacidade = 'Não foi possível conferir as vagas. Tente novamente';
+      }
+    } finally {
+      if (mounted) setState(() => carregandoCapacidade = false);
+    }
   }
 
   TimeOfDay? _converterHorario(String horario) {
@@ -379,6 +421,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
   // Valida e envia a oferta para o backend.
   Future<void> ofertarCarona() async {
+    if (enviandoCarona) return;
     if (precisaCnh && !verificacaoCnh.permiteOferecerCarona()) {
       await abrirVerificacaoCnh();
       return;
@@ -429,6 +472,10 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
             ),
       horario: '${DataHoraUtils.formatarHorario(horarioSelecionado!)}:00',
       vagas: int.parse(vagasController.text),
+      capacidadePassageiros: edicaoIndividual
+          ? int.parse(vagasController.text)
+          : null,
+      capacidadeAnterior: edicaoIndividual ? capacidade?.total : null,
       valor: converterMoedaRealParaDouble(valorController.text),
       recorrente: caronaRecorrente,
       diasSemana: caronaRecorrente ? List<String>.from(diasSelecionados) : null,
@@ -470,6 +517,12 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
   }
 
   String? validarFormulario() {
+    if (edicaoIndividual &&
+        (carregandoCapacidade ||
+            erroCapacidade != null ||
+            capacidade == null)) {
+      return 'Confira a capacidade da carona antes de salvar';
+    }
     final camposObrigatorios = [
       origemController.text,
       destinoController.text,
@@ -511,6 +564,9 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
     if (vagas == null || vagas <= 0 || vagas > 4) {
       return 'Informe entre 1 e 4 vagas';
+    }
+    if (edicaoIndividual && vagas < capacidade!.aceitos) {
+      return 'A capacidade não pode ser menor que a quantidade de passageiros aceitos';
     }
 
     if (caronaRecorrente && diasSelecionados.isEmpty) {
@@ -605,6 +661,24 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
                   ),
                 ),
               )
+            : edicaoIndividual &&
+                  (carregandoCapacidade ||
+                      erroCapacidade != null ||
+                      capacidade == null)
+            ? SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: EstadoConteudoPadrao(
+                  carregando: carregandoCapacidade,
+                  icone: Icons.people_outline,
+                  titulo: carregandoCapacidade
+                      ? 'Conferindo vagas'
+                      : 'Não foi possível continuar',
+                  mensagem: erroCapacidade,
+                  textoBotao: carregandoCapacidade ? null : 'Tentar novamente',
+                  iconeBotao: Icons.refresh,
+                  onPressed: carregandoCapacidade ? null : atualizarCapacidade,
+                ),
+              )
             : SingleChildScrollView(
                 padding: const EdgeInsets.all(24),
                 child: FormularioOfertarCarona(
@@ -626,6 +700,9 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
                   dataController: dataController,
                   horarioController: horarioController,
                   vagasController: vagasController,
+                  passageirosAceitos: edicaoIndividual
+                      ? capacidade?.aceitos
+                      : null,
                   valorController: valorController,
                   observacoesController: observacoesController,
 
