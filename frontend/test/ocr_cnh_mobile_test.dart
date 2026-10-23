@@ -5,10 +5,15 @@ import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uni_carona/services/ocr_cnh_mobile.dart';
 
-Map<String, dynamic> retornoNativo() {
+Map<String, dynamic> retornoNativo({bool vertical = false}) {
   Map<String, dynamic> item(String texto) => {
     'text': texto,
-    'rect': {'left': 10, 'top': 10, 'right': 80, 'bottom': 20},
+    'rect': {
+      'left': 10,
+      'top': 10,
+      'right': vertical ? 20 : 80,
+      'bottom': vertical ? 80 : 20,
+    },
     'points': [],
     'recognizedLanguages': [],
     'symbols': [],
@@ -110,5 +115,23 @@ void main() {
     );
     expect(fechamentos, 1);
     expect(await File(arquivos.single).exists(), false);
+  });
+  test('continua girando quando os rótulos foram lidos de lado', () async {
+    var chamadas = 0;
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(canal, (call) async {
+          if (call.method == 'vision#closeTextRecognizer') return null;
+          chamadas++;
+          return retornoNativo(vertical: chamadas == 1);
+        });
+    final resultado = await lerCnh(await fotoSintetica());
+    expect(chamadas, 2);
+    expect(resultado['largura'], 800);
+    expect(resultado['altura'], 1000);
+    final palavra = resultado['linhas'][0]['palavras'][0];
+    expect(
+      palavra['x1'] - palavra['x0'],
+      greaterThan(palavra['y1'] - palavra['y0']),
+    );
   });
 }

@@ -15,6 +15,63 @@ function blocos(...lines: ReturnType<typeof linha>[]): Block[] {
 }
 
 describe('nomePeloLayout', () => {
+  it('separa primeira habilitação quando o OCR lê a numeração como T', () => {
+    const titulo = linha('NOME', 226, 681);
+    titulo.words[0].bbox = { x0: 226, y0: 681, x1: 266, y1: 695 };
+    const vizinho = linha('THABILITAÇÃO', 730, 673);
+    vizinho.words[0].bbox = { x0: 730, y0: 673, x1: 822, y1: 690 };
+    const data = linha('01/01/2020', 734, 686);
+    data.words[0].bbox = { x0: 734, y0: 686, x1: 822, y1: 710 };
+    expect(
+      nomePeloLayout(
+        blocos(
+          titulo,
+          vizinho,
+          data,
+          linha('MARIA CLARA SILVA', 226, 700),
+          linha('NASCIMENTO', 400, 726),
+        ),
+      ),
+    ).toBe('MARIA CLARA SILVA');
+  });
+  it('não usa o título geral acima como borda e aceita moldura junto à numeração', () => {
+    const palavra = (
+      text: string,
+      x0: number,
+      y0: number,
+      x1: number,
+      y1: number,
+    ) => ({ text, bbox: { x0, y0, x1, y1 } });
+    const entrada: Block[] = [
+      {
+        paragraphs: [
+          {
+            lines: [
+              { words: [palavra('HABILITACAO', 484, 262, 562, 283)] },
+              { words: [palavra('1HABILTACAO', 758, 283, 834, 297)] },
+              { words: [palavra('01/01/2020', 768, 300, 834, 313)] },
+              {
+                words: [
+                  palavra('r2e1', 353, 287, 381, 301),
+                  palavra('NOME', 389, 287, 419, 300),
+                  palavra('E', 431, 286, 433, 299),
+                  palavra('SOBRENOME', 439, 286, 500, 300),
+                ],
+              },
+              {
+                words: [
+                  palavra('MARIA', 365, 302, 431, 317),
+                  palavra('CLARA', 435, 301, 473, 316),
+                  palavra('SILVA', 478, 301, 535, 316),
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    ];
+    expect(nomePeloLayout(entrada)).toBe('MARIA CLARA SILVA');
+  });
   it('usa a numeração do título mesmo quando o ML Kit a separa em outro bloco', () => {
     const entrada = blocos(
       linha('NOME E SOBRENOME', 310, 10),

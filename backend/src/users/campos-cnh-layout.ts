@@ -145,6 +145,12 @@ export function regiaoDoCampo(
       p.bbox.y0 < top + height &&
       p.bbox.y1 > top &&
       !outro.test(rotulo(p.text)) &&
+      // O registro também tem onze dígitos. A posição sob um rótulo vizinho,
+      // e não o formato numérico, distingue essa coluna do CPF.
+      !(
+        campo !== 'nome' &&
+        vizinhos.some((v) => (p.bbox.x0 + p.bbox.x1) / 2 >= v.bbox.x0)
+      ) &&
       !(
         campo !== 'nome' &&
         ((p.bbox.x0 + p.bbox.x1) / 2 < left ||

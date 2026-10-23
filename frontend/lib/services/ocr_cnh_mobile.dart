@@ -79,6 +79,9 @@ Future<Map<String, dynamic>> lerCnh(Uint8List bytes) async {
       final palavras = leitura.blocks
           .expand((b) => b.lines)
           .expand((l) => l.elements)
+          // O ML Kit reconhece texto de lado, mas mantém suas caixas verticais.
+          // Os campos do backend precisam de uma leitura na horizontal.
+          .where((p) => p.boundingBox.width > p.boundingBox.height)
           .map((p) => p.text.toUpperCase().replaceAll(RegExp('[^A-Z]'), ''))
           .toList();
       final rotulos = [

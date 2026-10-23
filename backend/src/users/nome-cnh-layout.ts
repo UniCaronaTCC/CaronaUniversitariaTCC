@@ -17,6 +17,10 @@ const normalizar = (texto: string) =>
 const outroCampo =
   /\b(CPF|REGISTRO|VALIDADE|CATEGORIA|CAT|FILIACAO|NASCIMENTO|DATA|DOC|IDENTIDADE|ASSINATURA|NACIONALIDADE|PERMISSAO|HABILITACAO)\b/;
 const sobrepoe = (a: Bbox, b: Bbox) => a.x0 < b.x1 && a.x1 > b.x0;
+// Uma moldura pode virar um caractere unido à numeração impressa "2 e 1".
+// A tolerância vale apenas para esse prefixo, nunca para o nome da pessoa.
+const normalizarPrefixo = (texto: string) =>
+  normalizar(texto).replace(/^[^\d](?=2\s*E\s*1$)/, '');
 
 type MotivoRegiao =
   | 'TITULO_AUSENTE'
@@ -78,7 +82,7 @@ export function nomePeloLayout(
     if (
       prefixo.length === 3 ||
       esquerda - p.bbox.x1 > altura * 2 ||
-      !/^(?:\d{1,2}|E|\d{1,2}\s*E\s*\d{1,2})$/.test(normalizar(p.text))
+      !/^(?:\d{1,2}|E|\d{1,2}\s*E\s*\d{1,2})$/.test(normalizarPrefixo(p.text))
     )
       break;
     prefixo.unshift(p);
@@ -86,7 +90,7 @@ export function nomePeloLayout(
   }
   if (
     !/^\d{1,2}(?:\s*E\s*\d{1,2})?$/.test(
-      prefixo.map((p) => normalizar(p.text)).join(' '),
+      prefixo.map((p) => normalizarPrefixo(p.text)).join(' '),
     )
   )
     prefixo.length = 0;
@@ -106,8 +110,10 @@ export function nomePeloLayout(
   const vizinhos = palavras.filter(
     (p) =>
       p.bbox.x0 > titulo.bbox.x1 &&
-      Math.abs(p.bbox.y0 - titulo.bbox.y0) < altura * 2 &&
-      outroCampo.test(normalizar(p.text)),
+      p.bbox.y0 < titulo.bbox.y1 &&
+      p.bbox.y1 > titulo.bbox.y0 &&
+      (outroCampo.test(normalizar(p.text)) ||
+        /^(?:1[ªAº°.]?|T)\s*HABILI?TACAO$/.test(normalizar(p.text))),
   );
   const regiao: Bbox = {
     x0: inicio - altura,
