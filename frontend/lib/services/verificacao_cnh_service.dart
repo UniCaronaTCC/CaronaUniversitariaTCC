@@ -118,7 +118,6 @@ class VerificacaoCnhService {
   Future<Map<String, dynamic>> enviar(
     Uint8List frente, {
     required bool aceitePrivacidade,
-    required String nomeCompleto,
   }) async {
     if (!aceitePrivacidade) {
       return {'sucesso': false, 'mensagem': 'Aceite o aviso de privacidade'};
@@ -183,7 +182,6 @@ class VerificacaoCnhService {
               ..body = jsonEncode({
                 'versaoLeitura': 'mlkit-v1',
                 'aceitePrivacidade': true,
-                'nomeCompleto': nomeCompleto.trim(),
                 'leitura': leitura,
               });
         fase = 'aguardando_resposta';

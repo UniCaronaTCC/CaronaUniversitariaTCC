@@ -13,11 +13,7 @@ import 'selecionar_foto_cnh.dart';
 
 typedef CapturarFotoCnh = Future<XFile?> Function();
 typedef EnviarFotosCnh =
-    Future<Map<String, dynamic>> Function(
-      Uint8List frente,
-      bool aceite,
-      String nomeCompleto,
-    );
+    Future<Map<String, dynamic>> Function(Uint8List frente, bool aceite);
 
 class VerificacaoCnhTela extends StatefulWidget {
   final Future<Map<String, dynamic>> Function()? carregarPerfil;
@@ -53,7 +49,6 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
   bool aprovadaAgora = false;
   bool reiniciando = false;
   String? erro;
-  final nomeCompleto = TextEditingController();
 
   bool get aprovada => aprovadaAgora || verificacao.permiteOferecerCarona();
   bool get ocupada => carregando || capturando || enviando || reiniciando;
@@ -127,7 +122,6 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
         aprovadaAgora = false;
         verificacao = const VerificacaoCnh();
         aceite = false;
-        nomeCompleto.clear();
         descartarImagens();
         await atualizarStatus();
       } else {
@@ -187,25 +181,16 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
 
   Future<void> enviar() async {
     if (ocupada || !aceite || frente == null) return;
-    if (nomeCompleto.text.trim().split(RegExp(r'\s+')).length < 2) {
-      setState(() => erro = 'Informe seu nome completo conforme a CNH');
-      return;
-    }
     setState(() {
       enviando = true;
       erro = null;
     });
     try {
       final resultado =
-          await (widget.enviarFotos?.call(
-                frente!,
-                aceite,
-                nomeCompleto.text.trim(),
-              ) ??
+          await (widget.enviarFotos?.call(frente!, aceite) ??
               const VerificacaoCnhService().enviar(
                 frente!,
                 aceitePrivacidade: aceite,
-                nomeCompleto: nomeCompleto.text.trim(),
               ));
       if (!mounted) return;
       if (resultado['sucesso'] == true && resultado['dados'] is Map) {
@@ -234,7 +219,6 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
   @override
   void dispose() {
     descartarImagens();
-    nomeCompleto.dispose();
     super.dispose();
   }
 
@@ -284,7 +268,7 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'A foto é lida no seu celular. Enviamos o texto e as posições das palavras para conferir nome, CPF, categoria e validade. Guardamos CPF, categoria e validade; a foto e o texto da leitura não são armazenados.',
+                  'A foto é lida no seu celular. Enviamos o texto e as posições das palavras para extrair os campos e conferir CPF, categoria e validade. Guardamos CPF, categoria e validade; a foto e o texto da leitura não são armazenados.',
                   style: TextStyle(height: 1.4),
                 ),
                 CheckboxListTile(
@@ -299,16 +283,6 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
                         }),
                   title: const Text(
                     'Li e concordo com o uso desses dados para verificar minha CNH',
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: nomeCompleto,
-                  enabled: aceite && !ocupada,
-                  maxLength: 150,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Nome completo conforme a CNH',
                   ),
                 ),
                 const SizedBox(height: 12),

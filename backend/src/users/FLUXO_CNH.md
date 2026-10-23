@@ -12,13 +12,13 @@ diferentes nunca sao combinados. Nao ha reconhecimento de texto no servidor.
 POST /usuarios/cnh/verificar-mlkit, autenticado, Content-Type application/json:
 - versaoLeitura: mlkit-v1
 - aceitePrivacidade: boolean true
-- nomeCompleto: nome completo informado
 - leitura: { largura, altura, linhas: [{ palavras: [{ texto, x0, y0, x1, y1 }] }] }
 
 O usuario vem do JWT, nunca do corpo. O servidor valida dimensoes, limites,
 tipos e coordenadas e extrai os campos pelas posicoes/rotulos. Nao aceita um
-objeto com campos ja aprovados nem um status fornecido pelo cliente. Nome deve
-coincidir integralmente (normalizando acentos, caixa e espacos), CPF passa no
+objeto com campos ja aprovados nem um status fornecido pelo cliente. O nome é apenas uma extração opcional, sem comparação com o perfil ou com texto
+digitado. Caixas de palavras inteiras podem ultrapassar a região estimada sem
+recusa; não alteramos letras nem dígitos reconhecidos no nome. CPF passa no
 checksum, validade exige calendario real e nao vencida, categoria deve permitir
 carro. CPF duplicado entre contas continua bloqueado. Campo ambiguo e recusado.
 
@@ -26,7 +26,7 @@ carro. CPF duplicado entre contas continua bloqueado. Campo ambiguo e recusado.
 
 Fotos nao sao enviadas ao backend. A foto temporaria local usada pelo plugin e
 removida ao concluir, inclusive em falhas. Nao persistimos texto completo ou
-nome informado, nem os imprimimos em logs. Guardamos CPF, categoria, validade,
+nome extraído, nem os imprimimos em logs. Guardamos CPF, categoria, validade,
 consentimento e estado/data da conferencia, como antes. Nao ha migracao de banco.
 
 IMPORTANTE: o OCR recebido do celular pode ser adulterado. Estas regras conferem

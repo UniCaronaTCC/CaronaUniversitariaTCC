@@ -20,13 +20,12 @@ describe('VerificacaoCnhController ML Kit', () => {
       {
         versaoLeitura: 'mlkit-v1',
         aceitePrivacidade: true,
-        nomeCompleto: 'Maria Silva',
         leitura,
         idUsuario: 99,
       },
       req,
     );
-    expect(verificar).toHaveBeenCalledWith(7, leitura, 'Maria Silva');
+    expect(verificar).toHaveBeenCalledWith(7, leitura);
     expect(r.dados).toEqual({ status: 'APROVADA' });
   });
   it.each([
@@ -46,8 +45,7 @@ describe('VerificacaoCnhController ML Kit', () => {
   it('explica a etapa que falhou sem expor o nome lido', async () => {
     verificar.mockResolvedValueOnce({
       status: 'RECUSADA',
-      motivo: 'NOME_NAO_LIDO',
-      detalheLeitura: 'TITULO_AUSENTE',
+      motivo: 'CPF_NAO_LIDO',
     });
     const resposta = await controller.verificar(
       {
@@ -58,7 +56,7 @@ describe('VerificacaoCnhController ML Kit', () => {
       },
       req,
     );
-    expect(resposta.mensagem).toContain('título NOME');
+    expect(resposta.mensagem).toContain('CPF');
     expect(resposta.mensagem).not.toContain('Maria Silva');
   });
 });

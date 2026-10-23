@@ -2,7 +2,6 @@ import {
   ConflictException,
   Injectable,
   NotFoundException,
-  BadRequestException,
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -10,7 +9,7 @@ import { DataSource, In, QueryFailedError, Repository } from 'typeorm';
 import { Carona } from '../caronas/carona.entity';
 import { RecorrenciaCarona } from '../caronas/recorrencia.entity';
 
-import { conferirDadosCnh, nomeCompletoValido } from './dados-cnh';
+import { conferirDadosCnh } from './dados-cnh';
 import { LeituraCnhService } from './leitura-cnh.service';
 import { User } from './user.entity';
 import { cnhPermiteOferecerCarona, hojeEmSaoPaulo } from './verificacao-cnh';
@@ -78,16 +77,7 @@ export class VerificacaoCnhService {
     }
   }
 
-  async verificar(
-    idUsuario: number,
-    leituraOcr: unknown,
-    nomeCompleto: string,
-  ) {
-    if (!nomeCompletoValido(nomeCompleto)) {
-      throw new BadRequestException(
-        'Informe seu nome completo conforme a CNH. Se o campo não aparece, atualize o app.',
-      );
-    }
+  async verificar(idUsuario: number, leituraOcr: unknown) {
     if (this.emAndamento.has(idUsuario)) {
       throw new ConflictException('Já existe uma verificação em andamento');
     }
@@ -106,17 +96,7 @@ export class VerificacaoCnhService {
 
       const texto = this.leitura.ler(leituraOcr);
       this.logger.log('CNH: leitura concluída, conferindo campos');
-      const conferencia = conferirDadosCnh(
-        texto,
-        nomeCompleto,
-        hoje,
-        (diagnostico) => {
-          // Somente códigos fixos e contagens, nunca o texto do documento.
-          this.logger.log(
-            `CNH: diagnostico_nome ${JSON.stringify(diagnostico)}`,
-          );
-        },
-      );
+      const conferencia = conferirDadosCnh(texto, hoje);
       const dados = conferencia.dados;
       const privacidadeAceitaEm = new Date();
 
@@ -134,9 +114,6 @@ export class VerificacaoCnhService {
         return {
           status: 'RECUSADA' as const,
           motivo: conferencia.motivo,
-          ...(conferencia.motivo === 'NOME_NAO_LIDO' && texto.diagnosticoNome
-            ? { detalheLeitura: texto.diagnosticoNome.motivo }
-            : {}),
         };
       }
 

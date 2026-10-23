@@ -28,11 +28,7 @@ void main() {
           );
         }),
       );
-      final resultado = await service.enviar(
-        frente,
-        nomeCompleto: 'Maria Silva',
-        aceitePrivacidade: true,
-      );
+      final resultado = await service.enviar(frente, aceitePrivacidade: true);
       expect(resultado['sucesso'], false);
       expect(resultado['mensagem'], contains('backend atualizado'));
     },
@@ -47,11 +43,7 @@ void main() {
         return http.Response('{}', 500);
       }),
     );
-    final resultado = await service.enviar(
-      frente,
-      nomeCompleto: 'Maria Silva',
-      aceitePrivacidade: true,
-    );
+    final resultado = await service.enviar(frente, aceitePrivacidade: true);
     expect(resultado['sucesso'], false);
     expect(resultado['mensagem'], contains('no celular'));
     expect(chamadas, 0);
@@ -65,17 +57,9 @@ void main() {
         return {};
       },
     );
-    await service.enviar(
-      frente,
-      nomeCompleto: 'Maria Silva',
-      aceitePrivacidade: false,
-    );
+    await service.enviar(frente, aceitePrivacidade: false);
     AuthService.tokenUsuarioLogado = null;
-    await service.enviar(
-      frente,
-      nomeCompleto: 'Maria Silva',
-      aceitePrivacidade: true,
-    );
+    await service.enviar(frente, aceitePrivacidade: true);
     expect(leituras, 0);
   });
 
@@ -99,11 +83,7 @@ void main() {
         registrarDiagnostico: logs.add,
         cliente: MockClient((_) async => resposta),
       );
-      final resultado = await service.enviar(
-        frente,
-        nomeCompleto: 'Nome Sensivel',
-        aceitePrivacidade: true,
-      );
+      final resultado = await service.enviar(frente, aceitePrivacidade: true);
       expect(resultado['sucesso'], false);
       expect(resultado['mensagem'], contains('HTTP ${resposta.statusCode}'));
       expect(resultado['mensagem'], isNot(contains('conectar')));
@@ -130,11 +110,7 @@ void main() {
           throw http.ClientException('dado-sensivel-sintetico token-teste');
         }),
       );
-      final resultado = await service.enviar(
-        frente,
-        nomeCompleto: 'Nome Sensivel',
-        aceitePrivacidade: true,
-      );
+      final resultado = await service.enviar(frente, aceitePrivacidade: true);
       expect(resultado['mensagem'], contains('Falha de conexão'));
       final diagnostico = logs.join('\n');
       expect(diagnostico, contains('classe=conexao tipo=ClientException'));
@@ -154,11 +130,7 @@ void main() {
         (_) async => throw StateError('dado-sensivel-sintetico'),
       ),
     );
-    final resultado = await service.enviar(
-      frente,
-      nomeCompleto: 'Nome Sensivel',
-      aceitePrivacidade: true,
-    );
+    final resultado = await service.enviar(frente, aceitePrivacidade: true);
     expect(resultado['sucesso'], false);
     expect(resultado['mensagem'], contains('concluir o envio'));
     expect(logs.join('\n'), contains('classe=inesperada tipo=StateError'));
@@ -182,11 +154,7 @@ void main() {
         registrarDiagnostico: logs.add,
         cliente: MockClient((_) async => throw http.ClientException(caso.key)),
       );
-      await service.enviar(
-        frente,
-        nomeCompleto: 'Nome Sensivel',
-        aceitePrivacidade: true,
-      );
+      await service.enviar(frente, aceitePrivacidade: true);
       expect(logs.join('\n'), contains('conexao causa=${caso.value}'));
       expect(logs.join('\n'), isNot(contains('dado-sensivel-sintetico')));
     });
@@ -236,11 +204,7 @@ void main() {
         );
       }),
     );
-    final resultado = await service.enviar(
-      frente,
-      nomeCompleto: 'João Pedro da Silva',
-      aceitePrivacidade: true,
-    );
+    final resultado = await service.enviar(frente, aceitePrivacidade: true);
     expect(resultado['dados']['status'], 'APROVADA');
     expect(recebido.url.path, '/usuarios/cnh/verificar-mlkit');
     expect(recebido.headers['authorization'], 'Bearer token-teste');
@@ -248,7 +212,7 @@ void main() {
     final corpo = jsonDecode(recebido.body) as Map;
     expect(corpo['versaoLeitura'], 'mlkit-v1');
     expect(corpo['aceitePrivacidade'], true);
-    expect(corpo['nomeCompleto'], 'João Pedro da Silva');
+    expect(corpo.containsKey('nomeCompleto'), false);
     expect(corpo['leitura']['largura'], 1000);
     expect(corpo.containsKey('frente'), false);
     expect(corpo.containsKey('verso'), false);
@@ -264,36 +228,23 @@ void main() {
       }),
     );
     expect(
-      (await service.enviar(
-        frente,
-        nomeCompleto: 'João Pedro da Silva',
-        aceitePrivacidade: false,
-      ))['sucesso'],
+      (await service.enviar(frente, aceitePrivacidade: false))['sucesso'],
       isFalse,
     );
     expect(
-      (await service.enviar(
-        Uint8List(0),
-        nomeCompleto: 'João Pedro da Silva',
-        aceitePrivacidade: true,
-      ))['sucesso'],
+      (await service.enviar(Uint8List(0), aceitePrivacidade: true))['sucesso'],
       isFalse,
     );
     expect(
       (await service.enviar(
         Uint8List(5 * 1024 * 1024 + 1),
-        nomeCompleto: 'João Pedro da Silva',
         aceitePrivacidade: true,
       ))['sucesso'],
       isFalse,
     );
     AuthService.tokenUsuarioLogado = null;
     expect(
-      (await service.enviar(
-        frente,
-        nomeCompleto: 'João Pedro da Silva',
-        aceitePrivacidade: true,
-      ))['mensagem'],
+      (await service.enviar(frente, aceitePrivacidade: true))['mensagem'],
       'Usuário não está logado',
     );
     expect(chamadas, 0);
@@ -311,7 +262,6 @@ void main() {
       expect(
         (await recusada.enviar(
           frente,
-          nomeCompleto: 'João Pedro da Silva',
           aceitePrivacidade: true,
         ))['dados']['status'],
         'RECUSADA',
@@ -326,11 +276,7 @@ void main() {
         ),
       );
       expect(
-        (await falha.enviar(
-          frente,
-          nomeCompleto: 'João Pedro da Silva',
-          aceitePrivacidade: true,
-        ))['mensagem'],
+        (await falha.enviar(frente, aceitePrivacidade: true))['mensagem'],
         'Serviço temporariamente indisponível',
       );
     },
@@ -345,11 +291,7 @@ void main() {
       prazo: const Duration(milliseconds: 1),
       cliente: MockClient((_) => pendente.future),
     );
-    final resultado = await service.enviar(
-      frente,
-      nomeCompleto: 'João Pedro da Silva',
-      aceitePrivacidade: true,
-    );
+    final resultado = await service.enviar(frente, aceitePrivacidade: true);
     expect(resultado['sucesso'], isFalse);
     expect(resultado['mensagem'], contains('Atualize o status'));
     expect(logs.join('\n'), contains('classe=timeout tipo=TimeoutException'));

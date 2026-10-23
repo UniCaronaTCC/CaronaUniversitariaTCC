@@ -149,7 +149,6 @@ void main() {
   Future<void> fotografarFrente(WidgetTester tester) async {
     await tester.tap(find.byType(Checkbox));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'João Pedro da Silva');
     FocusManager.instance.primaryFocus?.unfocus();
     await tester.pumpAndSettle();
     await tester.scrollUntilVisible(
@@ -183,9 +182,8 @@ void main() {
             capturas++;
             return XFile.fromData(Uint8List.fromList(png), name: 'cnh.png');
           },
-          enviarFotos: (frente, aceite, nome) async {
+          enviarFotos: (frente, aceite) async {
             envios++;
-            expect(nome, 'João Pedro da Silva');
             expect(frente, png);
             expect(aceite, isTrue);
             status = perfilAprovado;
@@ -231,7 +229,7 @@ void main() {
           },
           capturarFoto: () async =>
               XFile.fromData(Uint8List.fromList(png), name: 'cnh.png'),
-          enviarFotos: (_, _, _) async {
+          enviarFotos: (_, _) async {
             envios++;
             return {'sucesso': false, 'mensagem': 'Falha de conexão'};
           },
@@ -260,7 +258,7 @@ void main() {
           },
           capturarFoto: () async =>
               XFile.fromData(Uint8List.fromList(png), name: 'cnh.png'),
-          enviarFotos: (_, _, _) async => {
+          enviarFotos: (_, _) async => {
             'sucesso': true,
             'dados': {'status': 'RECUSADA'},
             'mensagem': 'Não conseguimos ler a categoria da CNH.',

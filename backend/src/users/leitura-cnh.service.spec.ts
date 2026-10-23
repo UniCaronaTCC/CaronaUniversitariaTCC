@@ -44,14 +44,14 @@ describe('LeituraCnhService com ML Kit', () => {
       validade: '01/01/2099',
       categoria: 'AB',
     });
-    expect(conferirDadosCnh(l, 'Maria Silva', '2026-10-20').dados).toEqual({
+    expect(conferirDadosCnh(l, '2026-10-20').dados).toEqual({
       cpf: '52998224725',
       validade: '2099-01-01',
       categoria: 'AB',
     });
-    expect(conferirDadosCnh(l, 'Outra Pessoa', '2026-10-20').motivo).toBe(
-      'NOME_DIVERGENTE',
-    );
+    expect(
+      conferirDadosCnh({ ...l, nome: null }, '2026-10-20').dados,
+    ).not.toBeNull();
   });
   it.each([
     null,

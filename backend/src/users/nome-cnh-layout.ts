@@ -20,18 +20,15 @@ const sobrepoe = (a: Bbox, b: Bbox) => a.x0 < b.x1 && a.x1 > b.x0;
 // Uma moldura pode virar um caractere unido à numeração impressa "2 e 1".
 // A tolerância vale apenas para esse prefixo, nunca para o nome da pessoa.
 const normalizarPrefixo = (texto: string) =>
-  normalizar(texto).replace(/^[^\d](?=2\s*E\s*1$)/, '');
+  normalizar(texto)
+    .replace(/^[|()[\]{}]+|[|()[\]{}]+$/g, '')
+    .replace(/^[^\d](?=2\s*E\s*1$)/, '');
 
 type MotivoRegiao =
   | 'TITULO_AUSENTE'
   | 'TITULO_DUPLICADO'
   | 'ALTURA_INVALIDA'
-  | 'PALAVRA_NA_BORDA'
   | 'REGIAO_VAZIA'
-  | 'EXCESSO_DE_LINHAS'
-  | 'NOME_DISTANTE'
-  | 'OUTRO_CAMPO'
-  | 'FORMATO_INVALIDO'
   | 'REGIAO_LIDA';
 
 export interface DiagnosticoRegiaoNome {
@@ -82,14 +79,14 @@ export function nomePeloLayout(
     if (
       prefixo.length === 3 ||
       esquerda - p.bbox.x1 > altura * 2 ||
-      !/^(?:\d{1,2}|E|\d{1,2}\s*E\s*\d{1,2})$/.test(normalizarPrefixo(p.text))
+      !/^(?:\d{1,3}|E|\d{1,2}\s*E\s*\d{1,2})$/.test(normalizarPrefixo(p.text))
     )
       break;
     prefixo.unshift(p);
     esquerda = p.bbox.x0;
   }
   if (
-    !/^\d{1,2}(?:\s*E\s*\d{1,2})?$/.test(
+    !/^\d{1,3}(?:\s*E\s*\d{1,2})?$/.test(
       prefixo.map((p) => normalizarPrefixo(p.text)).join(' '),
     )
   )
@@ -112,6 +109,10 @@ export function nomePeloLayout(
       p.bbox.x0 > titulo.bbox.x1 &&
       p.bbox.y0 < titulo.bbox.y1 &&
       p.bbox.y1 > titulo.bbox.y0 &&
+      // Caixas de letras altas do título geral podem sobrepor NOME.
+      // Um campo da mesma linha também precisa ter o centro alinhado.
+      Math.abs((p.bbox.y0 + p.bbox.y1 - titulo.bbox.y0 - titulo.bbox.y1) / 2) <=
+        altura * 0.75 &&
       (outroCampo.test(normalizar(p.text)) ||
         /^(?:1[ªAº°.]?|T)\s*HABILI?TACAO$/.test(normalizar(p.text))),
   );
@@ -131,88 +132,28 @@ export function nomePeloLayout(
       outroCampo.test(normalizar(p.text)),
   );
   regiao.y1 = Math.min(regiao.y1, ...proximosCampos.map((p) => p.bbox.y0));
-  // Uma leve inclinação pode colocar o topo de uma letra acima do fim
-  // do título. Só toleramos essa sobreposição se o centro estiver abaixo.
-  const abaixoDoTitulo = (p: (typeof palavras)[number]) => {
-    const centro = (p.bbox.y0 + p.bbox.y1) / 2;
-    if (palavrasTitulo.has(p) || centro <= regiao.y0) return false;
-    if (p.bbox.y0 >= regiao.y0 - altura / 2) return true;
-    if (p.bbox.y0 < regiao.y0 - altura) return false;
-    // Uma moldura pode aumentar a caixa de uma palavra. Só toleramos isso
-    // quando pelo menos duas outras palavras confirmam a mesma linha de base.
-    const referencias = linhas
-      .find((l) => l.words.includes(p))!
-      .words.filter(
-        (q) =>
-          q !== p &&
-          q.bbox.x0 >= regiao.x0 &&
-          q.bbox.x1 <= regiao.x1 &&
-          q.bbox.y0 >= regiao.y0 - altura / 2 &&
-          (q.bbox.y0 + q.bbox.y1) / 2 > regiao.y0 &&
-          /^[\p{L}'’.-]+$/u.test(q.text) &&
-          !outroCampo.test(normalizar(q.text)),
-      );
-    if (referencias.length < 2) return false;
-    const centros = referencias
-      .map((q) => (q.bbox.y0 + q.bbox.y1) / 2)
-      .sort((a, b) => a - b);
-    const alturas = referencias
-      .map((q) => q.bbox.y1 - q.bbox.y0)
-      .sort((a, b) => a - b);
-    return (
-      Math.abs(centro - centros[Math.floor(centros.length / 2)]) <=
-      alturas[Math.floor(alturas.length / 2)] / 2
-    );
-  };
-  // Não descartar silenciosamente uma palavra que cruza a borda:
-  // isso poderia transformar um nome completo em outro nome mais curto.
-  const cortada = palavras.some(
-    (p) =>
-      !palavrasTitulo.has(p) &&
-      !outroCampo.test(normalizar(p.text)) &&
-      !(
-        vizinhos.length &&
-        /\d/.test(p.text) &&
-        (p.bbox.x0 + p.bbox.x1) / 2 >= regiao.x1
-      ) &&
-      (p.bbox.y0 + p.bbox.y1) / 2 > regiao.y0 &&
-      sobrepoe(p.bbox, regiao) &&
-      p.bbox.y1 > regiao.y0 &&
-      p.bbox.y0 < regiao.y1 &&
-      (p.bbox.x0 < regiao.x0 ||
-        p.bbox.x1 > regiao.x1 ||
-        (p.bbox.y0 < regiao.y0 && !abaixoDoTitulo(p)) ||
-        p.bbox.y1 > regiao.y1),
-  );
-  if (cortada) return concluir('PALAVRA_NA_BORDA');
+  // A região escolhe linhas prováveis, sem cortar palavras nas margens.
   const candidatas = linhas
-    .map((linha) =>
-      linha.words
-        .filter(
-          (p) =>
-            abaixoDoTitulo(p) &&
-            p.bbox.y1 <= regiao.y1 &&
-            p.bbox.x0 >= regiao.x0 &&
-            p.bbox.x1 <= regiao.x1,
-        )
-        .sort((a, b) => a.bbox.x0 - b.bbox.x0),
-    )
+    .map((linha) => {
+      const valores = linha.words.filter(
+        (p) =>
+          !palavrasTitulo.has(p) &&
+          !outroCampo.test(normalizar(p.text)) &&
+          /[\p{L}\d]/u.test(p.text) &&
+          (p.bbox.y0 + p.bbox.y1) / 2 > regiao.y0 &&
+          p.bbox.y0 < regiao.y1 &&
+          !(vizinhos.length && (p.bbox.x0 + p.bbox.x1) / 2 >= regiao.x1),
+      );
+      return valores.some((p) => sobrepoe(p.bbox, regiao))
+        ? valores.sort((a, b) => a.bbox.x0 - b.bbox.x0)
+        : [];
+    })
     .filter((linha) => linha.length > 0)
     .sort((a, b) => a[0].bbox.y0 - b[0].bbox.y0);
   linhasCandidatas = candidatas.length;
   if (!candidatas.length) return concluir('REGIAO_VAZIA');
-  if (candidatas.length > 2) return concluir('EXCESSO_DE_LINHAS');
-  if (candidatas[0][0].bbox.y0 - regiao.y0 > altura * 3)
-    return concluir('NOME_DISTANTE');
   const nome = candidatas
     .map((linha) => linha.map((p) => p.text).join(' '))
     .join(' ');
-  if (outroCampo.test(normalizar(nome))) return concluir('OUTRO_CAMPO');
-  if (
-    !/^[\p{L}]+(?:['’.-]?[\p{L}]+)*(?:\s+[\p{L}]+(?:['’.-]?[\p{L}]+)*)+$/u.test(
-      nome,
-    )
-  )
-    return concluir('FORMATO_INVALIDO');
   return concluir('REGIAO_LIDA', nome);
 }

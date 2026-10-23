@@ -7,10 +7,6 @@ export interface DadosCnh {
 }
 
 export const motivosCnh = {
-  NOME_NAO_LIDO:
-    'Não foi possível identificar o campo de nome completo na CNH. Isso pode ocorrer por uma limitação da leitura automática, mesmo com uma foto nítida. Confira se a frente do documento está inteira e tente novamente.',
-  NOME_DIVERGENTE:
-    'O nome lido não corresponde ao nome completo informado. Confira o preenchimento e a foto.',
   CPF_NAO_LIDO: 'Não conseguimos ler o CPF na CNH. Refaça a foto dessa parte.',
   CPF_INVALIDO:
     'O CPF lido não passou na conferência. Refaça a foto com os números nítidos.',
@@ -26,41 +22,6 @@ export const motivosCnh = {
 type ConferenciaCnh =
   | { dados: DadosCnh; motivo?: never }
   | { dados: null; motivo: keyof typeof motivosCnh };
-
-export interface DiagnosticoNomeCnh {
-  titulosEncontrados: number;
-  linhasAceitas: number;
-  parada:
-    | 'TITULO_AUSENTE'
-    | 'REGIAO_LIDA'
-    | 'REGIAO_NAO_IDENTIFICADA'
-    | 'FIM_DA_LEITURA'
-    | 'OUTRO_CAMPO'
-    | 'DIGITOS_NA_LINHA'
-    | 'FORMATO_NAO_RECONHECIDO'
-    | 'LIMITE_DE_LINHAS';
-  resultado: 'NAO_EXTRAIDO' | 'DIVERGENTE' | 'CORRESPONDE';
-}
-
-export function nomeCompletoValido(nome: unknown): nome is string {
-  return (
-    typeof nome === 'string' &&
-    nome.trim().length <= 150 &&
-    /^[\p{L}]+(?:['’-][\p{L}]+)*(?:\s+[\p{L}]+(?:['’-][\p{L}]+)*)+$/u.test(
-      nome.trim(),
-    )
-  );
-}
-
-function normalizar(texto: string): string {
-  return texto
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toUpperCase()
-    .replace(/[^A-Z0-9/.-]+/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
 
 export function cpfValido(cpf: string): boolean {
   if (!/^\d{11}$/.test(cpf) || /^(\d)\1{10}$/.test(cpf)) return false;
@@ -92,25 +53,10 @@ function dataIso(valor: string): string | null {
 
 export function conferirDadosCnh(
   entrada: LeituraCnh,
-  nomeUsuario: string,
   hoje: string,
-  diagnosticarNome?: (diagnostico: DiagnosticoNomeCnh) => void,
 ): ConferenciaCnh {
-  const nome = normalizar(nomeUsuario);
-  const nomeDocumento = normalizar(entrada.nome ?? '');
-  diagnosticarNome?.({
-    titulosEncontrados: nomeDocumento ? 1 : 0,
-    linhasAceitas: nomeDocumento ? 1 : 0,
-    parada: nomeDocumento ? 'REGIAO_LIDA' : 'REGIAO_NAO_IDENTIFICADA',
-    resultado: !nomeDocumento
-      ? 'NAO_EXTRAIDO'
-      : nomeCompletoValido(nomeUsuario) && nomeDocumento === nome
-        ? 'CORRESPONDE'
-        : 'DIVERGENTE',
-  });
-  if (!nomeDocumento) return { dados: null, motivo: 'NOME_NAO_LIDO' };
-  if (!nomeCompletoValido(nomeUsuario) || nomeDocumento !== nome)
-    return { dados: null, motivo: 'NOME_DIVERGENTE' };
+  // O nome é extraído como informação, sem comparar com texto digitado
+  // nem bloquear os demais campos quando a leitura dele é inconclusiva.
   const campos = entrada.campos;
   const cpfLido = campos?.cpf;
   if (!cpfLido) return { dados: null, motivo: 'CPF_NAO_LIDO' };
