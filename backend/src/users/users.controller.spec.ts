@@ -49,6 +49,8 @@ describe('UsersController', () => {
       cnhValidade: null,
       cpf: '52998224725',
       cnhRegistroFinal: '8901',
+      cnhNome: 'JOAO SILVA',
+      cnhRegistro: '12345678901',
       senha: 'hash-que-nao-deve-sair',
     });
     usersService.buscarVeiculo.mockResolvedValue({
@@ -90,6 +92,8 @@ describe('UsersController', () => {
     expect(resultado.dados).not.toHaveProperty('senha');
     expect(resultado.dados).not.toHaveProperty('cpf');
     expect(resultado.dados).not.toHaveProperty('cnhRegistroFinal');
+    expect(resultado.dados).not.toHaveProperty('cnhNome');
+    expect(resultado.dados).not.toHaveProperty('cnhRegistro');
   });
 
   it('informa quando o usuário não existe', async () => {

@@ -59,6 +59,8 @@ CREATE TABLE IF NOT EXISTS unicarona.usuarios (
   cnh_categoria VARCHAR(5),
   cnh_validade DATE,
   cnh_registro_final VARCHAR(4),
+  cnh_nome VARCHAR(150),
+  cnh_registro VARCHAR(11),
   cnh_verificada_em TIMESTAMPTZ,
   privacidade_aceita_em TIMESTAMPTZ,
   criado_em TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,

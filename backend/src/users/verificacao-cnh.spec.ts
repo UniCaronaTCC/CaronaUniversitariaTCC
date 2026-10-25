@@ -13,6 +13,8 @@ describe('liberação para oferecer carona', () => {
     const usuario = new User();
     expect(usuario.cpf).toBeUndefined();
     expect(usuario.cnhRegistroFinal).toBeUndefined();
+    expect(usuario.cnhNome).toBeUndefined();
+    expect(usuario.cnhRegistro).toBeUndefined();
   });
 
   it.each(['B', 'AB', 'C', 'AC', 'D', 'AD', 'E', 'AE'])(

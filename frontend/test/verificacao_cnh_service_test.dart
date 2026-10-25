@@ -14,6 +14,28 @@ void main() {
   tearDown(() => AuthService.tokenUsuarioLogado = null);
 
   test(
+    'consulta nome e registro apenas pela rota da conta autenticada',
+    () async {
+      final service = VerificacaoCnhService(
+        cliente: MockClient((pedido) async {
+          expect(pedido.method, 'GET');
+          expect(pedido.url.path, '/usuarios/cnh/dados');
+          expect(pedido.url.queryParameters, isEmpty);
+          expect(pedido.headers['Authorization'], 'Bearer token-teste');
+          return http.Response(
+            jsonEncode({
+              'dados': {'nome': 'MARIA SILVA', 'registro': '12345678901'},
+            }),
+            200,
+          );
+        }),
+      );
+      final dados = await service.buscarDadosExtraidos();
+      expect(dados, {'nome': 'MARIA SILVA', 'registro': '12345678901'});
+    },
+  );
+
+  test(
     'servidor antigo orienta atualizar backend em vez de culpar o aceite',
     () async {
       final service = VerificacaoCnhService(

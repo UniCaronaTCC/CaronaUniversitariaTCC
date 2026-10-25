@@ -25,14 +25,28 @@ carro. CPF duplicado entre contas continua bloqueado. Campo ambiguo e recusado.
 ## Privacidade e limites
 
 Fotos nao sao enviadas ao backend. A foto temporaria local usada pelo plugin e
-removida ao concluir, inclusive em falhas. Nao persistimos texto completo ou
-nome extraído, nem os imprimimos em logs. Guardamos CPF, categoria, validade,
-consentimento e estado/data da conferencia, como antes. Nao ha migracao de banco.
+removida ao concluir, inclusive em falhas. Não persistimos o texto completo da
+leitura e não imprimimos dados do documento nos logs. Guardamos CPF, categoria,
+validade, consentimento e estado/data da conferência. Os campos opcionais abaixo
+exigem uma atualização aditiva do banco antes de publicar esta versão.
 
 IMPORTANTE: o OCR recebido do celular pode ser adulterado. Estas regras conferem
 coerencia dos dados para o TCC e nao comprovam autenticidade, titularidade,
 suspensao ou autorizacao oficial para dirigir. Nao existe consulta ao Detran.
 Uma verificacao de identidade confiavel exige um servico/procedimento proprio.
+
+Nome extraído e número completo de registro são opcionais e salvos em
+cnh_nome e cnh_registro, sem modificar o nome do perfil. Registro é extraído
+somente abaixo do rótulo REGISTRO, sem reutilizar o CPF como alternativa.
+Ausência desses campos não impede a aprovação. GET /usuarios/cnh/dados exige
+JWT e devolve esses dois dados apenas da conta autenticada; consultas normais
+de usuários omitem as colunas privadas. Reiniciar o teste apaga esses campos.
+
+Antes de publicar esta versão, executar no banco PostgreSQL:
+database/postgres/atualizacoes/adicionar_dados_extraidos_cnh.sql.
+Não é possível reconstruir esses dados em contas aprovadas anteriormente,
+pois a foto e o texto completo do OCR não são guardados. Uma nova leitura é
+necessária para preencher campos antigos; não reiniciamos contas automaticamente.
 
 ## Publicacao e testes
 

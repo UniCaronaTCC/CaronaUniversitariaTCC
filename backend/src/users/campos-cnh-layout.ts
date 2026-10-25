@@ -1,8 +1,8 @@
 import type { Block, Word } from './ocr-cnh';
 import type { RelatarCampoCnh, MotivoCampoCnh } from './diagnostico-campo-cnh';
 
-export type CampoCnh = 'nome' | 'cpf' | 'validade' | 'categoria';
-export type CamposCnh = Record<Exclude<CampoCnh, 'nome'>, string | null>;
+export type CampoCnh = 'nome' | 'cpf' | 'validade' | 'categoria' | 'registro';
+export type CamposCnh = Record<'cpf' | 'validade' | 'categoria', string | null>;
 export interface RegiaoCnh {
   left: number;
   top: number;
@@ -21,6 +21,7 @@ const padroes: Record<CampoCnh, RegExp> = {
   cpf: /^(?:D)?CPF$/,
   validade: /^(?:B)?VALIDADE$/,
   categoria: /^(?:CATEGORIA|CAT|[SG]?CAT[HM]AB)$/,
+  registro: /^N?REGISTRO$/,
 };
 const outro =
   /^(?:NOME|CPF|N?REGISTRO|VALIDADE|CAT|CATHAB|HAB|CATEGORIA|[A-E]?DATA|NASCIMENTO|[A-E]?FILIACAO|[A-E]?NACIONALIDADE|[A-E]?(?:DOC(?:IDENTIDADE)?|IDENTIDADE)(?:ORGEMISSORUF)?|ORG|EMISSOR|UF|ACC|HABILITACAO)$/;
@@ -72,7 +73,7 @@ export function regiaoDoCampo(
       !(campo === 'categoria' && rotulo(p.text) === 'HAB'),
   );
   const anteriores =
-    campo === 'categoria'
+    campo === 'categoria' || campo === 'registro'
       ? palavras.filter(
           (p) =>
             p.bbox.x1 < b.x0 &&
@@ -93,7 +94,7 @@ export function regiaoDoCampo(
       h *
         (campo === 'nome'
           ? 40
-          : campo === 'cpf'
+          : campo === 'cpf' || campo === 'registro'
             ? 14
             : campo === 'validade'
               ? 8
@@ -215,6 +216,11 @@ function validarFormato(campo: Exclude<CampoCnh, 'nome'>, valor: string) {
     cpf: /^(?:\d[\d .-]*\d)$/,
     validade: /^\d{2}\s*([/.])\s*\d{2}\s*\1\s*\d{4}$/,
     categoria: /^(?:A?[BCDE]|A|ACC)$/,
+    registro: /^(?:\d\s*){11}$/,
   }[campo];
-  return formato.test(texto) ? texto : null;
+  return formato.test(texto)
+    ? campo === 'registro'
+      ? texto.replace(/\s/g, '')
+      : texto
+    : null;
 }

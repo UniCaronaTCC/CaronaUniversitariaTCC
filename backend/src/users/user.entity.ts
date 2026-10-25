@@ -104,6 +104,24 @@ export class User {
   cnhValidade: string | null = null;
 
   @Column({
+    name: 'cnh_nome',
+    type: 'varchar',
+    length: 150,
+    nullable: true,
+    select: false,
+  })
+  cnhNome: string | null;
+
+  @Column({
+    name: 'cnh_registro',
+    type: 'varchar',
+    length: 11,
+    nullable: true,
+    select: false,
+  })
+  cnhRegistro: string | null;
+
+  @Column({
     name: 'cnh_registro_final',
     type: 'varchar',
     length: 4,

@@ -6,14 +6,22 @@ import { VerificacaoCnhService } from './verificacao-cnh.service';
 describe('VerificacaoCnhController ML Kit', () => {
   const req = { usuario: { sub: 7 } } as RequisicaoComUsuario;
   const verificar = jest.fn().mockResolvedValue({ status: 'APROVADA' });
+  const buscarDados = jest
+    .fn()
+    .mockResolvedValue({ nome: null, registro: null });
   const reiniciarParaTeste = jest
     .fn()
     .mockResolvedValue({ status: 'NAO_ENVIADA' });
   const controller = new VerificacaoCnhController({
     verificar,
+    buscarDados,
     reiniciarParaTeste,
   } as unknown as VerificacaoCnhService);
   beforeEach(() => jest.clearAllMocks());
+  it('consulta nome e registro apenas do usuário autenticado', async () => {
+    await controller.buscarDados(req);
+    expect(buscarDados).toHaveBeenCalledWith(7);
+  });
   it('usa conta autenticada e não devolve OCR', async () => {
     const leitura = { largura: 1000, altura: 800, linhas: [] };
     const r = await controller.verificar(

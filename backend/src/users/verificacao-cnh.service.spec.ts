@@ -65,6 +65,38 @@ describe('VerificacaoCnhService', () => {
       dataSource as unknown as DataSource,
     );
   });
+  it('salva nome e registro opcionais sem alterar nome do perfil', async () => {
+    leitura.ler.mockReturnValue({ ...texto, registro: '12345678901' });
+    await expect(service.verificar(1, frente)).resolves.toEqual({
+      status: 'APROVADA',
+    });
+    const [, alteracoes] = usuarios.update.mock.calls[0] as [
+      number,
+      Partial<User>,
+    ];
+    expect(alteracoes).toMatchObject({
+      cnhNome: texto.nome,
+      cnhRegistro: '12345678901',
+      cnhRegistroFinal: '8901',
+    });
+    expect(alteracoes).not.toHaveProperty('nome');
+  });
+
+  it('consulta os dados privados somente da conta solicitada', async () => {
+    usuarios.findOne.mockResolvedValue({
+      idUsuario: 7,
+      cnhNome: 'MARIA SILVA',
+      cnhRegistro: '12345678901',
+    });
+    expect(await service.buscarDados(7)).toEqual({
+      nome: 'MARIA SILVA',
+      registro: '12345678901',
+    });
+    expect(usuarios.findOne).toHaveBeenCalledWith({
+      where: { idUsuario: 7 },
+      select: { idUsuario: true, cnhNome: true, cnhRegistro: true },
+    });
+  });
 
   it('reinicia somente os campos da CNH e permite uma nova leitura', async () => {
     await expect(service.reiniciarParaTeste(1)).resolves.toEqual({
@@ -73,6 +105,8 @@ describe('VerificacaoCnhService', () => {
     expect(usuarios.update).toHaveBeenCalledWith(1, {
       statusVerificacaoCnh: 'NAO_ENVIADA',
       cpf: null,
+      cnhNome: null,
+      cnhRegistro: null,
       cnhCategoria: null,
       cnhValidade: null,
       cnhRegistroFinal: null,

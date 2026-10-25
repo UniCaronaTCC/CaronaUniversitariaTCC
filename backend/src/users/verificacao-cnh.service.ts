@@ -26,6 +26,18 @@ export class VerificacaoCnhService {
     private readonly dataSource: DataSource,
   ) {}
 
+  async buscarDados(idUsuario: number) {
+    const usuario = await this.usuarios.findOne({
+      where: { idUsuario },
+      select: { idUsuario: true, cnhNome: true, cnhRegistro: true },
+    });
+    if (!usuario) throw new NotFoundException('Usuário não encontrado');
+    return {
+      nome: usuario.cnhNome ?? null,
+      registro: usuario.cnhRegistro ?? null,
+    };
+  }
+
   // Recurso temporario de QA: remover junto com a rota antes da entrega.
   async reiniciarParaTeste(idUsuario: number) {
     if (this.emAndamento.has(idUsuario)) {
@@ -61,6 +73,8 @@ export class VerificacaoCnhService {
         const resultado = await usuarios.update(idUsuario, {
           statusVerificacaoCnh: 'NAO_ENVIADA',
           cpf: null,
+          cnhNome: null,
+          cnhRegistro: null,
           cnhCategoria: null,
           cnhValidade: null,
           cnhRegistroFinal: null,
@@ -105,6 +119,8 @@ export class VerificacaoCnhService {
         await this.usuarios.update(idUsuario, {
           statusVerificacaoCnh: 'RECUSADA',
           cpf: null,
+          cnhNome: null,
+          cnhRegistro: null,
           cnhCategoria: null,
           cnhValidade: null,
           cnhRegistroFinal: null,
@@ -121,9 +137,17 @@ export class VerificacaoCnhService {
         await this.usuarios.update(idUsuario, {
           statusVerificacaoCnh: 'APROVADA',
           cpf: dados.cpf,
+          cnhNome: texto.nome && texto.nome.length <= 150 ? texto.nome : null,
+          cnhRegistro:
+            texto.registro && /^\d{11}$/.test(texto.registro)
+              ? texto.registro
+              : null,
           cnhCategoria: dados.categoria,
           cnhValidade: dados.validade,
-          cnhRegistroFinal: null,
+          cnhRegistroFinal:
+            texto.registro && /^\d{11}$/.test(texto.registro)
+              ? texto.registro.slice(-4)
+              : null,
           cnhVerificadaEm: new Date(),
           privacidadeAceitaEm,
         });

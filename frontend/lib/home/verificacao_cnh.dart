@@ -9,6 +9,7 @@ import '../services/auth_service.dart';
 import '../services/verificacao_cnh_service.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/foto_cnh.dart';
+import '../widgets/dados_cnh_extraidos.dart';
 import 'selecionar_foto_cnh.dart';
 
 typedef CapturarFotoCnh = Future<XFile?> Function();
@@ -246,6 +247,7 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
                     'Categoria ${verificacao.categoria} · Válida até ${verificacao.validadeFormatada}',
                     textAlign: TextAlign.center,
                   ),
+                const DadosCnhExtraidos(),
                 const SizedBox(height: 24),
                 FilledButton.icon(
                   onPressed: ocupada
@@ -268,7 +270,7 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'A foto é lida no seu celular. Enviamos o texto e as posições das palavras para extrair os campos e conferir CPF, categoria e validade. Guardamos CPF, categoria e validade; a foto e o texto da leitura não são armazenados.',
+                  'A foto é lida no seu celular. Enviamos o texto e as posições das palavras para extrair os campos e conferir CPF, categoria e validade. Guardamos CPF, categoria, validade e, quando lidos, o nome e o número de registro da CNH. A foto e o texto completo da leitura não são armazenados. O nome lido não altera seu perfil.',
                   style: TextStyle(height: 1.4),
                 ),
                 CheckboxListTile(

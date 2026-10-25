@@ -23,6 +23,26 @@ class VerificacaoCnhService {
     this.registrarDiagnostico,
   });
 
+  Future<Map<String, dynamic>> buscarDadosExtraidos() async {
+    final conexao = cliente ?? http.Client();
+    try {
+      final resposta = await AuthService.enviarComToken(
+        (token) => conexao.get(
+          Uri.parse('${ApiConfig.baseUrl}/usuarios/cnh/dados'),
+          headers: {'Authorization': 'Bearer $token'},
+        ),
+      ).timeout(const Duration(seconds: 15));
+      if (resposta == null || resposta.statusCode != 200) return {};
+      final corpo = jsonDecode(resposta.body);
+      if (corpo is! Map || corpo['dados'] is! Map) return {};
+      return Map<String, dynamic>.from(corpo['dados']);
+    } catch (_) {
+      return {};
+    } finally {
+      if (cliente == null) conexao.close();
+    }
+  }
+
   void _diagnosticar(String mensagem) {
     if (!kDebugMode) return;
     final registrar = registrarDiagnostico;

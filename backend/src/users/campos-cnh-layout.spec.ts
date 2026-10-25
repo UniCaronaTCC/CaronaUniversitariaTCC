@@ -13,6 +13,19 @@ const blocos = (...linhas: Word[][]): Block[] => [
 ];
 
 describe('separação das colunas da CNH', () => {
+  it.each([
+    ['00123456789', '00123456789'],
+    ['00123 456789', '00123456789'],
+    ['1234567890', null],
+    ['123456789012', null],
+    ['12345X78901', null],
+  ])('extrai registro sem inventar dígitos: %s', (valor, esperado) => {
+    const entrada = blocos(
+      [palavra('Nº REGISTRO', 400, 20, 480, 30)],
+      [palavra(valor, 400, 40, 520, 55)],
+    );
+    expect(valorDoCampo(entrada, 'registro', 1000, 800)).toBe(esperado);
+  });
   const titulo = palavra('CPF', 560, 436, 590, 448);
   const registro = palavra('REGISTRO', 695, 436, 748, 448);
   const cpf = palavra('529.982.247-25', 540, 450, 650, 465);

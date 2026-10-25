@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Get,
   Post,
   Req,
   UseGuards,
@@ -15,6 +16,13 @@ import { motivosCnh } from './dados-cnh';
 @Controller('usuarios/cnh')
 export class VerificacaoCnhController {
   constructor(private readonly verificacao: VerificacaoCnhService) {}
+  @Get('dados')
+  async buscarDados(@Req() request: RequisicaoComUsuario) {
+    return {
+      sucesso: true,
+      dados: await this.verificacao.buscarDados(request.usuario.sub),
+    };
+  }
   @Post('reiniciar-teste')
   async reiniciarTeste(@Req() request: RequisicaoComUsuario) {
     return {

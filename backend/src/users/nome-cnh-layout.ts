@@ -4,6 +4,7 @@ import type { CamposCnh } from './campos-cnh-layout';
 export interface LeituraCnh {
   texto: string;
   nome: string | null;
+  registro?: string | null;
   campos?: CamposCnh;
   diagnosticoNome?: DiagnosticoRegiaoNome;
 }

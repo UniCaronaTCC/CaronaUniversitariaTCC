@@ -85,15 +85,17 @@ export class LeituraCnhService {
       validade: valorDoCampo(blocos, 'validade', largura, altura),
       categoria: valorDoCampo(blocos, 'categoria', largura, altura),
     };
+    const registro = valorDoCampo(blocos, 'registro', largura, altura);
     this.logger.log(
       'CNH: campos_lidos ' +
         JSON.stringify({
           nome: !!nome,
+          registro: !!registro,
           cpf: !!campos.cpf,
           validade: !!campos.validade,
           categoria: !!campos.categoria,
         }),
     );
-    return { texto: '', nome, campos, diagnosticoNome };
+    return { texto: '', nome, registro, campos, diagnosticoNome };
   }
 }
