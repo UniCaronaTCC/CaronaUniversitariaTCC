@@ -338,11 +338,15 @@ class AuthService {
       }
       if (resposta.statusCode != 200) {
         final mensagem = corpo?['mensagem'] ?? corpo?['message'];
-        return falha(
+        final resultado = falha(
           mensagem is List
               ? mensagem.join('\n')
               : mensagem?.toString() ?? 'Não foi possível concluir a operação',
         );
+        if (veiculo && corpo?['campos'] is Map) {
+          resultado['campos'] = corpo!['campos'];
+        }
+        return resultado;
       }
       final dados = corpo?['dados'];
       if (dados is! Map<String, dynamic>) {

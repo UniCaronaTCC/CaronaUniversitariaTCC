@@ -1,4 +1,4 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { Request } from 'express';
 
 import { FotoPerfilService } from './foto-perfil.service';
@@ -236,4 +236,21 @@ describe('UsersController', () => {
     );
     expect(resultado.dados.placa).toBe('ABC1D23');
   });
+
+  it.each(['modelo', 'cor', 'placa'])(
+    'recusa objeto malformado em %s antes de acessar o banco',
+    async (campo) => {
+      const body = {
+        modelo: 'Honda Civic',
+        cor: 'Prata',
+        placa: 'ABC1D23',
+        [campo]: { toString: 'texto' },
+      };
+      await expect(
+        controller.salvarVeiculo(body, { usuario: { sub: 1 } } as never),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(usersService.buscarPorId).not.toHaveBeenCalled();
+      expect(usersService.salvarVeiculo).not.toHaveBeenCalled();
+    },
+  );
 });

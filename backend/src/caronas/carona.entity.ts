@@ -17,6 +17,17 @@ export class Carona {
   @PrimaryGeneratedColumn({ name: 'id_carona' })
   idCarona!: number;
 
+  // O banco captura na publicacao; nao pode ser regravado por edicoes da carona.
+  @Column({
+    name: 'veiculo_publicado',
+    type: 'jsonb',
+    nullable: true,
+    insert: false,
+    update: false,
+  })
+  veiculoPublicado: { modelo: string; cor: string; placa: string } | null =
+    null;
+
   // Informação do modelo, carregada somente na listagem do motorista.
   programacao?: { diasSemana: number[] };
 

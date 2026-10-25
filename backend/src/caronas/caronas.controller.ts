@@ -256,6 +256,7 @@ export class CaronasController {
   }
 
   private formatarCarona(carona: Carona) {
+    const veiculo = carona.veiculoPublicado;
     return {
       idCarona: carona.idCarona,
       idRecorrencia: carona.idRecorrencia,
@@ -293,11 +294,11 @@ export class CaronasController {
       usuario: {
         idUsuario: carona.usuario.idUsuario,
         nome: carona.usuario.nome,
-        veiculo: carona.usuario.veiculo
+        veiculo: veiculo
           ? {
-              modelo: carona.usuario.veiculo.modelo,
-              cor: carona.usuario.veiculo.cor,
-              placa: this.mascararPlaca(carona.usuario.veiculo.placa),
+              modelo: veiculo.modelo,
+              cor: veiculo.cor,
+              placa: this.mascararPlaca(veiculo.placa),
             }
           : null,
       },

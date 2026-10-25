@@ -5,6 +5,9 @@ import { User } from './user.entity';
 import { UsersService } from './users.service';
 import { Veiculo } from './veiculo.entity';
 import { ForbiddenException } from '@nestjs/common';
+import { EntityManager, In, QueryFailedError } from 'typeorm';
+import { Carona } from '../caronas/carona.entity';
+import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -12,6 +15,7 @@ describe('UsersService', () => {
     findOne: jest.Mock;
     save: jest.Mock;
     update: jest.Mock;
+    manager: { transaction: jest.Mock };
   };
   let instituicoesService: {
     buscarPorId: jest.Mock;
@@ -21,13 +25,18 @@ describe('UsersService', () => {
     findOne: jest.Mock;
     create: jest.Mock;
     save: jest.Mock;
+    createQueryBuilder: jest.Mock;
   };
+  let usuarioBloqueado: jest.Mock;
+  let caronasQuery: Record<string, jest.Mock>;
+  let temAceites: jest.Mock;
 
   beforeEach(async () => {
     repository = {
       findOne: jest.fn(),
       save: jest.fn(),
       update: jest.fn().mockResolvedValue({ affected: 1 }),
+      manager: { transaction: jest.fn() },
     };
     instituicoesService = {
       buscarPorId: jest.fn(),
@@ -35,9 +44,40 @@ describe('UsersService', () => {
     };
     veiculosRepository = {
       findOne: jest.fn(),
-      create: jest.fn().mockReturnValue({}),
+      create: jest
+        .fn()
+        .mockImplementation((dados: Partial<Veiculo>) => ({ ...dados })),
       save: jest.fn(),
+      createQueryBuilder: jest.fn(),
     };
+    usuarioBloqueado = jest.fn().mockResolvedValue({ idUsuario: 1 });
+    temAceites = jest.fn().mockResolvedValue(false);
+    caronasQuery = Object.fromEntries(
+      ['select', 'where', 'andWhere', 'orderBy', 'setLock'].map((nome) => [
+        nome,
+        jest.fn().mockReturnThis(),
+      ]),
+    );
+    caronasQuery.getMany = jest.fn().mockResolvedValue([]);
+    veiculosRepository.createQueryBuilder.mockReturnValue({
+      where: jest.fn().mockReturnThis(),
+      setLock: jest.fn().mockReturnThis(),
+      getOne: veiculosRepository.findOne,
+    });
+    const manager = {
+      getRepository: jest.fn().mockImplementation((entidade: unknown) => {
+        if (entidade === User) return { findOne: usuarioBloqueado };
+        if (entidade === Veiculo) return veiculosRepository;
+        if (entidade === Carona)
+          return { createQueryBuilder: () => caronasQuery };
+        if (entidade === Solicitacao) return { exists: temAceites };
+        throw new Error('Repositorio inesperado');
+      }),
+    };
+    repository.manager.transaction.mockImplementation(
+      (trabalho: (manager: EntityManager) => Promise<unknown>) =>
+        trabalho(manager as unknown as EntityManager),
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -295,6 +335,149 @@ describe('UsersService', () => {
       cor: 'Prata',
       placa: 'ABC1D23',
       usuario: { idUsuario: 7 },
+    });
+  });
+
+  it('edita o mesmo veiculo sem alterar seu proprietario ou o perfil', async () => {
+    const existente = {
+      idVeiculo: 7,
+      usuario: { idUsuario: 1 },
+      modelo: 'Onix',
+      cor: 'Prata',
+      placa: 'ABC1234',
+    };
+    veiculosRepository.findOne.mockResolvedValue(existente);
+    veiculosRepository.save.mockImplementation((veiculo: Veiculo) =>
+      Promise.resolve(veiculo),
+    );
+    await expect(
+      service.salvarVeiculo(1, 'Honda Civic', 'Azul escuro', 'XYZ9Z99'),
+    ).resolves.toMatchObject({
+      idVeiculo: 7,
+      usuario: { idUsuario: 1 },
+      modelo: 'Honda Civic',
+      cor: 'Azul escuro',
+      placa: 'XYZ9Z99',
+    });
+    expect(repository.save).not.toHaveBeenCalled();
+    expect(repository.update).not.toHaveBeenCalled();
+    expect(veiculosRepository.create).not.toHaveBeenCalled();
+  });
+
+  it('traduz placa duplicada em conflito com erro no campo', async () => {
+    veiculosRepository.findOne.mockResolvedValue(null);
+    veiculosRepository.save.mockRejectedValue(
+      new QueryFailedError(
+        'INSERT',
+        [],
+        Object.assign(new Error('unique'), { code: '23505' }),
+      ),
+    );
+    await expect(
+      service.salvarVeiculo(1, 'Honda Civic', 'Prata', 'ABC1D23'),
+    ).rejects.toMatchObject({
+      response: {
+        message: 'Esta placa j\u00e1 est\u00e1 cadastrada',
+        campos: { placa: 'Esta placa j\u00e1 est\u00e1 cadastrada' },
+      },
+    });
+  });
+
+  it('nao classifica indisponibilidade do banco como placa duplicada', async () => {
+    veiculosRepository.findOne.mockResolvedValue(null);
+    const erro = new Error('database unavailable');
+    veiculosRepository.save.mockRejectedValue(erro);
+    await expect(
+      service.salvarVeiculo(1, 'Honda Civic', 'Prata', 'ABC1D23'),
+    ).rejects.toBe(erro);
+  });
+
+  it('bloqueia alteracoes durante uma viagem mesmo sem passageiros aceitos', async () => {
+    caronasQuery.getMany.mockResolvedValue([
+      { idCarona: 10, status: 'EM_ANDAMENTO' },
+    ]);
+    await expect(
+      service.salvarVeiculo(1, 'Onix', 'Branco', 'ABC1234'),
+    ).rejects.toMatchObject({ status: 409 });
+    expect(veiculosRepository.save).not.toHaveBeenCalled();
+    expect(temAceites).not.toHaveBeenCalled();
+  });
+
+  it.each(['ATIVA', 'LOTADA'])(
+    'bloqueia troca com passageiros aceitos em carona %s',
+    async (status) => {
+      caronasQuery.getMany.mockResolvedValue([{ idCarona: 10, status }]);
+      temAceites.mockResolvedValue(true);
+      await expect(
+        service.salvarVeiculo(1, 'Onix', 'Branco', 'ABC1234'),
+      ).rejects.toMatchObject({ status: 409 });
+      expect(veiculosRepository.save).not.toHaveBeenCalled();
+      expect(temAceites).toHaveBeenCalledWith({
+        where: {
+          carona: { idCarona: In([10]) },
+          status: 'ACEITA',
+        },
+      });
+      expect(caronasQuery.getMany.mock.invocationCallOrder[0]).toBeLessThan(
+        temAceites.mock.invocationCallOrder[0],
+      );
+    },
+  );
+
+  it('permite trocar quando nao ha aceites nas caronas validas', async () => {
+    caronasQuery.getMany.mockResolvedValue([{ idCarona: 10, status: 'ATIVA' }]);
+    await service.salvarVeiculo(1, 'Onix', 'Branco', 'ABC1234');
+    expect(veiculosRepository.save).toHaveBeenCalledTimes(1);
+    expect(caronasQuery.setLock).toHaveBeenCalledWith('pessimistic_write');
+    expect(caronasQuery.where).toHaveBeenCalledWith('id_usuario = :idUsuario', {
+      idUsuario: 1,
+    });
+    expect(caronasQuery.andWhere).toHaveBeenCalledWith(
+      expect.stringContaining('OR NOT'),
+    );
+    expect(usuarioBloqueado).toHaveBeenCalledWith({
+      where: { idUsuario: 1 },
+      lock: { mode: 'for_no_key_update' },
+    });
+  });
+
+  it('salvar os mesmos dados e idempotente mesmo com viagens em andamento', async () => {
+    const existente = { modelo: 'Onix', cor: 'Branco', placa: 'ABC1234' };
+    veiculosRepository.findOne.mockResolvedValue(existente);
+    await expect(
+      service.salvarVeiculo(1, 'Onix', 'Branco', 'ABC1234'),
+    ).resolves.toBe(existente);
+    expect(caronasQuery.getMany).not.toHaveBeenCalled();
+    expect(veiculosRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('nao salva veiculo se o usuario deixou de existir', async () => {
+    usuarioBloqueado.mockResolvedValue(null);
+    await expect(
+      service.salvarVeiculo(1, 'Onix', 'Branco', 'ABC1234'),
+    ).rejects.toMatchObject({ status: 404 });
+    expect(veiculosRepository.save).not.toHaveBeenCalled();
+  });
+
+  it('nao atribui conflito do usuario ao campo placa', async () => {
+    veiculosRepository.save.mockRejectedValue(
+      new QueryFailedError(
+        'INSERT',
+        [],
+        Object.assign(new Error('unique'), {
+          code: '23505',
+          constraint: 'uq_veiculos_usuario',
+        }),
+      ),
+    );
+    await expect(
+      service.salvarVeiculo(1, 'Onix', 'Branco', 'ABC1234'),
+    ).rejects.toMatchObject({
+      response: {
+        statusCode: 409,
+        message:
+          'O cadastro do ve\u00edculo foi atualizado. Atualize o perfil antes de tentar novamente',
+      },
     });
   });
 });

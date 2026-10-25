@@ -6,12 +6,15 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
+import { In, QueryFailedError, Repository } from 'typeorm';
 
 import { InstituicoesService } from '../instituicoes/instituicoes.service';
 import { User } from './user.entity';
 import { Veiculo } from './veiculo.entity';
 import { cnhPermiteOferecerCarona, hojeEmSaoPaulo } from './verificacao-cnh';
+import { Carona } from '../caronas/carona.entity';
+import { CARONA_VENCIDA_SQL } from '../caronas/carona-vencida';
+import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 
 @Injectable()
 export class UsersService {
@@ -106,19 +109,69 @@ export class UsersService {
     cor: string,
     placa: string,
   ): Promise<Veiculo> {
-    const existente = await this.buscarVeiculo(idUsuario);
-    const veiculo = existente ?? this.veiculosRepository.create();
-
-    veiculo.modelo = modelo;
-    veiculo.cor = cor;
-    veiculo.placa = placa;
-
-    if (!existente) {
-      veiculo.usuario = { idUsuario } as User;
-    }
-
     try {
-      return await this.veiculosRepository.save(veiculo);
+      return await this.usersRepository.manager.transaction(async (manager) => {
+        // Serializa inclusive o primeiro cadastro, sem bloquear FKs de notificacoes.
+        const usuario = await manager.getRepository(User).findOne({
+          where: { idUsuario },
+          lock: { mode: 'for_no_key_update' },
+        });
+        if (!usuario)
+          throw new NotFoundException('Usu\u00e1rio n\u00e3o encontrado');
+        const repository = manager.getRepository(Veiculo);
+        const existente = await repository
+          .createQueryBuilder('veiculo')
+          .where('veiculo.id_usuario = :idUsuario', { idUsuario })
+          .setLock('pessimistic_write')
+          .getOne();
+        if (
+          existente &&
+          existente.modelo === modelo &&
+          existente.cor === cor &&
+          existente.placa === placa
+        ) {
+          return existente;
+        }
+        // Aceite e inicio da viagem precisam concluir antes de liberar a troca.
+        const caronas = await manager
+          .getRepository(Carona)
+          .createQueryBuilder('carona')
+          .select(['carona.idCarona', 'carona.status'])
+          .where('id_usuario = :idUsuario', { idUsuario })
+          .andWhere('status IN (:...status)', {
+            status: ['ATIVA', 'LOTADA', 'EM_ANDAMENTO'],
+          })
+          .andWhere(`(status = 'EM_ANDAMENTO' OR NOT ${CARONA_VENCIDA_SQL})`)
+          .orderBy('carona.idCarona', 'ASC')
+          .setLock('pessimistic_write')
+          .getMany();
+        if (caronas.some((carona) => carona.status === 'EM_ANDAMENTO')) {
+          throw new ConflictException(
+            'Finalize a carona em andamento antes de alterar o ve\u00edculo',
+          );
+        }
+        if (
+          caronas.length &&
+          (await manager.getRepository(Solicitacao).exists({
+            where: {
+              carona: {
+                idCarona: In(caronas.map((carona) => carona.idCarona)),
+              },
+              status: 'ACEITA',
+            },
+          }))
+        ) {
+          throw new ConflictException(
+            'Voc\u00ea tem caronas com passageiros confirmados. Conclua ou cancele essas caronas antes de alterar o ve\u00edculo',
+          );
+        }
+        const veiculo =
+          existente ?? repository.create({ usuario: { idUsuario } });
+        veiculo.modelo = modelo;
+        veiculo.cor = cor;
+        veiculo.placa = placa;
+        return repository.save(veiculo);
+      });
     } catch (erro) {
       const codigo =
         erro instanceof QueryFailedError
@@ -126,7 +179,18 @@ export class UsersService {
           : undefined;
 
       if (codigo === '23505') {
-        throw new ConflictException('Esta placa já está cadastrada');
+        const constraint = (
+          erro as QueryFailedError & { driverError: { constraint?: string } }
+        ).driverError.constraint;
+        if (constraint === 'uq_veiculos_usuario') {
+          throw new ConflictException(
+            'O cadastro do ve\u00edculo foi atualizado. Atualize o perfil antes de tentar novamente',
+          );
+        }
+        throw new ConflictException({
+          message: 'Esta placa j\u00e1 est\u00e1 cadastrada',
+          campos: { placa: 'Esta placa j\u00e1 est\u00e1 cadastrada' },
+        });
       }
 
       throw erro;

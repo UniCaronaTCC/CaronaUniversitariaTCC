@@ -18,6 +18,7 @@ import { FotoPerfilService } from './foto-perfil.service';
 import { User } from './user.entity';
 import { UsersService } from './users.service';
 import { Veiculo } from './veiculo.entity';
+import { validarDadosVeiculo } from './dados-veiculo';
 
 type DadosPerfilRecebidos = Record<string, unknown> | undefined;
 
@@ -55,23 +56,7 @@ export class UsersController {
     @Body() body: DadosPerfilRecebidos,
     @Req() request: RequisicaoComUsuario,
   ) {
-    const modelo = body?.modelo?.toString().trim() ?? '';
-    const cor = body?.cor?.toString().trim() ?? '';
-    const placa = (body?.placa?.toString() ?? '')
-      .toUpperCase()
-      .replace(/[^A-Z0-9]/g, '');
-
-    if (modelo.length < 2 || modelo.length > 100) {
-      throw new BadRequestException('Informe um modelo válido');
-    }
-
-    if (cor.length < 2 || cor.length > 50) {
-      throw new BadRequestException('Informe uma cor válida');
-    }
-
-    if (!/^[A-Z]{3}(?:\d{4}|\d[A-Z]\d{2})$/.test(placa)) {
-      throw new BadRequestException('Informe uma placa válida');
-    }
+    const { modelo, cor, placa } = validarDadosVeiculo(body);
 
     const usuario = await this.usersService.buscarPorId(request.usuario.sub);
 
@@ -88,7 +73,7 @@ export class UsersController {
 
     return {
       sucesso: true,
-      mensagem: 'Veículo salvo com sucesso',
+      mensagem: 'Veículo salvo. A alteração vale para novas caronas',
       dados: this.formatarVeiculo(veiculo),
     };
   }

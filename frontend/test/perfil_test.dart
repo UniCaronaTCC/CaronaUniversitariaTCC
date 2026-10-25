@@ -114,8 +114,11 @@ void main() {
     await tester.tap(find.text('Cadastrar veículo'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).at(0), 'Onix');
-    await tester.enterText(find.byType(TextField).at(1), 'Branco');
-    await tester.enterText(find.byType(TextField).at(2), 'abc1d23');
+    await tester.tap(find.byKey(const Key('veiculo-cor')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Branco').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('veiculo-placa')), 'abc1d23');
     await tester.tap(find.text('Salvar'));
     await tester.pumpAndSettle();
 

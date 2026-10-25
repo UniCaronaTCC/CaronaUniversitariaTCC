@@ -26,6 +26,7 @@ import { PosicaoAtualCarona } from './posicao-atual-carona.entity';
 import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 import { UsersService } from '../users/users.service';
 import { RecorrenciasService } from './recorrencias.service';
+import { CARONA_VENCIDA_SQL } from './carona-vencida';
 
 @Injectable()
 export class CaronasService {
@@ -301,24 +302,7 @@ export class CaronasService {
         status: ['ATIVA', 'LOTADA'],
       })
       // Cadastros legados sem programação não geram novas datas de carona.
-      .andWhere(
-        `
-        (
-          (
-            (recorrente = false OR id_recorrencia IS NULL)
-            AND (data_inicio + horario + INTERVAL '2 hours') <=
-              (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
-          )
-          OR
-          (
-            recorrente = true
-            AND data_fim IS NOT NULL
-            AND (data_fim + horario) <=
-              (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')
-          )
-        )
-        `,
-      )
+      .andWhere(CARONA_VENCIDA_SQL)
       .execute();
   }
 

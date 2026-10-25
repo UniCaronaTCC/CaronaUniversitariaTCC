@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../auth/login.dart';
@@ -15,6 +14,7 @@ import '../widgets/barra_navegacao_home.dart';
 import '../widgets/campo_busca_instituicao.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/foto_perfil.dart';
+import '../widgets/dialogo_veiculo.dart';
 import 'avaliacoes_recebidas.dart';
 import 'historico_caronas.dart';
 import 'recorrencias.dart';
@@ -342,123 +342,20 @@ class _PerfilTelaState extends State<PerfilTela> {
     final veiculoAtual = usuario['veiculo'] is Map
         ? Map<String, dynamic>.from(usuario['veiculo'])
         : <String, dynamic>{};
-    final modeloController = TextEditingController(
-      text: veiculoAtual['modelo']?.toString() ?? '',
-    );
-    final corController = TextEditingController(
-      text: veiculoAtual['cor']?.toString() ?? '',
-    );
-    final placaController = TextEditingController(
-      text: veiculoAtual['placa']?.toString() ?? '',
-    );
-    String? erroFormulario;
-
-    final dados = await showDialog<List<String>>(
+    final resultado = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (context) => StatefulBuilder(
-        builder: (context, atualizarDialogo) => AlertDialog(
-          title: Text(
-            veiculoAtual.isEmpty ? 'Cadastrar veículo' : 'Editar veículo',
-          ),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: modeloController,
-                  textCapitalization: TextCapitalization.words,
-                  maxLength: 100,
-                  decoration: const InputDecoration(
-                    labelText: 'Modelo',
-                    hintText: 'Ex.: Honda Civic',
-                  ),
-                ),
-                TextField(
-                  controller: corController,
-                  textCapitalization: TextCapitalization.words,
-                  maxLength: 50,
-                  decoration: const InputDecoration(
-                    labelText: 'Cor',
-                    hintText: 'Ex.: Prata',
-                  ),
-                ),
-                TextField(
-                  controller: placaController,
-                  textCapitalization: TextCapitalization.characters,
-                  maxLength: 7,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.allow(RegExp('[a-zA-Z0-9]')),
-                    TextInputFormatter.withFunction((antigo, novo) {
-                      return novo.copyWith(text: novo.text.toUpperCase());
-                    }),
-                  ],
-                  decoration: const InputDecoration(
-                    labelText: 'Placa',
-                    hintText: 'ABC1D23',
-                  ),
-                ),
-                if (erroFormulario != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Text(
-                      erroFormulario!,
-                      style: const TextStyle(color: Colors.red, fontSize: 13),
-                    ),
-                  ),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancelar'),
-            ),
-            FilledButton(
-              onPressed: () {
-                final modelo = modeloController.text.trim();
-                final cor = corController.text.trim();
-                final placa = placaController.text.trim().toUpperCase();
-
-                if (modelo.length < 2 || cor.length < 2) {
-                  atualizarDialogo(
-                    () => erroFormulario = 'Informe o modelo e a cor',
-                  );
-                  return;
-                }
-
-                if (!RegExp(
-                  r'^[A-Z]{3}(?:\d{4}|\d[A-Z]\d{2})$',
-                ).hasMatch(placa)) {
-                  atualizarDialogo(
-                    () => erroFormulario = 'Informe uma placa válida',
-                  );
-                  return;
-                }
-
-                Navigator.pop(context, [modelo, cor, placa]);
-              },
-              child: const Text('Salvar'),
-            ),
-          ],
-        ),
+      barrierDismissible: false,
+      builder: (_) => DialogoVeiculo(
+        veiculo: veiculoAtual,
+        salvar: widget.salvarVeiculo ?? AuthService.salvarVeiculo,
       ),
     );
 
-    if (!mounted || dados == null) {
-      return;
-    }
-
-    setState(() => carregando = true);
-    final resultado =
-        await (widget.salvarVeiculo?.call(dados[0], dados[1], dados[2]) ??
-            AuthService.salvarVeiculo(dados[0], dados[1], dados[2]));
-
-    if (!mounted) {
+    if (!mounted || resultado == null) {
       return;
     }
 
     setState(() {
-      carregando = false;
       if (resultado['sucesso'] == true && resultado['dados'] is Map) {
         usuario = {
           ...usuario,

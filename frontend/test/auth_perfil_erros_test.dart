@@ -147,6 +147,30 @@ void main() {
     expect(AuthService.usuarioLogado!['veiculo'], {'id': 2, 'modelo': 'Onix'});
   });
 
+  for (final status in [400, 409]) {
+    test(
+      'veiculo HTTP $status preserva dados e repassa erro por campo',
+      () async {
+        final resultado = await http.runWithClient(
+          () => AuthService.salvarVeiculo('Honda Civic', 'Prata', 'ABC1D23'),
+          () => MockClient(
+            (_) async => http.Response(
+              jsonEncode({
+                'message': 'Placa indisponivel',
+                'campos': {'placa': 'Placa indisponivel'},
+              }),
+              status,
+            ),
+          ),
+        );
+        expect(resultado['sucesso'], isFalse);
+        expect(resultado['campos'], {'placa': 'Placa indisponivel'});
+        expect(AuthService.usuarioLogado, perfil);
+        expect((await SessaoService.carregar())!['usuario'], perfil);
+      },
+    );
+  }
+
   test(
     'timeout de alteracao nao repete envio e orienta consultar perfil',
     () async {

@@ -7,6 +7,7 @@ describe('CaronasController', () => {
   it('não retorna senha nem hash ao criar uma carona', async () => {
     const carona = {
       idCarona: 1,
+      veiculoPublicado: { modelo: 'Onix', cor: 'Branco', placa: 'ABC1D23' },
       origem: 'Rua A',
       origemCidade: 'Araçatuba',
       origemLatitude: -21.2,
@@ -110,6 +111,7 @@ describe('CaronasController', () => {
   it('mascara a placa nas listagens de caronas', async () => {
     const carona = {
       idCarona: 1,
+      veiculoPublicado: { modelo: 'Onix', cor: 'Branco', placa: 'ABC1D23' },
       origem: 'Rua A',
       origemCidade: 'Araçatuba',
       origemLatitude: -21.2,
@@ -159,6 +161,55 @@ describe('CaronasController', () => {
     expect(detalhes.dados.usuario.veiculo.placa).toBe('***1D23');
     expect(JSON.stringify(detalhes)).not.toContain('ABC1D23');
     expect(service.buscarDetalhesCarona).toHaveBeenCalledWith(1, 1);
+  });
+
+  it.each(['ATIVA', 'FINALIZADA', 'CANCELADA'])(
+    'preserva o veiculo publicado na carona %s mesmo depois de trocar no perfil',
+    async (status) => {
+      const carona = {
+        idCarona: 1,
+        status,
+        veiculoPublicado: { modelo: 'Onix', cor: 'Branco', placa: 'ABC1234' },
+        usuario: {
+          idUsuario: 1,
+          nome: 'Teste',
+          veiculo: { modelo: 'Civic', cor: 'Preto', placa: 'XYZ9Z99' },
+        },
+      };
+      const service = {
+        buscarDetalhesCarona: jest.fn().mockResolvedValue(carona),
+      };
+      const controller = new CaronasController(
+        service as unknown as CaronasService,
+      );
+      const resultado = await controller.buscarDetalhesCarona('1', {
+        usuario: { sub: 1 },
+      } as never);
+      expect(resultado.dados.usuario.veiculo).toEqual({
+        modelo: 'Onix',
+        cor: 'Branco',
+        placa: '***1234',
+      });
+      expect(JSON.stringify(resultado)).not.toContain('Civic');
+      expect(JSON.stringify(resultado)).not.toContain('ABC1234');
+    },
+  );
+
+  it('nao inventa veiculo para carona antiga sem registro', async () => {
+    const service = {
+      buscarDetalhesCarona: jest.fn().mockResolvedValue({
+        idCarona: 1,
+        veiculoPublicado: null,
+        usuario: { idUsuario: 1, veiculo: { modelo: 'Novo' } },
+      }),
+    };
+    const controller = new CaronasController(
+      service as unknown as CaronasService,
+    );
+    const resultado = await controller.buscarDetalhesCarona('1', {
+      usuario: { sub: 1 },
+    } as never);
+    expect(resultado.dados.usuario.veiculo).toBeNull();
   });
 
   it.each(['0', '-1', 'abc', '1.2'])(
