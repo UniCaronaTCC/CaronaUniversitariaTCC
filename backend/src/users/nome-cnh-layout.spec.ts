@@ -109,7 +109,7 @@ describe('nomePeloLayout', () => {
   ])('não inventa nome sem título inequívoco %#', (entrada) =>
     expect(nomePeloLayout(entrada)).toBeNull(),
   );
-  it('não exige nome extraído para conferir CPF, categoria e validade', () => {
+  it('exige nome extraído sem reintroduzir comparação com o perfil', () => {
     expect(
       conferirDadosCnh(
         {
@@ -122,7 +122,7 @@ describe('nomePeloLayout', () => {
           },
         },
         '2026-10-23',
-      ).dados,
-    ).not.toBeNull();
+      ).motivo,
+    ).toBe('NOME_NAO_LIDO');
   });
 });

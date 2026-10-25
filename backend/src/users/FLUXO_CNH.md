@@ -16,7 +16,7 @@ POST /usuarios/cnh/verificar-mlkit, autenticado, Content-Type application/json:
 
 O usuario vem do JWT, nunca do corpo. O servidor valida dimensoes, limites,
 tipos e coordenadas e extrai os campos pelas posicoes/rotulos. Nao aceita um
-objeto com campos ja aprovados nem um status fornecido pelo cliente. O nome é apenas uma extração opcional, sem comparação com o perfil ou com texto
+objeto com campos ja aprovados nem um status fornecido pelo cliente. O nome e o registro são obrigatórios nas novas leituras, sem comparação com o perfil ou com texto
 digitado. Caixas de palavras inteiras podem ultrapassar a região estimada sem
 recusa; não alteramos letras nem dígitos reconhecidos no nome. CPF passa no
 checksum, validade exige calendario real e nao vencida, categoria deve permitir
@@ -27,7 +27,7 @@ carro. CPF duplicado entre contas continua bloqueado. Campo ambiguo e recusado.
 Fotos nao sao enviadas ao backend. A foto temporaria local usada pelo plugin e
 removida ao concluir, inclusive em falhas. Não persistimos o texto completo da
 leitura e não imprimimos dados do documento nos logs. Guardamos CPF, categoria,
-validade, consentimento e estado/data da conferência. Os campos opcionais abaixo
+validade, consentimento e estado/data da conferência. Os campos adicionais abaixo
 exigem uma atualização aditiva do banco antes de publicar esta versão.
 
 IMPORTANTE: o OCR recebido do celular pode ser adulterado. Estas regras conferem
@@ -35,10 +35,10 @@ coerencia dos dados para o TCC e nao comprovam autenticidade, titularidade,
 suspensao ou autorizacao oficial para dirigir. Nao existe consulta ao Detran.
 Uma verificacao de identidade confiavel exige um servico/procedimento proprio.
 
-Nome extraído e número completo de registro são opcionais e salvos em
+Nome extraído e número completo de registro são exigidos nas novas leituras e salvos em
 cnh_nome e cnh_registro, sem modificar o nome do perfil. Registro é extraído
 somente abaixo do rótulo REGISTRO, sem reutilizar o CPF como alternativa.
-Ausência desses campos não impede a aprovação. GET /usuarios/cnh/dados exige
+Sem um dos dois, uma nova leitura é recusada com mensagem indicando o campo ausente. GET /usuarios/cnh/dados exige
 JWT e devolve esses dois dados apenas da conta autenticada; consultas normais
 de usuários omitem as colunas privadas. Reiniciar o teste apaga esses campos.
 
@@ -47,6 +47,8 @@ database/postgres/atualizacoes/adicionar_dados_extraidos_cnh.sql.
 Não é possível reconstruir esses dados em contas aprovadas anteriormente,
 pois a foto e o texto completo do OCR não são guardados. Uma nova leitura é
 necessária para preencher campos antigos; não reiniciamos contas automaticamente.
+As colunas aceitam NULL para preservar registros anteriores; a obrigatoriedade é
+aplicada na conferência de novos envios, sem comparação do nome com o perfil.
 
 ## Publicacao e testes
 

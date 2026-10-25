@@ -137,17 +137,11 @@ export class VerificacaoCnhService {
         await this.usuarios.update(idUsuario, {
           statusVerificacaoCnh: 'APROVADA',
           cpf: dados.cpf,
-          cnhNome: texto.nome && texto.nome.length <= 150 ? texto.nome : null,
-          cnhRegistro:
-            texto.registro && /^\d{11}$/.test(texto.registro)
-              ? texto.registro
-              : null,
+          cnhNome: dados.nome,
+          cnhRegistro: dados.registro,
           cnhCategoria: dados.categoria,
           cnhValidade: dados.validade,
-          cnhRegistroFinal:
-            texto.registro && /^\d{11}$/.test(texto.registro)
-              ? texto.registro.slice(-4)
-              : null,
+          cnhRegistroFinal: dados.registro.slice(-4),
           cnhVerificadaEm: new Date(),
           privacidadeAceitaEm,
         });

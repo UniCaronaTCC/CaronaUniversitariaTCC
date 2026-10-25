@@ -1,12 +1,18 @@
 import type { LeituraCnh } from './nome-cnh-layout';
 
 export interface DadosCnh {
+  nome: string;
+  registro: string;
   cpf: string;
   categoria: string;
   validade: string;
 }
 
 export const motivosCnh = {
+  NOME_NAO_LIDO:
+    'O nome não foi identificado. Envie uma foto que mostre o campo NOME da CNH.',
+  REGISTRO_NAO_LIDO:
+    'O número de registro não foi identificado. Envie uma foto que mostre o campo REGISTRO da CNH.',
   CPF_NAO_LIDO: 'Não conseguimos ler o CPF na CNH. Refaça a foto dessa parte.',
   CPF_INVALIDO:
     'O CPF lido não passou na conferência. Refaça a foto com os números nítidos.',
@@ -55,8 +61,13 @@ export function conferirDadosCnh(
   entrada: LeituraCnh,
   hoje: string,
 ): ConferenciaCnh {
-  // O nome é extraído como informação, sem comparar com texto digitado
-  // nem bloquear os demais campos quando a leitura dele é inconclusiva.
+  // Exigimos os dados extraídos, sem comparar o nome com perfil ou texto digitado.
+  const nome = entrada.nome?.trim();
+  if (!nome || nome.length > 150)
+    return { dados: null, motivo: 'NOME_NAO_LIDO' };
+  const registro = entrada.registro;
+  if (!registro || !/^\d{11}$/.test(registro))
+    return { dados: null, motivo: 'REGISTRO_NAO_LIDO' };
   const campos = entrada.campos;
   const cpfLido = campos?.cpf;
   if (!cpfLido) return { dados: null, motivo: 'CPF_NAO_LIDO' };
@@ -75,5 +86,5 @@ export function conferirDadosCnh(
       : null;
   if (!validade) return { dados: null, motivo: 'VALIDADE_NAO_LIDA' };
   if (validade < hoje) return { dados: null, motivo: 'CNH_VENCIDA' };
-  return { dados: { cpf, categoria, validade } };
+  return { dados: { nome, registro, cpf, categoria, validade } };
 }

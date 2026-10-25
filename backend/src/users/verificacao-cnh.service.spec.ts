@@ -16,6 +16,7 @@ describe('VerificacaoCnhService', () => {
   const texto = {
     texto: '',
     nome: 'JOAO PEDRO DA SILVA',
+    registro: '12345678901',
     campos: { cpf: '529.982.247-25', categoria: 'B', validade: '06/10/2099' },
   };
   const frente = { largura: 1000, altura: 800, linhas: [] };
@@ -65,7 +66,7 @@ describe('VerificacaoCnhService', () => {
       dataSource as unknown as DataSource,
     );
   });
-  it('salva nome e registro opcionais sem alterar nome do perfil', async () => {
+  it('salva nome e registro lidos sem alterar nome do perfil', async () => {
     leitura.ler.mockReturnValue({ ...texto, registro: '12345678901' });
     await expect(service.verificar(1, frente)).resolves.toEqual({
       status: 'APROVADA',
@@ -243,7 +244,7 @@ describe('VerificacaoCnhService', () => {
     try {
       leitura.ler.mockReturnValue({ ...texto, nome: null });
       const resposta = await service.verificar(1, frente);
-      expect(resposta).toEqual({ status: 'APROVADA' });
+      expect(resposta).toEqual({ status: 'RECUSADA', motivo: 'NOME_NAO_LIDO' });
 
       const serializado = JSON.stringify(logs);
       for (const dado of [
@@ -282,7 +283,9 @@ describe('VerificacaoCnhService', () => {
       cpf: '52998224725',
       cnhCategoria: 'B',
       cnhValidade: '2099-10-06',
-      cnhRegistroFinal: null,
+      cnhNome: texto.nome,
+      cnhRegistro: texto.registro,
+      cnhRegistroFinal: '8901',
     });
     expect(alteracoes.cnhVerificadaEm).toBeInstanceOf(Date);
     expect(alteracoes.privacidadeAceitaEm).toBeInstanceOf(Date);

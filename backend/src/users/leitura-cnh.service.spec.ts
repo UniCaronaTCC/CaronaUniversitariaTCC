@@ -46,25 +46,29 @@ describe('LeituraCnhService com ML Kit', () => {
       categoria: 'AB',
     });
     expect(conferirDadosCnh(l, '2026-10-20').dados).toEqual({
+      nome: 'MARIA SILVA',
+      registro: '12345678901',
       cpf: '52998224725',
       validade: '2099-01-01',
       categoria: 'AB',
     });
-    expect(
-      conferirDadosCnh({ ...l, nome: null }, '2026-10-20').dados,
-    ).not.toBeNull();
+    expect(conferirDadosCnh({ ...l, nome: null }, '2026-10-20').motivo).toBe(
+      'NOME_NAO_LIDO',
+    );
   });
   it('não usa CPF como registro quando o rótulo REGISTRO está ausente', () => {
     const entrada = leituraTeste();
     entrada.linhas[2].palavras.pop();
     expect(service.ler(entrada).registro).toBeNull();
   });
-  it('registro ausente não impede a conferência dos campos obrigatórios', () => {
+  it('registro ausente impede nova aprovação', () => {
     const entrada = leituraTeste();
     entrada.linhas[3].palavras.pop();
     const leitura = service.ler(entrada);
     expect(leitura.registro).toBeNull();
-    expect(conferirDadosCnh(leitura, '2026-10-25').dados).not.toBeNull();
+    expect(conferirDadosCnh(leitura, '2026-10-25').motivo).toBe(
+      'REGISTRO_NAO_LIDO',
+    );
   });
   it.each([
     null,

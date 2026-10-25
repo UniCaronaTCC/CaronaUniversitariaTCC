@@ -270,7 +270,7 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
                 ),
                 const SizedBox(height: 12),
                 const Text(
-                  'A foto é lida no seu celular. Enviamos o texto e as posições das palavras para extrair os campos e conferir CPF, categoria e validade. Guardamos CPF, categoria, validade e, quando lidos, o nome e o número de registro da CNH. A foto e o texto completo da leitura não são armazenados. O nome lido não altera seu perfil.',
+                  'A foto é lida no seu celular. Enviamos o texto e as posições das palavras para extrair os campos e conferir CPF, categoria e validade. A leitura precisa identificar nome, registro, CPF, categoria e validade. Guardamos esses cinco dados. A foto e o texto completo da leitura não são armazenados. O nome lido não altera seu perfil.',
                   style: TextStyle(height: 1.4),
                 ),
                 CheckboxListTile(

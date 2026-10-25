@@ -5,18 +5,35 @@ describe('conferência dos campos extraídos do ML Kit', () => {
   const leitura = (): LeituraCnh => ({
     texto: '',
     nome: 'JOÃO PEDRO DA SILVA',
+    registro: '00123456789',
     campos: { cpf: '529.982.247-25', categoria: 'AB', validade: '06/10/2030' },
   });
   const conferir = (l: LeituraCnh) => conferirDadosCnh(l, '2026-10-20');
+  it.each([null, '', '   ', 'A'.repeat(151)])(
+    'exige nome extraído: %s',
+    (nome) => {
+      expect(conferir({ ...leitura(), nome }).motivo).toBe('NOME_NAO_LIDO');
+    },
+  );
+  it.each([undefined, null, '', '1234567890', '12345X78901'])(
+    'exige registro inteiro extraído: %s',
+    (registro) => {
+      expect(conferir({ ...leitura(), registro }).motivo).toBe(
+        'REGISTRO_NAO_LIDO',
+      );
+    },
+  );
   it('persiste apenas campos necessários', () => {
     expect(conferirDadosCnh(leitura(), '2026-10-20').dados).toEqual({
+      nome: 'JOÃO PEDRO DA SILVA',
+      registro: '00123456789',
       cpf: '52998224725',
       categoria: 'AB',
       validade: '2030-10-06',
     });
   });
-  it.each([null, 'JOAO', 'JOA0 SILVA'])(
-    'nome extraído não bloqueia os demais dados: %s',
+  it.each(['JOAO', 'JOA0 SILVA'])(
+    'nome extraído não é comparado com o perfil: %s',
     (nome) => {
       const l = leitura();
       l.nome = nome;
@@ -61,7 +78,7 @@ describe('conferência dos campos extraídos do ML Kit', () => {
     l.texto = 'CPF 529.982.247-25';
     expect(conferir(l).motivo).toBe('CPF_NAO_LIDO');
     l.nome = null;
-    expect(conferir(l).motivo).toBe('CPF_NAO_LIDO');
+    expect(conferir(l).motivo).toBe('NOME_NAO_LIDO');
   });
   it('valida checksum do CPF', () => {
     expect(cpfValido('52998224725')).toBe(true);
