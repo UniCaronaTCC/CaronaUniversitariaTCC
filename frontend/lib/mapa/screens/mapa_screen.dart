@@ -240,7 +240,7 @@ class _TesteMapaState extends State<TesteMapa> {
     }
 
     final podeConfirmar = widget.ajusteOpcional
-        ? localSelecionado.pontoDeEncontroValido
+        ? localSelecionado.localConfirmavel
         : _pontoEspecifico && !_exigeAjuste;
     if (!podeConfirmar) {
       ScaffoldMessenger.of(context).showSnackBar(

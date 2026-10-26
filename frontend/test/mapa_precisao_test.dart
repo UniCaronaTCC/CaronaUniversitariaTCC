@@ -264,7 +264,7 @@ void main() {
       expect(resultado!.numeroBuscado, '123');
       expect(resultado!.numero, isNull);
       expect(resultado!.endereco, inicial.endereco);
-      expect(resultado!.pontoDeEncontroValido, true);
+      expect(resultado!.localConfirmavel, true);
       expect(enderecos.consultas, 0);
       expect(chamadasGps, 0);
     }),
@@ -392,7 +392,30 @@ void main() {
     }),
   );
   testWidgets(
-    'destino so seleciona depois de marcar e confirmar no mapa',
+    'destino de rua permite confirmar sem toque preservando aproximacao',
+    (tester) => comTiles(tester, () async {
+      final controller = await abrirDestino(tester);
+      expect(resultado, isNull);
+      expect(
+        tester.widget<TesteMapa>(find.byType(TesteMapa)).ajusteOpcional,
+        true,
+      );
+      expect(find.textContaining('Ajuste no mapa opcional.'), findsWidgets);
+      await tester.tap(find.text('CONFIRMAR DESTINO'));
+      await tester.pumpAndSettle();
+      expect(resultado!.ponto, inicial.ponto);
+      expect(resultado!.precisao, PrecisaoLocalizacao.rua);
+      expect(resultado!.pontoEspecifico, false);
+      expect(resultado!.numeroBuscado, '123');
+      expect(resultado!.numero, isNull);
+      expect(controller.text, inicial.descricaoCompleta);
+      expect(find.byType(TesteMapa), findsNothing);
+      expect(enderecos.consultas, 0);
+      expect(tester.takeException(), isNull);
+    }),
+  );
+  testWidgets(
+    'destino permite ajustar no mapa antes de confirmar',
     (tester) => comTiles(tester, () async {
       final controller = await abrirDestino(tester);
       expect(resultado, isNull);

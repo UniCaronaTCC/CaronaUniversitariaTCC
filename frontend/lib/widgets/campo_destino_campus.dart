@@ -240,6 +240,7 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
               MaterialPageRoute(
                 builder: (_) => TesteMapa(
                   titulo: 'Confirmar destino',
+                  ajusteOpcional: true,
                   textoBotao: 'CONFIRMAR DESTINO',
                   localizacaoInicial: local,
                   enderecoService: _enderecos,
@@ -250,8 +251,7 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
             consulta != _consultaEndereco ||
             widget.controller.text != texto ||
             confirmado == null ||
-            confirmado.exigeAjusteNoMapa ||
-            !confirmado.coordenadasValidas) {
+            !confirmado.localConfirmavel) {
           return;
         }
         local = confirmado;
@@ -504,14 +504,17 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
                 ),
                 subtitle:
                     local.nome?.isNotEmpty == true ||
-                        local.avisoPrecisao != null
+                        local.avisoPrecisaoPara(ajusteOpcional: true) != null
                     ? Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           if (local.nome?.isNotEmpty == true)
                             Text(local.endereco),
-                          if (local.avisoPrecisao != null)
-                            Text(local.avisoPrecisao!),
+                          if (local.avisoPrecisaoPara(ajusteOpcional: true) !=
+                              null)
+                            Text(
+                              local.avisoPrecisaoPara(ajusteOpcional: true)!,
+                            ),
                         ],
                       )
                     : null,

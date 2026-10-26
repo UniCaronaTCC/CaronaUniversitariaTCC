@@ -12,7 +12,7 @@ void main() {
         precisao: precisao,
       );
       expect(
-        local.pontoDeEncontroValido,
+        local.localConfirmavel,
         precisao == PrecisaoLocalizacao.rua ||
             precisao == PrecisaoLocalizacao.ponto,
       );
@@ -31,7 +31,7 @@ void main() {
         precisao: PrecisaoLocalizacao.rua,
       ),
     ]) {
-      expect(local.pontoDeEncontroValido, false);
+      expect(local.localConfirmavel, false);
     }
   });
   test('numero igual em outra rua continua nao confirmado', () {

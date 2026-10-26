@@ -245,6 +245,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
         builder: (context) => TesteMapa(
           indiceNavegacao: widget.indiceNavegacao,
           titulo: 'Confirmar destino',
+          ajusteOpcional: true,
           instrucao: 'Confira o destino',
           textoBotao: 'CONFIRMAR DESTINO',
         ),
@@ -286,7 +287,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       return;
     }
 
-    if (!resultado.pontoDeEncontroValido) {
+    if (!resultado.localConfirmavel) {
       mostrarMensagem(
         'Escolha um ponto de encontro específico com endereço válido',
       );

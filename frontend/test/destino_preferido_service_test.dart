@@ -33,6 +33,29 @@ void main() {
     expect(salvo?.toJson(), local.toJson());
   });
 
+  test(
+    'destino aproximado confirmado sem toque preserva precisao ao reabrir',
+    () async {
+      const rua = LocalizacaoSelecionada(
+        ponto: LatLng(-21.2, -50.4),
+        endereco: 'Avenida Antonio Cavasana, Aracatuba',
+        rua: 'Avenida Antonio Cavasana',
+        pontoEspecifico: false,
+        precisao: PrecisaoLocalizacao.rua,
+        numeroBuscado: '123',
+      );
+      await service.salvar(1, rua);
+      final salvo = await const DestinoPreferidoService().carregar(1);
+      expect(salvo!.toJson(), rua.toJson());
+      expect(salvo.localConfirmavel, true);
+      expect(salvo.numero, isNull);
+      expect(
+        salvo.avisoPrecisaoPara(ajusteOpcional: true),
+        contains('opcional'),
+      );
+    },
+  );
+
   test('preferencia nao vaza entre contas no mesmo aparelho', () async {
     await service.salvar(1, local);
     expect(await service.carregar(2), isNull);

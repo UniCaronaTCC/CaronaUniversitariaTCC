@@ -46,7 +46,7 @@ class LocalizacaoSelecionada {
       numeroNaoConfirmado ||
       (precisao != null && precisao != PrecisaoLocalizacao.ponto);
 
-  bool get pontoDeEncontroValido =>
+  bool get localConfirmavel =>
       coordenadasValidas &&
       endereco.trim().isNotEmpty &&
       (precisao == PrecisaoLocalizacao.rua ||
@@ -61,7 +61,7 @@ class LocalizacaoSelecionada {
         ? 'Número $numeroBuscado não confirmado.'
         : 'Local aproximado.';
     if (ajusteOpcional) {
-      return pontoDeEncontroValido
+      return localConfirmavel
           ? '$aviso Ajuste no mapa opcional.'
           : '$aviso Escolha uma rua ou estabelecimento.';
     }
