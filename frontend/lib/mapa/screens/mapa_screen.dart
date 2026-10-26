@@ -17,6 +17,7 @@ class TesteMapa extends StatefulWidget {
   final int indiceNavegacao;
   final EnderecoService? enderecoService;
   final LocalizacaoSelecionada? localizacaoInicial;
+  final bool ajusteOpcional;
 
   const TesteMapa({
     super.key,
@@ -26,6 +27,7 @@ class TesteMapa extends StatefulWidget {
     this.indiceNavegacao = 0,
     this.enderecoService,
     this.localizacaoInicial,
+    this.ajusteOpcional = false,
   });
 
   @override
@@ -49,6 +51,7 @@ class _TesteMapaState extends State<TesteMapa> {
   String? _numero;
   String? _avisoPrecisao;
   bool _exigeAjuste = false;
+  LocalizacaoSelecionada? _localPesquisado;
 
   bool _buscandoLocalizacao = true;
   bool _buscandoEndereco = false;
@@ -69,7 +72,10 @@ class _TesteMapaState extends State<TesteMapa> {
       _numero = inicial.numero;
       _pontoEspecifico = inicial.pontoEspecifico;
       _exigeAjuste = inicial.exigeAjusteNoMapa;
-      _avisoPrecisao = inicial.avisoPrecisao;
+      _localPesquisado = inicial;
+      _avisoPrecisao = inicial.avisoPrecisaoPara(
+        ajusteOpcional: widget.ajusteOpcional,
+      );
       _buscandoLocalizacao = false;
     } else {
       _obterLocalizacao();
@@ -94,6 +100,7 @@ class _TesteMapaState extends State<TesteMapa> {
         _pontoEncontro = pontoAtual;
         _buscandoLocalizacao = false;
         _pontoEspecifico = true;
+        _localPesquisado = null;
       });
 
       await _buscarEnderecoDoPonto(pontoAtual);
@@ -162,6 +169,7 @@ class _TesteMapaState extends State<TesteMapa> {
       _pontoEspecifico = true;
       _exigeAjuste = false;
       _avisoPrecisao = null;
+      _localPesquisado = null;
     });
 
     await _buscarEnderecoDoPonto(ponto);
@@ -179,7 +187,10 @@ class _TesteMapaState extends State<TesteMapa> {
       _estadoPontoEncontro = local.estado;
       _pontoEspecifico = local.pontoEspecifico;
       _exigeAjuste = local.exigeAjusteNoMapa;
-      _avisoPrecisao = local.avisoPrecisao;
+      _localPesquisado = local;
+      _avisoPrecisao = local.avisoPrecisaoPara(
+        ajusteOpcional: widget.ajusteOpcional,
+      );
       _rua = local.rua;
       _numero = local.numero;
 
@@ -205,17 +216,19 @@ class _TesteMapaState extends State<TesteMapa> {
       return;
     }
 
-    final localSelecionado = LocalizacaoSelecionada(
-      ponto: _pontoEncontro!,
-      endereco: _enderecoPontoEncontro ?? 'Endereço não encontrado',
-      cidade: _cidadePontoEncontro,
-      estado: _estadoPontoEncontro,
-      nome: _nomePontoEncontro,
-      pontoEspecifico: _pontoEspecifico,
-      rua: _rua,
-      numero: _numero,
-      precisao: PrecisaoLocalizacao.ponto,
-    );
+    final localSelecionado =
+        _localPesquisado ??
+        LocalizacaoSelecionada(
+          ponto: _pontoEncontro!,
+          endereco: _enderecoPontoEncontro ?? 'Endereço não encontrado',
+          cidade: _cidadePontoEncontro,
+          estado: _estadoPontoEncontro,
+          nome: _nomePontoEncontro,
+          pontoEspecifico: _pontoEspecifico,
+          rua: _rua,
+          numero: _numero,
+          precisao: PrecisaoLocalizacao.ponto,
+        );
 
     if (!localSelecionado.coordenadasValidas) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -226,10 +239,17 @@ class _TesteMapaState extends State<TesteMapa> {
       return;
     }
 
-    if (!_pontoEspecifico || _exigeAjuste) {
+    final podeConfirmar = widget.ajusteOpcional
+        ? localSelecionado.pontoDeEncontroValido
+        : _pontoEspecifico && !_exigeAjuste;
+    if (!podeConfirmar) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Toque no mapa para confirmar o ponto exato'),
+        SnackBar(
+          content: Text(
+            widget.ajusteOpcional
+                ? 'Escolha uma rua ou estabelecimento, ou marque um ponto no mapa'
+                : 'Toque no mapa para confirmar o ponto exato',
+          ),
         ),
       );
       return;
@@ -331,6 +351,8 @@ class _TesteMapaState extends State<TesteMapa> {
             SafeArea(
               child: SingleChildScrollView(
                 child: BarraPesquisaEndereco(
+                  enderecoService: _enderecoService,
+                  ajusteOpcional: widget.ajusteOpcional,
                   onSelecionado: _selecionarEnderecoPesquisado,
                   latitudeReferencia: pontoReferencia?.latitude,
                   longitudeReferencia: pontoReferencia?.longitude,

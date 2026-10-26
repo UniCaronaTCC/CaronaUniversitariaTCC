@@ -3,6 +3,37 @@ import 'package:latlong2/latlong.dart';
 import 'package:uni_carona/mapa/models/localizacao_selecionada.dart';
 
 void main() {
+  for (final precisao in PrecisaoLocalizacao.values) {
+    test('encontro distingue rua de regiao $precisao', () {
+      final local = LocalizacaoSelecionada(
+        ponto: const LatLng(-21, -50),
+        endereco: 'Local retornado',
+        pontoEspecifico: false,
+        precisao: precisao,
+      );
+      expect(
+        local.pontoDeEncontroValido,
+        precisao == PrecisaoLocalizacao.rua ||
+            precisao == PrecisaoLocalizacao.ponto,
+      );
+      expect(
+        LocalizacaoSelecionada.fromJson(local.toJson()).precisao,
+        precisao,
+      );
+    });
+  }
+  test('encontro rejeita endereco vazio e coordenadas invalidas', () {
+    for (final local in [
+      const LocalizacaoSelecionada(ponto: LatLng(-21, -50), endereco: '  '),
+      const LocalizacaoSelecionada(
+        ponto: LatLng(double.nan, -50),
+        endereco: 'Rua',
+        precisao: PrecisaoLocalizacao.rua,
+      ),
+    ]) {
+      expect(local.pontoDeEncontroValido, false);
+    }
+  });
   test('numero igual em outra rua continua nao confirmado', () {
     const local = LocalizacaoSelecionada(
       ponto: LatLng(-21, -50),

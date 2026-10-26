@@ -209,6 +209,7 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
       MaterialPageRoute(
         builder: (context) => const TesteMapa(
           titulo: 'Novo ponto de embarque',
+          ajusteOpcional: true,
           instrucao: 'Escolha o ponto que deseja solicitar ao motorista',
           textoBotao: 'SOLICITAR ESTE PONTO',
         ),

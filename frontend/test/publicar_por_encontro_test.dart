@@ -230,6 +230,42 @@ void main() {
     );
   });
 
+  testeIsolado('publica encontro de rua sem toque e sem inventar numero', (
+    tester,
+  ) async {
+    const rua = LocalizacaoSelecionada(
+      ponto: LatLng(-21.2, -50.4),
+      endereco: 'Rua Brasil, Aracatuba',
+      rua: 'Rua Brasil',
+      cidade: 'Aracatuba',
+      precisao: PrecisaoLocalizacao.rua,
+      pontoEspecifico: false,
+      numeroBuscado: '999999',
+    );
+    var envios = 0;
+    await http.runWithClient(
+      () async {
+        await abrir(tester, () async => rua);
+        await adicionar(tester);
+        expect(formulario(tester).pontosEmbarque.single.endereco, rua.endereco);
+        await preencher(tester);
+        await enviar(tester);
+        expect(envios, 1);
+      },
+      () => MockClient((req) async {
+        if (req.method != 'POST') return respostaVazia();
+        envios++;
+        final body = jsonDecode(req.body) as Map<String, dynamic>;
+        final encontro = (body['pontosEmbarque'] as List).single as Map;
+        expect(encontro['endereco'], rua.endereco);
+        expect(encontro['latitude'], rua.ponto.latitude);
+        expect(encontro['longitude'], rua.ponto.longitude);
+        expect(req.body, isNot(contains('999999')));
+        return http.Response('{"sucesso":true}', 201);
+      }),
+    );
+  });
+
   for (final local in <LocalizacaoSelecionada?>[
     null,
     const LocalizacaoSelecionada(

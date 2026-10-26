@@ -18,6 +18,7 @@ class BarraPesquisaEndereco extends StatefulWidget {
   final double elevacao;
   final double borderRadius;
   final bool usarLabelComoHint;
+  final bool ajusteOpcional;
 
   // Contexto usado para priorizar resultados próximos.
   final double? latitudeReferencia;
@@ -37,6 +38,7 @@ class BarraPesquisaEndereco extends StatefulWidget {
     this.elevacao = 3,
     this.borderRadius = 12,
     this.usarLabelComoHint = true,
+    this.ajusteOpcional = false,
     this.latitudeReferencia,
     this.longitudeReferencia,
     this.cidadeReferencia,
@@ -236,6 +238,9 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
                   final local = _resultados[index];
 
                   final nome = local.nome?.trim();
+                  final aviso = local.avisoPrecisaoPara(
+                    ajusteOpcional: widget.ajusteOpcional,
+                  );
 
                   return Material(
                     color: Colors.transparent,
@@ -245,15 +250,13 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
                         nome != null && nome.isNotEmpty ? nome : local.endereco,
                       ),
                       subtitle:
-                          (nome != null && nome.isNotEmpty) ||
-                              local.avisoPrecisao != null
+                          (nome != null && nome.isNotEmpty) || aviso != null
                           ? Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 if (nome != null && nome.isNotEmpty)
                                   Text(local.endereco),
-                                if (local.avisoPrecisao != null)
-                                  Text(local.avisoPrecisao!),
+                                if (aviso != null) Text(aviso),
                               ],
                             )
                           : null,

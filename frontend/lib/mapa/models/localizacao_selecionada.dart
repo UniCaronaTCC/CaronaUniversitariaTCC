@@ -46,11 +46,27 @@ class LocalizacaoSelecionada {
       numeroNaoConfirmado ||
       (precisao != null && precisao != PrecisaoLocalizacao.ponto);
 
-  String? get avisoPrecisao => !exigeAjusteNoMapa
-      ? null
-      : numeroNaoConfirmado
-      ? 'Número $numeroBuscado não confirmado. Ajuste o ponto no mapa.'
-      : 'Local aproximado. Ajuste o ponto no mapa.';
+  bool get pontoDeEncontroValido =>
+      coordenadasValidas &&
+      endereco.trim().isNotEmpty &&
+      (precisao == PrecisaoLocalizacao.rua ||
+          precisao == PrecisaoLocalizacao.ponto ||
+          (precisao == null && pontoEspecifico));
+
+  String? get avisoPrecisao => avisoPrecisaoPara();
+
+  String? avisoPrecisaoPara({bool ajusteOpcional = false}) {
+    if (!exigeAjusteNoMapa) return null;
+    final aviso = numeroNaoConfirmado
+        ? 'Número $numeroBuscado não confirmado.'
+        : 'Local aproximado.';
+    if (ajusteOpcional) {
+      return pontoDeEncontroValido
+          ? '$aviso Ajuste no mapa opcional.'
+          : '$aviso Escolha uma rua ou estabelecimento.';
+    }
+    return '$aviso Ajuste o ponto no mapa.';
+  }
 
   LocalizacaoSelecionada comNumeroBuscado(
     String buscado, {

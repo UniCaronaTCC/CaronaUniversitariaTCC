@@ -275,6 +275,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
                 builder: (context) => TesteMapa(
                   indiceNavegacao: widget.indiceNavegacao,
                   titulo: 'Ponto de encontro',
+                  ajusteOpcional: true,
                   instrucao: 'Escolha onde os passageiros poderão embarcar',
                   textoBotao: 'ADICIONAR PONTO',
                 ),
@@ -285,9 +286,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       return;
     }
 
-    if (!resultado.coordenadasValidas ||
-        !resultado.pontoEspecifico ||
-        resultado.endereco.trim().isEmpty) {
+    if (!resultado.pontoDeEncontroValido) {
       mostrarMensagem(
         'Escolha um ponto de encontro específico com endereço válido',
       );
