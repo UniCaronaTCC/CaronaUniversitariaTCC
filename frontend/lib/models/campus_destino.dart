@@ -10,8 +10,9 @@ String normalizarDestino(String texto) => removeDiacritics(
 class CidadeCampus {
   final String cidade;
   final String uf;
+  final LatLng? pontoReferencia;
 
-  const CidadeCampus(this.cidade, this.uf);
+  const CidadeCampus(this.cidade, this.uf, {this.pontoReferencia});
 
   static const estados = {
     'AC': 'Acre',
@@ -57,7 +58,13 @@ class CidadeCampus {
   static CidadeCampus? deLocalizacao(LocalizacaoSelecionada? local) {
     final cidade = local?.cidade?.trim() ?? '';
     final uf = normalizarUf(local?.estado);
-    return cidade.length >= 2 && uf != null ? CidadeCampus(cidade, uf) : null;
+    return cidade.length >= 2 && uf != null
+        ? CidadeCampus(
+            cidade,
+            uf,
+            pontoReferencia: local!.coordenadasValidas ? local.ponto : null,
+          )
+        : null;
   }
 
   bool mesmaCidade(CidadeCampus outra) =>

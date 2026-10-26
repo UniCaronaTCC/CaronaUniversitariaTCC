@@ -7,12 +7,44 @@ import 'package:geocoding/geocoding.dart';
 import 'package:http/http.dart' as http;
 import 'package:latlong2/latlong.dart';
 
+import '../../services/cliente_http_com_prazo.dart';
 import '../models/localizacao_selecionada.dart';
+
+enum TipoFalhaEndereco {
+  conexao,
+  tempoEsgotado,
+  limite,
+  indisponivel,
+  respostaInvalida,
+}
+
+class FalhaBuscaEndereco implements Exception {
+  final TipoFalhaEndereco tipo;
+  const FalhaBuscaEndereco(this.tipo);
+
+  String get mensagem => switch (tipo) {
+    TipoFalhaEndereco.conexao =>
+      'Não foi possível consultar os endereços. Confira a conexão e tente novamente.',
+    TipoFalhaEndereco.tempoEsgotado =>
+      'A busca de endereços demorou demais. Tente novamente.',
+    TipoFalhaEndereco.limite =>
+      'Muitas consultas de endereço. Aguarde um momento antes de tentar novamente.',
+    TipoFalhaEndereco.indisponivel =>
+      'A busca de endereços está indisponível agora. Tente novamente.',
+    TipoFalhaEndereco.respostaInvalida =>
+      'Não foi possível interpretar a resposta da busca de endereços. Tente novamente.',
+  };
+
+  static String mensagemPara(Object erro) => erro is FalhaBuscaEndereco
+      ? erro.mensagem
+      : const FalhaBuscaEndereco(TipoFalhaEndereco.indisponivel).mensagem;
+}
 
 class EnderecoService {
   final http.Client? cliente;
+  final Duration prazo;
 
-  EnderecoService({this.cliente});
+  EnderecoService({this.cliente, this.prazo = const Duration(seconds: 8)});
 
   Future<LocalizacaoSelecionada?> buscarLocalizacaoPorCoordenadas(
     double latitude,
@@ -71,58 +103,65 @@ class EnderecoService {
       return [];
     }
 
-    try {
-      var resultados = await _buscarNoPhoton(
-        textoBusca,
-        latitudeReferencia: latitudeReferencia,
-        longitudeReferencia: longitudeReferencia,
-      );
+    final referenciaValida =
+        latitudeReferencia != null &&
+        longitudeReferencia != null &&
+        latitudeReferencia.isFinite &&
+        longitudeReferencia.isFinite &&
+        latitudeReferencia >= -90 &&
+        latitudeReferencia <= 90 &&
+        longitudeReferencia >= -180 &&
+        longitudeReferencia <= 180;
+    final latitude = referenciaValida ? latitudeReferencia : null;
+    final longitude = referenciaValida ? longitudeReferencia : null;
+    var resultados = await _buscarNoPhoton(
+      textoBusca,
+      latitudeReferencia: latitude,
+      longitudeReferencia: longitude,
+    );
 
-      final buscaAlternativa = _prepararBuscaAlternativa(textoBusca);
+    final buscaAlternativa = _prepararBuscaAlternativa(textoBusca);
 
-      // Exemplo: "mc donalds" faz uma segunda tentativa como "mcdonalds".
-      if (resultados.length < 3 &&
-          buscaAlternativa.isNotEmpty &&
-          buscaAlternativa != _normalizar(textoBusca)) {
+    // Exemplo: "mc donalds" faz uma segunda tentativa como "mcdonalds".
+    if (resultados.length < 3 &&
+        buscaAlternativa.isNotEmpty &&
+        buscaAlternativa != _normalizar(textoBusca)) {
+      try {
         final alternativos = await _buscarNoPhoton(
           buscaAlternativa,
-          latitudeReferencia: latitudeReferencia,
-          longitudeReferencia: longitudeReferencia,
+          latitudeReferencia: latitude,
+          longitudeReferencia: longitude,
         );
-
         resultados = _juntarSemDuplicar(resultados, alternativos);
+      } on FalhaBuscaEndereco {
+        // Uma falha complementar nao apaga sugestoes ja recebidas.
+        if (resultados.isEmpty) rethrow;
       }
+    }
 
-      resultados = _juntarSemDuplicar(resultados, []);
-      resultados.sort(
-        (a, b) =>
+    resultados = _juntarSemDuplicar(resultados, []);
+    resultados.sort(
+      (a, b) =>
+          _calcularPrioridade(
+            local: b,
+            textoBusca: textoBusca,
+            cidadeReferencia: cidadeReferencia,
+            estadoReferencia: estadoReferencia,
+            latitudeReferencia: latitude,
+            longitudeReferencia: longitude,
+          ).compareTo(
             _calcularPrioridade(
-              local: b,
+              local: a,
               textoBusca: textoBusca,
               cidadeReferencia: cidadeReferencia,
               estadoReferencia: estadoReferencia,
-              latitudeReferencia: latitudeReferencia,
-              longitudeReferencia: longitudeReferencia,
-            ).compareTo(
-              _calcularPrioridade(
-                local: a,
-                textoBusca: textoBusca,
-                cidadeReferencia: cidadeReferencia,
-                estadoReferencia: estadoReferencia,
-                latitudeReferencia: latitudeReferencia,
-                longitudeReferencia: longitudeReferencia,
-              ),
+              latitudeReferencia: latitude,
+              longitudeReferencia: longitude,
             ),
-      );
+          ),
+    );
 
-      return resultados.take(5).toList();
-    } on TimeoutException {
-      debugPrint('Photon demorou demais para responder');
-      return [];
-    } catch (erro) {
-      debugPrint('Erro Photon: $erro');
-      return [];
-    }
+    return resultados.take(5).toList();
   }
 
   Future<List<LocalizacaoSelecionada>> _buscarNoPhoton(
@@ -130,7 +169,11 @@ class EnderecoService {
     double? latitudeReferencia,
     double? longitudeReferencia,
   }) async {
-    final parametros = <String, String>{'q': textoBusca, 'limit': '15'};
+    final parametros = <String, String>{
+      'q': textoBusca,
+      'limit': '15',
+      'countrycode': 'BR',
+    };
 
     if (latitudeReferencia != null && longitudeReferencia != null) {
       parametros['lat'] = latitudeReferencia.toString();
@@ -139,27 +182,36 @@ class EnderecoService {
 
     final url = Uri.https('photon.komoot.io', '/api', parametros);
     final headers = {'User-Agent': 'UniCarona/1.0'};
-    final resposta =
-        await (cliente?.get(url, headers: headers) ??
-                http.get(url, headers: headers))
-            .timeout(const Duration(seconds: 8));
-
-    if (resposta.statusCode != 200) {
-      debugPrint('Erro Photon: ${resposta.statusCode}');
-      return [];
+    final conexao = cliente ?? ClienteHttpComPrazo(prazo: prazo);
+    try {
+      final resposta = await conexao.get(url, headers: headers).timeout(prazo);
+      if (resposta.statusCode == 429) {
+        throw const FalhaBuscaEndereco(TipoFalhaEndereco.limite);
+      }
+      if (resposta.statusCode != 200) {
+        throw const FalhaBuscaEndereco(TipoFalhaEndereco.indisponivel);
+      }
+      final json = jsonDecode(utf8.decode(resposta.bodyBytes));
+      if (json is! Map || json['features'] is! List) {
+        throw const FalhaBuscaEndereco(TipoFalhaEndereco.respostaInvalida);
+      }
+      return (json['features'] as List)
+          .map(_converterFeaturePhoton)
+          .whereType<LocalizacaoSelecionada>()
+          .toList();
+    } on FalhaBuscaEndereco {
+      rethrow;
+    } on TimeoutException {
+      throw const FalhaBuscaEndereco(TipoFalhaEndereco.tempoEsgotado);
+    } on http.ClientException {
+      throw const FalhaBuscaEndereco(TipoFalhaEndereco.conexao);
+    } on FormatException {
+      throw const FalhaBuscaEndereco(TipoFalhaEndereco.respostaInvalida);
+    } catch (_) {
+      throw const FalhaBuscaEndereco(TipoFalhaEndereco.indisponivel);
+    } finally {
+      if (cliente == null) conexao.close();
     }
-
-    final json = jsonDecode(resposta.body);
-    final features = json['features'];
-
-    if (features is! List) {
-      return [];
-    }
-
-    return features
-        .map(_converterFeaturePhoton)
-        .whereType<LocalizacaoSelecionada>()
-        .toList();
   }
 
   LocalizacaoSelecionada? _converterFeaturePhoton(dynamic feature) {

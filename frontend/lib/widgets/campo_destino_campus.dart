@@ -40,6 +40,7 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
   List<LocalizacaoSelecionada> _locais = [];
   String _filtro = '';
   String? _erroCampi;
+  String? _erroEndereco;
   CampusDestino? _confirmandoCampus;
   Timer? _debounce;
   int _consultaCampi = 0;
@@ -96,6 +97,7 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
       _confirmandoCampus = null;
       _buscandoEndereco = false;
       _pesquisouEndereco = false;
+      _erroEndereco = null;
     });
   }
 
@@ -130,6 +132,7 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
       _confirmandoCampus = null;
       _buscandoEndereco = false;
       _pesquisouEndereco = false;
+      _erroEndereco = null;
       _carregandoCampi = true;
       _erroCampi = null;
     });
@@ -165,11 +168,13 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
   }
 
   Future<void> _buscarEndereco(String texto) async {
+    if (_buscandoEndereco) return;
     if (texto.trim().length < 3) return;
     final consulta = ++_consultaEndereco;
     setState(() {
       _buscandoEndereco = true;
       _pesquisouEndereco = false;
+      _erroEndereco = null;
     });
     try {
       final usarReferencia =
@@ -178,16 +183,15 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
                 widget.referenciaInicial,
               )?.mesmaCidade(_cidade!) ==
               true;
+      final pontoReferencia = usarReferencia
+          ? widget.referenciaInicial?.ponto
+          : _cidade?.pontoReferencia;
       final locais = await _enderecos.buscarLocalizacoesPorEndereco(
         texto,
         cidadeReferencia: _cidade?.cidade,
         estadoReferencia: CidadeCampus.estados[_cidade?.uf],
-        latitudeReferencia: usarReferencia
-            ? widget.referenciaInicial?.ponto.latitude
-            : null,
-        longitudeReferencia: usarReferencia
-            ? widget.referenciaInicial?.ponto.longitude
-            : null,
+        latitudeReferencia: pontoReferencia?.latitude,
+        longitudeReferencia: pontoReferencia?.longitude,
       );
       if (!mounted || consulta != _consultaEndereco) return;
       setState(() {
@@ -200,9 +204,9 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
               CidadeCampus.normalizarUf(local.estado) == campus.cidade.uf;
         }).toList();
       });
-    } catch (_) {
+    } catch (erro) {
       if (!mounted || consulta != _consultaEndereco) return;
-      setState(() => _locais = []);
+      setState(() => _erroEndereco = FalhaBuscaEndereco.mensagemPara(erro));
     } finally {
       if (mounted && consulta == _consultaEndereco) {
         setState(() {
@@ -432,6 +436,16 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
               ),
             ),
           if (_buscandoEndereco) const LinearProgressIndicator(),
+          if (_erroEndereco != null) ...[
+            Text(_erroEndereco!),
+            TextButton.icon(
+              onPressed: _buscandoEndereco
+                  ? null
+                  : () => _buscarEndereco(widget.controller.text),
+              icon: const Icon(Icons.refresh),
+              label: const Text('Tentar novamente'),
+            ),
+          ],
           if (locais.isNotEmpty) ...[
             const Divider(),
             const Text(
@@ -453,6 +467,7 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
               ),
           ],
           if (_pesquisouEndereco &&
+              _erroEndereco == null &&
               !_buscandoEndereco &&
               locais.isEmpty &&
               campi.isEmpty)

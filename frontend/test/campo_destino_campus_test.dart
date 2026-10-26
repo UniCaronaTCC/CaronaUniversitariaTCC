@@ -72,6 +72,7 @@ class CatalogoTeste extends CampusDestinoService {
 
 class EnderecosTeste extends EnderecoService {
   final buscas = <String>[];
+  final referencias = <(double?, double?)>[];
   Future<List<LocalizacaoSelecionada>> Function(String texto)? resposta;
   @override
   Future<List<LocalizacaoSelecionada>> buscarLocalizacoesPorEndereco(
@@ -82,6 +83,7 @@ class EnderecosTeste extends EnderecoService {
     String? estadoReferencia,
   }) {
     buscas.add(enderecoDigitado);
+    referencias.add((latitudeReferencia, longitudeReferencia));
     return resposta?.call(enderecoDigitado) ?? Future.value([]);
   }
 }
@@ -134,6 +136,148 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     controller.dispose();
   }
+
+  for (final tipo in TipoFalhaEndereco.values) {
+    testWidgets(
+      'destino diferencia $tipo e preserva campi durante nova tentativa',
+      (tester) async {
+        enderecos.resposta = (_) async {
+          if (enderecos.buscas.length == 1) throw FalhaBuscaEndereco(tipo);
+          return [];
+        };
+        await montar(
+          tester,
+          controller: controller,
+          catalogo: catalogo,
+          enderecos: enderecos,
+        );
+        await tester.pumpAndSettle();
+        await tester.enterText(find.byType(TextField), 'unesp');
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pumpAndSettle();
+        expect(find.text(FalhaBuscaEndereco(tipo).mensagem), findsOneWidget);
+        expect(find.textContaining('Nenhum endereço encontrado'), findsNothing);
+        expect(find.textContaining('UNESP · Odontologia'), findsOneWidget);
+        expect(find.textContaining('UNESP · Veterinária'), findsOneWidget);
+        await tester.ensureVisible(find.text('Tentar novamente'));
+        await tester.tap(find.text('Tentar novamente'));
+        await tester.pumpAndSettle();
+        expect(enderecos.buscas, ['unesp', 'unesp']);
+        expect(find.text('Tentar novamente'), findsNothing);
+        expect(controller.text, 'unesp');
+        expect(tester.takeException(), isNull);
+        await fechar(tester);
+      },
+    );
+  }
+
+  testWidgets('GPS identificado conserva ponto de referencia para pesquisa', (
+    tester,
+  ) async {
+    catalogo.cidadeDetectada = const CidadeCampus(
+      'Araçatuba',
+      'SP',
+      pontoReferencia: LatLng(-21.2, -50.4),
+    );
+    await montar(
+      tester,
+      controller: controller,
+      catalogo: catalogo,
+      enderecos: enderecos,
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'rua teste');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+    expect(enderecos.referencias.single, (-21.2, -50.4));
+    await fechar(tester);
+  });
+
+  testWidgets('erro antigo de endereco nao afeta consulta nova', (
+    tester,
+  ) async {
+    final pendente = Completer<List<LocalizacaoSelecionada>>();
+    enderecos.resposta = (texto) =>
+        texto == 'antiga' ? pendente.future : Future.value([]);
+    await montar(
+      tester,
+      controller: controller,
+      catalogo: catalogo,
+      enderecos: enderecos,
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'antiga');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.enterText(find.byType(TextField), 'nova rua');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+    pendente.completeError(const FalhaBuscaEndereco(TipoFalhaEndereco.conexao));
+    await tester.pumpAndSettle();
+    expect(find.text('Tentar novamente'), findsNothing);
+    expect(find.textContaining('Nenhum endereço encontrado'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await fechar(tester);
+  });
+
+  testWidgets('troca manual de cidade descarta GPS anterior e erro pendente', (
+    tester,
+  ) async {
+    catalogo.cidadeDetectada = const CidadeCampus(
+      'Araçatuba',
+      'SP',
+      pontoReferencia: LatLng(-21.2, -50.4),
+    );
+    catalogo.resposta = (_) async => [];
+    final pendente = Completer<List<LocalizacaoSelecionada>>();
+    enderecos.resposta = (_) =>
+        enderecos.buscas.length == 1 ? pendente.future : Future.value([]);
+    await montar(
+      tester,
+      controller: controller,
+      catalogo: catalogo,
+      enderecos: enderecos,
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'rua teste');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.tap(find.byTooltip('Alterar cidade'));
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.enterText(find.byType(TextFormField).first, 'Campinas');
+    await tester.tap(find.text('Aplicar'));
+    await tester.pumpAndSettle();
+    pendente.completeError(const FalhaBuscaEndereco(TipoFalhaEndereco.conexao));
+    await tester.pumpAndSettle();
+    expect(enderecos.referencias, [(-21.2, -50.4), (null, null)]);
+    expect(find.text('Tentar novamente'), findsNothing);
+    expect(find.text('Faculdades em Campinas/SP'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await fechar(tester);
+  });
+
+  testWidgets('aviso da pesquisa cabe em tela estreita e fonte grande', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    enderecos.resposta = (_) async =>
+        throw const FalhaBuscaEndereco(TipoFalhaEndereco.conexao);
+    await montar(
+      tester,
+      controller: controller,
+      catalogo: catalogo,
+      enderecos: enderecos,
+      escala: 1.8,
+    );
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'rua teste');
+    await tester.pump(const Duration(milliseconds: 500));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Tentar novamente'));
+    expect(tester.takeException(), isNull);
+    await fechar(tester);
+  });
 
   testWidgets('lista campi ao abrir sem nenhuma letra', (tester) async {
     await montar(tester, controller: controller, catalogo: catalogo);

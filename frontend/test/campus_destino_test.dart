@@ -16,6 +16,19 @@ Map<String, dynamic> campusJson() => {
 };
 
 void main() {
+  test('identificacao da cidade preserva coordenadas sem mudar comparacao', () {
+    final cidade = CidadeCampus.deLocalizacao(
+      const LocalizacaoSelecionada(
+        ponto: LatLng(-21.2, -50.4),
+        endereco: 'Rua',
+        cidade: 'Araçatuba',
+        estado: 'São Paulo',
+      ),
+    );
+    expect(cidade!.pontoReferencia, const LatLng(-21.2, -50.4));
+    expect(cidade.mesmaCidade(const CidadeCampus('Aracatuba', 'SP')), isTrue);
+    expect(const CidadeCampus('Outra cidade', 'SP').pontoReferencia, isNull);
+  });
   test(
     'converte identificadores e ponto, com endereço de cidade explicitamente identificado',
     () {

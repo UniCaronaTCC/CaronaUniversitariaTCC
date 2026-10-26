@@ -44,12 +44,10 @@ class BarraPesquisaEndereco extends StatefulWidget {
   });
 
   @override
-  State<BarraPesquisaEndereco> createState() =>
-      _BarraPesquisaEnderecoState();
+  State<BarraPesquisaEndereco> createState() => _BarraPesquisaEnderecoState();
 }
 
-class _BarraPesquisaEnderecoState
-    extends State<BarraPesquisaEndereco> {
+class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
   late final TextEditingController _controller;
   late final bool _controllerInterno;
   late final EnderecoService _enderecoService;
@@ -61,6 +59,8 @@ class _BarraPesquisaEnderecoState
 
   bool _pesquisando = false;
   bool _pesquisaRealizada = false;
+  String? _erro;
+  late String _textoAtual;
 
   @override
   void initState() {
@@ -68,16 +68,17 @@ class _BarraPesquisaEnderecoState
 
     _controllerInterno = widget.controller == null;
 
-    _controller =
-        widget.controller ?? TextEditingController();
+    _controller = widget.controller ?? TextEditingController();
 
-    _enderecoService =
-        widget.enderecoService ?? EnderecoService();
+    _enderecoService = widget.enderecoService ?? EnderecoService();
+    _textoAtual = _controller.text;
+    _controller.addListener(_textoAlterado);
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _controller.removeListener(_textoAlterado);
 
     if (_controllerInterno) {
       _controller.dispose();
@@ -86,32 +87,32 @@ class _BarraPesquisaEnderecoState
     super.dispose();
   }
 
+  void _textoAlterado() {
+    if (_textoAtual == _controller.text) return;
+    _textoAtual = _controller.text;
+    _debounce?.cancel();
+    _numeroBusca++;
+    setState(() {
+      _resultados = [];
+      _erro = null;
+      _pesquisando = false;
+      _pesquisaRealizada = false;
+    });
+  }
+
   void _aoDigitar(String texto) {
     widget.onChanged?.call(texto);
-
     _debounce?.cancel();
-
     final textoBusca = texto.trim();
-
-    if (textoBusca.length < 3) {
-      _numeroBusca++;
-
-      setState(() {
-        _resultados = [];
-        _pesquisando = false;
-        _pesquisaRealizada = false;
-      });
-
-      return;
-    }
-
+    if (textoBusca.length < 3) return;
     _debounce = Timer(
       const Duration(milliseconds: 500),
-          () => _pesquisar(textoBusca),
+      () => _pesquisar(textoBusca),
     );
   }
 
   Future<void> _pesquisar(String texto) async {
+    if (_pesquisando) return;
     final textoBusca = texto.trim();
 
     if (textoBusca.length < 3) {
@@ -123,33 +124,37 @@ class _BarraPesquisaEnderecoState
     setState(() {
       _pesquisando = true;
       _pesquisaRealizada = false;
+      _erro = null;
     });
 
-    final resultados =
-    await _enderecoService.buscarLocalizacoesPorEndereco(
-      textoBusca,
-      latitudeReferencia: widget.latitudeReferencia,
-      longitudeReferencia: widget.longitudeReferencia,
-      cidadeReferencia: widget.cidadeReferencia,
-      estadoReferencia: widget.estadoReferencia,
-    );
-
-    if (!mounted ||
-        numeroBusca != _numeroBusca ||
-        _controller.text.trim() != textoBusca) {
-      return;
+    bool atual() =>
+        mounted &&
+        numeroBusca == _numeroBusca &&
+        _controller.text.trim() == textoBusca;
+    try {
+      final resultados = await _enderecoService.buscarLocalizacoesPorEndereco(
+        textoBusca,
+        latitudeReferencia: widget.latitudeReferencia,
+        longitudeReferencia: widget.longitudeReferencia,
+        cidadeReferencia: widget.cidadeReferencia,
+        estadoReferencia: widget.estadoReferencia,
+      );
+      if (!atual()) return;
+      setState(() => _resultados = resultados);
+    } catch (erro) {
+      if (!atual()) return;
+      setState(() => _erro = FalhaBuscaEndereco.mensagemPara(erro));
+    } finally {
+      if (atual()) {
+        setState(() {
+          _pesquisando = false;
+          _pesquisaRealizada = true;
+        });
+      }
     }
-
-    setState(() {
-      _resultados = resultados;
-      _pesquisando = false;
-      _pesquisaRealizada = true;
-    });
   }
 
-  void _selecionar(
-      LocalizacaoSelecionada local,
-      ) {
+  void _selecionar(LocalizacaoSelecionada local) {
     _debounce?.cancel();
 
     _numeroBusca++;
@@ -160,6 +165,7 @@ class _BarraPesquisaEnderecoState
       _resultados = [];
       _pesquisando = false;
       _pesquisaRealizada = false;
+      _erro = null;
     });
 
     FocusScope.of(context).unfocus();
@@ -176,9 +182,7 @@ class _BarraPesquisaEnderecoState
         children: [
           Material(
             elevation: widget.elevacao,
-            borderRadius: BorderRadius.circular(
-              widget.borderRadius,
-            ),
+            borderRadius: BorderRadius.circular(widget.borderRadius),
             child: TextField(
               controller: _controller,
               keyboardType: TextInputType.streetAddress,
@@ -188,40 +192,25 @@ class _BarraPesquisaEnderecoState
                 _debounce?.cancel();
                 _pesquisar(texto);
               },
-              style: const TextStyle(
-                color: AppColors.text,
-              ),
+              style: const TextStyle(color: AppColors.text),
               decoration: InputDecoration(
-                labelText: widget.usarLabelComoHint
-                    ? null
-                    : widget.label,
-                hintText: widget.usarLabelComoHint
-                    ? widget.label
-                    : null,
-                prefixIcon: Icon(
-                  widget.icone,
-                  color: AppColors.primary,
-                ),
+                labelText: widget.usarLabelComoHint ? null : widget.label,
+                hintText: widget.usarLabelComoHint ? widget.label : null,
+                prefixIcon: Icon(widget.icone, color: AppColors.primary),
                 suffixIcon: _pesquisando
                     ? const Padding(
-                  padding: EdgeInsets.all(12),
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child:
-                    CircularProgressIndicator(
-                      strokeWidth: 2,
-                    ),
-                  ),
-                )
+                        padding: EdgeInsets.all(12),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
                     : null,
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
-                  borderRadius:
-                  BorderRadius.circular(
-                    widget.borderRadius,
-                  ),
+                  borderRadius: BorderRadius.circular(widget.borderRadius),
                   borderSide: BorderSide.none,
                 ),
               ),
@@ -231,18 +220,12 @@ class _BarraPesquisaEnderecoState
           if (_resultados.isNotEmpty)
             Container(
               margin: const EdgeInsets.only(top: 8),
-              constraints: const BoxConstraints(
-                maxHeight: 250,
-              ),
+              constraints: const BoxConstraints(maxHeight: 250),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius:
-                BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(12),
                 boxShadow: const [
-                  BoxShadow(
-                    blurRadius: 6,
-                    color: Colors.black26,
-                  ),
+                  BoxShadow(blurRadius: 6, color: Colors.black26),
                 ],
               ),
               child: ListView.builder(
@@ -250,68 +233,67 @@ class _BarraPesquisaEnderecoState
                 shrinkWrap: true,
                 itemCount: _resultados.length,
                 itemBuilder: (context, index) {
-                  final local =
-                  _resultados[index];
+                  final local = _resultados[index];
 
-                  final nome =
-                  local.nome?.trim();
+                  final nome = local.nome?.trim();
 
                   return Material(
                     color: Colors.transparent,
                     child: ListTile(
-                      leading: const Icon(
-                        Icons.location_on,
-                      ),
+                      leading: const Icon(Icons.location_on),
                       title: Text(
-                        nome != null &&
-                            nome.isNotEmpty
-                            ? nome
-                            : local.endereco,
+                        nome != null && nome.isNotEmpty ? nome : local.endereco,
                       ),
-                      subtitle: nome != null &&
-                          nome.isNotEmpty
+                      subtitle: nome != null && nome.isNotEmpty
                           ? Text(local.endereco)
                           : null,
-                      trailing: const Icon(
-                        Icons.chevron_right,
-                      ),
-                      onTap: () =>
-                          _selecionar(local),
+                      trailing: const Icon(Icons.chevron_right),
+                      onTap: () => _selecionar(local),
                     ),
                   );
                 },
               ),
             ),
 
+          if (_erro != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(_erro!),
+                  TextButton.icon(
+                    onPressed: _pesquisando
+                        ? null
+                        : () => _pesquisar(_controller.text),
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Tentar novamente'),
+                  ),
+                ],
+              ),
+            ),
           if (_pesquisaRealizada &&
+              _erro == null &&
               !_pesquisando &&
               _resultados.isEmpty)
             Container(
-              margin:
-              const EdgeInsets.only(top: 8),
+              margin: const EdgeInsets.only(top: 8),
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius:
-                BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(12),
                 boxShadow: const [
-                  BoxShadow(
-                    blurRadius: 6,
-                    color: Colors.black26,
-                  ),
+                  BoxShadow(blurRadius: 6, color: Colors.black26),
                 ],
               ),
               child: const Row(
                 children: [
-                  Icon(
-                    Icons.search_off,
-                    color: Colors.grey,
-                  ),
+                  Icon(Icons.search_off, color: Colors.grey),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       'Nenhum endereço encontrado.\n'
-                          'Tente pesquisar por rua, bairro ou cidade.',
+                      'Tente pesquisar por rua, bairro ou cidade.',
                     ),
                   ),
                 ],
