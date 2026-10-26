@@ -9,7 +9,7 @@
 
     <application
         android:allowBackup="false"
-        android:label="uni_carona"
+        android:label="BuscaEu"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

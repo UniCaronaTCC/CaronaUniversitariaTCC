@@ -19,6 +19,7 @@ Future<void> main() async {
 
   runApp(
     MaterialApp(
+      title: 'BuscaEu',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: AuthService.estaLogado
