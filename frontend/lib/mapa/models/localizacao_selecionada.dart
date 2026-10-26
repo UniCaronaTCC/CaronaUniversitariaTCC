@@ -1,4 +1,7 @@
 import 'package:latlong2/latlong.dart';
+import 'consulta_endereco.dart';
+
+enum PrecisaoLocalizacao { ponto, rua, regiao, desconhecida }
 
 class LocalizacaoSelecionada {
   final LatLng ponto;
@@ -9,6 +12,9 @@ class LocalizacaoSelecionada {
   final String? rua;
   final String? numero;
   final bool pontoEspecifico;
+  final PrecisaoLocalizacao? precisao;
+  final String? numeroBuscado;
+  final String? logradouroBuscado;
 
   // Nome digitado pelo usuário, como "UniSalesiano".
   final String? nome;
@@ -23,7 +29,46 @@ class LocalizacaoSelecionada {
     this.rua,
     this.numero,
     this.pontoEspecifico = true,
+    this.precisao,
+    this.numeroBuscado,
+    this.logradouroBuscado,
   });
+
+  bool get numeroNaoConfirmado =>
+      numeroBuscado != null &&
+      (numeroBuscado!.trim().toUpperCase() != numero?.trim().toUpperCase() ||
+          (logradouroBuscado != null &&
+              ConsultaEndereco.normalizarLogradouro(logradouroBuscado!) !=
+                  ConsultaEndereco.normalizarLogradouro(rua ?? '')));
+
+  bool get exigeAjusteNoMapa =>
+      !pontoEspecifico ||
+      numeroNaoConfirmado ||
+      (precisao != null && precisao != PrecisaoLocalizacao.ponto);
+
+  String? get avisoPrecisao => !exigeAjusteNoMapa
+      ? null
+      : numeroNaoConfirmado
+      ? 'Número $numeroBuscado não confirmado. Ajuste o ponto no mapa.'
+      : 'Local aproximado. Ajuste o ponto no mapa.';
+
+  LocalizacaoSelecionada comNumeroBuscado(
+    String buscado, {
+    String? logradouroBuscado,
+  }) => LocalizacaoSelecionada(
+    ponto: ponto,
+    endereco: endereco,
+    cidade: cidade,
+    estado: estado,
+    pais: pais,
+    rua: rua,
+    numero: numero,
+    nome: nome,
+    pontoEspecifico: pontoEspecifico,
+    precisao: precisao,
+    numeroBuscado: buscado,
+    logradouroBuscado: logradouroBuscado,
+  );
 
   bool get coordenadasValidas =>
       ponto.latitude.isFinite &&
@@ -44,6 +89,9 @@ class LocalizacaoSelecionada {
     'rua': rua,
     'numero': numero,
     'pontoEspecifico': pontoEspecifico,
+    if (precisao != null) 'precisao': precisao!.name,
+    if (numeroBuscado != null) 'numeroBuscado': numeroBuscado,
+    if (logradouroBuscado != null) 'logradouroBuscado': logradouroBuscado,
   };
 
   factory LocalizacaoSelecionada.fromJson(Map<String, dynamic> json) {
@@ -73,6 +121,16 @@ class LocalizacaoSelecionada {
       return valor as String?;
     }
 
+    final precisaoSalva = textoOpcional('precisao');
+    PrecisaoLocalizacao? precisao;
+    if (precisaoSalva != null) {
+      for (final valor in PrecisaoLocalizacao.values) {
+        if (valor.name == precisaoSalva) precisao = valor;
+      }
+      if (precisao == null) {
+        throw const FormatException('Precisao do destino invalida');
+      }
+    }
     final local = LocalizacaoSelecionada(
       ponto: LatLng(latitude.toDouble(), longitude.toDouble()),
       endereco: endereco,
@@ -83,6 +141,9 @@ class LocalizacaoSelecionada {
       rua: textoOpcional('rua'),
       numero: textoOpcional('numero'),
       pontoEspecifico: json['pontoEspecifico'] as bool,
+      precisao: precisao,
+      numeroBuscado: textoOpcional('numeroBuscado'),
+      logradouroBuscado: textoOpcional('logradouroBuscado'),
     );
     if (!local.coordenadasValidas) {
       throw const FormatException('Coordenadas do destino invalidas');

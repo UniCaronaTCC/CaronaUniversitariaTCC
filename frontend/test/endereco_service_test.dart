@@ -238,7 +238,7 @@ void main() {
       await expectLater(
         EnderecoService(
           cliente: cliente,
-        ).buscarLocalizacoesPorEndereco('Rua Brasil'),
+        ).buscarLocalizacoesPorEndereco('uni salesiano'),
         throwsA(isA<FalhaBuscaEndereco>()),
       );
       expect(chamadas, 2);
@@ -253,7 +253,7 @@ void main() {
     expect(
       await EnderecoService(
         cliente: cliente,
-      ).buscarLocalizacoesPorEndereco('Rua Brasil'),
+      ).buscarLocalizacoesPorEndereco('uni salesiano'),
       isEmpty,
     );
   });

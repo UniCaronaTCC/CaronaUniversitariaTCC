@@ -244,8 +244,18 @@ class _BarraPesquisaEnderecoState extends State<BarraPesquisaEndereco> {
                       title: Text(
                         nome != null && nome.isNotEmpty ? nome : local.endereco,
                       ),
-                      subtitle: nome != null && nome.isNotEmpty
-                          ? Text(local.endereco)
+                      subtitle:
+                          (nome != null && nome.isNotEmpty) ||
+                              local.avisoPrecisao != null
+                          ? Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (nome != null && nome.isNotEmpty)
+                                  Text(local.endereco),
+                                if (local.avisoPrecisao != null)
+                                  Text(local.avisoPrecisao!),
+                              ],
+                            )
                           : null,
                       trailing: const Icon(Icons.chevron_right),
                       onTap: () => _selecionar(local),

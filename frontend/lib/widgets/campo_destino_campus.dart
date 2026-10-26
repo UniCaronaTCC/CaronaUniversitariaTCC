@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
+import '../mapa/screens/mapa_screen.dart';
 import '../mapa/services/endereco_service.dart';
 import '../models/campus_destino.dart';
 import '../services/campus_destino_service.dart';
@@ -51,6 +52,7 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
   bool _iniciado = false;
   bool _visivel = false;
   bool _cidadeManual = false;
+  bool _abrindoMapa = false;
 
   @override
   void initState() {
@@ -148,7 +150,10 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
         setState(() => _carregandoCampi = false);
       }
     }
-    if (mounted && consulta == _consultaCampi && _filtro.trim().length >= 3) {
+    if (mounted &&
+        consulta == _consultaCampi &&
+        !_abrindoMapa &&
+        _filtro.trim().length >= 3) {
       _agendarEndereco(_filtro);
     }
   }
@@ -198,7 +203,8 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
         _locais = locais.where((local) {
           final campus = _confirmandoCampus;
           if (campus == null) return true;
-          return local.pontoEspecifico &&
+          return (local.pontoEspecifico ||
+                  local.precisao == PrecisaoLocalizacao.rua) &&
               normalizarDestino(local.cidade ?? '') ==
                   normalizarDestino(campus.cidade.cidade) &&
               CidadeCampus.normalizarUf(local.estado) == campus.cidade.uf;
@@ -217,9 +223,43 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
     }
   }
 
-  void _selecionar(LocalizacaoSelecionada local) {
+  Future<void> _selecionar(LocalizacaoSelecionada local) async {
+    if (_abrindoMapa) return;
     _debounce?.cancel();
-    _consultaEndereco++;
+    final consulta = ++_consultaEndereco;
+    final texto = widget.controller.text;
+    if (local.exigeAjusteNoMapa) {
+      _abrindoMapa = true;
+      setState(() {
+        _buscandoEndereco = false;
+        _erroEndereco = null;
+      });
+      try {
+        final confirmado = await Navigator.of(context)
+            .push<LocalizacaoSelecionada>(
+              MaterialPageRoute(
+                builder: (_) => TesteMapa(
+                  titulo: 'Confirmar destino',
+                  textoBotao: 'CONFIRMAR DESTINO',
+                  localizacaoInicial: local,
+                  enderecoService: _enderecos,
+                ),
+              ),
+            );
+        if (!mounted ||
+            consulta != _consultaEndereco ||
+            widget.controller.text != texto ||
+            confirmado == null ||
+            confirmado.exigeAjusteNoMapa ||
+            !confirmado.coordenadasValidas) {
+          return;
+        }
+        local = confirmado;
+      } finally {
+        _abrindoMapa = false;
+      }
+    }
+    if (!mounted) return;
     widget.controller.text = local.descricaoCompleta;
     setState(() => _visivel = false);
     _foco.unfocus();
@@ -228,7 +268,10 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
 
   void _selecionarCampus(CampusDestino campus) {
     final local = campus.localizacao;
-    if (local != null) return _selecionar(local);
+    if (local != null) {
+      _selecionar(local);
+      return;
+    }
     final termo =
         '${campus.sigla?.trim().isNotEmpty == true ? campus.sigla : campus.nome} '
         '${campus.campus} ${campus.cidade.cidade} ${campus.cidade.uf}';
@@ -459,8 +502,18 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
                 title: Text(
                   local.nome?.isNotEmpty == true ? local.nome! : local.endereco,
                 ),
-                subtitle: local.nome?.isNotEmpty == true
-                    ? Text(local.endereco)
+                subtitle:
+                    local.nome?.isNotEmpty == true ||
+                        local.avisoPrecisao != null
+                    ? Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (local.nome?.isNotEmpty == true)
+                            Text(local.endereco),
+                          if (local.avisoPrecisao != null)
+                            Text(local.avisoPrecisao!),
+                        ],
+                      )
                     : null,
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => _selecionar(local),

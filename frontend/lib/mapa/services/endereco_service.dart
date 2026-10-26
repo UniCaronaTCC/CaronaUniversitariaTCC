@@ -9,6 +9,7 @@ import 'package:latlong2/latlong.dart';
 
 import '../../services/cliente_http_com_prazo.dart';
 import '../models/localizacao_selecionada.dart';
+import '../models/consulta_endereco.dart';
 
 enum TipoFalhaEndereco {
   conexao,
@@ -120,10 +121,34 @@ class EnderecoService {
       longitudeReferencia: longitude,
     );
 
-    final buscaAlternativa = _prepararBuscaAlternativa(textoBusca);
+    final numeroNoNomeDaRua =
+        !textoBusca.contains(',') &&
+        resultados.any(
+          (local) =>
+              local.precisao == PrecisaoLocalizacao.rua &&
+              ConsultaEndereco.normalizarLogradouro(local.rua ?? '') ==
+                  ConsultaEndereco.normalizarLogradouro(textoBusca),
+        );
+    final consulta = ConsultaEndereco(
+      textoBusca,
+      interpretarNumero: !numeroNoNomeDaRua,
+    );
+    final buscaAlternativa =
+        consulta.semNumero ??
+        (consulta.logradouro == null
+            ? _prepararBuscaAlternativa(textoBusca)
+            : '');
+    final numeroEncontrado =
+        consulta.numero != null &&
+        resultados.any(
+          (local) =>
+              ConsultaEndereco.normalizarLogradouro(local.rua ?? '') ==
+                  ConsultaEndereco.normalizarLogradouro(consulta.logradouro!) &&
+              local.numero?.trim().toUpperCase() == consulta.numero,
+        );
 
     // Exemplo: "mc donalds" faz uma segunda tentativa como "mcdonalds".
-    if (resultados.length < 3 &&
+    if ((consulta.numero != null ? !numeroEncontrado : resultados.length < 3) &&
         buscaAlternativa.isNotEmpty &&
         buscaAlternativa != _normalizar(textoBusca)) {
       try {
@@ -140,28 +165,42 @@ class EnderecoService {
     }
 
     resultados = _juntarSemDuplicar(resultados, []);
-    resultados.sort(
-      (a, b) =>
+    final indexados = resultados.asMap().entries.toList();
+    indexados.sort((a, b) {
+      final comparacao =
           _calcularPrioridade(
-            local: b,
+            local: b.value,
             textoBusca: textoBusca,
+            consulta: consulta,
             cidadeReferencia: cidadeReferencia,
             estadoReferencia: estadoReferencia,
             latitudeReferencia: latitude,
             longitudeReferencia: longitude,
           ).compareTo(
             _calcularPrioridade(
-              local: a,
+              local: a.value,
               textoBusca: textoBusca,
+              consulta: consulta,
               cidadeReferencia: cidadeReferencia,
               estadoReferencia: estadoReferencia,
               latitudeReferencia: latitude,
               longitudeReferencia: longitude,
             ),
-          ),
-    );
+          );
+      return comparacao != 0 ? comparacao : a.key.compareTo(b.key);
+    });
 
-    return resultados.take(5).toList();
+    return indexados
+        .take(5)
+        .map(
+          (item) => consulta.numero == null
+              ? item.value
+              : item.value.comNumeroBuscado(
+                  consulta.numero!,
+                  logradouroBuscado: consulta.logradouro,
+                ),
+        )
+        .toList();
   }
 
   Future<List<LocalizacaoSelecionada>> _buscarNoPhoton(
@@ -259,6 +298,8 @@ class EnderecoService {
     final rua = properties['street']?.toString().trim() ?? '';
     final numero = properties['housenumber']?.toString().trim() ?? '';
     final tipo = properties['type']?.toString().toLowerCase().trim() ?? '';
+    final osmKey = properties['osm_key']?.toString().toLowerCase() ?? '';
+    final osmValue = properties['osm_value']?.toString().toLowerCase() ?? '';
     const tiposGenericos = {
       'city',
       'town',
@@ -268,12 +309,60 @@ class EnderecoService {
       'state',
       'country',
       'locality',
+      'district',
+      'suburb',
+      'neighbourhood',
+      'hamlet',
+      'borough',
     };
-    final pontoEspecifico =
-        rua.isNotEmpty || (nome.isNotEmpty && !tiposGenericos.contains(tipo));
+    final PrecisaoLocalizacao precisao;
+    if (tiposGenericos.contains(tipo) ||
+        (osmKey == 'place' && tiposGenericos.contains(osmValue)) ||
+        osmKey == 'boundary') {
+      precisao = PrecisaoLocalizacao.regiao;
+    } else if (rua.isNotEmpty && numero.isNotEmpty) {
+      precisao = PrecisaoLocalizacao.ponto;
+    } else if (tipo == 'street' || osmKey == 'highway') {
+      precisao = PrecisaoLocalizacao.rua;
+    } else if (tipo == 'house' ||
+        tipo == 'building' ||
+        (nome.isNotEmpty &&
+            const {
+              'amenity',
+              'shop',
+              'office',
+              'tourism',
+              'leisure',
+              'healthcare',
+              'building',
+              'historic',
+              'railway',
+              'aeroway',
+            }.contains(osmKey))) {
+      precisao = PrecisaoLocalizacao.ponto;
+    } else {
+      precisao = PrecisaoLocalizacao.desconhecida;
+    }
+    final pontoEspecifico = precisao == PrecisaoLocalizacao.ponto;
+    final logradouro = rua.isNotEmpty
+        ? rua
+        : precisao == PrecisaoLocalizacao.rua
+        ? nome
+        : '';
 
     final cidade =
         (properties['city'] ??
+                ((tipo == 'city' ||
+                            (osmKey == 'place' &&
+                                const {
+                                  'city',
+                                  'town',
+                                  'municipality',
+                                  'village',
+                                }.contains(osmValue))) &&
+                        nome.isNotEmpty
+                    ? nome
+                    : null) ??
                 properties['locality'] ??
                 properties['county'] ??
                 '')
@@ -285,7 +374,7 @@ class EnderecoService {
     final pais = properties['country']?.toString().trim();
 
     final endereco = _montarEndereco([
-      rua,
+      logradouro,
       numero,
       properties['district']?.toString(),
       cidade,
@@ -300,9 +389,10 @@ class EnderecoService {
       cidade: cidade.isEmpty ? null : cidade,
       estado: estado,
       pais: pais,
-      rua: rua.isEmpty ? null : rua,
+      rua: logradouro.isEmpty ? null : logradouro,
       numero: numero.isEmpty ? null : numero,
       pontoEspecifico: pontoEspecifico,
+      precisao: precisao,
     );
   }
 
@@ -356,6 +446,7 @@ class EnderecoService {
   double _calcularPrioridade({
     required LocalizacaoSelecionada local,
     required String textoBusca,
+    required ConsultaEndereco consulta,
     String? cidadeReferencia,
     String? estadoReferencia,
     double? latitudeReferencia,
@@ -363,63 +454,73 @@ class EnderecoService {
   }) {
     double prioridade = 0;
 
-    final busca = _normalizar(textoBusca);
     final buscaCompacta = _normalizarCompacto(textoBusca);
-
-    final nome = _normalizar(local.nome ?? '');
     final nomeCompacto = _normalizarCompacto(local.nome ?? '');
+    if (buscaCompacta.isNotEmpty && nomeCompacto == buscaCompacta) {
+      prioridade += 5000;
+    }
 
-    final endereco = _normalizar(local.endereco);
+    if (consulta.logradouro != null &&
+        ConsultaEndereco.normalizarLogradouro(consulta.logradouro!) ==
+            ConsultaEndereco.normalizarLogradouro(local.rua ?? '')) {
+      prioridade += 4000;
+      if (consulta.numero != null) {
+        prioridade += local.numero?.trim().toUpperCase() == consulta.numero
+            ? 4000
+            : local.numero == null || local.numero!.isEmpty
+            ? 500
+            : -500;
+      }
+    }
+
+    final palavras = ConsultaEndereco.normalizar(textoBusca)
+        .split(' ')
+        .where(
+          (p) =>
+              p.isNotEmpty &&
+              !const {
+                'rua',
+                'r',
+                'avenida',
+                'av',
+                'de',
+                'da',
+                'do',
+                'das',
+                'dos',
+                'e',
+              }.contains(p),
+        )
+        .toSet();
+    final termosLocal = ConsultaEndereco.normalizar(
+      '${local.nome ?? ''} ${local.endereco}',
+    ).split(' ').toSet();
+    if (palavras.isNotEmpty) {
+      final correspondencias = palavras
+          .where(
+            (p) => termosLocal.any(
+              (t) => t == p || (p.length >= 3 && t.startsWith(p)),
+            ),
+          )
+          .length;
+      prioridade += 1000 * correspondencias / palavras.length;
+    }
+    // Apenas a cidade completa, fora do nome do logradouro, indica intencao geografica.
+    if (consulta.cidadeExplicita(local.cidade ?? '')) prioridade += 12000;
+
     final cidade = _normalizar(local.cidade ?? '');
     final estado = _normalizar(local.estado ?? '');
-
-    final palavras = busca
-        .split(RegExp(r'\s+'))
-        .where((palavra) => palavra.length >= 3);
-
-    // McDonald's, mc donalds e mcdonalds ficam equivalentes.
-    if (buscaCompacta.isNotEmpty && nomeCompacto.isNotEmpty) {
-      if (nomeCompacto == buscaCompacta) {
-        prioridade += 2000;
-      } else if (nomeCompacto.contains(buscaCompacta) ||
-          buscaCompacta.contains(nomeCompacto)) {
-        prioridade += 1200;
-      }
-    }
-
-    if (nome.isNotEmpty && nome.contains(busca)) {
-      prioridade += 800;
-    }
-
-    for (final palavra in palavras) {
-      if (nome.contains(palavra)) {
-        prioridade += 350;
-      }
-
-      // Cidade escrita pelo usuário ganha prioridade alta.
-      if (cidade.contains(palavra)) {
-        prioridade += 1200;
-      }
-
-      if (estado.contains(palavra)) {
-        prioridade += 300;
-      }
-
-      if (endereco.contains(palavra)) {
-        prioridade += 80;
-      }
-    }
 
     final cidadeEsperada = _normalizar(cidadeReferencia ?? '');
 
     if (cidadeEsperada.isNotEmpty && cidade == cidadeEsperada) {
-      prioridade += 1000;
+      prioridade += 200;
     }
 
     final estadoEsperado = _normalizar(estadoReferencia ?? '');
 
     if (estadoEsperado.isNotEmpty && estado == estadoEsperado) {
-      prioridade += 300;
+      prioridade += 50;
     }
 
     if (latitudeReferencia != null && longitudeReferencia != null) {
@@ -432,7 +533,7 @@ class EnderecoService {
       );
 
       // Proximidade ajuda, mas não passa por cima da cidade pesquisada.
-      prioridade += 200 / (1 + distanciaKm);
+      prioridade += 100 / (1 + distanciaKm);
     }
 
     return prioridade;

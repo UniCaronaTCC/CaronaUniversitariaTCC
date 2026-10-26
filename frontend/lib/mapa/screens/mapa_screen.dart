@@ -16,6 +16,7 @@ class TesteMapa extends StatefulWidget {
   final String textoBotao;
   final int indiceNavegacao;
   final EnderecoService? enderecoService;
+  final LocalizacaoSelecionada? localizacaoInicial;
 
   const TesteMapa({
     super.key,
@@ -24,6 +25,7 @@ class TesteMapa extends StatefulWidget {
     this.textoBotao = 'CONFIRMAR LOCAL',
     this.indiceNavegacao = 0,
     this.enderecoService,
+    this.localizacaoInicial,
   });
 
   @override
@@ -43,6 +45,10 @@ class _TesteMapaState extends State<TesteMapa> {
   String? _nomePontoEncontro;
   String? _cidadePontoEncontro;
   String? _estadoPontoEncontro;
+  String? _rua;
+  String? _numero;
+  String? _avisoPrecisao;
+  bool _exigeAjuste = false;
 
   bool _buscandoLocalizacao = true;
   bool _buscandoEndereco = false;
@@ -52,7 +58,22 @@ class _TesteMapaState extends State<TesteMapa> {
   @override
   void initState() {
     super.initState();
-    _obterLocalizacao();
+    final inicial = widget.localizacaoInicial;
+    if (inicial != null && inicial.coordenadasValidas) {
+      _pontoEncontro = inicial.ponto;
+      _nomePontoEncontro = inicial.nome;
+      _enderecoPontoEncontro = inicial.endereco;
+      _cidadePontoEncontro = inicial.cidade;
+      _estadoPontoEncontro = inicial.estado;
+      _rua = inicial.rua;
+      _numero = inicial.numero;
+      _pontoEspecifico = inicial.pontoEspecifico;
+      _exigeAjuste = inicial.exigeAjusteNoMapa;
+      _avisoPrecisao = inicial.avisoPrecisao;
+      _buscandoLocalizacao = false;
+    } else {
+      _obterLocalizacao();
+    }
   }
 
   // Obtém a localização atual e centraliza o mapa.
@@ -102,12 +123,19 @@ class _TesteMapaState extends State<TesteMapa> {
       _nomePontoEncontro = null;
       _cidadePontoEncontro = null;
       _estadoPontoEncontro = null;
+      _rua = null;
+      _numero = null;
     });
 
-    final localizacao = await _enderecoService.buscarLocalizacaoPorCoordenadas(
-      ponto.latitude,
-      ponto.longitude,
-    );
+    LocalizacaoSelecionada? localizacao;
+    try {
+      localizacao = await _enderecoService.buscarLocalizacaoPorCoordenadas(
+        ponto.latitude,
+        ponto.longitude,
+      );
+    } catch (_) {
+      localizacao = null;
+    }
 
     if (!mounted || consulta != _consultaEndereco) {
       return;
@@ -120,6 +148,8 @@ class _TesteMapaState extends State<TesteMapa> {
       _nomePontoEncontro = localizacao?.nome;
       _cidadePontoEncontro = localizacao?.cidade;
       _estadoPontoEncontro = localizacao?.estado;
+      _rua = localizacao?.rua;
+      _numero = localizacao?.numero;
 
       _buscandoEndereco = false;
     });
@@ -130,6 +160,8 @@ class _TesteMapaState extends State<TesteMapa> {
     setState(() {
       _pontoEncontro = ponto;
       _pontoEspecifico = true;
+      _exigeAjuste = false;
+      _avisoPrecisao = null;
     });
 
     await _buscarEnderecoDoPonto(ponto);
@@ -146,6 +178,10 @@ class _TesteMapaState extends State<TesteMapa> {
       _cidadePontoEncontro = local.cidade;
       _estadoPontoEncontro = local.estado;
       _pontoEspecifico = local.pontoEspecifico;
+      _exigeAjuste = local.exigeAjusteNoMapa;
+      _avisoPrecisao = local.avisoPrecisao;
+      _rua = local.rua;
+      _numero = local.numero;
 
       _buscandoEndereco = false;
     });
@@ -176,6 +212,9 @@ class _TesteMapaState extends State<TesteMapa> {
       estado: _estadoPontoEncontro,
       nome: _nomePontoEncontro,
       pontoEspecifico: _pontoEspecifico,
+      rua: _rua,
+      numero: _numero,
+      precisao: PrecisaoLocalizacao.ponto,
     );
 
     if (!localSelecionado.coordenadasValidas) {
@@ -187,12 +226,10 @@ class _TesteMapaState extends State<TesteMapa> {
       return;
     }
 
-    if (!_pontoEspecifico) {
+    if (!_pontoEspecifico || _exigeAjuste) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Escolha uma rua, estabelecimento ou marque um ponto exato no mapa',
-          ),
+          content: Text('Toque no mapa para confirmar o ponto exato'),
         ),
       );
       return;
@@ -241,8 +278,15 @@ class _TesteMapaState extends State<TesteMapa> {
               mapController: _mapController,
               options: MapOptions(
                 initialCenter:
-                    _localizacaoAtual ?? const LatLng(-14.235, -51.9253),
-                initialZoom: _localizacaoAtual == null ? 4 : 16,
+                    _pontoEncontro ??
+                    _localizacaoAtual ??
+                    const LatLng(-14.235, -51.9253),
+                initialZoom: _pontoEncontro == null
+                    ? 4
+                    : widget.localizacaoInicial?.precisao ==
+                          PrecisaoLocalizacao.regiao
+                    ? 11
+                    : 16,
                 onTap: (tapPosition, point) {
                   _selecionarPonto(point);
                 },
@@ -285,12 +329,14 @@ class _TesteMapaState extends State<TesteMapa> {
               ],
             ),
             SafeArea(
-              child: BarraPesquisaEndereco(
-                onSelecionado: _selecionarEnderecoPesquisado,
-                latitudeReferencia: pontoReferencia?.latitude,
-                longitudeReferencia: pontoReferencia?.longitude,
-                cidadeReferencia: _cidadePontoEncontro,
-                estadoReferencia: _estadoPontoEncontro,
+              child: SingleChildScrollView(
+                child: BarraPesquisaEndereco(
+                  onSelecionado: _selecionarEnderecoPesquisado,
+                  latitudeReferencia: pontoReferencia?.latitude,
+                  longitudeReferencia: pontoReferencia?.longitude,
+                  cidadeReferencia: _cidadePontoEncontro,
+                  estadoReferencia: _estadoPontoEncontro,
+                ),
               ),
             ),
             if (_localizacaoAtual != null)
@@ -311,52 +357,65 @@ class _TesteMapaState extends State<TesteMapa> {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
+            constraints: BoxConstraints(
+              maxHeight:
+                  (MediaQuery.sizeOf(context).height -
+                      MediaQuery.viewInsetsOf(context).bottom) *
+                  0.45,
+            ),
             padding: const EdgeInsets.all(16),
             color: Colors.white,
             child: SafeArea(
               top: false,
               bottom: false,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    _buscandoLocalizacao
-                        ? 'Obtendo sua localização...'
-                        : widget.instrucao,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-
-                  if (_buscandoEndereco)
-                    const Text('Buscando endereço...')
-                  else
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Text(
-                      _nomePontoEncontro != null &&
-                              _nomePontoEncontro!.trim().isNotEmpty
-                          ? '$_nomePontoEncontro - '
-                                '${_enderecoPontoEncontro ?? ''}'
-                          : _enderecoPontoEncontro ??
-                                'Toque no mapa para escolher o ponto',
+                      _buscandoLocalizacao
+                          ? 'Obtendo sua localização...'
+                          : widget.instrucao,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                      ),
                     ),
 
-                  const SizedBox(height: 12),
+                    const SizedBox(height: 8),
 
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _pontoEncontro == null || _buscandoEndereco
-                          ? null
-                          : _confirmarPontoEncontro,
-                      icon: const Icon(Icons.check),
-                      label: Text(widget.textoBotao),
+                    if (_buscandoEndereco)
+                      const Text('Buscando endereço...')
+                    else
+                      Text(
+                        _nomePontoEncontro != null &&
+                                _nomePontoEncontro!.trim().isNotEmpty
+                            ? '$_nomePontoEncontro - '
+                                  '${_enderecoPontoEncontro ?? ''}'
+                            : _enderecoPontoEncontro ??
+                                  'Toque no mapa para escolher o ponto',
+                      ),
+
+                    const SizedBox(height: 12),
+
+                    if (_avisoPrecisao != null) ...[
+                      Text(_avisoPrecisao!),
+                      const SizedBox(height: 8),
+                    ],
+
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        onPressed: _pontoEncontro == null || _buscandoEndereco
+                            ? null
+                            : _confirmarPontoEncontro,
+                        icon: const Icon(Icons.check),
+                        label: Text(widget.textoBotao),
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
