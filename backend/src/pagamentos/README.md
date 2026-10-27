@@ -114,10 +114,15 @@ secret do webhook e nunca colocar nenhum dos dois valores no Flutter ou Git.
 
 - Usar exclusivamente uma chave criada no Dev Mode do painel. A URL da API e a
   mesma nos dois ambientes; `NODE_ENV` nao transforma uma chave real em sandbox.
-- O service bloqueia `NODE_ENV=production` e o prefixo documentado `prod_` como
-  protecoes adicionais. Outros formatos de chave nao comprovam o ambiente.
+- O sandbox funciona tambem com `NODE_ENV=production`, como no Render. Nao e
+  preciso mudar o ambiente do Node para desenvolvimento nem criar outra flag.
+- Antes de qualquer chamada, o service exige uma chave com prefixo `dev_` ou
+  `abc_dev_`. Chaves reais (`prod_`/`abc_prod_`), publicas ou de formato
+  desconhecido sao bloqueadas antes da rede. Manter a chave de Dev Mode apenas
+  em `ABACATEPAY_API_KEY` no backend.
 - A verificacao de `devMode` ocorre DEPOIS da criacao. Ela recusa a resposta fora
-  do sandbox, mas nao desfaz uma cobranca. Conferir o painel antes de testes reais.
+  do sandbox, mas nao desfaz uma cobranca. Ela complementa a validacao previa da
+  chave; nao a substitui. Conferir o painel antes de testes reais.
 - Chave apenas no `.env` do backend, nunca no Flutter, Git ou logs.
 - Requisicoes expiram em 10 segundos e nao seguem redirecionamentos.
 - Nenhuma requisicao e repetida automaticamente. Em uma falha de rede, pode ser

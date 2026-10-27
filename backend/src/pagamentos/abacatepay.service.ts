@@ -177,12 +177,11 @@ export class AbacatePayService {
       );
     }
 
-    if (
-      this.configService.get<string>('NODE_ENV') === 'production' ||
-      chave.startsWith('prod_')
-    ) {
+    // O servidor pode rodar em production e usar o sandbox. A chave deve
+    // comprovar o modo de teste antes do POST, nao so depois de criar o Pix.
+    if (!/^(?:dev_|abc_dev_)\S+$/.test(chave)) {
       throw new ServiceUnavailableException(
-        'A integracao de pagamentos ainda esta disponivel apenas para testes',
+        'Configure uma chave de testes da AbacatePay (dev_ ou abc_dev_) no backend. Pagamentos reais estao desativados',
       );
     }
 

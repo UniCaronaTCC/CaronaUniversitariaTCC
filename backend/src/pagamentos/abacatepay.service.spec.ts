@@ -190,20 +190,87 @@ describe('AbacatePayService', () => {
     },
   );
 
-  it('bloqueia a integracao quando NODE_ENV e production', async () => {
+  it.each([
+    ['test', 'dev_chave-ficticia'],
+    ['test', 'abc_dev_chave-ficticia'],
+    ['production', 'dev_chave-ficticia'],
+    ['production', 'abc_dev_chave-ficticia'],
+  ])(
+    'cria Pix de teste com NODE_ENV=%s e chave %s',
+    async (ambiente, chave) => {
+      configuracao.NODE_ENV = ambiente;
+      configuracao.ABACATEPAY_API_KEY = chave;
+      fetchMock.mockResolvedValue(resposta());
+
+      await expect(service.criarPix(entrada)).resolves.toMatchObject({
+        modoTeste: true,
+        pixCopiaECola: cobranca.brCode,
+        qrCodeBase64: cobranca.brCodeBase64,
+      });
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+      expect(fetchMock.mock.calls[0][1]?.headers).toMatchObject({
+        Authorization: `Bearer ${chave}`,
+      });
+    },
+  );
+
+  it.each([
+    'prod_chave-ficticia',
+    'abc_prod_chave-ficticia',
+    'pk_chave-ficticia',
+    'chave-sem-ambiente',
+    'dev_',
+    'abc_dev_',
+    'dev_chave com espaco',
+    'abc_dev_chave\ncom-quebra',
+  ])(
+    'recusa chave nao reconhecida como teste antes da rede: %s',
+    async (chave) => {
+      configuracao.ABACATEPAY_API_KEY = chave;
+      for (const ambiente of ['test', 'production']) {
+        configuracao.NODE_ENV = ambiente;
+        await expect(service.criarPix(entrada)).rejects.toBeInstanceOf(
+          ServiceUnavailableException,
+        );
+        await expect(service.consultarPix(cobranca.id)).rejects.toBeInstanceOf(
+          ServiceUnavailableException,
+        );
+        await expect(
+          service.simularPagamento(cobranca.id),
+        ).rejects.toBeInstanceOf(ServiceUnavailableException);
+      }
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it('consulta e simula o Pix de teste no ambiente production', async () => {
     configuracao.NODE_ENV = 'production';
-    await expect(service.criarPix(entrada)).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
-    );
-    expect(fetchMock).not.toHaveBeenCalled();
+    configuracao.ABACATEPAY_API_KEY = 'abc_dev_chave-ficticia';
+    fetchMock
+      .mockResolvedValueOnce(resposta())
+      .mockResolvedValueOnce(
+        resposta({
+          id: cobranca.id,
+          status: 'PENDING',
+          expiresAt: cobranca.expiresAt,
+        }),
+      )
+      .mockResolvedValueOnce(resposta({ ...cobranca, status: 'PAID' }));
+
+    const pix = await service.criarPix(entrada);
+    await expect(service.consultarPix(pix.id)).resolves.toMatchObject({
+      status: 'PENDING',
+    });
+    await expect(service.simularPagamento(pix.id)).resolves.toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(3);
   });
 
-  it('recusa chaves com prefixo explicitamente de producao', async () => {
-    configuracao.ABACATEPAY_API_KEY = 'prod_chave-ficticia';
+  it('mantem a exigencia de devMode true mesmo no ambiente production', async () => {
+    configuracao.NODE_ENV = 'production';
+    fetchMock.mockResolvedValue(resposta({ ...cobranca, devMode: false }));
     await expect(service.criarPix(entrada)).rejects.toBeInstanceOf(
-      ServiceUnavailableException,
+      BadGatewayException,
     );
-    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it.each([false, undefined, 'true'])(
