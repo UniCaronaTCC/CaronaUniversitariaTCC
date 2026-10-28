@@ -9,6 +9,7 @@ class BotaoAcaoHome extends StatelessWidget {
   final String texto;
   final IconData icone;
   final EstiloBotaoAcaoHome estilo;
+  final bool carregando;
 
   // Quando for null, o botao fica desativado.
   final VoidCallback? onPressed;
@@ -19,16 +20,32 @@ class BotaoAcaoHome extends StatelessWidget {
     required this.icone,
     required this.onPressed,
     this.estilo = EstiloBotaoAcaoHome.padrao,
+    this.carregando = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    final aoPressionar = carregando ? null : onPressed;
+    Widget construirIcone(double tamanho, Color cor) => carregando
+        ? SizedBox(
+            width: tamanho,
+            height: tamanho,
+            child: CircularProgressIndicator(
+              strokeWidth: 2,
+              color: cor,
+              semanticsLabel: 'Preparando abertura',
+            ),
+          )
+        : Icon(icone, size: tamanho);
     if (estilo != EstiloBotaoAcaoHome.padrao) {
       final principal = estilo == EstiloBotaoAcaoHome.principal;
       final formato = RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
       );
-      final iconeBotao = Icon(icone, size: 22);
+      final iconeBotao = construirIcone(
+        22,
+        principal ? Colors.white : AppColors.primary,
+      );
       final rotulo = Text(
         texto,
         textAlign: TextAlign.center,
@@ -39,7 +56,7 @@ class BotaoAcaoHome extends StatelessWidget {
         width: double.infinity,
         child: principal
             ? ElevatedButton.icon(
-                onPressed: onPressed,
+                onPressed: aoPressionar,
                 icon: iconeBotao,
                 label: rotulo,
                 style: ElevatedButton.styleFrom(
@@ -50,16 +67,18 @@ class BotaoAcaoHome extends StatelessWidget {
                   ),
                   backgroundColor: AppColors.primary,
                   foregroundColor: Colors.white,
-                  disabledBackgroundColor: AppColors.primary.withValues(
-                    alpha: 0.38,
-                  ),
-                  disabledForegroundColor: Colors.white70,
+                  disabledBackgroundColor: carregando
+                      ? AppColors.primary
+                      : AppColors.primary.withValues(alpha: 0.38),
+                  disabledForegroundColor: carregando
+                      ? Colors.white
+                      : Colors.white70,
                   shape: formato,
                   elevation: 0,
                 ),
               )
             : OutlinedButton.icon(
-                onPressed: onPressed,
+                onPressed: aoPressionar,
                 icon: iconeBotao,
                 label: rotulo,
                 style: OutlinedButton.styleFrom(
@@ -69,9 +88,11 @@ class BotaoAcaoHome extends StatelessWidget {
                     vertical: 14,
                   ),
                   foregroundColor: AppColors.primary,
-                  disabledForegroundColor: Colors.black38,
+                  disabledForegroundColor: carregando
+                      ? AppColors.primary
+                      : Colors.black38,
                   side: BorderSide(
-                    color: onPressed == null
+                    color: aoPressionar == null && !carregando
                         ? Colors.black26
                         : AppColors.primary,
                   ),
@@ -85,8 +106,8 @@ class BotaoAcaoHome extends StatelessWidget {
       width: double.infinity,
       height: 82,
       child: ElevatedButton.icon(
-        onPressed: onPressed,
-        icon: Icon(icone, size: 32),
+        onPressed: aoPressionar,
+        icon: construirIcone(32, Colors.white),
         label: Text(
           texto,
           style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
@@ -99,7 +120,7 @@ class BotaoAcaoHome extends StatelessWidget {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
-          elevation: onPressed == null ? 0 : 6,
+          elevation: aoPressionar == null ? 0 : 6,
         ),
       ),
     );

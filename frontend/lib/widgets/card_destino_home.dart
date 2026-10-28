@@ -6,7 +6,8 @@ class CardDestinoHome extends StatelessWidget {
   final String destino;
   final String? nome;
   final String? endereco;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
+  final bool carregando;
 
   const CardDestinoHome({
     super.key,
@@ -14,6 +15,7 @@ class CardDestinoHome extends StatelessWidget {
     this.nome,
     this.endereco,
     required this.onTap,
+    this.carregando = false,
   });
 
   @override
@@ -29,7 +31,7 @@ class CardDestinoHome extends StatelessWidget {
       color: const Color(0xFFF5F5F8),
       borderRadius: BorderRadius.circular(8),
       child: InkWell(
-        onTap: onTap,
+        onTap: carregando ? null : onTap,
         borderRadius: BorderRadius.circular(8),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -76,7 +78,17 @@ class CardDestinoHome extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(width: 8),
-                const Icon(Icons.chevron_right, color: Colors.black54),
+                if (carregando)
+                  const SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      semanticsLabel: 'Carregando destino',
+                    ),
+                  )
+                else
+                  const Icon(Icons.chevron_right, color: Colors.black54),
               ],
             ),
           ),

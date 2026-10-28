@@ -3,6 +3,32 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:uni_carona/widgets/card_destino_home.dart';
 
 void main() {
+  testWidgets('carregamento do destino bloqueia toque sem mudar tamanho', (
+    tester,
+  ) async {
+    var toques = 0;
+    Widget montar(bool carregando) => MaterialApp(
+      home: Scaffold(
+        body: CardDestinoHome(
+          destino: 'Campus teste',
+          carregando: carregando,
+          onTap: () => toques++,
+        ),
+      ),
+    );
+    await tester.pumpWidget(montar(false));
+    final tamanho = tester.getSize(find.byType(CardDestinoHome));
+    await tester.pumpWidget(montar(true));
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(tester.getSize(find.byType(CardDestinoHome)), tamanho);
+    expect(tester.widget<InkWell>(find.byType(InkWell)).onTap, isNull);
+    await tester.tap(find.text('Campus teste'));
+    expect(toques, 0);
+    await tester.pumpWidget(montar(false));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Campus teste'));
+    expect(toques, 1);
+  });
   testWidgets('exibe o destino e responde ao toque', (tester) async {
     var tocou = false;
 

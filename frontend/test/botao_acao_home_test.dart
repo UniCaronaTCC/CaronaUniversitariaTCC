@@ -4,6 +4,39 @@ import 'package:uni_carona/config/app_colors.dart';
 import 'package:uni_carona/widgets/botao_acao_home.dart';
 
 void main() {
+  for (final estilo in EstiloBotaoAcaoHome.values) {
+    testWidgets('carregamento impede toque e preserva tamanho: $estilo', (
+      tester,
+    ) async {
+      var toques = 0;
+      Widget montar(bool carregando) => MaterialApp(
+        home: Scaffold(
+          body: BotaoAcaoHome(
+            texto: 'Buscar carona',
+            icone: Icons.search,
+            estilo: estilo,
+            carregando: carregando,
+            onPressed: () => toques++,
+          ),
+        ),
+      );
+      await tester.pumpWidget(montar(false));
+      final tamanho = tester.getSize(find.byType(BotaoAcaoHome));
+      await tester.pumpWidget(montar(true));
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(tester.getSize(find.byType(BotaoAcaoHome)), tamanho);
+      final controle = tester.widget<ButtonStyleButton>(
+        find.byWidgetPredicate((widget) => widget is ButtonStyleButton),
+      );
+      expect(controle.onPressed, isNull);
+      await tester.tap(find.text('Buscar carona'));
+      expect(toques, 0);
+      await tester.pumpWidget(montar(false));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Buscar carona'));
+      expect(toques, 1);
+    });
+  }
   testWidgets('estilo padrao preserva o botao usado na publicacao', (
     tester,
   ) async {

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
@@ -23,6 +25,8 @@ import 'detalhes_carona.dart';
 import 'minhas_caronas.dart';
 import 'ofertar_carona.dart';
 import 'selecionar_destino.dart';
+
+enum _AcaoHome { busca, oferta, destino }
 
 class TelaInicial extends StatefulWidget {
   final String nomeUsuario;
@@ -53,7 +57,40 @@ class _TelaInicialState extends State<TelaInicial> {
   LocalizacaoSelecionada? localizacaoAtual;
   late final Future<void> carregamentoDestino;
   late final int? idUsuario;
-  bool escolhendoDestino = false;
+  _AcaoHome? _acaoEmAndamento;
+
+  bool _iniciarAcao(_AcaoHome acao) {
+    if (!mounted ||
+        _acaoEmAndamento != null ||
+        ModalRoute.of(context)?.isCurrent != true) {
+      return false;
+    }
+    setState(() => _acaoEmAndamento = acao);
+    return true;
+  }
+
+  void _finalizarAcao() {
+    if (mounted) setState(() => _acaoEmAndamento = null);
+  }
+
+  void _avisarFalha(String mensagem) {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(mensagem)));
+  }
+
+  Future<bool> _aguardarDestinoParaNavegar() async {
+    try {
+      await carregamentoDestino.timeout(const Duration(seconds: 10));
+    } on TimeoutException {
+      _avisarFalha(
+        'Não foi possível carregar seu destino a tempo. Tente novamente.',
+      );
+      return false;
+    }
+    return mounted && ModalRoute.of(context)?.isCurrent == true;
+  }
 
   @override
   void initState() {
@@ -171,44 +208,61 @@ class _TelaInicialState extends State<TelaInicial> {
   }
 
   Future<void> abrirBusca() async {
-    await carregamentoDestino;
-    if (!mounted) return;
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => BuscarCaronaTela(
-          destinoInicial: destinoSelecionado,
-          cidadeInicial: cidadeAtual,
+    if (!_iniciarAcao(_AcaoHome.busca)) return;
+    try {
+      if (!await _aguardarDestinoParaNavegar()) return;
+      if (!mounted) return;
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => BuscarCaronaTela(
+            destinoInicial: destinoSelecionado,
+            cidadeInicial: cidadeAtual,
+          ),
         ),
-      ),
-    );
+      );
+    } catch (_) {
+      _avisarFalha('Não foi possível abrir a busca. Tente novamente.');
+      return;
+    } finally {
+      _finalizarAcao();
+    }
 
     // Atualiza a Home ao voltar da busca.
-    await carregarCaronas();
+    if (mounted) await carregarCaronas();
   }
 
   Future<void> abrirOferta() async {
-    await carregamentoDestino;
-    if (!mounted) return;
-    final caronaCriada = await Navigator.push<bool>(
-      context,
-      MaterialPageRoute(
-        builder: (context) =>
-            OfertarCaronaTela(destinoInicial: destinoSelecionado),
-      ),
-    );
+    if (!_iniciarAcao(_AcaoHome.oferta)) return;
+    bool caronaCriada = false;
+    try {
+      if (!await _aguardarDestinoParaNavegar()) return;
+      if (!mounted) return;
+      final resultado = await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (context) =>
+              OfertarCaronaTela(destinoInicial: destinoSelecionado),
+        ),
+      );
+      caronaCriada = resultado == true;
+    } catch (_) {
+      _avisarFalha('Não foi possível abrir a oferta. Tente novamente.');
+      return;
+    } finally {
+      _finalizarAcao();
+    }
 
     // Atualiza imediatamente depois de criar uma oferta.
-    if (caronaCriada == true) {
+    if (mounted && caronaCriada) {
       await carregarConteudo();
     }
   }
 
   Future<void> escolherDestino() async {
-    if (escolhendoDestino) return;
-    escolhendoDestino = true;
+    if (!_iniciarAcao(_AcaoHome.destino)) return;
     try {
-      await carregamentoDestino;
+      if (!await _aguardarDestinoParaNavegar()) return;
       if (!mounted) return;
       final resultado = await Navigator.push<LocalizacaoSelecionada>(
         context,
@@ -240,7 +294,7 @@ class _TelaInicialState extends State<TelaInicial> {
         );
       }
     } finally {
-      escolhendoDestino = false;
+      _finalizarAcao();
     }
   }
 
@@ -434,7 +488,8 @@ class _TelaInicialState extends State<TelaInicial> {
                       'Escolha seu destino',
                   nome: destinoSelecionado?.nome,
                   endereco: destinoSelecionado?.endereco,
-                  onTap: escolherDestino,
+                  onTap: _acaoEmAndamento == null ? escolherDestino : null,
+                  carregando: _acaoEmAndamento == _AcaoHome.destino,
                 ),
                 const SizedBox(height: 24),
 
@@ -442,7 +497,8 @@ class _TelaInicialState extends State<TelaInicial> {
                   texto: 'Buscar carona',
                   icone: Icons.search,
                   estilo: EstiloBotaoAcaoHome.principal,
-                  onPressed: abrirBusca,
+                  onPressed: _acaoEmAndamento == null ? abrirBusca : null,
+                  carregando: _acaoEmAndamento == _AcaoHome.busca,
                 ),
                 const SizedBox(height: 12),
 
@@ -450,7 +506,8 @@ class _TelaInicialState extends State<TelaInicial> {
                   texto: 'Oferecer carona',
                   icone: Icons.directions_car_outlined,
                   estilo: EstiloBotaoAcaoHome.secundario,
-                  onPressed: abrirOferta,
+                  onPressed: _acaoEmAndamento == null ? abrirOferta : null,
+                  carregando: _acaoEmAndamento == _AcaoHome.oferta,
                 ),
                 const SizedBox(height: 36),
 
@@ -483,7 +540,7 @@ class _TelaInicialState extends State<TelaInicial> {
                       ),
                     ),
                     TextButton(
-                      onPressed: abrirBusca,
+                      onPressed: _acaoEmAndamento == null ? abrirBusca : null,
                       child: const Text('Ver todas'),
                     ),
                   ],
