@@ -32,7 +32,7 @@ class ConteudoDetalhesCarona extends StatelessWidget {
             children: [
               AvatarUsuario(
                 nome: carona.motorista,
-                urlFoto: fotoMotorista,
+                urlFoto: fotoMotorista ?? carona.fotoMotorista,
                 raio: 22,
               ),
               const SizedBox(width: 12),

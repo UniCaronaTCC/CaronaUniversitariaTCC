@@ -4,6 +4,49 @@ import { CaronasController } from './caronas.controller';
 import { CaronasService } from './caronas.service';
 
 describe('CaronasController', () => {
+  it.each(['https://imagens.exemplo.com/motorista.jpg', null, undefined])(
+    'retorna somente dados publicos do motorista com foto %s',
+    async (fotoPerfil) => {
+      const carona = {
+        idCarona: 1,
+        usuario: {
+          idUsuario: 2,
+          nome: 'Maria',
+          fotoPerfil,
+          email: 'privado@exemplo.com',
+          senha: 'hash-privado',
+          cpf: 'documento-privado',
+          cnhNumero: 'cnh-privada',
+        },
+      };
+      const service = {
+        listarCaronas: jest.fn().mockResolvedValue([carona]),
+        listarMinhasCaronas: jest.fn().mockResolvedValue([carona]),
+        buscarDetalhesCarona: jest.fn().mockResolvedValue(carona),
+      };
+      const controller = new CaronasController(
+        service as unknown as CaronasService,
+      );
+      const request = { usuario: { sub: 1 } } as never;
+      const disponiveis = await controller.listarCaronas(request);
+      const minhas = await controller.listarMinhasCaronas(request);
+      const detalhes = await controller.buscarDetalhesCarona('1', request);
+      for (const resultado of [
+        disponiveis.dados[0],
+        minhas.dados[0],
+        detalhes.dados,
+      ]) {
+        expect(resultado.usuario).toEqual({
+          idUsuario: 2,
+          nome: 'Maria',
+          fotoPerfil: fotoPerfil ?? null,
+          veiculo: null,
+        });
+        expect(JSON.stringify(resultado)).not.toContain('privad');
+      }
+    },
+  );
+
   it('não retorna senha nem hash ao criar uma carona', async () => {
     const carona = {
       idCarona: 1,

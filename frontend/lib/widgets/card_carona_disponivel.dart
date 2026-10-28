@@ -238,6 +238,8 @@ class CardCaronaDisponivel extends StatelessWidget {
 
   Widget _cardHome() {
     final nome = carona.motorista.trim();
+    final foto = carona.fotoMotorista?.trim();
+    final possuiFoto = foto != null && foto.isNotEmpty;
     final veiculo = [
       carona.veiculoModelo?.trim() ?? '',
       carona.veiculoCor?.trim() ?? '',
@@ -319,6 +321,8 @@ class CardCaronaDisponivel extends StatelessWidget {
                   ExcludeSemantics(
                     child: CircleAvatar(
                       radius: 18,
+                      foregroundImage: possuiFoto ? NetworkImage(foto) : null,
+                      onForegroundImageError: possuiFoto ? (_, _) {} : null,
                       backgroundColor: AppColors.primary.withValues(
                         alpha: 0.08,
                       ),

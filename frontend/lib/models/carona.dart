@@ -33,6 +33,7 @@ class Carona {
   final String status;
   final int idMotorista;
   final String motorista;
+  final String? fotoMotorista;
   final String? veiculoModelo;
   final String? veiculoCor;
   final String? veiculoPlaca;
@@ -61,6 +62,7 @@ class Carona {
     this.status = 'ATIVA',
     this.idMotorista = 0,
     required this.motorista,
+    this.fotoMotorista,
     this.veiculoModelo,
     this.veiculoCor,
     this.veiculoPlaca,
@@ -69,6 +71,7 @@ class Carona {
   // Converte a resposta JSON do backend em uma Carona.
   factory Carona.fromJson(Map<String, dynamic> json) {
     final usuario = json['usuario'];
+    final foto = usuario is Map ? usuario['fotoPerfil'] : null;
     final veiculo = usuario is Map ? usuario['veiculo'] : null;
 
     final pontosRecebidos = json['pontosEmbarque'];
@@ -135,6 +138,9 @@ class Carona {
           : 'Motorista',
 
       veiculoModelo: veiculo is Map ? veiculo['modelo']?.toString() : null,
+      fotoMotorista: foto is String && foto.trim().isNotEmpty
+          ? foto.trim()
+          : null,
       veiculoCor: veiculo is Map ? veiculo['cor']?.toString() : null,
       veiculoPlaca: veiculo is Map ? veiculo['placa']?.toString() : null,
     );

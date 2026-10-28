@@ -23,6 +23,7 @@ const segundo = PontoEmbarque(
 
 Carona viagem({
   String motorista = 'Henrique',
+  String? fotoMotorista,
   String destino = 'Campus teste',
   List<PontoEmbarque> pontos = const [segundo, primeiro],
   String origem = 'Origem antiga',
@@ -37,6 +38,7 @@ Carona viagem({
   id: 10,
   idMotorista: 50,
   motorista: motorista,
+  fotoMotorista: fotoMotorista,
   destino: destino,
   origem: origem,
   pontosEmbarque: pontos,

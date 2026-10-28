@@ -294,6 +294,7 @@ export class CaronasController {
       usuario: {
         idUsuario: carona.usuario.idUsuario,
         nome: carona.usuario.nome,
+        fotoPerfil: carona.usuario.fotoPerfil ?? null,
         veiculo: veiculo
           ? {
               modelo: veiculo.modelo,

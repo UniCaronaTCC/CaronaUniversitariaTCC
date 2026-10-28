@@ -142,6 +142,33 @@ describe('CaronasService', () => {
     );
   });
 
+  it.each(['listarCaronas', 'listarMinhasCaronas'] as const)(
+    '%s seleciona a foto publica sem carregar os demais dados do usuario',
+    async (metodo) => {
+      const caronas = [
+        { usuario: { fotoPerfil: 'https://imagens.exemplo.com/foto.jpg' } },
+      ];
+      const listagem = {
+        ...queryBuilder,
+        leftJoinAndMapOne: jest.fn().mockReturnThis(),
+        innerJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(caronas),
+      };
+      repository.createQueryBuilder.mockReturnValue(listagem);
+      await expect(service[metodo](1)).resolves.toBe(caronas);
+      const campos = listagem.select.mock.calls[0][0] as string[];
+      expect(campos.filter((campo) => campo.startsWith('usuario'))).toEqual([
+        'usuario.idUsuario',
+        'usuario.nome',
+        'usuario.fotoPerfil',
+      ]);
+    },
+  );
+
   it('retorna detalhes para o motorista, incluindo carona encerrada e pontos em ordem', async () => {
     const carona = {
       idCarona: 20,

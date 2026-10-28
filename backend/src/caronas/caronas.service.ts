@@ -439,6 +439,7 @@ export class CaronasService {
         'carona',
         'usuario.idUsuario',
         'usuario.nome',
+        'usuario.fotoPerfil',
         'veiculo',
         'pontoEmbarque',
       ])
@@ -515,6 +516,7 @@ export class CaronasService {
         'programacao.diasSemana',
         'usuario.idUsuario',
         'usuario.nome',
+        'usuario.fotoPerfil',
         'veiculo',
         'pontoEmbarque',
       ])

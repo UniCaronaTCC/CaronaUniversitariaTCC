@@ -56,6 +56,41 @@ void main() {
     AuthService.tokenUsuarioLogado = null;
   });
 
+  testWidgets('Home leva a foto do motorista da resposta HTTP ate o card', (
+    tester,
+  ) async {
+    const foto = 'https://imagens.exemplo.com/perfil-home.jpg';
+    await fixtures.executar(
+      () async {
+        await tester.pumpWidget(
+          const MaterialApp(home: TelaInicial(nomeUsuario: 'Pessoa')),
+        );
+        await tester.pumpAndSettle();
+        final card = find.byKey(const ValueKey('card-carona-10'));
+        final avatar = tester.widget<CircleAvatar>(
+          find.descendant(of: card, matching: find.byType(CircleAvatar)),
+        );
+        expect((avatar.foregroundImage! as NetworkImage).url, foto);
+        expect(
+          tester
+              .widget<CardCaronaDisponivel>(find.byType(CardCaronaDisponivel))
+              .carona
+              .fotoMotorista,
+          foto,
+        );
+        expect(tester.takeException(), isNull);
+      },
+      responder: (request) async {
+        if (request.url.path == '/caronas') {
+          final carona = dadosCarona(10);
+          (carona['usuario'] as Map<String, dynamic>)['fotoPerfil'] = foto;
+          return lista([carona]);
+        }
+        return lista([]);
+      },
+    );
+  });
+
   testWidgets('somente disponiveis da Home usam visual novo e abrem detalhes', (
     tester,
   ) async {
