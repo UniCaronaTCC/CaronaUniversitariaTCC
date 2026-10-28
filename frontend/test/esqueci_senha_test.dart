@@ -51,7 +51,7 @@ void main() {
 
     expect(senhaRecebida, 'novaSenha123');
     expect(codigoRecebido, '123456');
-    expect(find.text('ENTRAR'), findsWidgets);
+    expect(find.text('Entrar'), findsOneWidget);
   });
 
   Future<void> abrirFormulario(
@@ -150,7 +150,7 @@ void main() {
       await tester.tap(find.text('SALVAR NOVA SENHA'));
       await tester.pumpAndSettle();
       expect(chamadas, 2);
-      expect(find.text('ENTRAR'), findsWidgets);
+      expect(find.text('Entrar'), findsOneWidget);
     },
   );
 

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../config/app_colors.dart';
 import '../home/tela_inicial.dart';
 import '../services/auth_service.dart';
-import '../widgets/auth_widgets.dart';
 import 'cadastro.dart';
 import 'esqueci_senha.dart';
 
@@ -21,9 +21,18 @@ class _LoginTelaState extends State<LoginTela> {
   final TextEditingController emailController = TextEditingController();
   final TextEditingController senhaController = TextEditingController();
   bool carregando = false;
+  bool _senhaOculta = true;
+
+  bool get _telaAtiva => mounted && ModalRoute.of(context)?.isCurrent == true;
+
+  void _abrirTela(WidgetBuilder builder) {
+    if (carregando || !_telaAtiva) return;
+    FocusScope.of(context).unfocus();
+    Navigator.of(context).push(MaterialPageRoute<void>(builder: builder));
+  }
 
   Future<void> fazerLogin() async {
-    if (carregando) return;
+    if (carregando || !_telaAtiva) return;
     if (emailController.text.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -38,6 +47,7 @@ class _LoginTelaState extends State<LoginTela> {
       return;
     }
 
+    FocusScope.of(context).unfocus();
     setState(() {
       carregando = true;
     });
@@ -48,18 +58,19 @@ class _LoginTelaState extends State<LoginTela> {
         senhaController.text,
       );
 
-      if (!mounted) return;
+      if (!mounted || !_telaAtiva) return;
 
       if (resultado['sucesso'] == true) {
+        final mensagem = resultado['dados']['mensagem'] as String;
+        final nomeUsuario = resultado['dados']['usuario']['nome'].toString();
+        TextInput.finishAutofillContext(shouldSave: true);
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(resultado['dados']['mensagem'])));
+        ).showSnackBar(SnackBar(content: Text(mensagem)));
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => TelaInicial(
-              nomeUsuario: resultado['dados']['usuario']['nome'].toString(),
-            ),
+            builder: (context) => TelaInicial(nomeUsuario: nomeUsuario),
           ),
         );
       } else {
@@ -73,7 +84,7 @@ class _LoginTelaState extends State<LoginTela> {
         );
       }
     } catch (_) {
-      if (!mounted) return;
+      if (!mounted || !_telaAtiva) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Não foi possível entrar. Tente novamente'),
@@ -96,90 +107,276 @@ class _LoginTelaState extends State<LoginTela> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Align(
-          alignment: Alignment.center,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: AuthCard(
-              children: [
-                const Text(
-                  'ENTRAR',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
-                  ),
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: (constraints.maxHeight - 64).clamp(
+                  0,
+                  double.infinity,
                 ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Bem-vindo ao app',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 16,
-                    letterSpacing: 1,
-                  ),
-                ),
-                const SizedBox(height: 36),
-                AuthCampoTexto(
-                  hint: 'E-mail',
-                  icone: Icons.email,
-                  controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 16),
-                AuthCampoTexto(
-                  hint: 'Senha',
-                  icone: Icons.lock,
-                  controller: senhaController,
-                  obscureText: true,
-                ),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const EsqueciSenhaTela(),
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: AutofillGroup(
+                    onDisposeAction: AutofillContextAction.cancel,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(24),
+                            child: Image.asset(
+                              'assets/imagens/icone_buscaeu.png',
+                              key: const ValueKey('logo-login'),
+                              width: 128,
+                              height: 128,
+                              semanticLabel: 'Logo BuscaEu',
+                            ),
+                          ),
                         ),
-                      );
-                    },
-                    child: const Text(
-                      'Esqueceu sua senha?',
-                      style: TextStyle(color: Colors.white),
+                        const SizedBox(height: 12),
+                        const Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Busca',
+                                style: TextStyle(color: AppColors.text),
+                              ),
+                              TextSpan(
+                                text: 'Eu',
+                                style: TextStyle(color: AppColors.primary),
+                              ),
+                            ],
+                          ),
+                          key: ValueKey('marca-login'),
+                          semanticsLabel: 'BuscaEu',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 40,
+                            fontWeight: FontWeight.w700,
+                            height: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 40),
+                        const Text(
+                          'Entre na sua conta',
+                          style: TextStyle(
+                            color: AppColors.text,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Bom ter você por aqui.',
+                          style: TextStyle(
+                            color: Color(0xFF666879),
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 30),
+                        _campoLogin(
+                          rotulo: 'E-mail',
+                          hint: 'Seu e-mail',
+                          icone: Icons.mail_outline_rounded,
+                          controller: emailController,
+                        ),
+                        const SizedBox(height: 20),
+                        _campoLogin(
+                          rotulo: 'Senha',
+                          hint: 'Sua senha',
+                          icone: Icons.lock_outline_rounded,
+                          controller: senhaController,
+                          senha: true,
+                        ),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            onPressed: carregando
+                                ? null
+                                : () => _abrirTela(
+                                    (_) => const EsqueciSenhaTela(),
+                                  ),
+                            child: Text(
+                              'Esqueceu sua senha?',
+                              style: TextStyle(
+                                color: carregando
+                                    ? Colors.black38
+                                    : AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          key: const ValueKey('entrar-login'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: AppColors.primary
+                                .withValues(alpha: 0.65),
+                            disabledForegroundColor: Colors.white,
+                            minimumSize: const Size.fromHeight(56),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            elevation: 0,
+                            textStyle: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                          onPressed: carregando ? null : fazerLogin,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (carregando) ...[
+                                const ExcludeSemantics(
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                              ],
+                              Flexible(
+                                child: Text(
+                                  carregando ? 'Entrando...' : 'Entrar',
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 4,
+                          children: [
+                            const Text(
+                              'Ainda não tem uma conta?',
+                              style: TextStyle(
+                                color: Color(0xFF666879),
+                                fontSize: 14,
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: carregando
+                                  ? null
+                                  : () =>
+                                        _abrirTela((_) => const CadastroTela()),
+                              child: Text(
+                                'Criar conta',
+                                style: TextStyle(
+                                  color: carregando
+                                      ? Colors.black38
+                                      : AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),
-                const SizedBox(height: 8),
-                AuthBotaoPrincipal(
-                  texto: carregando ? 'ENTRANDO...' : 'ENTRAR',
-                  onPressed: carregando ? null : fazerLogin,
-                ),
-                const SizedBox(height: 18),
-                TextButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const CadastroTela(),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    'Não tem uma conta? Cadastre-se',
-                    style: TextStyle(
-                      color: Colors.white,
-                      decoration: TextDecoration.underline,
-                      decorationColor: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
+
+  Widget _campoLogin({
+    required String rotulo,
+    required String hint,
+    required IconData icone,
+    required TextEditingController controller,
+    bool senha = false,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Text(
+        rotulo,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: AppColors.text,
+        ),
+      ),
+      const SizedBox(height: 8),
+      TextField(
+        key: ValueKey(senha ? 'senha-login' : 'email-login'),
+        controller: controller,
+        enabled: !carregando,
+        obscureText: senha && _senhaOculta,
+        keyboardType: senha
+            ? TextInputType.visiblePassword
+            : TextInputType.emailAddress,
+        textInputAction: senha ? TextInputAction.done : TextInputAction.next,
+        autofillHints: [
+          senha ? AutofillHints.password : AutofillHints.username,
+        ],
+        autocorrect: false,
+        enableSuggestions: !senha,
+        onSubmitted: senha ? (_) => fazerLogin() : null,
+        style: const TextStyle(color: AppColors.text, fontSize: 16),
+        decoration: InputDecoration(
+          hintText: hint,
+          hintStyle: const TextStyle(color: Color(0xFF727587)),
+          constraints: const BoxConstraints(minHeight: 56),
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
+          ),
+          filled: true,
+          fillColor: const Color(0xFFF6F6F9),
+          prefixIcon: Icon(icone, color: const Color(0xFF666879)),
+          suffixIcon: senha
+              ? IconButton(
+                  tooltip: _senhaOculta ? 'Mostrar senha' : 'Ocultar senha',
+                  onPressed: carregando
+                      ? null
+                      : () => setState(() => _senhaOculta = !_senhaOculta),
+                  icon: Icon(
+                    _senhaOculta
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    color: const Color(0xFF666879),
+                  ),
+                )
+              : null,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFFD1D2DC)),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFFD1D2DC)),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: AppColors.primary, width: 2),
+          ),
+        ),
+      ),
+    ],
+  );
 }
