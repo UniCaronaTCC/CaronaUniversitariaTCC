@@ -30,6 +30,7 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
   late final RastreamentoGps _gps;
   LatLng? _localizacaoMotorista;
   double? _direcaoMotorista;
+  double? _precisaoMotorista;
   late final ProgressoCorrida _progresso;
   DateTime? _ultimoEnvioPosicao;
   bool _enviandoPosicao = false;
@@ -50,8 +51,8 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
     if (!mounted) return;
 
     final anterior = _localizacaoMotorista;
-    final recebida = LatLng(posicao.latitude, posicao.longitude);
-    final atual = _suavizarPosicao(anterior, recebida, posicao.accuracy);
+    // A animação visual pertence ao mapa. Rota e servidor recebem o GPS filtrado.
+    final atual = LatLng(posicao.latitude, posicao.longitude);
     _progresso.observar(posicao);
     double? novaDirecao;
     if (posicao.speed >= 1 &&
@@ -71,6 +72,7 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
 
     setState(() {
       _localizacaoMotorista = atual;
+      _precisaoMotorista = posicao.accuracy;
       if (novaDirecao != null) {
         _direcaoMotorista = (novaDirecao % 360 + 360) % 360;
       }
@@ -81,21 +83,6 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
         precisao: posicao.accuracy,
         direcao: _direcaoMotorista,
       ),
-    );
-  }
-
-  LatLng _suavizarPosicao(LatLng? anterior, LatLng recebida, double precisao) {
-    if (anterior == null) return recebida;
-
-    final distancia = const Distance().as(LengthUnit.Meter, anterior, recebida);
-    if (distancia < 2) return anterior;
-
-    final pesoNovaPosicao = precisao <= 15 ? 0.75 : 0.5;
-    return LatLng(
-      anterior.latitude +
-          (recebida.latitude - anterior.latitude) * pesoNovaPosicao,
-      anterior.longitude +
-          (recebida.longitude - anterior.longitude) * pesoNovaPosicao,
     );
   }
 
@@ -218,6 +205,7 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
                               : null,
                           localizacaoMotorista: _localizacaoMotorista,
                           direcaoMotorista: _direcaoMotorista,
+                          precisaoMotorista: _precisaoMotorista,
                           embarquesConcluidos: _progresso.concluidos,
                           onRotaCarregada: (resultado) {
                             if (mounted) setState(() => rota = resultado);

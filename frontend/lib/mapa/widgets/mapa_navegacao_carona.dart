@@ -13,6 +13,7 @@ class MapaNavegacaoCarona extends StatefulWidget {
   final Carona carona;
   final LatLng? localizacaoMotorista;
   final double? direcaoMotorista;
+  final double? precisaoMotorista;
   final RotaService? rotaService;
   final String? erroLocalizacao;
   final Set<int> embarquesConcluidos;
@@ -23,6 +24,7 @@ class MapaNavegacaoCarona extends StatefulWidget {
     required this.carona,
     required this.localizacaoMotorista,
     this.direcaoMotorista,
+    this.precisaoMotorista,
     this.rotaService,
     this.erroLocalizacao,
     this.embarquesConcluidos = const {},
@@ -188,6 +190,7 @@ class _MapaNavegacaoCaronaState extends State<MapaNavegacaoCarona> {
       navegacao: true,
       localizacaoMotorista: widget.localizacaoMotorista,
       direcaoMotorista: widget.direcaoMotorista,
+      precisaoMotorista: widget.precisaoMotorista,
       embarquesConcluidos: widget.embarquesConcluidos,
       atualizando: _carregando,
       erroAtualizacao: _erro,

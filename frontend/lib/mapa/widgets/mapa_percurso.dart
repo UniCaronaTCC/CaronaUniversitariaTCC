@@ -8,6 +8,7 @@ import 'marcadores_percurso.dart';
 import 'avisos_rota.dart';
 import '../services/rota_service.dart';
 import '../utils/rota_mapa_utils.dart';
+import '../utils/posicao_no_percurso.dart';
 
 class MapaPercurso extends StatefulWidget {
   final Carona carona;
@@ -18,6 +19,7 @@ class MapaPercurso extends StatefulWidget {
   final bool mostrarMarcadorMotorista;
   final LatLng? localizacaoMotorista;
   final double? direcaoMotorista;
+  final double? precisaoMotorista;
   final Set<int> embarquesConcluidos;
   final bool atualizando;
   final String? erroAtualizacao;
@@ -33,6 +35,7 @@ class MapaPercurso extends StatefulWidget {
     this.mostrarMarcadorMotorista = false,
     this.localizacaoMotorista,
     this.direcaoMotorista,
+    this.precisaoMotorista,
     this.embarquesConcluidos = const {},
     this.atualizando = false,
     this.erroAtualizacao,
@@ -61,7 +64,7 @@ class _MapaPercursoState extends State<MapaPercurso>
   @override
   void initState() {
     super.initState();
-    _posicaoExibida = widget.localizacaoMotorista;
+    _posicaoExibida = _localizacaoVisual();
     _direcaoExibida = _direcaoNavegacao();
     _animacaoCamera = AnimationController(
       vsync: this,
@@ -74,10 +77,12 @@ class _MapaPercursoState extends State<MapaPercurso>
     super.didUpdateWidget(oldWidget);
     if (widget.localizacaoMotorista != null &&
         (widget.localizacaoMotorista != oldWidget.localizacaoMotorista ||
-            widget.direcaoMotorista != oldWidget.direcaoMotorista)) {
+            widget.direcaoMotorista != oldWidget.direcaoMotorista ||
+            widget.precisaoMotorista != oldWidget.precisaoMotorista ||
+            widget.rota != oldWidget.rota)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted && _mapaPronto) {
-          _animarCamera(widget.localizacaoMotorista!, _direcaoNavegacao());
+          _animarCamera(_localizacaoVisual()!, _direcaoNavegacao());
         }
       });
     }
@@ -96,6 +101,17 @@ class _MapaPercursoState extends State<MapaPercurso>
       return direcao % 360;
     }
     return direcaoInicial(widget.rota.pontos);
+  }
+
+  LatLng? _localizacaoVisual() {
+    final posicao = widget.localizacaoMotorista;
+    if (posicao == null) return null;
+    return posicaoVisualNoPercurso(
+      posicao: posicao,
+      percurso: widget.rota.pontos,
+      precisao: widget.precisaoMotorista,
+      direcao: widget.direcaoMotorista,
+    );
   }
 
   void _animarCamera(LatLng destino, double rotacao) {
@@ -134,10 +150,10 @@ class _MapaPercursoState extends State<MapaPercurso>
     setState(() => _seguirMotorista = true);
     if (widget.navegacao) {
       _animacaoCamera.stop();
-      _posicaoExibida = widget.localizacaoMotorista;
+      _posicaoExibida = _localizacaoVisual();
       _direcaoExibida = _direcaoNavegacao();
       _mapController.moveAndRotate(
-        widget.localizacaoMotorista ?? widget.rota.pontos.first,
+        _posicaoExibida ?? widget.rota.pontos.first,
         17.5,
         -_direcaoNavegacao(),
       );
@@ -164,8 +180,7 @@ class _MapaPercursoState extends State<MapaPercurso>
         FlutterMap(
           mapController: _mapController,
           options: MapOptions(
-            initialCenter:
-                widget.localizacaoMotorista ?? widget.rota.pontos.first,
+            initialCenter: _posicaoExibida ?? widget.rota.pontos.first,
             initialZoom: widget.navegacao ? 17.5 : 13,
             initialRotation: widget.navegacao ? -_direcaoNavegacao() : 0,
             onMapReady: () => _mapaPronto = true,

@@ -12,9 +12,14 @@ PontoEmbarque ponto(int id, {bool concluido = false}) => PontoEmbarque(
   longitude: -50.4,
   percorridoEm: concluido ? DateTime(2026, 10, 4) : null,
 );
-Position posicao(int segundos, {double precisao = 8}) => Position(
-  latitude: -21.2,
-  longitude: -50.4,
+Position posicao(
+  int segundos, {
+  double precisao = 8,
+  double latitude = -21.2,
+  double longitude = -50.4,
+}) => Position(
+  latitude: latitude,
+  longitude: longitude,
   accuracy: precisao,
   timestamp: DateTime(2026, 10, 4, 12, 0, segundos),
   altitude: 0,
@@ -43,6 +48,88 @@ class _Service extends ProgressoCaronaService {
 }
 
 void main() {
+  for (final cenario in [
+    (
+      nome: 'apenas se aproxima do ponto',
+      primeira: posicao(0, longitude: -50.4014),
+      segunda: posicao(5, longitude: -50.4007),
+    ),
+    (
+      nome: 'passa fora do raio de 30 m',
+      primeira: posicao(0, latitude: -21.1995, longitude: -50.4007),
+      segunda: posicao(5, latitude: -21.1995, longitude: -50.3993),
+    ),
+    (
+      nome: 'fica muito tempo sem amostra',
+      primeira: posicao(0, longitude: -50.4007),
+      segunda: posicao(30, longitude: -50.3993),
+    ),
+    (
+      nome: 'recebe um salto muito distante',
+      primeira: posicao(0, longitude: -50.403),
+      segunda: posicao(5, longitude: -50.397),
+    ),
+    (
+      nome: 'recebe coordenadas fora de ordem',
+      primeira: posicao(5, longitude: -50.4007),
+      segunda: posicao(0, longitude: -50.3993),
+    ),
+    (
+      nome: 'recebe uma posição imprecisa',
+      primeira: posicao(0, longitude: -50.4007),
+      segunda: posicao(5, longitude: -50.3993, precisao: 80),
+    ),
+    (
+      nome: 'recebe deslocamento impossível para o intervalo',
+      primeira: posicao(0, longitude: -50.4007),
+      segunda: posicao(1, longitude: -50.3993),
+    ),
+  ]) {
+    testWidgets('não marca ponto quando ${cenario.nome}', (tester) async {
+      final service = _Service();
+      final progresso = ProgressoCorrida(7, service: service);
+      await progresso.sincronizar();
+      progresso.observar(cenario.primeira);
+      progresso.observar(cenario.segunda);
+      await tester.pump();
+      expect(service.chamadas, 0);
+      expect(progresso.concluidos, isEmpty);
+      progresso.dispose();
+    });
+  }
+
+  testWidgets('leitura repetida não conta como segunda aproximação', (
+    tester,
+  ) async {
+    final service = _Service();
+    final progresso = ProgressoCorrida(7, service: service);
+    await progresso.sincronizar();
+    progresso.observar(posicao(0));
+    progresso.observar(posicao(0));
+    await tester.pump();
+    expect(service.chamadas, 0);
+    progresso.observar(posicao(5));
+    await tester.pump();
+    expect(service.chamadas, 1);
+    progresso.dispose();
+  });
+
+  testWidgets('registra passagem pelo ponto entre duas leituras na estrada', (
+    tester,
+  ) async {
+    final service = _Service();
+    final progresso = ProgressoCorrida(7, service: service);
+    await progresso.sincronizar();
+    // As duas amostras estão a cerca de 72 m do ponto, em lados opostos.
+    progresso.observar(posicao(0, longitude: -50.4007));
+    progresso.observar(posicao(5, longitude: -50.3993));
+    await tester.pump();
+    expect(service.chamadas, 1);
+    expect(progresso.concluidos, {1});
+    expect(progresso.proximo?.id, 2);
+    progresso.dispose();
+  });
+
   test('recupera os pontos salvos ao reabrir', () async {
     final service = _Service()..salvos = [ponto(1, concluido: true), ponto(2)];
     final progresso = ProgressoCorrida(7, service: service);

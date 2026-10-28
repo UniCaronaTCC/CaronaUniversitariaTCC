@@ -10,9 +10,13 @@ class _GpsFake extends LocalizacaoService {
   Future<Stream<Position>> acompanharLocalizacao() async => stream.stream;
 }
 
-Position posicao({double precisao = 8, DateTime? data}) => Position(
+Position posicao({
+  double precisao = 8,
+  DateTime? data,
+  double longitude = -50.4,
+}) => Position(
   latitude: -21.2,
-  longitude: -50.4,
+  longitude: longitude,
   timestamp: data ?? DateTime.now(),
   accuracy: precisao,
   altitude: 0,
@@ -24,6 +28,30 @@ Position posicao({double precisao = 8, DateTime? data}) => Position(
 );
 
 void main() {
+  testWidgets('mantém atualizações na estrada entre leituras espaçadas', (
+    tester,
+  ) async {
+    final service = _GpsFake();
+    final recebidas = <Position>[];
+    final gps = RastreamentoGps(service: service, onPosicao: recebidas.add);
+    await gps.iniciar();
+    final inicio = DateTime.now().subtract(const Duration(seconds: 15));
+    for (var indice = 0; indice < 4; indice++) {
+      // Cerca de 145 m a cada 5 s: movimento normal em uma rodovia.
+      service.stream.add(
+        posicao(
+          longitude: -50.4 + indice * 0.0014,
+          data: inicio.add(Duration(seconds: indice * 5)),
+        ),
+      );
+      await tester.pump();
+    }
+    expect(recebidas, hasLength(4));
+    expect(gps.precisaAtencao, isFalse);
+    gps.dispose();
+    await service.stream.close();
+  });
+
   testWidgets('GPS impreciso se recupera sem perder a assinatura', (
     tester,
   ) async {
@@ -41,6 +69,7 @@ void main() {
     await tester.pump();
     expect(gps.precisaAtencao, isFalse);
     expect(recebidas, hasLength(1));
+    expect(gps.mensagem, contains('Precisão estimada: 8 m'));
     await tester.pump(const Duration(seconds: 21));
     expect(gps.mensagem, contains('Sem leitura recente'));
     gps.dispose();

@@ -63,13 +63,17 @@ class RastreamentoGps extends ChangeNotifier {
       latitude: posicao.latitude,
       longitude: posicao.longitude,
       precisao: posicao.accuracy,
+      instante: posicao.timestamp,
     )) {
       _status('GPS impreciso. Aguardando uma posição confiável.', true);
       return;
     }
     _ultimaLeitura = posicao.timestamp;
     _aguardarLeitura();
-    _status('GPS atualizado. Siga o percurso até o destino.', false);
+    _status(
+      'GPS atualizado. Precisão estimada: ${posicao.accuracy.ceil()} m.',
+      false,
+    );
     onPosicao(posicao);
   }
 

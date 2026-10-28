@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../models/ponto_embarque.dart';
 import '../../services/progresso_carona_service.dart';
+import 'passagem_ponto_gps.dart';
 
 class ProgressoCorrida extends ChangeNotifier {
   final int idCarona;
@@ -14,6 +15,7 @@ class ProgressoCorrida extends ChangeNotifier {
   bool _descartado = false;
   int? _pendente;
   DateTime? _leituraProxima;
+  Position? _ultimaPosicao;
   Timer? _retry;
 
   ProgressoCorrida(this.idCarona, {ProgressoCaronaService? service})
@@ -62,17 +64,34 @@ class ProgressoCorrida extends ChangeNotifier {
     if (!carregado || _pendente != null || _descartado) return;
     final ponto = proximo;
     if (ponto?.id == null) return;
+    if (!posicaoPrecisaParaPonto(posicao)) {
+      _leituraProxima = null;
+      _ultimaPosicao = null;
+      return;
+    }
+    final anteriorGps = _ultimaPosicao;
+    if (anteriorGps != null &&
+        !posicao.timestamp.isAfter(anteriorGps.timestamp)) {
+      return;
+    }
+    _ultimaPosicao = posicao;
+    if (anteriorGps != null &&
+        passouPeloPonto(
+          anterior: anteriorGps,
+          atual: posicao,
+          latitude: ponto!.latitude,
+          longitude: ponto.longitude,
+        )) {
+      marcarProximo();
+      return;
+    }
     final distancia = Geolocator.distanceBetween(
       posicao.latitude,
       posicao.longitude,
       ponto!.latitude,
       ponto.longitude,
     );
-    if (!posicao.accuracy.isFinite ||
-        posicao.accuracy < 0 ||
-        posicao.accuracy > 30 ||
-        !distancia.isFinite ||
-        distancia > 30) {
+    if (!distancia.isFinite || distancia > 30) {
       _leituraProxima = null;
       return;
     }
@@ -92,6 +111,7 @@ class ProgressoCorrida extends ChangeNotifier {
     if (id == null) return;
     _pendente = id;
     _leituraProxima = null;
+    _ultimaPosicao = null;
     notifyListeners();
     unawaited(sincronizar());
   }
