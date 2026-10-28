@@ -8,6 +8,7 @@ class CardCaronaDisponivel extends StatelessWidget {
   final VoidCallback? onTap;
   final Widget? acaoCabecalho;
   final bool mostrarRecorrencia;
+  final bool visualHome;
 
   const CardCaronaDisponivel({
     super.key,
@@ -15,10 +16,12 @@ class CardCaronaDisponivel extends StatelessWidget {
     this.onTap,
     this.acaoCabecalho,
     this.mostrarRecorrencia = false,
+    this.visualHome = false,
   });
 
   @override
   Widget build(BuildContext context) {
+    if (visualHome) return _cardHome();
     return Material(
       key: ValueKey('card-carona-${carona.id}'),
       color: carona.finalizada ? const Color(0xFFF1F1F1) : Colors.white,
@@ -232,6 +235,212 @@ class CardCaronaDisponivel extends StatelessWidget {
       ),
     );
   }
+
+  Widget _cardHome() {
+    final nome = carona.motorista.trim();
+    final veiculo = [
+      carona.veiculoModelo?.trim() ?? '',
+      carona.veiculoCor?.trim() ?? '',
+    ].where((parte) => parte.isNotEmpty).join(' • ');
+    final vagas = carona.vagas == 0
+        ? 'Sem vagas disponíveis'
+        : carona.vagas == 1
+        ? '1 vaga disponível'
+        : '${carona.vagas} vagas disponíveis';
+
+    return Material(
+      key: ValueKey('card-carona-${carona.id}'),
+      color: carona.finalizada ? const Color(0xFFF1F1F1) : Colors.white,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+        side: const BorderSide(color: Color(0xFFE2E2E8)),
+      ),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Wrap(
+                alignment: WrapAlignment.spaceBetween,
+                spacing: 16,
+                runSpacing: 12,
+                children: [
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '${_textoData()}, ${carona.horarioFormatado}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        carona.rotuloHorario,
+                        style: const TextStyle(
+                          fontSize: 12,
+                          color: Colors.black54,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      Text(
+                        carona.valorFormatado,
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.text,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'por pessoa',
+                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
+                    ],
+                  ),
+                  ?acaoCabecalho,
+                ],
+              ),
+              const SizedBox(height: 16),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  ExcludeSemantics(
+                    child: CircleAvatar(
+                      radius: 18,
+                      backgroundColor: AppColors.primary.withValues(
+                        alpha: 0.08,
+                      ),
+                      child: nome.isEmpty
+                          ? const Icon(
+                              Icons.person_outline,
+                              color: Colors.black54,
+                              size: 20,
+                            )
+                          : Text(
+                              nome.characters.first.toUpperCase(),
+                              style: const TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w600,
+                                color: Colors.black87,
+                              ),
+                            ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          nome.isEmpty ? 'Motorista' : nome,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.text,
+                          ),
+                        ),
+                        if (veiculo.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            veiculo,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              _localHome(Icons.location_on_rounded, carona.resumoInicio),
+              const SizedBox(height: 10),
+              _localHome(
+                Icons.school_outlined,
+                carona.destino.trim().isEmpty
+                    ? 'Destino não informado'
+                    : carona.destino,
+              ),
+              if (mostrarRecorrencia && _diasRecorrencia.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                Text(
+                  'Recorrência: ${_diasRecorrencia.join(', ').toLowerCase()}',
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: AppColors.primary,
+                  ),
+                ),
+              ],
+              const Divider(height: 24, color: Color(0xFFE2E2E8)),
+              Row(
+                children: [
+                  const Icon(
+                    Icons.event_seat_outlined,
+                    size: 20,
+                    color: Colors.black54,
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      vagas,
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ),
+                  if (onTap != null) ...[
+                    const SizedBox(width: 8),
+                    const Icon(Icons.chevron_right, color: Colors.black54),
+                  ],
+                ],
+              ),
+              if (carona.status != 'ATIVA') ...[
+                const SizedBox(height: 8),
+                Text(
+                  carona.status,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black54,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _localHome(IconData icone, String texto) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(icone, size: 20, color: AppColors.primary),
+      const SizedBox(width: 10),
+      Expanded(
+        child: Text(
+          texto,
+          style: const TextStyle(fontSize: 14, color: AppColors.text),
+        ),
+      ),
+    ],
+  );
 
   List<String> get _diasRecorrencia {
     final dias = carona.idRecorrencia != null

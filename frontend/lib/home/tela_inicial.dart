@@ -527,10 +527,15 @@ class _TelaInicialState extends State<TelaInicial> {
                   const SizedBox(height: 36),
                 ],
 
-                Row(
-                  children: [
-                    const Expanded(
-                      child: Text(
+                SizedBox(
+                  width: double.infinity,
+                  child: Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: 8,
+                    runSpacing: 4,
+                    children: [
+                      const Text(
                         'Caronas disponíveis',
                         style: TextStyle(
                           color: AppColors.text,
@@ -538,12 +543,12 @@ class _TelaInicialState extends State<TelaInicial> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ),
-                    TextButton(
-                      onPressed: _acaoEmAndamento == null ? abrirBusca : null,
-                      child: const Text('Ver todas'),
-                    ),
-                  ],
+                      TextButton(
+                        onPressed: _acaoEmAndamento == null ? abrirBusca : null,
+                        child: const Text('Ver todas'),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 12),
 
@@ -575,6 +580,8 @@ class _TelaInicialState extends State<TelaInicial> {
 
                       return CardCaronaDisponivel(
                         carona: carona,
+                        visualHome: true,
+                        mostrarRecorrencia: true,
                         onTap: () => abrirDetalhes(carona),
                       );
                     },
