@@ -59,7 +59,7 @@ void main() {
                   .destino,
               salvo.descricaoCompleta,
             );
-            await tester.tap(find.text('BUSCAR'));
+            await tester.tap(find.text('Buscar carona'));
             await tester.pumpAndSettle();
             expect(
               tester

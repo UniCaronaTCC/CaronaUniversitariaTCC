@@ -376,64 +376,80 @@ class _TelaInicialState extends State<TelaInicial> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Expanded(
                       child: Text.rich(
-                        TextSpan(
+                        const TextSpan(
                           children: [
-                            const TextSpan(
-                              text: 'Olá, ',
-                              style: TextStyle(
-                                color: AppColors.text,
-                                fontSize: 32,
-                              ),
+                            TextSpan(
+                              text: 'Busca',
+                              style: TextStyle(color: AppColors.text),
                             ),
                             TextSpan(
-                              text: widget.nomeUsuario.isNotEmpty
-                                  ? widget.nomeUsuario
-                                  : 'usuário',
-                              style: const TextStyle(
-                                color: AppColors.primary,
-                                fontSize: 32,
-                                fontWeight: FontWeight.bold,
-                              ),
+                              text: 'Eu',
+                              style: TextStyle(color: AppColors.primary),
                             ),
                           ],
                         ),
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          fontSize: 28,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 12),
                     const SinoNotificacoes(),
                   ],
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
+                Text.rich(
+                  TextSpan(
+                    children: [
+                      const TextSpan(text: 'Olá, '),
+                      TextSpan(
+                        text: widget.nomeUsuario.trim().isNotEmpty
+                            ? widget.nomeUsuario.trim()
+                            : 'usuário',
+                        style: const TextStyle(color: AppColors.primary),
+                      ),
+                    ],
+                  ),
+                  style: const TextStyle(
+                    color: AppColors.text,
+                    fontSize: 26,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 6),
                 const Text(
                   'Para onde você vai hoje?',
-                  style: TextStyle(fontSize: 20, color: AppColors.text),
+                  style: TextStyle(fontSize: 17, color: Colors.black54),
                 ),
-                const SizedBox(height: 36),
+                const SizedBox(height: 24),
 
                 CardDestinoHome(
                   destino:
                       destinoSelecionado?.descricaoCompleta ??
                       'Escolha seu destino',
+                  nome: destinoSelecionado?.nome,
+                  endereco: destinoSelecionado?.endereco,
                   onTap: escolherDestino,
                 ),
-                const SizedBox(height: 36),
+                const SizedBox(height: 24),
 
                 BotaoAcaoHome(
-                  texto: 'BUSCAR',
+                  texto: 'Buscar carona',
                   icone: Icons.search,
+                  estilo: EstiloBotaoAcaoHome.principal,
                   onPressed: abrirBusca,
                 ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
 
                 BotaoAcaoHome(
-                  texto: 'OFERTAR',
-                  icone: Icons.add_road,
+                  texto: 'Oferecer carona',
+                  icone: Icons.directions_car_outlined,
+                  estilo: EstiloBotaoAcaoHome.secundario,
                   onPressed: abrirOferta,
                 ),
                 const SizedBox(height: 36),
