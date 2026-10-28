@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
@@ -59,40 +60,60 @@ class _BarraNavegacaoHomeState extends State<BarraNavegacaoHome> {
     );
   }
 
-  Widget _barra(
-    int totalMensagensNaoLidas,
-    int totalSolicitacoesPendentes,
-  ) {
-    return BottomNavigationBar(
-      currentIndex: widget.currentIndex,
-      selectedItemColor: AppColors.primary,
-      unselectedItemColor: Colors.black54,
-      type: BottomNavigationBarType.fixed,
-      onTap: widget.onTap,
-      items: [
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.home_outlined),
-          label: 'Início',
-        ),
-        BottomNavigationBarItem(
-          icon: _iconeComContador(
-            icone: Icons.chat_bubble_outline,
-            total: totalMensagensNaoLidas,
+  Widget _barra(int totalMensagensNaoLidas, int totalSolicitacoesPendentes) {
+    return DecoratedBox(
+      position: DecorationPosition.foreground,
+      decoration: const BoxDecoration(
+        border: Border(top: BorderSide(color: Color(0xFFE2E2E8))),
+      ),
+      child: BottomNavigationBar(
+        currentIndex: widget.currentIndex,
+        backgroundColor: Colors.white,
+        elevation: 0,
+        iconSize: 26,
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
+        selectedLabelStyle: const TextStyle(fontWeight: FontWeight.w600),
+        unselectedLabelStyle: const TextStyle(fontWeight: FontWeight.w500),
+        selectedItemColor: AppColors.primary,
+        unselectedItemColor: Colors.black54,
+        type: BottomNavigationBarType.fixed,
+        onTap: widget.onTap,
+        items: [
+          BottomNavigationBarItem(
+            icon: Icon(
+              widget.currentIndex == 0
+                  ? CupertinoIcons.house_fill
+                  : CupertinoIcons.house,
+            ),
+            label: 'Início',
           ),
-          label: 'Chat',
-        ),
-        BottomNavigationBarItem(
-          icon: _iconeComContador(
-            icone: Icons.directions_car_outlined,
-            total: totalSolicitacoesPendentes,
+          BottomNavigationBarItem(
+            icon: _iconeComContador(
+              icone: widget.currentIndex == 1
+                  ? CupertinoIcons.chat_bubble_fill
+                  : CupertinoIcons.chat_bubble,
+              total: totalMensagensNaoLidas,
+            ),
+            label: 'Chat',
           ),
-          label: 'Caronas',
-        ),
-        const BottomNavigationBarItem(
-          icon: Icon(Icons.person_outline),
-          label: 'Perfil',
-        ),
-      ],
+          BottomNavigationBarItem(
+            icon: _iconeComContador(
+              icone: Icons.directions_car_filled_outlined,
+              total: totalSolicitacoesPendentes,
+            ),
+            label: 'Caronas',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(
+              widget.currentIndex == 3
+                  ? CupertinoIcons.person_fill
+                  : CupertinoIcons.person,
+            ),
+            label: 'Perfil',
+          ),
+        ],
+      ),
     );
   }
 

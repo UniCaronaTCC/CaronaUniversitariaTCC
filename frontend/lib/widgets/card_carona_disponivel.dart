@@ -368,8 +368,11 @@ class CardCaronaDisponivel extends StatelessWidget {
                 ],
               ),
               const SizedBox(height: 16),
-              _localHome(Icons.location_on_rounded, carona.resumoInicio),
-              const SizedBox(height: 10),
+              _localHome(
+                Icons.location_on_rounded,
+                carona.resumoInicio,
+                conectarAoDestino: true,
+              ),
               _localHome(
                 Icons.school_outlined,
                 carona.destino.trim().isEmpty
@@ -428,19 +431,53 @@ class CardCaronaDisponivel extends StatelessWidget {
     );
   }
 
-  Widget _localHome(IconData icone, String texto) => Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Icon(icone, size: 20, color: AppColors.primary),
-      const SizedBox(width: 10),
-      Expanded(
-        child: Text(
-          texto,
-          style: const TextStyle(fontSize: 14, color: AppColors.text),
+  Widget _localHome(
+    IconData icone,
+    String texto, {
+    bool conectarAoDestino = false,
+  }) {
+    final marcador = Icon(icone, size: 20, color: AppColors.primary);
+    final linha = Row(
+      crossAxisAlignment: conectarAoDestino
+          ? CrossAxisAlignment.stretch
+          : CrossAxisAlignment.start,
+      children: [
+        if (conectarAoDestino)
+          SizedBox(
+            width: 20,
+            child: Column(
+              children: [
+                marcador,
+                const SizedBox(height: 4),
+                const Expanded(
+                  child: ExcludeSemantics(
+                    child: CustomPaint(
+                      key: ValueKey('linha-trajeto-home'),
+                      size: Size(1, 0),
+                      painter: _LinhaTrajetoPainter(),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 4),
+              ],
+            ),
+          )
+        else
+          marcador,
+        const SizedBox(width: 10),
+        Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: conectarAoDestino ? 16 : 0),
+            child: Text(
+              texto,
+              style: const TextStyle(fontSize: 14, color: AppColors.text),
+            ),
+          ),
         ),
-      ),
-    ],
-  );
+      ],
+    );
+    return conectarAoDestino ? IntrinsicHeight(child: linha) : linha;
+  }
 
   List<String> get _diasRecorrencia {
     final dias = carona.idRecorrencia != null
@@ -466,4 +503,25 @@ class CardCaronaDisponivel extends StatelessWidget {
 
     return carona.dataFormatada;
   }
+}
+
+class _LinhaTrajetoPainter extends CustomPainter {
+  const _LinhaTrajetoPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final tinta = Paint()
+      ..color = const Color(0xFF9E9EA9)
+      ..strokeWidth = 1;
+    for (var y = 0.0; y < size.height; y += 6) {
+      canvas.drawLine(
+        Offset(size.width / 2, y),
+        Offset(size.width / 2, (y + 3).clamp(0, size.height)),
+        tinta,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(_LinhaTrajetoPainter oldDelegate) => false;
 }

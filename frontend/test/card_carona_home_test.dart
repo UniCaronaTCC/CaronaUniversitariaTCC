@@ -121,6 +121,17 @@ void main() {
       lessThan(tester.getTopLeft(find.text('Campus teste')).dy),
     );
     expect(carona.pontosEmbarque.first, segundo);
+    final linha = tester.getRect(
+      find.byKey(const ValueKey('linha-trajeto-home')),
+    );
+    final encontro = tester.getRect(find.byIcon(Icons.location_on_rounded));
+    final destino = tester.getRect(find.byIcon(Icons.school_outlined));
+    expect(linha.width, 1);
+    expect(linha.height, greaterThan(0));
+    expect(linha.center.dx, encontro.center.dx);
+    expect(linha.center.dx, destino.center.dx);
+    expect(linha.top, greaterThan(encontro.bottom));
+    expect(linha.bottom, lessThan(destino.top));
   });
 
   testWidgets('layout padrao continua intacto sem ativar novo visual', (
@@ -131,6 +142,7 @@ void main() {
     expect(find.text('2 vagas'), findsOneWidget);
     expect(find.text('por pessoa'), findsNothing);
     expect(find.byType(CircleAvatar), findsNothing);
+    expect(find.byKey(const ValueKey('linha-trajeto-home')), findsNothing);
   });
 
   for (final vagas in [0, 1, 3]) {
@@ -283,6 +295,18 @@ void main() {
           );
           expect(find.text(carona.valorFormatado), findsOneWidget);
           expect(tester.takeException(), isNull);
+          final linha = tester.getRect(
+            find.byKey(const ValueKey('linha-trajeto-home')),
+          );
+          final encontro = tester.getRect(
+            find.byIcon(Icons.location_on_rounded),
+          );
+          final destino = tester.getRect(find.byIcon(Icons.school_outlined));
+          expect(linha.height, greaterThan(0));
+          expect(linha.center.dx, encontro.center.dx);
+          expect(linha.center.dx, destino.center.dx);
+          expect(linha.top, greaterThan(encontro.bottom));
+          expect(linha.bottom, lessThan(destino.top));
           expect(
             tester.getBottomLeft(find.text(carona.motorista)).dy,
             lessThan(
