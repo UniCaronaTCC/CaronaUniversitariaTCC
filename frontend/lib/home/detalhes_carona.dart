@@ -5,6 +5,7 @@ import '../mapa/models/localizacao_selecionada.dart';
 import '../mapa/screens/mapa_screen.dart';
 import '../models/carona.dart';
 import '../models/ponto_embarque.dart';
+import '../models/solicitacao_enviada.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/auth_service.dart';
 import '../services/carona_service.dart';
@@ -42,6 +43,92 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
 
   Carona get caronaAtual => _caronaAtualizada ?? widget.carona;
 
+  bool get _exibeSolicitacao =>
+      !widget.somenteConsulta &&
+      !usuarioEhMotorista &&
+      widget.permitirSolicitacao &&
+      ['ATIVA', 'LOTADA', 'EM_ANDAMENTO'].contains(caronaAtual.status);
+
+  bool _consultandoSolicitacao = true;
+  bool _falhaConsultaSolicitacao = false;
+  String? _statusSolicitacao;
+  bool _pagamentoConfirmado = false;
+  int _ultimaConsultaSolicitacao = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    if (_exibeSolicitacao) _consultarSolicitacao();
+  }
+
+  @override
+  void didUpdateWidget(covariant DetalhesCaronaTela oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.carona.id != widget.carona.id ||
+        oldWidget.carona.status != widget.carona.status ||
+        oldWidget.carona.idMotorista != widget.carona.idMotorista ||
+        oldWidget.permitirSolicitacao != widget.permitirSolicitacao ||
+        oldWidget.somenteConsulta != widget.somenteConsulta) {
+      _ultimaConsultaSolicitacao++;
+      _ultimaAtualizacao++;
+      _caronaAtualizada = null;
+      _statusSolicitacao = null;
+      _pagamentoConfirmado = false;
+      enviandoSolicitacao = false;
+      if (_exibeSolicitacao) _consultarSolicitacao();
+    }
+  }
+
+  Future<void> _consultarSolicitacao() async {
+    final consulta = ++_ultimaConsultaSolicitacao;
+    final idCarona = caronaAtual.id;
+    setState(() {
+      _consultandoSolicitacao = true;
+      _falhaConsultaSolicitacao = false;
+    });
+
+    try {
+      final resultado = await SolicitacaoService.listarEnviadas().timeout(
+        const Duration(seconds: 20),
+      );
+      if (!mounted || consulta != _ultimaConsultaSolicitacao) return;
+
+      final dados = resultado['dados'];
+      if (resultado['sucesso'] != true || dados is! List<SolicitacaoEnviada>) {
+        throw const FormatException('Consulta de solicitação indisponível');
+      }
+
+      SolicitacaoEnviada? existente;
+      for (final solicitacao in dados) {
+        if (solicitacao.idCarona == idCarona &&
+            ['PENDENTE', 'ACEITA'].contains(solicitacao.status)) {
+          existente = solicitacao;
+          break;
+        }
+      }
+      setState(() {
+        _statusSolicitacao = existente?.status;
+        _pagamentoConfirmado = existente?.pagamentoConfirmado ?? false;
+        _consultandoSolicitacao = false;
+      });
+    } catch (_) {
+      if (!mounted || consulta != _ultimaConsultaSolicitacao) return;
+      setState(() {
+        _consultandoSolicitacao = false;
+        _falhaConsultaSolicitacao = true;
+      });
+    }
+  }
+
+  bool get _podeSolicitar =>
+      _exibeSolicitacao &&
+      !_consultandoSolicitacao &&
+      !_falhaConsultaSolicitacao &&
+      _statusSolicitacao == null &&
+      !enviandoSolicitacao &&
+      caronaAtual.status == 'ATIVA' &&
+      caronaAtual.vagas > 0;
+
   Future<void> _atualizarCarona() async {
     final atualizacao = ++_ultimaAtualizacao;
     final idCarona = caronaAtual.id;
@@ -75,7 +162,6 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
   }
 
   bool enviandoSolicitacao = false;
-  bool solicitacaoEnviada = false;
   bool excluindoCarona = false;
   bool processandoCorrida = false;
 
@@ -120,9 +206,14 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
       widget.indiceNavegacaoOrigem ?? (usuarioEhMotorista ? 2 : 0);
 
   Future<void> solicitarVaga() async {
+    if (!_podeSolicitar) return;
+    final idCarona = caronaAtual.id;
     final escolha = await _selecionarPontoEmbarque();
 
-    if (!mounted || escolha == null) {
+    if (!mounted ||
+        idCarona != caronaAtual.id ||
+        escolha == null ||
+        !_podeSolicitar) {
       return;
     }
 
@@ -204,6 +295,7 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
   }
 
   Future<void> _solicitarNovoPonto() async {
+    final idCarona = caronaAtual.id;
     final localEmbarque = await Navigator.push<LocalizacaoSelecionada>(
       context,
       MaterialPageRoute(
@@ -216,7 +308,10 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
       ),
     );
 
-    if (!mounted || localEmbarque == null) {
+    if (!mounted ||
+        idCarona != caronaAtual.id ||
+        localEmbarque == null ||
+        !_podeSolicitar) {
       return;
     }
 
@@ -233,24 +328,31 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
   Future<void> _enviarSolicitacao(
     Future<Map<String, dynamic>> requisicao,
   ) async {
+    final idCarona = caronaAtual.id;
     setState(() {
       enviandoSolicitacao = true;
     });
 
     final resultado = await requisicao;
 
-    if (!mounted) {
+    if (!mounted || idCarona != caronaAtual.id) {
       return;
     }
 
     setState(() {
       enviandoSolicitacao = false;
-      solicitacaoEnviada = resultado['sucesso'] == true;
+      if (resultado['sucesso'] == true) {
+        _statusSolicitacao = 'PENDENTE';
+        _pagamentoConfirmado = false;
+      }
     });
 
     _mostrarMensagem(
       resultado['mensagem']?.toString() ?? 'Erro ao solicitar vaga',
     );
+
+    // Uma falha de resposta não garante que o servidor deixou de registrar.
+    if (resultado['sucesso'] != true) await _consultarSolicitacao();
   }
 
   Future<void> editarCarona() async {
@@ -355,11 +457,8 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
         children: [
           if (!widget.somenteConsulta && usuarioEhMotorista && permiteAcoes)
             _acoesGerenciamento()
-          else if (!widget.somenteConsulta &&
-              !usuarioEhMotorista &&
-              permiteAcoes &&
-              widget.permitirSolicitacao)
-            _botaoSolicitar(),
+          else if (_exibeSolicitacao)
+            _rodapeSolicitacao(),
 
           BarraNavegacaoHome(
             currentIndex: indiceNavegacao,
@@ -442,35 +541,98 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
     );
   }
 
-  Widget _botaoSolicitar() {
+  Widget _rodapeSolicitacao() {
+    Widget conteudo;
+    if (_consultandoSolicitacao) {
+      conteudo = const Row(
+        children: [
+          SizedBox(
+            width: 20,
+            height: 20,
+            child: CircularProgressIndicator(strokeWidth: 2),
+          ),
+          SizedBox(width: 12),
+          Expanded(child: Text('Consultando solicitação...')),
+        ],
+      );
+    } else if (_falhaConsultaSolicitacao) {
+      conteudo = Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Text('Não foi possível consultar sua solicitação.'),
+          TextButton.icon(
+            onPressed: _consultarSolicitacao,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Tentar novamente'),
+          ),
+        ],
+      );
+    } else if (_statusSolicitacao != null) {
+      final aceita = _statusSolicitacao == 'ACEITA';
+      conteudo = Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            _pagamentoConfirmado ? Icons.check_circle_outline : Icons.schedule,
+            color: AppColors.primary,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _pagamentoConfirmado
+                      ? 'Vaga confirmada'
+                      : aceita
+                      ? 'Solicitação aceita'
+                      : 'Carona já solicitada',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _pagamentoConfirmado
+                      ? 'Seu pagamento foi confirmado.'
+                      : aceita
+                      ? caronaAtual.recorrente
+                            ? 'Acompanhe os detalhes em Caronas.'
+                            : 'Aguardando pagamento. Acompanhe em Caronas.'
+                      : 'Aguardando resposta do motorista.',
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    } else if (caronaAtual.status != 'ATIVA' || caronaAtual.vagas <= 0) {
+      conteudo = const Text(
+        'Esta carona não está disponível para solicitações.',
+      );
+    } else {
+      conteudo = SizedBox(
+        width: double.infinity,
+        height: 52,
+        child: ElevatedButton.icon(
+          onPressed: _podeSolicitar ? solicitarVaga : null,
+          icon: enviandoSolicitacao
+              ? const SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.person_add_alt_1),
+          label: Text(enviandoSolicitacao ? 'ENVIANDO...' : 'SOLICITAR VAGA'),
+        ),
+      );
+    }
+
     return SafeArea(
       top: false,
       bottom: false,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(24, 10, 24, 10),
-        child: SizedBox(
-          width: double.infinity,
-          height: 52,
-          child: ElevatedButton.icon(
-            onPressed: enviandoSolicitacao || solicitacaoEnviada
-                ? null
-                : solicitarVaga,
-            icon: enviandoSolicitacao
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : Icon(
-                    solicitacaoEnviada
-                        ? Icons.check_circle_outline
-                        : Icons.person_add_alt_1,
-                  ),
-            label: Text(
-              solicitacaoEnviada ? 'SOLICITAÇÃO ENVIADA' : 'SOLICITAR VAGA',
-            ),
-          ),
-        ),
+        child: Semantics(liveRegion: true, child: conteudo),
       ),
     );
   }

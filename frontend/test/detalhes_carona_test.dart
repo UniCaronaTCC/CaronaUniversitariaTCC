@@ -1,9 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:uni_carona/home/detalhes_carona.dart';
 import 'package:uni_carona/models/carona.dart';
 import 'package:uni_carona/services/auth_service.dart';
+import 'package:uni_carona/services/mensagem_service.dart';
+import 'package:uni_carona/services/solicitacao_service.dart';
 import 'package:uni_carona/widgets/painel_solicitacoes_carona.dart';
 
 void main() {
@@ -13,6 +17,12 @@ void main() {
   });
 
   testWidgets('exibe os dados principais da carona', (tester) async {
+    AuthService.tokenUsuarioLogado = 'token-teste';
+    addTearDown(() async {
+      AuthService.tokenUsuarioLogado = null;
+      SolicitacaoService.pararContadorSolicitacoesPendentes();
+      await MensagemService.pararContadorMensagensNaoLidas();
+    });
     final carona = Carona(
       id: 1,
       origem: 'Rua de origem',
@@ -31,9 +41,14 @@ void main() {
       veiculoPlaca: '***1D23',
     );
 
-    await tester.pumpWidget(
-      MaterialApp(home: DetalhesCaronaTela(carona: carona)),
-    );
+    await http.runWithClient(() async {
+      await tester.pumpWidget(
+        MaterialApp(home: DetalhesCaronaTela(carona: carona)),
+      );
+      await tester.pumpAndSettle();
+    }, () => MockClient((_) async => http.Response('{"dados":[]}', 200)));
+    SolicitacaoService.pararContadorSolicitacoesPendentes();
+    await MensagemService.pararContadorMensagensNaoLidas();
 
     expect(find.text('Detalhes da carona'), findsOneWidget);
     expect(find.text('João'), findsOneWidget);

@@ -94,20 +94,28 @@ class SolicitacaoService {
         final solicitacoes = <SolicitacaoEnviada>[];
         final dados = corpo['dados'];
 
-        if (dados is List) {
-          for (final item in dados) {
-            if (item is Map) {
-              solicitacoes.add(
-                SolicitacaoEnviada.fromJson(Map<String, dynamic>.from(item)),
-              );
-            }
+        if (corpo['sucesso'] == false || dados is! List) {
+          throw const FormatException('Lista de solicitações inválida');
+        }
+        for (final item in dados) {
+          if (item is! Map) {
+            throw const FormatException('Solicitação inválida');
           }
+          solicitacoes.add(
+            SolicitacaoEnviada.fromJson(Map<String, dynamic>.from(item)),
+          );
         }
 
         return {'sucesso': true, 'dados': solicitacoes};
       }
 
       return await _tratarErro(resposta.statusCode, corpo);
+    } on FormatException {
+      return {
+        'sucesso': false,
+        'mensagem':
+            'O servidor retornou uma resposta inválida ao consultar suas solicitações. Tente novamente.',
+      };
     } catch (erro) {
       return _erroConexao();
     }
