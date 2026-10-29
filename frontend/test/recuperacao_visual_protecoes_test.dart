@@ -110,6 +110,44 @@ void main() {
     expect(campo.enableSuggestions, isFalse);
   });
 
+  testWidgets('seta fica na barra superior e nao acompanha a rolagem', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    await abrir(tester, escala: 3);
+    expect(
+      find.ancestor(of: find.byKey(voltar), matching: find.byType(AppBar)),
+      findsOneWidget,
+    );
+    final posicao = tester.getRect(find.byKey(voltar));
+    await tester.ensureVisible(find.byKey(login));
+    await tester.pumpAndSettle();
+    expect(tester.getRect(find.byKey(voltar)), posicao);
+    expect(posicao.top, lessThanOrEqualTo(24));
+  });
+
+  testWidgets('erro e teclado nao deslocam titulo e seta', (tester) async {
+    tester.view.physicalSize = const Size(390, 844);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    addTearDown(tester.view.resetViewInsets);
+    await abrir(tester);
+    final seta = tester.getRect(find.byKey(voltar));
+    final titulo = tester.getTopLeft(find.text('Esqueceu sua senha?'));
+    await tocar(tester, find.byKey(enviar));
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(find.text('Esqueceu sua senha?')), titulo);
+    expect(tester.getRect(find.byKey(voltar)), seta);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+    await tester.pumpAndSettle();
+    expect(tester.getTopLeft(find.text('Esqueceu sua senha?')), titulo);
+    expect(tester.getRect(find.byKey(voltar)), seta);
+  });
+
   for (final valor in ['', '   ', 'email-invalido', 'joao@']) {
     testWidgets(
       'email invalido "$valor" nao chama servico e erro fica junto ao campo',

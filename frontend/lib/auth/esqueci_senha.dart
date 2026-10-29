@@ -277,231 +277,218 @@ class _EsqueciSenhaTelaState extends State<EsqueciSenhaTela> {
 
   Widget _solicitarRecuperacao() => Scaffold(
     backgroundColor: AppColors.background,
+    appBar: AppBar(
+      backgroundColor: AppColors.background,
+      foregroundColor: AppColors.text,
+      elevation: 0,
+      scrolledUnderElevation: 0,
+      leading: IconButton(
+        key: const ValueKey('voltar-recuperacao'),
+        tooltip: 'Voltar para o login',
+        onPressed: carregando ? null : _voltarParaLogin,
+        icon: const Icon(Icons.arrow_back_rounded),
+      ),
+    ),
     body: SafeArea(
-      child: LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Align(
+          alignment: Alignment.topCenter,
           child: ConstrainedBox(
-            constraints: BoxConstraints(
-              minHeight: (constraints.maxHeight - 32).clamp(0, double.infinity),
-            ),
-            child: Center(
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: AutofillGroup(
-                  onDisposeAction: AutofillContextAction.cancel,
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Align(
-                        alignment: Alignment.centerLeft,
-                        child: IconButton(
-                          key: const ValueKey('voltar-recuperacao'),
-                          tooltip: 'Voltar para o login',
-                          onPressed: carregando ? null : _voltarParaLogin,
-                          icon: const Icon(Icons.arrow_back_rounded),
-                        ),
+            constraints: const BoxConstraints(maxWidth: 420),
+            child: AutofillGroup(
+              onDisposeAction: AutofillContextAction.cancel,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Center(
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.asset(
+                        'assets/imagens/icone_buscaeu.png',
+                        key: const ValueKey('logo-recuperacao'),
+                        width: 80,
+                        height: 80,
+                        semanticLabel: 'Logo BuscaEu',
                       ),
-                      const SizedBox(height: 12),
-                      Center(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(20),
-                          child: Image.asset(
-                            'assets/imagens/icone_buscaeu.png',
-                            key: const ValueKey('logo-recuperacao'),
-                            width: 96,
-                            height: 96,
-                            semanticLabel: 'Logo BuscaEu',
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 10),
-                      const Text.rich(
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text.rich(
+                    TextSpan(
+                      children: [
                         TextSpan(
-                          children: [
-                            TextSpan(
-                              text: 'Busca',
-                              style: TextStyle(color: AppColors.text),
-                            ),
-                            TextSpan(
-                              text: 'Eu',
-                              style: TextStyle(color: AppColors.primary),
-                            ),
-                          ],
+                          text: 'Busca',
+                          style: TextStyle(color: AppColors.text),
                         ),
-                        textAlign: TextAlign.center,
-                        semanticsLabel: 'BuscaEu',
+                        TextSpan(
+                          text: 'Eu',
+                          style: TextStyle(color: AppColors.primary),
+                        ),
+                      ],
+                    ),
+                    textAlign: TextAlign.center,
+                    semanticsLabel: 'BuscaEu',
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.w700,
+                      height: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  const Text(
+                    'Esqueceu sua senha?',
+                    style: TextStyle(
+                      color: AppColors.text,
+                      fontSize: 26,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    'Informe seu e-mail para receber um código de recuperação.',
+                    style: TextStyle(color: Color(0xFF666879), fontSize: 16),
+                  ),
+                  const SizedBox(height: 28),
+                  const Text(
+                    'E-mail',
+                    style: TextStyle(
+                      color: AppColors.text,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  TextField(
+                    key: const ValueKey('email-recuperacao'),
+                    controller: emailController,
+                    enabled: !carregando,
+                    keyboardType: TextInputType.emailAddress,
+                    textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.email],
+                    autocorrect: false,
+                    enableSuggestions: false,
+                    onSubmitted: (_) => solicitarCodigo(),
+                    onChanged: (_) {
+                      if (_erroEmail != null) {
+                        setState(() => _erroEmail = null);
+                      }
+                    },
+                    style: const TextStyle(color: AppColors.text, fontSize: 16),
+                    decoration: InputDecoration(
+                      hintText: 'Seu e-mail',
+                      hintStyle: const TextStyle(color: Color(0xFF727587)),
+                      constraints: const BoxConstraints(minHeight: 56),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 16,
+                      ),
+                      filled: true,
+                      fillColor: const Color(0xFFF6F6F9),
+                      prefixIcon: const Icon(
+                        Icons.mail_outline_rounded,
+                        color: Color(0xFF666879),
+                      ),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: _erroEmail == null
+                              ? const Color(0xFFD1D2DC)
+                              : Theme.of(context).colorScheme.error,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: BorderSide(
+                          color: _erroEmail == null
+                              ? AppColors.primary
+                              : Theme.of(context).colorScheme.error,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
+                  if (_erroEmail != null) ...[
+                    const SizedBox(height: 8),
+                    Semantics(
+                      liveRegion: true,
+                      child: Text(
+                        _erroEmail!,
+                        key: const ValueKey('erro-recuperacao'),
                         style: TextStyle(
-                          fontSize: 36,
-                          fontWeight: FontWeight.w700,
-                          height: 1.1,
+                          color: Theme.of(context).colorScheme.error,
+                          fontSize: 14,
                         ),
                       ),
-                      const SizedBox(height: 32),
-                      const Text(
-                        'Esqueceu sua senha?',
-                        style: TextStyle(
-                          color: AppColors.text,
-                          fontSize: 26,
-                          fontWeight: FontWeight.w700,
-                        ),
+                    ),
+                  ],
+                  const SizedBox(height: 24),
+                  ElevatedButton(
+                    key: const ValueKey('solicitar-codigo-senha'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.primary,
+                      foregroundColor: Colors.white,
+                      disabledBackgroundColor: AppColors.primary.withValues(
+                        alpha: 0.65,
                       ),
-                      const SizedBox(height: 10),
-                      const Text(
-                        'Informe seu e-mail para receber um código de recuperação.',
-                        style: TextStyle(
-                          color: Color(0xFF666879),
-                          fontSize: 16,
-                        ),
+                      disabledForegroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(56),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 16,
                       ),
-                      const SizedBox(height: 28),
-                      const Text(
-                        'E-mail',
-                        style: TextStyle(
-                          color: AppColors.text,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                        ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
                       ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        key: const ValueKey('email-recuperacao'),
-                        controller: emailController,
-                        enabled: !carregando,
-                        keyboardType: TextInputType.emailAddress,
-                        textInputAction: TextInputAction.done,
-                        autofillHints: const [AutofillHints.email],
-                        autocorrect: false,
-                        enableSuggestions: false,
-                        onSubmitted: (_) => solicitarCodigo(),
-                        onChanged: (_) {
-                          if (_erroEmail != null) {
-                            setState(() => _erroEmail = null);
-                          }
-                        },
-                        style: const TextStyle(
-                          color: AppColors.text,
-                          fontSize: 16,
-                        ),
-                        decoration: InputDecoration(
-                          hintText: 'Seu e-mail',
-                          hintStyle: const TextStyle(color: Color(0xFF727587)),
-                          constraints: const BoxConstraints(minHeight: 56),
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 16,
-                          ),
-                          filled: true,
-                          fillColor: const Color(0xFFF6F6F9),
-                          prefixIcon: const Icon(
-                            Icons.mail_outline_rounded,
-                            color: Color(0xFF666879),
-                          ),
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: _erroEmail == null
-                                  ? const Color(0xFFD1D2DC)
-                                  : Theme.of(context).colorScheme.error,
+                      elevation: 0,
+                      textStyle: Theme.of(context).textTheme.labelLarge
+                          ?.copyWith(fontSize: 18, fontWeight: FontWeight.w600),
+                    ),
+                    onPressed: carregando ? null : solicitarCodigo,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        if (carregando) ...[
+                          const ExcludeSemantics(
+                            child: SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
                             ),
                           ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(8),
-                            borderSide: BorderSide(
-                              color: _erroEmail == null
-                                  ? AppColors.primary
-                                  : Theme.of(context).colorScheme.error,
-                              width: 2,
-                            ),
-                          ),
-                        ),
-                      ),
-                      if (_erroEmail != null) ...[
-                        const SizedBox(height: 8),
-                        Semantics(
-                          liveRegion: true,
+                          const SizedBox(width: 12),
+                        ],
+                        Flexible(
                           child: Text(
-                            _erroEmail!,
-                            key: const ValueKey('erro-recuperacao'),
-                            style: TextStyle(
-                              color: Theme.of(context).colorScheme.error,
-                              fontSize: 14,
-                            ),
+                            carregando ? 'Enviando...' : 'Enviar código',
+                            textAlign: TextAlign.center,
                           ),
                         ),
                       ],
-                      const SizedBox(height: 24),
-                      ElevatedButton(
-                        key: const ValueKey('solicitar-codigo-senha'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                          disabledBackgroundColor: AppColors.primary.withValues(
-                            alpha: 0.65,
-                          ),
-                          disabledForegroundColor: Colors.white,
-                          minimumSize: const Size.fromHeight(56),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 16,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          elevation: 0,
-                          textStyle: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                        onPressed: carregando ? null : solicitarCodigo,
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            if (carregando) ...[
-                              const ExcludeSemantics(
-                                child: SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                            ],
-                            Flexible(
-                              child: Text(
-                                carregando ? 'Enviando...' : 'Enviar código',
-                                textAlign: TextAlign.center,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      TextButton(
-                        key: const ValueKey('login-recuperacao'),
-                        style: TextButton.styleFrom(
-                          foregroundColor: AppColors.primary,
-                          textStyle: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(fontWeight: FontWeight.w600),
-                        ),
-                        onPressed: carregando ? null : _voltarParaLogin,
-                        child: const Text(
-                          'Voltar para o login',
-                          textAlign: TextAlign.center,
-                        ),
-                      ),
-                    ],
+                    ),
                   ),
-                ),
+                  const SizedBox(height: 20),
+                  TextButton(
+                    key: const ValueKey('login-recuperacao'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.primary,
+                      textStyle: Theme.of(context).textTheme.labelLarge
+                          ?.copyWith(fontWeight: FontWeight.w600),
+                    ),
+                    onPressed: carregando ? null : _voltarParaLogin,
+                    child: const Text(
+                      'Voltar para o login',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
