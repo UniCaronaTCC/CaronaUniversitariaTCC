@@ -213,21 +213,6 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.all(24),
             children: [
-              const Text(
-                'Buscar carona',
-                style: TextStyle(
-                  color: AppColors.text,
-                  fontSize: 30,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Encontre uma viagem para o seu destino',
-                style: TextStyle(color: AppColors.text, fontSize: 18),
-              ),
-              const SizedBox(height: 28),
-
               FiltrosBuscaCarona(
                 destinoController: destinoController,
                 dataController: dataController,
@@ -240,7 +225,7 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
                 onLimparFiltros: limparFiltros,
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 24),
 
               Row(
                 children: [
@@ -249,7 +234,7 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
                       'Caronas encontradas',
                       style: TextStyle(
                         color: AppColors.text,
-                        fontSize: 21,
+                        fontSize: 18,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -326,6 +311,7 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
 
                       return CardCaronaDisponivel(
                         carona: carona,
+                        visualHome: true,
                         onTap: () => abrirDetalhes(carona),
                       );
                     },

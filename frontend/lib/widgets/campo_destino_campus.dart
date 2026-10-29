@@ -17,6 +17,7 @@ class CampoDestinoCampus extends StatefulWidget {
   final CampusDestinoService campusService;
   final EnderecoService? enderecoService;
   final bool mostrarAoAbrir;
+  final bool visualAtualizado;
 
   /// Controla a rolagem da tela; não deve ficar dentro de outra lista.
   final bool telaCompleta;
@@ -30,6 +31,7 @@ class CampoDestinoCampus extends StatefulWidget {
     this.campusService = const CampusDestinoService(),
     this.enderecoService,
     this.mostrarAoAbrir = false,
+    this.visualAtualizado = false,
     this.telaCompleta = false,
   });
 
@@ -366,6 +368,8 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
 
   @override
   Widget build(BuildContext context) {
+    final visualCampoAtualizado =
+        widget.telaCompleta || widget.visualAtualizado;
     final campi = _confirmandoCampus == null
         ? _campi.where((campus) => campus.corresponde(_filtro)).toList()
         : <CampusDestino>[];
@@ -383,6 +387,8 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
           ),
         ),
         const SizedBox(height: 24),
+      ],
+      if (visualCampoAtualizado) ...[
         const Text(
           'Destino',
           style: TextStyle(
@@ -409,26 +415,26 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
           _buscarEndereco(texto);
         },
         decoration: InputDecoration(
-          labelText: widget.telaCompleta ? null : 'Destino',
-          hintText: widget.telaCompleta ? 'Faculdade ou endereço' : null,
+          labelText: visualCampoAtualizado ? null : 'Destino',
+          hintText: visualCampoAtualizado ? 'Faculdade ou endereço' : null,
           hintStyle: const TextStyle(color: Color(0xFF646B7B)),
           filled: true,
-          fillColor: widget.telaCompleta
+          fillColor: visualCampoAtualizado
               ? const Color(0xFFF6F6F9)
               : Colors.white,
           border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(widget.telaCompleta ? 8 : 16),
-            borderSide: widget.telaCompleta
+            borderRadius: BorderRadius.circular(visualCampoAtualizado ? 8 : 16),
+            borderSide: visualCampoAtualizado
                 ? const BorderSide(color: Color(0xFFDADCE5))
                 : BorderSide.none,
           ),
-          enabledBorder: widget.telaCompleta
+          enabledBorder: visualCampoAtualizado
               ? OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: const BorderSide(color: Color(0xFFDADCE5)),
                 )
               : null,
-          focusedBorder: widget.telaCompleta
+          focusedBorder: visualCampoAtualizado
               ? OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                   borderSide: const BorderSide(
@@ -438,8 +444,8 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
                 )
               : null,
           prefixIcon: Icon(
-            widget.telaCompleta ? Icons.search : Icons.location_on_outlined,
-            color: widget.telaCompleta
+            visualCampoAtualizado ? Icons.search : Icons.location_on_outlined,
+            color: visualCampoAtualizado
                 ? const Color(0xFF646B7B)
                 : AppColors.primary,
           ),
