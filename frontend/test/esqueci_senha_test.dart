@@ -28,10 +28,10 @@ void main() {
     );
 
     await tester.enterText(
-      find.widgetWithText(TextField, 'E-mail'),
+      find.widgetWithText(TextField, 'Seu e-mail'),
       'joao@email.com',
     );
-    await tester.tap(find.text('ENVIAR CÓDIGO'));
+    await tester.tap(find.text('Enviar código'));
     await tester.pumpAndSettle();
 
     expect(emailSolicitado, 'joao@email.com');
@@ -70,10 +70,10 @@ void main() {
       ),
     );
     await tester.enterText(
-      find.widgetWithText(TextField, 'E-mail'),
+      find.widgetWithText(TextField, 'Seu e-mail'),
       'usuario@example.test',
     );
-    await tester.tap(find.text('ENVIAR CÓDIGO'));
+    await tester.tap(find.text('Enviar código'));
     await tester.pumpAndSettle();
     ScaffoldMessenger.of(
       tester.element(find.byType(EsqueciSenhaTela)),

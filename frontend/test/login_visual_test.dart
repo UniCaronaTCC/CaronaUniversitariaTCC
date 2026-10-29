@@ -229,10 +229,7 @@ void main() {
         find.byType(destino == 'Criar conta' ? CadastroTela : EsqueciSenhaTela),
         findsOneWidget,
       );
-      expect(
-        find.byType(AuthCard),
-        destino == 'Criar conta' ? findsNothing : findsOneWidget,
-      );
+      expect(find.byType(AuthCard), findsNothing);
       Navigator.of(
         tester.element(
           find.byType(
