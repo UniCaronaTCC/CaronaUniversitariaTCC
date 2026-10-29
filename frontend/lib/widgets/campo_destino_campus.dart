@@ -18,6 +18,9 @@ class CampoDestinoCampus extends StatefulWidget {
   final EnderecoService? enderecoService;
   final bool mostrarAoAbrir;
 
+  /// Controla a rolagem da tela; não deve ficar dentro de outra lista.
+  final bool telaCompleta;
+
   const CampoDestinoCampus({
     super.key,
     required this.controller,
@@ -27,6 +30,7 @@ class CampoDestinoCampus extends StatefulWidget {
     this.campusService = const CampusDestinoService(),
     this.enderecoService,
     this.mostrarAoAbrir = false,
+    this.telaCompleta = false,
   });
 
   @override
@@ -368,51 +372,95 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
     final locais = _locais
         .where((local) => !campi.any((campus) => campus.mesmoLocal(local)))
         .toList();
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        TextField(
-          controller: widget.controller,
-          focusNode: _foco,
-          onTap: () {
-            setState(() => _visivel = true);
-            if (!_iniciado) _iniciar();
-          },
-          onChanged: _aoDigitar,
-          keyboardType: TextInputType.streetAddress,
-          textInputAction: TextInputAction.search,
-          style: const TextStyle(color: AppColors.text),
-          onSubmitted: (texto) {
-            _debounce?.cancel();
-            _buscarEndereco(texto);
-          },
-          decoration: InputDecoration(
-            labelText: 'Destino',
-            filled: true,
-            fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: BorderSide.none,
-            ),
-            prefixIcon: const Icon(
-              Icons.location_on_outlined,
-              color: AppColors.primary,
-            ),
-            suffixIcon: widget.controller.text.isEmpty
-                ? null
-                : IconButton(
-                    tooltip: 'Limpar destino',
-                    icon: const Icon(Icons.close),
-                    onPressed: () {
-                      widget.controller.clear();
-                      widget.onChanged?.call('');
-                      _foco.requestFocus();
-                    },
-                  ),
+    final cabecalho = <Widget>[
+      if (widget.telaCompleta) ...[
+        const Text(
+          'Para onde você vai?',
+          style: TextStyle(
+            color: Color(0xFF151824),
+            fontSize: 26,
+            fontWeight: FontWeight.w700,
           ),
         ),
-        if (_visivel) ...[
-          const SizedBox(height: 8),
+        const SizedBox(height: 24),
+        const Text(
+          'Destino',
+          style: TextStyle(
+            color: Color(0xFF151824),
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
+      TextField(
+        controller: widget.controller,
+        focusNode: _foco,
+        onTap: () {
+          setState(() => _visivel = true);
+          if (!_iniciado) _iniciar();
+        },
+        onChanged: _aoDigitar,
+        keyboardType: TextInputType.streetAddress,
+        textInputAction: TextInputAction.search,
+        style: const TextStyle(color: AppColors.text),
+        onSubmitted: (texto) {
+          _debounce?.cancel();
+          _buscarEndereco(texto);
+        },
+        decoration: InputDecoration(
+          labelText: widget.telaCompleta ? null : 'Destino',
+          hintText: widget.telaCompleta ? 'Faculdade ou endereço' : null,
+          hintStyle: const TextStyle(color: Color(0xFF646B7B)),
+          filled: true,
+          fillColor: widget.telaCompleta
+              ? const Color(0xFFF6F6F9)
+              : Colors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(widget.telaCompleta ? 8 : 16),
+            borderSide: widget.telaCompleta
+                ? const BorderSide(color: Color(0xFFDADCE5))
+                : BorderSide.none,
+          ),
+          enabledBorder: widget.telaCompleta
+              ? OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(color: Color(0xFFDADCE5)),
+                )
+              : null,
+          focusedBorder: widget.telaCompleta
+              ? OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
+                    width: 1.5,
+                  ),
+                )
+              : null,
+          prefixIcon: Icon(
+            widget.telaCompleta ? Icons.search : Icons.location_on_outlined,
+            color: widget.telaCompleta
+                ? const Color(0xFF646B7B)
+                : AppColors.primary,
+          ),
+          suffixIcon: widget.controller.text.isEmpty
+              ? null
+              : IconButton(
+                  tooltip: 'Limpar destino',
+                  icon: const Icon(Icons.close),
+                  onPressed: () {
+                    widget.controller.clear();
+                    widget.onChanged?.call('');
+                    _foco.requestFocus();
+                  },
+                ),
+        ),
+      ),
+      if (_visivel) ...[
+        const SizedBox(height: 8),
+        if (widget.telaCompleta)
+          _cidadeTelaCompleta()
+        else
           Row(
             children: [
               Expanded(
@@ -430,31 +478,121 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
               ),
             ],
           ),
-          if (_carregandoCampi) const LinearProgressIndicator(),
-          if (!_carregandoCampi && _cidade == null)
-            const Text('Localização indisponível. Selecione uma cidade.'),
-          if (_erroCampi != null) ...[
-            Text(_erroCampi!),
-            TextButton.icon(
-              onPressed: _carregandoCampi
-                  ? null
-                  : () => _carregarCampi(_cidade!),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Tentar novamente'),
+        if (widget.telaCompleta) ...[
+          const SizedBox(height: 20),
+          const Text(
+            'Faculdades',
+            style: TextStyle(
+              color: Color(0xFF151824),
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        if (_carregandoCampi) const LinearProgressIndicator(),
+        if (!_carregandoCampi && _cidade == null)
+          const Text('Localização indisponível. Selecione uma cidade.'),
+        if (_erroCampi != null) ...[
+          Text(_erroCampi!),
+          TextButton.icon(
+            onPressed: _carregandoCampi ? null : () => _carregarCampi(_cidade!),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Tentar novamente'),
+          ),
+        ],
+        if (_confirmandoCampus != null)
+          const Text('Confirme o endereço do campus nos resultados abaixo.'),
+        if (!_carregandoCampi &&
+            _erroCampi == null &&
+            _cidade != null &&
+            campi.isEmpty &&
+            _confirmandoCampus == null)
+          Text(
+            _filtro.trim().isEmpty
+                ? 'Nenhuma faculdade cadastrada nesta cidade.'
+                : 'Nenhum campus corresponde à pesquisa.',
+          ),
+      ],
+    ];
+    final avisosEndereco = <Widget>[
+      if (_visivel) ...[
+        if (_buscandoEndereco) const LinearProgressIndicator(),
+        if (_erroEndereco != null) ...[
+          Text(_erroEndereco!),
+          TextButton.icon(
+            onPressed: _buscandoEndereco
+                ? null
+                : () => _buscarEndereco(widget.controller.text),
+            icon: const Icon(Icons.refresh),
+            label: const Text('Tentar novamente'),
+          ),
+        ],
+        if (locais.isNotEmpty) ...[
+          const Divider(),
+          const Text(
+            'Endereços',
+            style: TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ],
+      ],
+    ];
+    final rodape = <Widget>[
+      if (_visivel &&
+          _pesquisouEndereco &&
+          _erroEndereco == null &&
+          !_buscandoEndereco &&
+          locais.isEmpty &&
+          campi.isEmpty)
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 8),
+          child: Text(
+            'Nenhum endereço encontrado. Tente rua, bairro e cidade.',
+          ),
+        ),
+    ];
+    if (widget.telaCompleta) {
+      // Uma rolagem, com resultados criados sob demanda, mesmo em cidades grandes.
+      return CustomScrollView(
+        key: const ValueKey('rolagem-escolher-destino'),
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        slivers: [
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+            sliver: SliverList.list(children: cabecalho),
+          ),
+          if (_visivel) ...[
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              sliver: SliverList.builder(
+                itemCount: campi.length,
+                itemBuilder: (context, indice) => _itemCampus(campi[indice]),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              sliver: SliverList.list(children: avisosEndereco),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              sliver: SliverList.builder(
+                itemCount: locais.length,
+                itemBuilder: (context, indice) => _itemEndereco(locais[indice]),
+              ),
             ),
           ],
-          if (_confirmandoCampus != null)
-            const Text('Confirme o endereço do campus nos resultados abaixo.'),
-          if (!_carregandoCampi &&
-              _erroCampi == null &&
-              _cidade != null &&
-              campi.isEmpty &&
-              _confirmandoCampus == null)
-            Text(
-              _filtro.trim().isEmpty
-                  ? 'Nenhuma faculdade cadastrada nesta cidade.'
-                  : 'Nenhum campus corresponde à pesquisa.',
-            ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+            sliver: SliverList.list(children: rodape),
+          ),
+        ],
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        ...cabecalho,
+        if (_visivel) ...[
           if (campi.isNotEmpty)
             ConstrainedBox(
               constraints: const BoxConstraints(maxHeight: 280),
@@ -463,78 +601,162 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
                 shrinkWrap: true,
                 itemCount: campi.length,
                 itemBuilder: (context, indice) {
-                  final campus = campi[indice];
-                  return ListTile(
-                    contentPadding: EdgeInsets.zero,
-                    title: Text(campus.titulo),
-                    subtitle: Text(
-                      '${campus.cidade.cidade}/${campus.cidade.uf}',
-                    ),
-                    trailing: Icon(
-                      campus.ponto == null ? Icons.search : Icons.chevron_right,
-                    ),
-                    onTap: () => _selecionarCampus(campus),
-                  );
+                  return _itemCampus(campi[indice]);
                 },
               ),
             ),
-          if (_buscandoEndereco) const LinearProgressIndicator(),
-          if (_erroEndereco != null) ...[
-            Text(_erroEndereco!),
-            TextButton.icon(
-              onPressed: _buscandoEndereco
-                  ? null
-                  : () => _buscarEndereco(widget.controller.text),
-              icon: const Icon(Icons.refresh),
-              label: const Text('Tentar novamente'),
-            ),
-          ],
-          if (locais.isNotEmpty) ...[
-            const Divider(),
-            const Text(
-              'Endereços',
-              style: TextStyle(fontWeight: FontWeight.w600),
-            ),
-            for (final local in locais)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: const Icon(Icons.place_outlined),
-                title: Text(
-                  local.nome?.isNotEmpty == true ? local.nome! : local.endereco,
-                ),
-                subtitle:
-                    local.nome?.isNotEmpty == true ||
-                        local.avisoPrecisaoPara(ajusteOpcional: true) != null
-                    ? Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (local.nome?.isNotEmpty == true)
-                            Text(local.endereco),
-                          if (local.avisoPrecisaoPara(ajusteOpcional: true) !=
-                              null)
-                            Text(
-                              local.avisoPrecisaoPara(ajusteOpcional: true)!,
-                            ),
-                        ],
-                      )
-                    : null,
-                trailing: const Icon(Icons.chevron_right),
-                onTap: () => _selecionar(local),
-              ),
-          ],
-          if (_pesquisouEndereco &&
-              _erroEndereco == null &&
-              !_buscandoEndereco &&
-              locais.isEmpty &&
-              campi.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: Text(
-                'Nenhum endereço encontrado. Tente rua, bairro e cidade.',
-              ),
-            ),
+          ...avisosEndereco,
+          for (final local in locais) _itemEndereco(local),
         ],
+        ...rodape,
       ],
+    );
+  }
+
+  Widget _cidadeTelaCompleta() {
+    return Row(
+      children: [
+        const Icon(
+          Icons.location_on_outlined,
+          color: AppColors.primary,
+          size: 22,
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            _cidade == null
+                ? 'Selecionar cidade'
+                : '${_cidade!.cidade}, ${_cidade!.uf}',
+            style: const TextStyle(color: Color(0xFF646B7B), fontSize: 14),
+          ),
+        ),
+        Tooltip(
+          message: 'Alterar cidade',
+          child: TextButton.icon(
+            onPressed: _trocarCidade,
+            style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+            icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+            iconAlignment: IconAlignment.end,
+            label: const Text('Alterar'),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _itemCampus(CampusDestino campus) {
+    final tituloEstilo = widget.telaCompleta
+        ? Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: const Color(0xFF151824),
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          )
+        : null;
+    final subtituloEstilo = widget.telaCompleta
+        ? Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: const Color(0xFF646B7B),
+            fontSize: 14,
+          )
+        : null;
+    final indicador = Icon(
+      campus.ponto == null ? Icons.search : Icons.chevron_right,
+      color: widget.telaCompleta ? const Color(0xFF646B7B) : null,
+    );
+    if (widget.telaCompleta &&
+        MediaQuery.textScalerOf(context).scale(16) > 24) {
+      return InkWell(
+        key: ValueKey('campus-destino-${campus.idCampus}'),
+        onTap: () => _selecionarCampus(campus),
+        child: Padding(
+          padding: const EdgeInsets.only(top: 16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _iconeResultado(Icons.school_outlined),
+                  const Spacer(),
+                  indicador,
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(campus.titulo, style: tituloEstilo),
+              const SizedBox(height: 4),
+              Text(
+                '${campus.cidade.cidade}, ${campus.cidade.uf}',
+                style: subtituloEstilo,
+              ),
+              const SizedBox(height: 16),
+              const Divider(height: 1, color: Color(0xFFE9E9EF)),
+            ],
+          ),
+        ),
+      );
+    }
+    final item = ListTile(
+      key: ValueKey('campus-destino-${campus.idCampus}'),
+      contentPadding: widget.telaCompleta
+          ? const EdgeInsets.symmetric(vertical: 8)
+          : EdgeInsets.zero,
+      leading: widget.telaCompleta
+          ? _iconeResultado(Icons.school_outlined)
+          : null,
+      horizontalTitleGap: widget.telaCompleta ? 12 : null,
+      title: Text(campus.titulo),
+      titleTextStyle: tituloEstilo,
+      subtitle: Text(
+        widget.telaCompleta
+            ? '${campus.cidade.cidade}, ${campus.cidade.uf}'
+            : '${campus.cidade.cidade}/${campus.cidade.uf}',
+      ),
+      subtitleTextStyle: subtituloEstilo,
+      trailing: indicador,
+      onTap: () => _selecionarCampus(campus),
+    );
+    if (!widget.telaCompleta) return item;
+    return Column(
+      children: [
+        item,
+        const Divider(height: 1, color: Color(0xFFE9E9EF)),
+      ],
+    );
+  }
+
+  Widget _iconeResultado(IconData icone) {
+    return Container(
+      width: 40,
+      height: 40,
+      decoration: BoxDecoration(
+        color: const Color(0xFFF3E8FC),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Icon(icone, color: AppColors.primary, size: 22),
+    );
+  }
+
+  Widget _itemEndereco(LocalizacaoSelecionada local) {
+    return ListTile(
+      contentPadding: EdgeInsets.zero,
+      leading: widget.telaCompleta
+          ? _iconeResultado(Icons.place_outlined)
+          : const Icon(Icons.place_outlined),
+      title: Text(
+        local.nome?.isNotEmpty == true ? local.nome! : local.endereco,
+      ),
+      subtitle:
+          local.nome?.isNotEmpty == true ||
+              local.avisoPrecisaoPara(ajusteOpcional: true) != null
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (local.nome?.isNotEmpty == true) Text(local.endereco),
+                if (local.avisoPrecisaoPara(ajusteOpcional: true) != null)
+                  Text(local.avisoPrecisaoPara(ajusteOpcional: true)!),
+              ],
+            )
+          : null,
+      trailing: const Icon(Icons.chevron_right),
+      onTap: () => _selecionar(local),
     );
   }
 }
