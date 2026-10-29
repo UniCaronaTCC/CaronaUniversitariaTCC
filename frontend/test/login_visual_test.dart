@@ -229,8 +229,17 @@ void main() {
         find.byType(destino == 'Criar conta' ? CadastroTela : EsqueciSenhaTela),
         findsOneWidget,
       );
-      expect(find.byType(AuthCard), findsOneWidget);
-      Navigator.of(tester.element(find.byType(AuthCard))).pop();
+      expect(
+        find.byType(AuthCard),
+        destino == 'Criar conta' ? findsNothing : findsOneWidget,
+      );
+      Navigator.of(
+        tester.element(
+          find.byType(
+            destino == 'Criar conta' ? CadastroTela : EsqueciSenhaTela,
+          ),
+        ),
+      ).pop();
       await tester.pumpAndSettle();
       expect(
         tester.widget<TextField>(find.byKey(email)).controller!.text,

@@ -4,12 +4,18 @@ import '../config/app_colors.dart';
 import '../services/auth_service.dart';
 import '../utils/validacao_email.dart';
 import '../utils/validacao_senha.dart';
-import '../widgets/auth_widgets.dart';
 import 'confirmar_email.dart';
 import 'login.dart';
 
 class CadastroTela extends StatefulWidget {
-  const CadastroTela({super.key});
+  final Future<Map<String, dynamic>> Function(
+    String nome,
+    String email,
+    String senha,
+  )?
+  cadastrar;
+
+  const CadastroTela({super.key, this.cadastrar});
 
   @override
   State<CadastroTela> createState() => _CadastroTelaState();
@@ -21,8 +27,25 @@ class _CadastroTelaState extends State<CadastroTela> {
   final TextEditingController senhaController = TextEditingController();
 
   bool carregando = false;
+  bool _senhaOculta = true;
+
+  bool get _telaAtiva => mounted && ModalRoute.of(context)?.isCurrent == true;
+
+  void _irParaLogin() {
+    if (carregando || !_telaAtiva) return;
+    FocusScope.of(context).unfocus();
+    final navigator = Navigator.of(context);
+    if (navigator.canPop()) {
+      navigator.pop();
+    } else {
+      navigator.pushReplacement(
+        MaterialPageRoute<void>(builder: (_) => const LoginTela()),
+      );
+    }
+  }
 
   Future<void> fazerCadastro() async {
+    if (carregando || !_telaAtiva) return;
     if (nomeController.text.trim().isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -58,50 +81,61 @@ class _CadastroTelaState extends State<CadastroTela> {
       return;
     }
 
+    final nome = nomeController.text;
     final email = emailController.text.trim().toLowerCase();
+    final senha = senhaController.text;
 
+    FocusScope.of(context).unfocus();
     setState(() {
       carregando = true;
     });
 
-    final resultado = await AuthService.fazerCadastro(
-      nomeController.text,
-      email,
-      senhaController.text,
-    );
+    try {
+      final resultado = await (widget.cadastrar ?? AuthService.fazerCadastro)(
+        nome,
+        email,
+        senha,
+      );
 
-    if (!mounted) {
-      return;
-    }
+      if (!mounted || !_telaAtiva) return;
 
-    setState(() {
-      carregando = false;
-    });
+      if (resultado['sucesso'] == true) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              resultado['dados']['mensagem'] ??
+                  'Cadastro realizado com sucesso',
+            ),
+          ),
+        );
 
-    if (resultado['sucesso'] == true) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ConfirmarEmailTela(email: email),
+          ),
+        );
+
+        return;
+      }
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            resultado['dados']['mensagem'] ?? 'Cadastro realizado com sucesso',
+            resultado['mensagem']?.toString() ?? 'Erro ao cadastrar',
           ),
         ),
       );
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ConfirmarEmailTela(email: email),
+    } catch (_) {
+      if (!mounted || !_telaAtiva) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível criar sua conta. Tente novamente'),
         ),
       );
-
-      return;
+    } finally {
+      if (mounted) setState(() => carregando = false);
     }
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(resultado['mensagem']?.toString() ?? 'Erro ao cadastrar'),
-      ),
-    );
   }
 
   @override
@@ -117,80 +151,296 @@ class _CadastroTelaState extends State<CadastroTela> {
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Align(
-          alignment: Alignment.center,
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: AuthCard(
-              children: [
-                const Text(
-                  'CADASTRO',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.5,
-                  ),
+        child: LayoutBuilder(
+          builder: (context, constraints) => SingleChildScrollView(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            child: ConstrainedBox(
+              constraints: BoxConstraints(
+                minHeight: (constraints.maxHeight - 32).clamp(
+                  0,
+                  double.infinity,
                 ),
-                const SizedBox(height: 6),
-                const Text(
-                  'Crie sua conta',
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 16,
-                    letterSpacing: 1,
-                  ),
-                ),
-                const SizedBox(height: 36),
-                AuthCampoTexto(
-                  hint: 'Nome',
-                  icone: Icons.person,
-                  controller: nomeController,
-                  textCapitalization: TextCapitalization.sentences,
-                ),
-                const SizedBox(height: 16),
-                AuthCampoTexto(
-                  hint: 'E-mail',
-                  icone: Icons.email,
-                  controller: emailController,
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 16),
-                AuthCampoTexto(
-                  hint: 'Senha',
-                  icone: Icons.lock,
-                  controller: senhaController,
-                  obscureText: true,
-                ),
-                const SizedBox(height: 24),
-                AuthBotaoPrincipal(
-                  texto: carregando ? 'CADASTRANDO...' : 'CADASTRAR',
-                  onPressed: carregando ? null : fazerCadastro,
-                ),
-                const SizedBox(height: 18),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const LoginTela(),
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    'Já tem uma conta? Entrar',
-                    style: TextStyle(
-                      color: Colors.white,
-                      decoration: TextDecoration.underline,
-                      decorationColor: Colors.white,
+              ),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 420),
+                  child: AutofillGroup(
+                    onDisposeAction: AutofillContextAction.cancel,
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: IconButton(
+                            key: const ValueKey('voltar-cadastro'),
+                            tooltip: 'Voltar para o login',
+                            onPressed: carregando ? null : _irParaLogin,
+                            icon: const Icon(Icons.arrow_back_rounded),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Center(
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: Image.asset(
+                              'assets/imagens/icone_buscaeu.png',
+                              key: const ValueKey('logo-cadastro'),
+                              width: 96,
+                              height: 96,
+                              semanticLabel: 'Logo BuscaEu',
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        const Text.rich(
+                          TextSpan(
+                            children: [
+                              TextSpan(
+                                text: 'Busca',
+                                style: TextStyle(color: AppColors.text),
+                              ),
+                              TextSpan(
+                                text: 'Eu',
+                                style: TextStyle(color: AppColors.primary),
+                              ),
+                            ],
+                          ),
+                          semanticsLabel: 'BuscaEu',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontSize: 36,
+                            fontWeight: FontWeight.w700,
+                            height: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 28),
+                        const Text(
+                          'Crie sua conta',
+                          style: TextStyle(
+                            color: AppColors.text,
+                            fontSize: 26,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Sua próxima carona começa aqui.',
+                          style: TextStyle(
+                            color: Color(0xFF666879),
+                            fontSize: 16,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        _campoCadastro(
+                          id: 'nome',
+                          rotulo: 'Nome',
+                          hint: 'Seu nome',
+                          icone: Icons.person_outline_rounded,
+                          controller: nomeController,
+                        ),
+                        const SizedBox(height: 18),
+                        _campoCadastro(
+                          id: 'email',
+                          rotulo: 'E-mail',
+                          hint: 'Seu e-mail',
+                          icone: Icons.mail_outline_rounded,
+                          controller: emailController,
+                        ),
+                        const SizedBox(height: 18),
+                        _campoCadastro(
+                          id: 'senha',
+                          rotulo: 'Senha',
+                          hint: 'Crie uma senha',
+                          icone: Icons.lock_outline_rounded,
+                          controller: senhaController,
+                        ),
+                        const SizedBox(height: 8),
+                        const Text(
+                          'Pelo menos 8 caracteres, com letras e números.',
+                          style: TextStyle(
+                            color: Color(0xFF666879),
+                            fontSize: 13,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          key: const ValueKey('criar-conta-cadastro'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppColors.primary,
+                            foregroundColor: Colors.white,
+                            disabledBackgroundColor: AppColors.primary
+                                .withValues(alpha: 0.65),
+                            disabledForegroundColor: Colors.white,
+                            minimumSize: const Size.fromHeight(56),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 16,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            elevation: 0,
+                            textStyle: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                          onPressed: carregando ? null : fazerCadastro,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              if (carregando) ...[
+                                const ExcludeSemantics(
+                                  child: SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                              ],
+                              Flexible(
+                                child: Text(
+                                  carregando
+                                      ? 'Criando conta...'
+                                      : 'Criar conta',
+                                  textAlign: TextAlign.center,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Wrap(
+                          alignment: WrapAlignment.center,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          spacing: 4,
+                          children: [
+                            const Text(
+                              'Já tem uma conta?',
+                              style: TextStyle(
+                                color: Color(0xFF666879),
+                                fontSize: 14,
+                              ),
+                            ),
+                            TextButton(
+                              key: const ValueKey('entrar-cadastro'),
+                              onPressed: carregando ? null : _irParaLogin,
+                              child: Text(
+                                'Entrar',
+                                style: TextStyle(
+                                  color: carregando
+                                      ? Colors.black38
+                                      : AppColors.primary,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ),
                 ),
-              ],
+              ),
             ),
           ),
         ),
       ),
+    );
+  }
+
+  Widget _campoCadastro({
+    required String id,
+    required String rotulo,
+    required String hint,
+    required IconData icone,
+    required TextEditingController controller,
+  }) {
+    final senha = id == 'senha';
+    final nome = id == 'nome';
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          rotulo,
+          style: const TextStyle(
+            color: AppColors.text,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          key: ValueKey('$id-cadastro'),
+          controller: controller,
+          enabled: !carregando,
+          obscureText: senha && _senhaOculta,
+          keyboardType: senha
+              ? TextInputType.visiblePassword
+              : nome
+              ? TextInputType.name
+              : TextInputType.emailAddress,
+          textCapitalization: nome
+              ? TextCapitalization.sentences
+              : TextCapitalization.none,
+          textInputAction: senha ? TextInputAction.done : TextInputAction.next,
+          autofillHints: [
+            senha
+                ? AutofillHints.newPassword
+                : nome
+                ? AutofillHints.name
+                : AutofillHints.email,
+          ],
+          autocorrect: nome,
+          enableSuggestions: !senha,
+          onSubmitted: senha ? (_) => fazerCadastro() : null,
+          style: const TextStyle(color: AppColors.text, fontSize: 16),
+          decoration: InputDecoration(
+            hintText: hint,
+            hintStyle: const TextStyle(color: Color(0xFF727587)),
+            constraints: const BoxConstraints(minHeight: 56),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+            filled: true,
+            fillColor: const Color(0xFFF6F6F9),
+            prefixIcon: Icon(icone, color: const Color(0xFF666879)),
+            suffixIcon: senha
+                ? IconButton(
+                    tooltip: _senhaOculta ? 'Mostrar senha' : 'Ocultar senha',
+                    onPressed: carregando
+                        ? null
+                        : () => setState(() => _senhaOculta = !_senhaOculta),
+                    icon: Icon(
+                      _senhaOculta
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: const Color(0xFF666879),
+                    ),
+                  )
+                : null,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD1D2DC)),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD1D2DC)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.primary, width: 2),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
