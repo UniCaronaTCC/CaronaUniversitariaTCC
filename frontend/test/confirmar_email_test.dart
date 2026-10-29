@@ -105,8 +105,11 @@ void main() {
     addTearDown(tester.view.resetPhysicalSize);
     addTearDown(tester.view.resetDevicePixelRatio);
     await tester.pumpWidget(
-      const MaterialApp(
-        home: ConfirmarEmailTela(email: 'usuario@example.test'),
+      MaterialApp(
+        home: ConfirmarEmailTela(
+          email: 'usuario@example.test',
+          agora: () => tester.binding.clock.now(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -129,7 +132,7 @@ void main() {
     testWidgets('codigo incompleto "$codigo" nao e enviado', (tester) async {
       await abrir(tester);
       await tester.enterText(find.byType(TextField), codigo);
-      await tester.tap(find.text('CONFIRMAR E-MAIL'));
+      await tester.tap(find.text('Confirmar e-mail'));
       await tester.pumpAndSettle();
       expect(verificacoes, 0);
       expect(find.text('Informe o código de 6 dígitos'), findsOneWidget);
@@ -152,7 +155,7 @@ void main() {
   ) async {
     await abrir(tester);
     await tester.enterText(find.byType(TextField), '001234');
-    await tester.tap(find.text('CONFIRMAR E-MAIL'));
+    await tester.tap(find.text('Confirmar e-mail'));
     await tester.pumpAndSettle();
     expect(verificacoes, 1);
     expect(pedido!['token'], '001234');
@@ -168,14 +171,14 @@ void main() {
     aceitarCodigo = false;
     await abrir(tester);
     await tester.enterText(find.byType(TextField), '123456');
-    await tester.tap(find.text('CONFIRMAR E-MAIL'));
+    await tester.tap(find.text('Confirmar e-mail'));
     await tester.pumpAndSettle();
     expect(find.text('Código inválido ou expirado'), findsOneWidget);
-    expect(find.text('CONFIRMANDO...'), findsNothing);
+    expect(find.text('Confirmando...'), findsNothing);
     expect(find.byType(ConfirmarEmailTela), findsOneWidget);
     aceitarCodigo = true;
     await tester.enterText(find.byType(TextField), '654321');
-    await tester.tap(find.text('CONFIRMAR E-MAIL'));
+    await tester.tap(find.text('Confirmar e-mail'));
     await tester.pumpAndSettle();
     expect(verificacoes, 2);
     expect(pedido!['token'], '654321');
@@ -188,11 +191,11 @@ void main() {
   ) async {
     await abrir(tester);
     await tester.enterText(find.byType(TextField), '123456');
-    expect(find.text('REENVIAR CÓDIGO'), findsNothing);
+    expect(find.text('Reenviar código'), findsNothing);
     await tester.pump(const Duration(seconds: 61));
     await tester.pumpAndSettle();
-    await tester.ensureVisible(find.text('REENVIAR CÓDIGO'));
-    await tester.tap(find.text('REENVIAR CÓDIGO'));
+    await tester.ensureVisible(find.text('Reenviar código'));
+    await tester.tap(find.text('Reenviar código'));
     await tester.pumpAndSettle();
     expect(reenvios, 1);
     expect(find.text('Reenviar código em 60s'), findsOneWidget);
