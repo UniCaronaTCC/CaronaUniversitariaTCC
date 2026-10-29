@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
+import '../widgets/auth_secundario.dart';
 import '../services/auth_service.dart';
 import '../utils/validacao_email.dart';
 import '../utils/validacao_senha.dart';
@@ -147,213 +148,114 @@ class _CadastroTelaState extends State<CadastroTela> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: (constraints.maxHeight - 32).clamp(
-                  0,
-                  double.infinity,
-                ),
-              ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: AutofillGroup(
-                    onDisposeAction: AutofillContextAction.cancel,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: IconButton(
-                            key: const ValueKey('voltar-cadastro'),
-                            tooltip: 'Voltar para o login',
-                            onPressed: carregando ? null : _irParaLogin,
-                            icon: const Icon(Icons.arrow_back_rounded),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Center(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: Image.asset(
-                              'assets/imagens/icone_buscaeu.png',
-                              key: const ValueKey('logo-cadastro'),
-                              width: 96,
-                              height: 96,
-                              semanticLabel: 'Logo BuscaEu',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        const Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'Busca',
-                                style: TextStyle(color: AppColors.text),
-                              ),
-                              TextSpan(
-                                text: 'Eu',
-                                style: TextStyle(color: AppColors.primary),
-                              ),
-                            ],
-                          ),
-                          semanticsLabel: 'BuscaEu',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w700,
-                            height: 1.1,
-                          ),
-                        ),
-                        const SizedBox(height: 28),
-                        const Text(
-                          'Crie sua conta',
-                          style: TextStyle(
-                            color: AppColors.text,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Sua próxima carona começa aqui.',
-                          style: TextStyle(
-                            color: Color(0xFF666879),
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        _campoCadastro(
-                          id: 'nome',
-                          rotulo: 'Nome',
-                          hint: 'Seu nome',
-                          icone: Icons.person_outline_rounded,
-                          controller: nomeController,
-                        ),
-                        const SizedBox(height: 18),
-                        _campoCadastro(
-                          id: 'email',
-                          rotulo: 'E-mail',
-                          hint: 'Seu e-mail',
-                          icone: Icons.mail_outline_rounded,
-                          controller: emailController,
-                        ),
-                        const SizedBox(height: 18),
-                        _campoCadastro(
-                          id: 'senha',
-                          rotulo: 'Senha',
-                          hint: 'Crie uma senha',
-                          icone: Icons.lock_outline_rounded,
-                          controller: senhaController,
-                        ),
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Pelo menos 8 caracteres, com letras e números.',
-                          style: TextStyle(
-                            color: Color(0xFF666879),
-                            fontSize: 13,
-                          ),
-                        ),
-                        const SizedBox(height: 24),
-                        ElevatedButton(
-                          key: const ValueKey('criar-conta-cadastro'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            disabledBackgroundColor: AppColors.primary
-                                .withValues(alpha: 0.65),
-                            disabledForegroundColor: Colors.white,
-                            minimumSize: const Size.fromHeight(56),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 16,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            elevation: 0,
-                            textStyle: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                          onPressed: carregando ? null : fazerCadastro,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              if (carregando) ...[
-                                const ExcludeSemantics(
-                                  child: SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                              ],
-                              Flexible(
-                                child: Text(
-                                  carregando
-                                      ? 'Criando conta...'
-                                      : 'Criar conta',
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-                        Wrap(
-                          alignment: WrapAlignment.center,
-                          crossAxisAlignment: WrapCrossAlignment.center,
-                          spacing: 4,
-                          children: [
-                            const Text(
-                              'Já tem uma conta?',
-                              style: TextStyle(
-                                color: Color(0xFF666879),
-                                fontSize: 14,
-                              ),
-                            ),
-                            TextButton(
-                              key: const ValueKey('entrar-cadastro'),
-                              onPressed: carregando ? null : _irParaLogin,
-                              child: Text(
-                                'Entrar',
-                                style: TextStyle(
-                                  color: carregando
-                                      ? Colors.black38
-                                      : AppColors.primary,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+  Widget build(BuildContext context) => TelaAuthSecundaria(
+    identificador: 'cadastro',
+    titulo: 'Crie sua conta',
+    subtitulo: 'Sua próxima carona começa aqui.',
+    onVoltar: carregando ? null : _irParaLogin,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _campoCadastro(
+          id: 'nome',
+          rotulo: 'Nome',
+          hint: 'Seu nome',
+          icone: Icons.person_outline_rounded,
+          controller: nomeController,
+        ),
+        const SizedBox(height: 18),
+        _campoCadastro(
+          id: 'email',
+          rotulo: 'E-mail',
+          hint: 'Seu e-mail',
+          icone: Icons.mail_outline_rounded,
+          controller: emailController,
+        ),
+        const SizedBox(height: 18),
+        _campoCadastro(
+          id: 'senha',
+          rotulo: 'Senha',
+          hint: 'Crie uma senha',
+          icone: Icons.lock_outline_rounded,
+          controller: senhaController,
+        ),
+        const SizedBox(height: 8),
+        const Text(
+          'Pelo menos 8 caracteres, com letras e números.',
+          style: TextStyle(color: Color(0xFF666879), fontSize: 13),
+        ),
+        const SizedBox(height: 24),
+        ElevatedButton(
+          key: const ValueKey('criar-conta-cadastro'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.65),
+            disabledForegroundColor: Colors.white,
+            minimumSize: const Size.fromHeight(56),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            elevation: 0,
+            textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          onPressed: carregando ? null : fazerCadastro,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (carregando) ...[
+                const ExcludeSemantics(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
                     ),
                   ),
                 ),
+                const SizedBox(width: 12),
+              ],
+              Flexible(
+                child: Text(
+                  carregando ? 'Criando conta...' : 'Criar conta',
+                  textAlign: TextAlign.center,
+                ),
               ),
-            ),
+            ],
           ),
         ),
-      ),
-    );
-  }
+        const SizedBox(height: 16),
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 4,
+          children: [
+            const Text(
+              'Já tem uma conta?',
+              style: TextStyle(color: Color(0xFF666879), fontSize: 14),
+            ),
+            TextButton(
+              key: const ValueKey('entrar-cadastro'),
+              onPressed: carregando ? null : _irParaLogin,
+              child: Text(
+                'Entrar',
+                style: TextStyle(
+                  color: carregando ? Colors.black38 : AppColors.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          ],
+        ),
+      ],
+    ),
+  );
 
   Widget _campoCadastro({
     required String id,

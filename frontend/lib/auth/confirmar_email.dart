@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../config/app_colors.dart';
+import '../widgets/auth_secundario.dart';
 import '../services/email_verificacao_service.dart';
 import 'login.dart';
 
@@ -173,302 +174,190 @@ class _ConfirmarEmailTelaState extends State<ConfirmarEmailTela>
   }
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      body: SafeArea(
-        child: LayoutBuilder(
-          builder: (context, constraints) => SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: ConstrainedBox(
-              constraints: BoxConstraints(
-                minHeight: (constraints.maxHeight - 32).clamp(
-                  0,
-                  double.infinity,
-                ),
+  Widget build(BuildContext context) => TelaAuthSecundaria(
+    identificador: 'confirmacao',
+    titulo: 'Confirme seu e-mail',
+    subtitulo: 'Enviamos um código de 6 dígitos para',
+    onVoltar: _ocupado ? null : _voltarParaLogin,
+    complementoDescricao: Text(
+      widget.email,
+      key: const ValueKey('email-confirmacao'),
+    ),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'Código de confirmação',
+          style: TextStyle(
+            color: AppColors.text,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          key: const ValueKey('codigo-confirmacao'),
+          controller: codigoController,
+          enabled: !_ocupado,
+          keyboardType: TextInputType.number,
+          textInputAction: TextInputAction.done,
+          autofillHints: const [AutofillHints.oneTimeCode],
+          autocorrect: false,
+          enableSuggestions: false,
+          textAlign: TextAlign.center,
+          maxLength: 6,
+          inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+          onSubmitted: (_) => confirmar(),
+          onChanged: (_) {
+            if (_erroCodigo != null) {
+              setState(() => _erroCodigo = null);
+            }
+          },
+          style: const TextStyle(
+            color: AppColors.text,
+            fontSize: 24,
+            fontWeight: FontWeight.w600,
+          ),
+          decoration: InputDecoration(
+            counterText: '',
+            hintText: '000000',
+            hintStyle: const TextStyle(color: Color(0xFF727587)),
+            constraints: const BoxConstraints(minHeight: 64),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+            prefixIcon: const Icon(
+              Icons.mail_outline_rounded,
+              color: Color(0xFF666879),
+            ),
+            filled: true,
+            fillColor: const Color(0xFFF6F6F9),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: _erroCodigo == null
+                    ? const Color(0xFFD1D2DC)
+                    : Theme.of(context).colorScheme.error,
               ),
-              child: Center(
-                child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 420),
-                  child: AutofillGroup(
-                    onDisposeAction: AutofillContextAction.cancel,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: IconButton(
-                            key: const ValueKey('voltar-confirmacao'),
-                            tooltip: 'Voltar para o login',
-                            onPressed: _ocupado ? null : _voltarParaLogin,
-                            icon: const Icon(Icons.arrow_back_rounded),
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Center(
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: Image.asset(
-                              'assets/imagens/icone_buscaeu.png',
-                              key: const ValueKey('logo-confirmacao'),
-                              width: 96,
-                              height: 96,
-                              semanticLabel: 'Logo BuscaEu',
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        const Text.rich(
-                          TextSpan(
-                            children: [
-                              TextSpan(
-                                text: 'Busca',
-                                style: TextStyle(color: AppColors.text),
-                              ),
-                              TextSpan(
-                                text: 'Eu',
-                                style: TextStyle(color: AppColors.primary),
-                              ),
-                            ],
-                          ),
-                          textAlign: TextAlign.center,
-                          semanticsLabel: 'BuscaEu',
-                          style: TextStyle(
-                            fontSize: 36,
-                            fontWeight: FontWeight.w700,
-                            height: 1.1,
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-                        const Text(
-                          'Confirme seu e-mail',
-                          style: TextStyle(
-                            color: AppColors.text,
-                            fontSize: 26,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-                        const Text(
-                          'Enviamos um código de 6 dígitos para',
-                          style: TextStyle(
-                            color: Color(0xFF666879),
-                            fontSize: 16,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.email,
-                          key: const ValueKey('email-confirmacao'),
-                          style: const TextStyle(
-                            color: AppColors.text,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 28),
-                        const Text(
-                          'Código de confirmação',
-                          style: TextStyle(
-                            color: AppColors.text,
-                            fontSize: 16,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        TextField(
-                          key: const ValueKey('codigo-confirmacao'),
-                          controller: codigoController,
-                          enabled: !_ocupado,
-                          keyboardType: TextInputType.number,
-                          textInputAction: TextInputAction.done,
-                          autofillHints: const [AutofillHints.oneTimeCode],
-                          autocorrect: false,
-                          enableSuggestions: false,
-                          textAlign: TextAlign.center,
-                          maxLength: 6,
-                          inputFormatters: [
-                            FilteringTextInputFormatter.digitsOnly,
-                          ],
-                          onSubmitted: (_) => confirmar(),
-                          onChanged: (_) {
-                            if (_erroCodigo != null) {
-                              setState(() => _erroCodigo = null);
-                            }
-                          },
-                          style: const TextStyle(
-                            color: AppColors.text,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          decoration: InputDecoration(
-                            counterText: '',
-                            hintText: '000000',
-                            hintStyle: const TextStyle(
-                              color: Color(0xFF727587),
-                            ),
-                            constraints: const BoxConstraints(minHeight: 64),
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 16,
-                            ),
-                            prefixIcon: const Icon(
-                              Icons.mail_outline_rounded,
-                              color: Color(0xFF666879),
-                            ),
-                            filled: true,
-                            fillColor: const Color(0xFFF6F6F9),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                color: _erroCodigo == null
-                                    ? const Color(0xFFD1D2DC)
-                                    : Theme.of(context).colorScheme.error,
-                              ),
-                            ),
-                            focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(8),
-                              borderSide: BorderSide(
-                                color: _erroCodigo == null
-                                    ? AppColors.primary
-                                    : Theme.of(context).colorScheme.error,
-                                width: 2,
-                              ),
-                            ),
-                          ),
-                        ),
-                        if (_erroCodigo != null) ...[
-                          const SizedBox(height: 8),
-                          Semantics(
-                            liveRegion: true,
-                            child: Text(
-                              _erroCodigo!,
-                              key: const ValueKey('erro-confirmacao'),
-                              style: TextStyle(
-                                color: Theme.of(context).colorScheme.error,
-                                fontSize: 14,
-                              ),
-                            ),
-                          ),
-                        ],
-                        const SizedBox(height: 20),
-                        ElevatedButton(
-                          key: const ValueKey('confirmar-email'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.primary,
-                            foregroundColor: Colors.white,
-                            disabledBackgroundColor: AppColors.primary
-                                .withValues(alpha: 0.65),
-                            disabledForegroundColor: Colors.white,
-                            minimumSize: const Size.fromHeight(56),
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 20,
-                              vertical: 16,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                            elevation: 0,
-                            textStyle: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                          ),
-                          onPressed: _ocupado ? null : confirmar,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              if (confirmando) ...[
-                                const ExcludeSemantics(
-                                  child: SizedBox(
-                                    width: 20,
-                                    height: 20,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                              ],
-                              Flexible(
-                                child: Text(
-                                  confirmando
-                                      ? 'Confirmando...'
-                                      : 'Confirmar e-mail',
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        const Text(
-                          'Não recebeu o código?',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            color: Color(0xFF666879),
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        TextButton(
-                          key: const ValueKey('reenviar-confirmacao'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppColors.primary,
-                          ),
-                          onPressed: _ocupado || segundos > 0 ? null : reenviar,
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(
-                                segundos > 0
-                                    ? Icons.schedule_outlined
-                                    : Icons.refresh_rounded,
-                                size: 20,
-                              ),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  reenviando
-                                      ? 'Reenviando...'
-                                      : segundos > 0
-                                      ? 'Reenviar código em ${segundos}s'
-                                      : 'Reenviar código',
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        TextButton(
-                          key: const ValueKey('login-confirmacao'),
-                          style: TextButton.styleFrom(
-                            foregroundColor: AppColors.primary,
-                            textStyle: Theme.of(context).textTheme.labelLarge
-                                ?.copyWith(fontWeight: FontWeight.w600),
-                          ),
-                          onPressed: _ocupado ? null : _voltarParaLogin,
-                          child: const Text(
-                            'Voltar para o login',
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: _erroCodigo == null
+                    ? AppColors.primary
+                    : Theme.of(context).colorScheme.error,
+                width: 2,
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
+        if (_erroCodigo != null) ...[
+          const SizedBox(height: 8),
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              _erroCodigo!,
+              key: const ValueKey('erro-confirmacao'),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 20),
+        ElevatedButton(
+          key: const ValueKey('confirmar-email'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.65),
+            disabledForegroundColor: Colors.white,
+            minimumSize: const Size.fromHeight(56),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            elevation: 0,
+            textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          onPressed: _ocupado ? null : confirmar,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (confirmando) ...[
+                const ExcludeSemantics(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Flexible(
+                child: Text(
+                  confirmando ? 'Confirmando...' : 'Confirmar e-mail',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        const Text(
+          'Não recebeu o código?',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Color(0xFF666879), fontSize: 14),
+        ),
+        const SizedBox(height: 4),
+        TextButton(
+          key: const ValueKey('reenviar-confirmacao'),
+          style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+          onPressed: _ocupado || segundos > 0 ? null : reenviar,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                segundos > 0 ? Icons.schedule_outlined : Icons.refresh_rounded,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  reenviando
+                      ? 'Reenviando...'
+                      : segundos > 0
+                      ? 'Reenviar código em ${segundos}s'
+                      : 'Reenviar código',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        TextButton(
+          key: const ValueKey('login-confirmacao'),
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            textStyle: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          onPressed: _ocupado ? null : _voltarParaLogin,
+          child: const Text('Voltar para o login', textAlign: TextAlign.center),
+        ),
+      ],
+    ),
+  );
 }

@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:uni_carona/auth/confirmar_email.dart';
 import 'package:uni_carona/auth/login.dart';
@@ -16,6 +17,14 @@ void main() {
   const login = ValueKey('login-confirmacao');
   const sucesso = {'sucesso': true};
   const falha = {'sucesso': false, 'mensagem': 'Código inválido ou expirado'};
+
+  setUpAll(() async {
+    final fontes = FontLoader('Inter');
+    for (final peso in ['Regular', 'Medium', 'SemiBold', 'Bold']) {
+      fontes.addFont(rootBundle.load('assets/fontes/Inter_18pt-$peso.ttf'));
+    }
+    await fontes.load();
+  });
 
   setUp(() {
     final anterior = WidgetController.hitTestWarningShouldBeFatal;
@@ -548,6 +557,7 @@ void main() {
                 expect(
                   rect.bottom,
                   lessThanOrEqualTo(tamanho.height - teclado + 1),
+                  reason: '$chave $rect',
                 );
               }
             }

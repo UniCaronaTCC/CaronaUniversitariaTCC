@@ -246,7 +246,11 @@ void main() {
     controller.text = 'alterado@exemplo.com';
     resposta.complete(sucesso);
     await tester.pumpAndSettle();
-    expect(find.byType(AuthCard), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('formulario-redefinicao')),
+      findsOneWidget,
+    );
+    expect(find.byType(AuthCard), findsNothing);
     expect(find.textContaining('original@exemplo.com'), findsOneWidget);
     expect(find.textContaining('alterado@exemplo.com'), findsNothing);
     expect(find.byType(TextField), findsNWidgets(3));
@@ -275,7 +279,11 @@ void main() {
     await tester.testTextInput.receiveAction(TextInputAction.done);
     await tester.pumpAndSettle();
     expect(chamadas, 1);
-    expect(find.byType(AuthCard), findsOneWidget);
+    expect(
+      find.byKey(const ValueKey('formulario-redefinicao')),
+      findsOneWidget,
+    );
+    expect(find.byType(AuthCard), findsNothing);
     expect(
       tester.testTextInput.log.where(
         (call) =>
@@ -500,7 +508,7 @@ void main() {
               .widget<AbsorbPointer>(
                 find
                     .ancestor(
-                      of: find.byType(AuthCard),
+                      of: find.byKey(const ValueKey('formulario-redefinicao')),
                       matching: find.byType(AbsorbPointer),
                     )
                     .first,

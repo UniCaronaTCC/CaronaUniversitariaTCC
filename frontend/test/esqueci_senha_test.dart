@@ -46,6 +46,9 @@ void main() {
       find.widgetWithText(TextField, 'Confirmar nova senha'),
       'novaSenha123',
     );
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('SALVAR NOVA SENHA'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('SALVAR NOVA SENHA'));
     await tester.pumpAndSettle();
 

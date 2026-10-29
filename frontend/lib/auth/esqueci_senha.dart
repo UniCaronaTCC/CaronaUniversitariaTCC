@@ -5,7 +5,7 @@ import '../config/app_colors.dart';
 import '../services/email_verificacao_service.dart';
 import '../utils/validacao_email.dart';
 import '../utils/validacao_senha.dart';
-import '../widgets/auth_widgets.dart';
+import '../widgets/auth_secundario.dart';
 import 'login.dart';
 
 typedef SolicitarCodigoSenha =
@@ -41,6 +41,8 @@ class _EsqueciSenhaTelaState extends State<EsqueciSenhaTela> {
   bool carregando = false;
   String? _emailRecuperacao;
   String? _erroEmail;
+  bool _novaSenhaOculta = true;
+  bool _confirmacaoOculta = true;
 
   bool get _telaAtiva => mounted && ModalRoute.of(context)?.isCurrent == true;
 
@@ -177,323 +179,326 @@ class _EsqueciSenhaTelaState extends State<EsqueciSenhaTela> {
   }
 
   @override
-  Widget build(BuildContext context) {
-    if (!codigoEnviado) return _solicitarRecuperacao();
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        leading: IconButton(
-          tooltip: 'Voltar para o login',
-          onPressed: carregando ? null : _voltarParaLogin,
-          icon: const Icon(Icons.arrow_back_rounded),
-        ),
-        backgroundColor: AppColors.background,
-        foregroundColor: AppColors.text,
-        elevation: 0,
-      ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: AbsorbPointer(
-              absorbing: carregando,
-              child: AuthCard(
-                children: [
-                  const Icon(Icons.lock_reset, color: Colors.white, size: 46),
-                  const SizedBox(height: 14),
-                  const Text(
-                    'REDEFINIR SENHA',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Digite o código enviado para\n$_emailRecuperacao',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.white70, fontSize: 15),
-                  ),
-                  const SizedBox(height: 28),
-                  TextField(
-                    controller: codigoController,
-                    keyboardType: TextInputType.number,
-                    textAlign: TextAlign.center,
-                    maxLength: 6,
-                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                    style: const TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 4,
-                    ),
-                    decoration: InputDecoration(
-                      counterText: '',
-                      hintText: '000000',
-                      filled: true,
-                      fillColor: Colors.white,
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(28),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  AuthCampoTexto(
-                    hint: 'Nova senha',
-                    icone: Icons.lock_outline,
-                    controller: senhaController,
-                    obscureText: true,
-                  ),
-                  const SizedBox(height: 16),
-                  AuthCampoTexto(
-                    hint: 'Confirmar nova senha',
-                    icone: Icons.lock_outline,
-                    controller: confirmarSenhaController,
-                    obscureText: true,
-                  ),
-                  const SizedBox(height: 22),
-                  AuthBotaoPrincipal(
-                    texto: carregando ? 'SALVANDO...' : 'SALVAR NOVA SENHA',
-                    onPressed: carregando ? null : redefinirSenha,
-                  ),
-                  const SizedBox(height: 10),
-                  TextButton(
-                    onPressed: carregando ? null : solicitarCodigo,
-                    child: const Text(
-                      'Reenviar código',
-                      style: TextStyle(color: Colors.white),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) =>
+      codigoEnviado ? _redefinirSenha() : _solicitarRecuperacao();
 
-  Widget _solicitarRecuperacao() => Scaffold(
-    backgroundColor: AppColors.background,
-    appBar: AppBar(
-      backgroundColor: AppColors.background,
-      foregroundColor: AppColors.text,
-      elevation: 0,
-      scrolledUnderElevation: 0,
-      leading: IconButton(
-        key: const ValueKey('voltar-recuperacao'),
-        tooltip: 'Voltar para o login',
-        onPressed: carregando ? null : _voltarParaLogin,
-        icon: const Icon(Icons.arrow_back_rounded),
-      ),
-    ),
-    body: SafeArea(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 420),
-            child: AutofillGroup(
-              onDisposeAction: AutofillContextAction.cancel,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: Image.asset(
-                        'assets/imagens/icone_buscaeu.png',
-                        key: const ValueKey('logo-recuperacao'),
-                        width: 80,
-                        height: 80,
-                        semanticLabel: 'Logo BuscaEu',
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text.rich(
-                    TextSpan(
-                      children: [
-                        TextSpan(
-                          text: 'Busca',
-                          style: TextStyle(color: AppColors.text),
-                        ),
-                        TextSpan(
-                          text: 'Eu',
-                          style: TextStyle(color: AppColors.primary),
-                        ),
-                      ],
-                    ),
-                    textAlign: TextAlign.center,
-                    semanticsLabel: 'BuscaEu',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w700,
-                      height: 1.1,
-                    ),
-                  ),
-                  const SizedBox(height: 32),
-                  const Text(
-                    'Esqueceu sua senha?',
-                    style: TextStyle(
-                      color: AppColors.text,
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    'Informe seu e-mail para receber um código de recuperação.',
-                    style: TextStyle(color: Color(0xFF666879), fontSize: 16),
-                  ),
-                  const SizedBox(height: 28),
-                  const Text(
-                    'E-mail',
-                    style: TextStyle(
-                      color: AppColors.text,
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  TextField(
-                    key: const ValueKey('email-recuperacao'),
-                    controller: emailController,
-                    enabled: !carregando,
-                    keyboardType: TextInputType.emailAddress,
-                    textInputAction: TextInputAction.done,
-                    autofillHints: const [AutofillHints.email],
-                    autocorrect: false,
-                    enableSuggestions: false,
-                    onSubmitted: (_) => solicitarCodigo(),
-                    onChanged: (_) {
-                      if (_erroEmail != null) {
-                        setState(() => _erroEmail = null);
-                      }
-                    },
-                    style: const TextStyle(color: AppColors.text, fontSize: 16),
-                    decoration: InputDecoration(
-                      hintText: 'Seu e-mail',
-                      hintStyle: const TextStyle(color: Color(0xFF727587)),
-                      constraints: const BoxConstraints(minHeight: 56),
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 16,
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF6F6F9),
-                      prefixIcon: const Icon(
-                        Icons.mail_outline_rounded,
-                        color: Color(0xFF666879),
-                      ),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: _erroEmail == null
-                              ? const Color(0xFFD1D2DC)
-                              : Theme.of(context).colorScheme.error,
-                        ),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        borderSide: BorderSide(
-                          color: _erroEmail == null
-                              ? AppColors.primary
-                              : Theme.of(context).colorScheme.error,
-                          width: 2,
-                        ),
-                      ),
-                    ),
-                  ),
-                  if (_erroEmail != null) ...[
-                    const SizedBox(height: 8),
-                    Semantics(
-                      liveRegion: true,
-                      child: Text(
-                        _erroEmail!,
-                        key: const ValueKey('erro-recuperacao'),
-                        style: TextStyle(
-                          color: Theme.of(context).colorScheme.error,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  ElevatedButton(
-                    key: const ValueKey('solicitar-codigo-senha'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.primary,
-                      foregroundColor: Colors.white,
-                      disabledBackgroundColor: AppColors.primary.withValues(
-                        alpha: 0.65,
-                      ),
-                      disabledForegroundColor: Colors.white,
-                      minimumSize: const Size.fromHeight(56),
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 16,
-                      ),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      elevation: 0,
-                      textStyle: Theme.of(context).textTheme.labelLarge
-                          ?.copyWith(fontSize: 18, fontWeight: FontWeight.w600),
-                    ),
-                    onPressed: carregando ? null : solicitarCodigo,
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        if (carregando) ...[
-                          const ExcludeSemantics(
-                            child: SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                        ],
-                        Flexible(
-                          child: Text(
-                            carregando ? 'Enviando...' : 'Enviar código',
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
-                  TextButton(
-                    key: const ValueKey('login-recuperacao'),
-                    style: TextButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      textStyle: Theme.of(context).textTheme.labelLarge
-                          ?.copyWith(fontWeight: FontWeight.w600),
-                    ),
-                    onPressed: carregando ? null : _voltarParaLogin,
-                    child: const Text(
-                      'Voltar para o login',
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ],
+  Widget _solicitarRecuperacao() => TelaAuthSecundaria(
+    identificador: 'recuperacao',
+    titulo: 'Esqueceu sua senha?',
+    subtitulo: 'Informe seu e-mail para receber um código de recuperação.',
+    onVoltar: carregando ? null : _voltarParaLogin,
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text(
+          'E-mail',
+          style: TextStyle(
+            color: AppColors.text,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          key: const ValueKey('email-recuperacao'),
+          controller: emailController,
+          enabled: !carregando,
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.done,
+          autofillHints: const [AutofillHints.email],
+          autocorrect: false,
+          enableSuggestions: false,
+          onSubmitted: (_) => solicitarCodigo(),
+          onChanged: (_) {
+            if (_erroEmail != null) {
+              setState(() => _erroEmail = null);
+            }
+          },
+          style: const TextStyle(color: AppColors.text, fontSize: 16),
+          decoration: InputDecoration(
+            hintText: 'Seu e-mail',
+            hintStyle: const TextStyle(color: Color(0xFF727587)),
+            constraints: const BoxConstraints(minHeight: 56),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+            filled: true,
+            fillColor: const Color(0xFFF6F6F9),
+            prefixIcon: const Icon(
+              Icons.mail_outline_rounded,
+              color: Color(0xFF666879),
+            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: _erroEmail == null
+                    ? const Color(0xFFD1D2DC)
+                    : Theme.of(context).colorScheme.error,
+              ),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: BorderSide(
+                color: _erroEmail == null
+                    ? AppColors.primary
+                    : Theme.of(context).colorScheme.error,
+                width: 2,
               ),
             ),
           ),
         ),
+        if (_erroEmail != null) ...[
+          const SizedBox(height: 8),
+          Semantics(
+            liveRegion: true,
+            child: Text(
+              _erroEmail!,
+              key: const ValueKey('erro-recuperacao'),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.error,
+                fontSize: 14,
+              ),
+            ),
+          ),
+        ],
+        const SizedBox(height: 24),
+        ElevatedButton(
+          key: const ValueKey('solicitar-codigo-senha'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppColors.primary,
+            foregroundColor: Colors.white,
+            disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.65),
+            disabledForegroundColor: Colors.white,
+            minimumSize: const Size.fromHeight(56),
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+            elevation: 0,
+            textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          onPressed: carregando ? null : solicitarCodigo,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (carregando) ...[
+                const ExcludeSemantics(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+              ],
+              Flexible(
+                child: Text(
+                  carregando ? 'Enviando...' : 'Enviar código',
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 20),
+        TextButton(
+          key: const ValueKey('login-recuperacao'),
+          style: TextButton.styleFrom(
+            foregroundColor: AppColors.primary,
+            textStyle: Theme.of(
+              context,
+            ).textTheme.labelLarge?.copyWith(fontWeight: FontWeight.w600),
+          ),
+          onPressed: carregando ? null : _voltarParaLogin,
+          child: const Text('Voltar para o login', textAlign: TextAlign.center),
+        ),
+      ],
+    ),
+  );
+
+  Widget _redefinirSenha() => TelaAuthSecundaria(
+    identificador: 'redefinicao',
+    titulo: 'Crie uma nova senha',
+    subtitulo: 'Digite o código enviado para',
+    complementoDescricao: Text(
+      _emailRecuperacao!,
+      key: const ValueKey('email-redefinicao'),
+    ),
+    onVoltar: carregando ? null : _voltarParaLogin,
+    child: AbsorbPointer(
+      absorbing: carregando,
+      child: Column(
+        key: const ValueKey('formulario-redefinicao'),
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _campoRedefinicao(
+            rotulo: 'Código de recuperação',
+            hint: '000000',
+            controller: codigoController,
+            codigo: true,
+          ),
+          const SizedBox(height: 18),
+          _campoRedefinicao(
+            rotulo: 'Nova senha',
+            hint: 'Nova senha',
+            controller: senhaController,
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Pelo menos 8 caracteres, com letras e números.',
+            style: TextStyle(color: Color(0xFF666879), fontSize: 13),
+          ),
+          const SizedBox(height: 18),
+          _campoRedefinicao(
+            rotulo: 'Confirmar nova senha',
+            hint: 'Confirmar nova senha',
+            controller: confirmarSenhaController,
+            confirmacao: true,
+          ),
+          const SizedBox(height: 24),
+          ElevatedButton(
+            key: const ValueKey('salvar-nova-senha'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              disabledBackgroundColor: AppColors.primary.withValues(
+                alpha: 0.65,
+              ),
+              disabledForegroundColor: Colors.white,
+              minimumSize: const Size.fromHeight(56),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0,
+              textStyle: Theme.of(context).textTheme.labelLarge?.copyWith(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            onPressed: carregando ? null : redefinirSenha,
+            child: Text(
+              carregando ? 'SALVANDO...' : 'SALVAR NOVA SENHA',
+              textAlign: TextAlign.center,
+            ),
+          ),
+          const SizedBox(height: 10),
+          TextButton(
+            style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+            onPressed: carregando ? null : solicitarCodigo,
+            child: const Text('Reenviar código', textAlign: TextAlign.center),
+          ),
+        ],
       ),
     ),
   );
+
+  Widget _campoRedefinicao({
+    required String rotulo,
+    required String hint,
+    required TextEditingController controller,
+    bool codigo = false,
+    bool confirmacao = false,
+  }) {
+    final oculta = confirmacao ? _confirmacaoOculta : _novaSenhaOculta;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          rotulo,
+          style: const TextStyle(
+            color: AppColors.text,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          key: ValueKey(
+            codigo
+                ? 'codigo-recuperacao'
+                : confirmacao
+                ? 'confirmar-nova-senha'
+                : 'nova-senha-recuperacao',
+          ),
+          controller: controller,
+          enabled: !carregando,
+          obscureText: !codigo && oculta,
+          keyboardType: codigo
+              ? TextInputType.number
+              : TextInputType.visiblePassword,
+          textInputAction: confirmacao
+              ? TextInputAction.done
+              : TextInputAction.next,
+          autofillHints: [
+            codigo ? AutofillHints.oneTimeCode : AutofillHints.newPassword,
+          ],
+          autocorrect: false,
+          enableSuggestions: false,
+          textAlign: codigo ? TextAlign.center : TextAlign.start,
+          maxLength: codigo ? 6 : null,
+          inputFormatters: codigo
+              ? [FilteringTextInputFormatter.digitsOnly]
+              : null,
+          onSubmitted: confirmacao ? (_) => redefinirSenha() : null,
+          style: TextStyle(color: AppColors.text, fontSize: codigo ? 24 : 16),
+          decoration: InputDecoration(
+            hintText: hint,
+            counterText: '',
+            hintStyle: const TextStyle(color: Color(0xFF727587)),
+            constraints: BoxConstraints(minHeight: codigo ? 64 : 56),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 16,
+            ),
+            prefixIcon: Icon(
+              codigo ? Icons.mail_outline_rounded : Icons.lock_outline_rounded,
+              color: const Color(0xFF666879),
+            ),
+            suffixIcon: codigo
+                ? null
+                : IconButton(
+                    tooltip: oculta ? 'Mostrar senha' : 'Ocultar senha',
+                    onPressed: carregando
+                        ? null
+                        : () => setState(() {
+                            if (confirmacao) {
+                              _confirmacaoOculta = !_confirmacaoOculta;
+                            } else {
+                              _novaSenhaOculta = !_novaSenhaOculta;
+                            }
+                          }),
+                    icon: Icon(
+                      oculta
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: const Color(0xFF666879),
+                    ),
+                  ),
+            filled: true,
+            fillColor: const Color(0xFFF6F6F9),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: Color(0xFFD1D2DC)),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.primary, width: 2),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
