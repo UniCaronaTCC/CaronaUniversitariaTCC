@@ -432,6 +432,10 @@ void main() {
                 idInstituicao: 5,
                 nome: 'Universidade Federal com Nome Extenso',
                 campus: 'Campus de Engenharia e Tecnologia da Informação',
+                rotuloUnidade:
+                    'Unidade de Engenharia e Tecnologia da Informação',
+                enderecoCompleto:
+                    'Avenida Universitária Professor Antônio José da Silva, 12345 - Bairro Universitário - CEP 12345-678',
                 cidade: CidadeCampus('São José do Vale do Rio Preto', 'RJ'),
                 ponto: LatLng(-22.15, -42.92),
               ),

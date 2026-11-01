@@ -119,4 +119,165 @@ void main() {
       startsWith('Universidade Estadual Paulista'),
     );
   });
+
+  test(
+    'metadados mudam a apresentação sem substituir o nome interno ou ponto',
+    () {
+      final campus = CampusDestino.fromJson({
+        ...campusJson(),
+        'rotuloUnidade': '  Odontologia - José Bonifácio  ',
+        'enderecoCompleto': '  Rua José Bonifácio, 1193 - Vila Mendonça  ',
+      });
+      expect(campus.campus, 'Araçatuba - Odontologia');
+      expect(campus.titulo, 'UNESP · Odontologia - José Bonifácio');
+      expect(
+        campus.descricaoEndereco,
+        'Rua José Bonifácio, 1193 - Vila Mendonça · Araçatuba, SP',
+      );
+      expect(campus.localizacao!.ponto, const LatLng(-21.2, -50.4));
+      expect(campus.localizacao!.endereco, contains('1193'));
+      expect(campus.localizacao!.exigeAjusteNoMapa, isFalse);
+      expect(
+        LocalizacaoSelecionada.fromJson(campus.localizacao!.toJson()).toJson(),
+        campus.localizacao!.toJson(),
+      );
+    },
+  );
+
+  for (final metadados in [
+    <String, dynamic>{},
+    {'rotuloUnidade': null, 'enderecoCompleto': null},
+    {'rotuloUnidade': '', 'enderecoCompleto': '   '},
+  ]) {
+    test(
+      'mantém compatibilidade com metadados ausentes ou vazios: $metadados',
+      () {
+        final campus = CampusDestino.fromJson({...campusJson(), ...metadados});
+        expect(campus.rotuloUnidade, isNull);
+        expect(campus.enderecoCompleto, isNull);
+        expect(campus.titulo, 'UNESP · Araçatuba - Odontologia');
+        expect(campus.descricaoEndereco, 'Araçatuba, SP');
+        expect(campus.localizacao!.endereco, 'Araçatuba, SP, Brasil');
+      },
+    );
+  }
+
+  for (final termo in [
+    'jose BONIFACIO',
+    '1193',
+    'vila mendonca',
+    'unesp 1193',
+  ]) {
+    test('filtra também por unidade, rua, bairro e número: $termo', () {
+      final campus = CampusDestino.fromJson({
+        ...campusJson(),
+        'rotuloUnidade': 'Odontologia - José Bonifácio',
+        'enderecoCompleto': 'Rua José Bonifácio, 1193 - Vila Mendonça',
+      });
+      expect(campus.corresponde(termo), isTrue);
+      expect(campus.corresponde('1194'), isFalse);
+    });
+  }
+
+  test('endereço sem coordenadas não fabrica localização', () {
+    final campus = CampusDestino.fromJson({
+      ...campusJson(),
+      'latitude': null,
+      'longitude': null,
+      'enderecoCompleto': 'Rua José Bonifácio, 1193',
+    });
+    expect(campus.localizacao, isNull);
+  });
+
+  test('reconhece título antigo e novo sem unir unidades afastadas', () {
+    final antigo = CampusDestino.fromJson(campusJson());
+    final novo = CampusDestino.fromJson({
+      ...campusJson(),
+      'rotuloUnidade': 'Odontologia - José Bonifácio',
+    });
+    expect(novo.mesmoLocal(antigo.localizacao!), isTrue);
+    expect(novo.mesmoLocal(novo.localizacao!), isTrue);
+    expect(
+      novo.mesmoLocal(
+        const LocalizacaoSelecionada(
+          ponto: LatLng(-21.3, -50.4),
+          nome: 'UNESP · Odontologia - José Bonifácio',
+          endereco: 'Outro campus',
+        ),
+      ),
+      isFalse,
+    );
+    expect(
+      novo.mesmoLocal(
+        const LocalizacaoSelecionada(
+          ponto: LatLng(-21.2, -50.4),
+          nome: 'Outra faculdade',
+          endereco: 'Rua José Bonifácio, 1193',
+        ),
+      ),
+      isFalse,
+    );
+  });
+
+  for (final metadados in [
+    {'rotuloUnidade': 10},
+    {'enderecoCompleto': <String>[]},
+    {'rotuloUnidade': 'x' * 151},
+    {'enderecoCompleto': 'x' * 501},
+  ]) {
+    test(
+      'rejeita metadados inválidos sem tratá-los como endereço: $metadados',
+      () {
+        expect(
+          () => CampusDestino.fromJson({...campusJson(), ...metadados}),
+          throwsFormatException,
+        );
+      },
+    );
+  }
+
+  test('aceita os limites de tamanho dos metadados', () {
+    final campus = CampusDestino.fromJson({
+      ...campusJson(),
+      'rotuloUnidade': 'x' * 150,
+      'enderecoCompleto': 'x' * 500,
+    });
+    expect(campus.rotuloUnidade, hasLength(150));
+    expect(campus.enderecoCompleto, hasLength(500));
+  });
+
+  test(
+    'endereço extenso permanece na lista sem ultrapassar o limite da carona',
+    () {
+      final campus = CampusDestino.fromJson({
+        ...campusJson(),
+        'rotuloUnidade': 'Odontologia - José Bonifácio',
+        'enderecoCompleto': 'x' * 500,
+      });
+      expect(campus.descricaoEndereco, startsWith('x' * 500));
+      expect(campus.localizacao!.endereco, 'Araçatuba, SP, Brasil');
+      expect(
+        campus.localizacao!.descricaoCompleta.length,
+        lessThanOrEqualTo(255),
+      );
+      expect(campus.localizacao!.ponto, const LatLng(-21.2, -50.4));
+    },
+  );
+
+  test('inclui endereço até o limite exato de 255 caracteres da carona', () {
+    final original = CampusDestino.fromJson(campusJson());
+    final fixos =
+        original.titulo.length + 3 + ' · Araçatuba, SP, Brasil'.length;
+    for (final excesso in [0, 1]) {
+      final campus = CampusDestino.fromJson({
+        ...campusJson(),
+        'enderecoCompleto': 'x' * (255 - fixos + excesso),
+      });
+      expect(
+        campus.localizacao!.descricaoCompleta.length,
+        lessThanOrEqualTo(255),
+      );
+      expect(campus.localizacao!.endereco.startsWith('x'), excesso == 0);
+    }
+  });
 }

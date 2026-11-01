@@ -19,7 +19,8 @@ Nao inclui seed, novos campi, troca de nomes internos ou ajuste de coordenadas.
    antes de publicar ou iniciar o backend desta branch contra o banco compartilhado.
 2. Conferir as duas colunas opcionais e a preservacao dos registros existentes.
 3. Publicar o backend. Aplicativos antigos ignoram os dois campos adicionais.
-4. Em outra etapa, carregar somente enderecos/pontos aprovados e adaptar a lista.
+4. A lista e a carga municipal foram preparadas na etapa seguinte. Ver
+   `destinos-campi-aracatuba.md` antes de aplicar os dados e publicar o APK.
 
 A migration nao e executada automaticamente pelo backend (`synchronize: false`).
 O script de estrutura atende bancos novos; nao substitui a migration para bancos

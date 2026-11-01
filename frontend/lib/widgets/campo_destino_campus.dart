@@ -278,9 +278,11 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
       _selecionar(local);
       return;
     }
-    final termo =
-        '${campus.sigla?.trim().isNotEmpty == true ? campus.sigla : campus.nome} '
-        '${campus.campus} ${campus.cidade.cidade} ${campus.cidade.uf}';
+    final endereco = campus.enderecoCompleto?.trim();
+    final termo = endereco?.isNotEmpty == true
+        ? '$endereco, ${campus.cidade.cidade} ${campus.cidade.uf}'
+        : '${campus.sigla?.trim().isNotEmpty == true ? campus.sigla : campus.nome} '
+              '${campus.campus} ${campus.cidade.cidade} ${campus.cidade.uf}';
     widget.controller.text = termo;
     widget.onChanged?.call(termo);
     setState(() {
@@ -688,10 +690,7 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
               const SizedBox(height: 12),
               Text(campus.titulo, style: tituloEstilo),
               const SizedBox(height: 4),
-              Text(
-                '${campus.cidade.cidade}, ${campus.cidade.uf}',
-                style: subtituloEstilo,
-              ),
+              Text(campus.descricaoEndereco, style: subtituloEstilo),
               const SizedBox(height: 16),
               const Divider(height: 1, color: Color(0xFFE9E9EF)),
             ],
@@ -711,8 +710,9 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
       title: Text(campus.titulo),
       titleTextStyle: tituloEstilo,
       subtitle: Text(
-        widget.telaCompleta
-            ? '${campus.cidade.cidade}, ${campus.cidade.uf}'
+        widget.telaCompleta ||
+                campus.enderecoCompleto?.trim().isNotEmpty == true
+            ? campus.descricaoEndereco
             : '${campus.cidade.cidade}/${campus.cidade.uf}',
       ),
       subtitleTextStyle: subtituloEstilo,

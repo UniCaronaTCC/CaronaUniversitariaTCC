@@ -78,6 +78,8 @@ class CampusDestino {
   final String nome;
   final String? sigla;
   final String campus;
+  final String? rotuloUnidade;
+  final String? enderecoCompleto;
   final CidadeCampus cidade;
   final LatLng? ponto;
 
@@ -89,31 +91,50 @@ class CampusDestino {
     required this.cidade,
     this.sigla,
     this.ponto,
+    this.rotuloUnidade,
+    this.enderecoCompleto,
   });
 
+  String get _nomeInstituicao =>
+      sigla?.trim().isNotEmpty == true ? sigla!.trim() : nome;
+
+  String get _tituloOriginal => '$_nomeInstituicao · $campus';
+
   String get titulo =>
-      '${sigla?.trim().isNotEmpty == true ? sigla : nome} · $campus';
+      '$_nomeInstituicao · ${rotuloUnidade?.trim().isNotEmpty == true ? rotuloUnidade!.trim() : campus}';
+
+  String get descricaoEndereco => [
+    if (enderecoCompleto?.trim().isNotEmpty == true) enderecoCompleto!.trim(),
+    '${cidade.cidade}, ${cidade.uf}',
+  ].join(' · ');
 
   bool corresponde(String termo) {
     final palavras = normalizarDestino(
       termo,
     ).split(' ').where((p) => p.isNotEmpty);
     final texto = normalizarDestino(
-      '$nome ${sigla ?? ''} $campus ${cidade.cidade} ${cidade.uf}',
+      '$nome ${sigla ?? ''} $campus ${rotuloUnidade ?? ''} '
+      '${enderecoCompleto ?? ''} ${cidade.cidade} ${cidade.uf}',
     );
     return palavras.every(texto.contains);
   }
 
-  LocalizacaoSelecionada? get localizacao => ponto == null
-      ? null
-      : LocalizacaoSelecionada(
-          ponto: ponto!,
-          nome: titulo,
-          endereco: '${cidade.cidade}, ${cidade.uf}, Brasil',
-          cidade: cidade.cidade,
-          estado: CidadeCampus.estados[cidade.uf],
-          pais: 'Brasil',
-        );
+  LocalizacaoSelecionada? get localizacao {
+    if (ponto == null) return null;
+    final endereco = '$descricaoEndereco, Brasil';
+    // A carona aceita 255 caracteres para nome + separador + endereco.
+    final cabeNaCarona = titulo.length + 3 + endereco.length <= 255;
+    return LocalizacaoSelecionada(
+      ponto: ponto!,
+      nome: titulo,
+      endereco: cabeNaCarona
+          ? endereco
+          : '${cidade.cidade}, ${cidade.uf}, Brasil',
+      cidade: cidade.cidade,
+      estado: CidadeCampus.estados[cidade.uf],
+      pais: 'Brasil',
+    );
+  }
 
   bool mesmoLocal(LocalizacaoSelecionada local) {
     if (ponto == null) return false;
@@ -124,6 +145,7 @@ class CampusDestino {
       nome,
       sigla ?? '',
       titulo,
+      _tituloOriginal,
     ].map((n) => normalizarDestino(n).replaceAll(RegExp(r'[^a-z0-9]'), ''));
     return nomeLocal.isNotEmpty &&
         nomes.contains(nomeLocal) &&
@@ -137,6 +159,15 @@ class CampusDestino {
         throw const FormatException('Campus inválido');
       }
       return valor.trim();
+    }
+
+    String? textoOpcional(String campo, int limite) {
+      final valor = json[campo];
+      if (valor == null) return null;
+      if (valor is! String || valor.length > limite) {
+        throw const FormatException('Metadados de campus inválidos');
+      }
+      return valor.trim().isEmpty ? null : valor.trim();
     }
 
     final id = json['idCampus'];
@@ -172,6 +203,8 @@ class CampusDestino {
       nome: texto('nome'),
       sigla: sigla as String?,
       campus: texto('campus'),
+      rotuloUnidade: textoOpcional('rotuloUnidade', 150),
+      enderecoCompleto: textoOpcional('enderecoCompleto', 500),
       cidade: CidadeCampus(texto('municipio'), uf),
       ponto: ponto,
     );

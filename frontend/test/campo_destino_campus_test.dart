@@ -288,6 +288,118 @@ void main() {
     await fechar(tester);
   });
 
+  for (final escala in [1.0, 2.0]) {
+    testWidgets(
+      'formulário exibe endereço e seleciona campus diretamente com fonte $escala',
+      (tester) async {
+        const campus = CampusDestino(
+          idCampus: 589,
+          idInstituicao: 588,
+          nome: 'Centro Universitário Toledo',
+          sigla: 'UniToledo Wyden',
+          campus: 'Araçatuba',
+          rotuloUnidade: 'Jardim Sumaré',
+          enderecoCompleto: 'Rua Antônio Afonso de Toledo, 595 - Jardim Sumaré',
+          cidade: cidadeA,
+          ponto: LatLng(-21.21307520, -50.43053199),
+        );
+        catalogo.resposta = (_) async => [campus];
+        LocalizacaoSelecionada? escolhido;
+        await montar(
+          tester,
+          controller: controller,
+          catalogo: catalogo,
+          enderecos: enderecos,
+          escala: escala,
+          selecionar: (local) => escolhido = local,
+        );
+        expect(find.text(campus.titulo), findsOneWidget);
+        expect(find.text(campus.descricaoEndereco), findsOneWidget);
+        await tester.ensureVisible(find.text(campus.titulo));
+        await tester.tap(find.text(campus.titulo));
+        await tester.pumpAndSettle();
+        expect(escolhido!.ponto, campus.ponto);
+        expect(escolhido!.endereco, contains('595'));
+        expect(escolhido!.nome, campus.titulo);
+        expect(enderecos.buscas, isEmpty);
+        expect(tester.takeException(), isNull);
+        await fechar(tester);
+      },
+    );
+  }
+
+  testWidgets('filtra unidades distintas por rua e número sem misturá-las', (
+    tester,
+  ) async {
+    const primeiro = CampusDestino(
+      idCampus: 10,
+      idInstituicao: 1,
+      nome: 'Universidade Estadual',
+      sigla: 'UE',
+      campus: 'Campus I',
+      rotuloUnidade: 'Centro',
+      enderecoCompleto: 'Rua José Bonifácio, 1193',
+      cidade: cidadeA,
+      ponto: LatLng(-21.2, -50.4),
+    );
+    const segundo = CampusDestino(
+      idCampus: 11,
+      idInstituicao: 1,
+      nome: 'Universidade Estadual',
+      sigla: 'UE',
+      campus: 'Campus II',
+      rotuloUnidade: 'Rodovia',
+      enderecoCompleto: 'Rodovia Marechal Rondon, km 527',
+      cidade: cidadeA,
+      ponto: LatLng(-21.25, -50.42),
+    );
+    catalogo.resposta = (_) async => [primeiro, segundo];
+    await montar(
+      tester,
+      controller: controller,
+      catalogo: catalogo,
+      enderecos: enderecos,
+    );
+    expect(find.text(primeiro.titulo), findsOneWidget);
+    expect(find.text(segundo.titulo), findsOneWidget);
+    await tester.enterText(find.byType(TextField), 'jose 1193');
+    await tester.pump();
+    expect(find.text(primeiro.titulo), findsOneWidget);
+    expect(find.text(segundo.titulo), findsNothing);
+    await fechar(tester);
+  });
+
+  testWidgets(
+    'sem ponto usa o endereço cadastrado na busca e continua pedindo confirmação',
+    (tester) async {
+      const campus = CampusDestino(
+        idCampus: 1707,
+        idInstituicao: 1706,
+        nome: 'Faculdade de Tecnologia',
+        sigla: 'Fatec',
+        campus: 'Araçatuba',
+        rotuloUnidade: 'Prof. Fernando Amaral',
+        enderecoCompleto: 'Avenida Prestes Maia, 1764',
+        cidade: cidadeA,
+      );
+      catalogo.resposta = (_) async => [campus];
+      var selecionou = false;
+      await montar(
+        tester,
+        controller: controller,
+        catalogo: catalogo,
+        enderecos: enderecos,
+        selecionar: (_) => selecionou = true,
+      );
+      await tester.tap(find.text(campus.titulo));
+      await tester.pumpAndSettle();
+      expect(enderecos.buscas, ['Avenida Prestes Maia, 1764, Araçatuba SP']);
+      expect(selecionou, isFalse);
+      expect(find.textContaining('Confirme o endereço'), findsOneWidget);
+      await fechar(tester);
+    },
+  );
+
   testWidgets('filtra desde a primeira letra e restaura ao apagar', (
     tester,
   ) async {
