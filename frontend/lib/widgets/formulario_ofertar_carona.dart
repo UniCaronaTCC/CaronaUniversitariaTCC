@@ -9,6 +9,8 @@ import 'campo_recorrencia_carona.dart';
 import 'campo_texto_carona.dart';
 import 'seletor_quantidade_passageiros.dart';
 import 'campo_destino_campus.dart';
+import 'visual_buscaeu.dart';
+import 'pontos_encontro_oferta.dart';
 
 class FormularioOfertarCarona extends StatelessWidget {
   final String titulo;
@@ -30,6 +32,7 @@ class FormularioOfertarCarona extends StatelessWidget {
   final bool pontosEmbarqueEditaveis;
   final bool possuiVeiculo;
   final bool mostrarRecorrencia;
+  final bool mostrarTitulo;
 
   final List<String> diasSelecionados;
   final List<PontoEmbarque> pontosEmbarque;
@@ -54,6 +57,7 @@ class FormularioOfertarCarona extends StatelessWidget {
     this.textoBotao = 'OFERTAR CARONA',
     this.textoCarregando = 'ENVIANDO...',
     this.mostrarRecorrencia = true,
+    this.mostrarTitulo = true,
     required this.destinoController,
     required this.dataController,
     required this.horarioController,
@@ -89,23 +93,21 @@ class FormularioOfertarCarona extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          titulo,
-          style: const TextStyle(
-            color: AppColors.text,
-            fontSize: 30,
-            fontWeight: FontWeight.bold,
+        if (mostrarTitulo)
+          Text(
+            titulo,
+            style: const TextStyle(
+              color: AppColors.text,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
           ),
-        ),
 
         const SizedBox(height: 8),
 
-        Text(
-          descricao,
-          style: const TextStyle(color: AppColors.text, fontSize: 18),
-        ),
+        Text(descricao, style: VisualBuscaEu.descricao),
 
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
 
         if (!possuiVeiculo) ...[
           Container(
@@ -145,6 +147,7 @@ class FormularioOfertarCarona extends StatelessWidget {
         // O destino pode ser pesquisado ou marcado direto no mapa.
         if (edicaoLimitada)
           CampoTextoCarona(
+            visualAtualizado: true,
             label: 'Destino',
             icone: Icons.place_outlined,
             controller: destinoController,
@@ -157,6 +160,7 @@ class FormularioOfertarCarona extends StatelessWidget {
             children: [
               Expanded(
                 child: CampoDestinoCampus(
+                  visualAtualizado: true,
                   controller: destinoController,
                   onChanged: onDestinoChanged,
                   onSelecionado: onDestinoSelecionado,
@@ -176,31 +180,38 @@ class FormularioOfertarCarona extends StatelessWidget {
 
         const SizedBox(height: 24),
 
-        _secaoPontosEmbarque(),
+        PontosEncontroOferta(
+          pontos: pontosEmbarque,
+          editaveis: pontosEmbarqueEditaveis,
+          edicaoLimitada: edicaoLimitada,
+          onAdicionar: onAdicionarPontoEmbarque,
+          onRemover: onRemoverPontoEmbarque,
+        ),
 
         const SizedBox(height: 24),
 
-        CampoTextoCarona(
-          label: caronaRecorrente ? 'Repetir a partir de' : 'Data',
-          icone: Icons.calendar_today_outlined,
-          controller: dataController,
-          somenteLeitura: true,
-          onTap: edicaoLimitada ? null : onSelecionarData,
-          suffixIcon: Icon(
-            edicaoLimitada ? Icons.lock_outline : Icons.arrow_drop_down,
+        CamposLadoALado(
+          primeiro: CampoTextoCarona(
+            visualAtualizado: true,
+            label: caronaRecorrente ? 'Repetir a partir de' : 'Data',
+            icone: Icons.calendar_today_outlined,
+            controller: dataController,
+            somenteLeitura: true,
+            onTap: edicaoLimitada ? null : onSelecionarData,
+            suffixIcon: Icon(
+              edicaoLimitada ? Icons.lock_outline : Icons.arrow_drop_down,
+            ),
           ),
-        ),
-
-        const SizedBox(height: 16),
-
-        CampoTextoCarona(
-          label: 'Horário do primeiro encontro',
-          icone: Icons.access_time,
-          controller: horarioController,
-          somenteLeitura: true,
-          onTap: edicaoLimitada ? null : onSelecionarHorario,
-          suffixIcon: Icon(
-            edicaoLimitada ? Icons.lock_outline : Icons.arrow_drop_down,
+          segundo: CampoTextoCarona(
+            visualAtualizado: true,
+            label: 'Horário do primeiro encontro',
+            icone: Icons.access_time,
+            controller: horarioController,
+            somenteLeitura: true,
+            onTap: edicaoLimitada ? null : onSelecionarHorario,
+            suffixIcon: Icon(
+              edicaoLimitada ? Icons.lock_outline : Icons.arrow_drop_down,
+            ),
           ),
         ),
 
@@ -215,6 +226,7 @@ class FormularioOfertarCarona extends StatelessWidget {
         const SizedBox(height: 16),
 
         CampoTextoCarona(
+          visualAtualizado: true,
           label: 'Valor por passageiro',
           icone: Icons.payments_outlined,
           controller: valorController,
@@ -237,6 +249,7 @@ class FormularioOfertarCarona extends StatelessWidget {
         const SizedBox(height: 16),
 
         CampoTextoCarona(
+          visualAtualizado: true,
           label: 'Observações',
           icone: Icons.notes,
           controller: observacoesController,
@@ -246,168 +259,12 @@ class FormularioOfertarCarona extends StatelessWidget {
         const SizedBox(height: 32),
 
         BotaoAcaoHome(
+          estilo: EstiloBotaoAcaoHome.principal,
+          carregando: enviandoCarona,
           texto: enviandoCarona ? textoCarregando : textoBotao,
           icone: enviandoCarona ? Icons.hourglass_top : Icons.groups_outlined,
           onPressed: enviandoCarona || !possuiVeiculo ? null : onOfertarCarona,
         ),
-      ],
-    );
-  }
-
-  Widget _secaoPontosEmbarque() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Pontos de encontro',
-          style: TextStyle(
-            color: AppColors.text,
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-
-        const SizedBox(height: 6),
-
-        Text(
-          edicaoLimitada
-              ? 'Locais de embarque confirmados.'
-              : 'Adicione os locais onde os passageiros poderão embarcar.',
-          style: TextStyle(color: Colors.black54, fontSize: 14),
-        ),
-
-        const SizedBox(height: 14),
-
-        if (pontosEmbarque.isEmpty)
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.06),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(
-                color: AppColors.primary.withValues(alpha: 0.20),
-              ),
-            ),
-            child: const Row(
-              children: [
-                Icon(Icons.location_off_outlined, color: Colors.black45),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    'Nenhum ponto de encontro adicionado.',
-                    style: TextStyle(color: Colors.black54),
-                  ),
-                ),
-              ],
-            ),
-          )
-        else
-          ...List.generate(pontosEmbarque.length, (indice) {
-            final ponto = pontosEmbarque[indice];
-
-            final nome = ponto.nome?.trim();
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
-                decoration: BoxDecoration(
-                  color: AppColors.primary.withValues(alpha: 0.06),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: AppColors.primary.withValues(alpha: 0.18),
-                  ),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Container(
-                      width: 36,
-                      height: 36,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: AppColors.primary.withValues(alpha: 0.12),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Text(
-                        '${indice + 1}',
-                        style: const TextStyle(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(width: 12),
-
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            nome != null && nome.isNotEmpty
-                                ? nome
-                                : 'Ponto de encontro ${indice + 1}',
-                            style: const TextStyle(
-                              color: AppColors.text,
-                              fontSize: 15,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-
-                          const SizedBox(height: 4),
-
-                          Text(
-                            ponto.endereco,
-                            style: const TextStyle(
-                              color: Colors.black54,
-                              fontSize: 13,
-                              height: 1.3,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    if (pontosEmbarqueEditaveis && !edicaoLimitada)
-                      IconButton(
-                        tooltip: 'Remover ponto',
-                        onPressed: () => onRemoverPontoEmbarque(indice),
-                        icon: const Icon(
-                          Icons.delete_outline,
-                          color: Colors.redAccent,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            );
-          }),
-
-        const SizedBox(height: 4),
-
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: pontosEmbarqueEditaveis && !edicaoLimitada
-                ? onAdicionarPontoEmbarque
-                : null,
-            icon: const Icon(Icons.add_location_alt_outlined),
-            label: const Text('ADICIONAR PONTO DE ENCONTRO'),
-          ),
-        ),
-
-        if (!pontosEmbarqueEditaveis) ...[
-          const SizedBox(height: 8),
-          Text(
-            edicaoLimitada
-                ? 'Pontos mantidos para os passageiros confirmados.'
-                : 'A edição dos pontos de embarque será adicionada depois.',
-            style: const TextStyle(color: Colors.black45, fontSize: 12),
-          ),
-        ],
       ],
     );
   }

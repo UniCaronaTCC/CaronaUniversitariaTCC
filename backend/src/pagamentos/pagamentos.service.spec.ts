@@ -107,6 +107,18 @@ describe('PagamentosService', () => {
     );
   });
 
+  it('nao cria nova cobranca para corrida encerrada por tempo', async () => {
+    consultaSolicitacao.getOne.mockResolvedValue({
+      ...solicitacaoAceita,
+      carona: { ...solicitacaoAceita.carona, status: 'ENCERRADA_POR_TEMPO' },
+    });
+    await expect(service.criarOuObterPix(10, 1)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(abacatePayService.criarPix).not.toHaveBeenCalled();
+    expect(pagamentosTransacaoRepository.save).not.toHaveBeenCalled();
+  });
+
   afterEach(() => {
     jest.useRealTimers();
   });

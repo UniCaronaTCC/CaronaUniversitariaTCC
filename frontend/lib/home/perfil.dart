@@ -4,7 +4,6 @@ import 'package:image_picker/image_picker.dart';
 import '../auth/login.dart';
 import '../config/app_colors.dart';
 import '../models/instituicao.dart';
-import '../models/verificacao_cnh.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/avaliacao_service.dart';
 import '../services/auth_service.dart';
@@ -13,7 +12,8 @@ import '../services/solicitacao_service.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/campo_busca_instituicao.dart';
 import '../widgets/componentes_padrao.dart';
-import '../widgets/foto_perfil.dart';
+import '../widgets/conteudo_perfil_buscaeu.dart';
+import '../widgets/visual_buscaeu.dart';
 import '../widgets/dialogo_veiculo.dart';
 import 'avaliacoes_recebidas.dart';
 import 'historico_caronas.dart';
@@ -448,310 +448,54 @@ class _PerfilTelaState extends State<PerfilTela> {
 
   @override
   Widget build(BuildContext context) {
-    final cnh = VerificacaoCnh.fromPerfil(usuario);
-    final nome = usuario['nome']?.toString().trim() ?? '';
-    final email = usuario['email']?.toString().trim() ?? '';
-    final instituicao = usuario['instituicao']?.toString().trim() ?? '';
-    final campus = usuario['campus']?.toString().trim() ?? '';
-    final tipoPerfil = usuario['tipoPerfil']?.toString().trim() ?? 'PASSAGEIRO';
-    final statusVerificacao =
+    final status =
         usuario['statusVerificacao']?.toString().trim() ?? 'NAO_ENVIADO';
-    final fotoPerfil = usuario['fotoPerfil']?.toString().trim();
-    final mediaExibida = mediaAvaliacao.clamp(0, 5).toDouble();
-    final textoMedia = mediaExibida.toStringAsFixed(1).replaceAll('.', ',');
-    final textoTotalAvaliacoes = totalAvaliacoes == 0
-        ? 'Sem avaliações'
-        : totalAvaliacoes == 1
-        ? '1 avaliação'
-        : '$totalAvaliacoes avaliações';
-    final instituicaoCompleta = [
-      instituicao,
-      if (campus.isNotEmpty) 'Campus $campus',
-    ].where((texto) => texto.isNotEmpty).join(' - ');
-    final veiculo = usuario['veiculo'] is Map
-        ? Map<String, dynamic>.from(usuario['veiculo'])
-        : null;
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: BarraSuperiorPadrao(
-        titulo: 'Perfil',
-        actions: [
-          IconButton(
-            tooltip: 'Editar perfil',
-            onPressed: carregando ? null : editarPerfil,
-            icon: const Icon(Icons.edit_outlined),
-          ),
-        ],
-      ),
-      bottomNavigationBar: BarraNavegacaoHome(
-        currentIndex: 3,
-        onTap: (indice) =>
-            NavegacaoPrincipal.selecionar(context, indice, indiceAtual: 3),
-      ),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(24),
-          children: [
-            if (carregando) const LinearProgressIndicator(),
-            if (carregando) const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F5FA),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.black12),
-              ),
-              child: Column(
-                children: [
-                  FotoPerfil(
-                    nome: nome,
-                    urlFoto: fotoPerfil,
-                    carregando: enviandoFoto,
-                    onTap: carregando ? null : alterarFoto,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    nome.isNotEmpty ? nome : 'Usuário',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: AppColors.text,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    instituicaoCompleta.isNotEmpty
-                        ? instituicaoCompleta
-                        : 'Instituição não informada',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.black54,
-                      fontSize: 13,
-                      height: 1.3,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    textoTipoPerfil(tipoPerfil),
-                    style: const TextStyle(
-                      color: AppColors.text,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(
-                        iconeVerificacao(statusVerificacao),
-                        color: corVerificacao(statusVerificacao),
-                        size: 18,
-                      ),
-                      const SizedBox(width: 5),
-                      Text(
-                        textoVerificacao(statusVerificacao),
-                        style: TextStyle(
-                          color: corVerificacao(statusVerificacao),
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  InkWell(
-                    onTap: abrirAvaliacoes,
-                    borderRadius: BorderRadius.circular(8),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.star,
-                                color: AppColors.primary,
-                                size: 24,
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                '$textoMedia / 5',
-                                style: const TextStyle(
-                                  color: AppColors.text,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Icon(
-                                Icons.chevron_right,
-                                color: Colors.black45,
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            mensagemErroAvaliacoes ?? textoTotalAvaliacoes,
-                            style: const TextStyle(
-                              color: Colors.black54,
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            if (mensagemErro != null) ...[
-              const SizedBox(height: 12),
-              TextButton.icon(
-                onPressed: carregarDados,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Tentar atualizar novamente'),
-              ),
-            ],
-            const SizedBox(height: 32),
-            const Text(
-              'Sua atividade',
-              style: TextStyle(
-                color: AppColors.text,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.history, color: AppColors.primary),
-              title: const Text('Histórico de caronas'),
-              subtitle: const Text('Como motorista e passageiro'),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: abrirHistorico,
-            ),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.repeat, color: AppColors.primary),
-              title: const Text('Recorrências de caronas'),
-              subtitle: const Text(
-                'Editar, pausar ou retomar suas programações',
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: () => Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const RecorrenciasTela()),
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Habilitação',
-              style: TextStyle(
-                color: AppColors.text,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: Icon(
-                cnh.permiteOferecerCarona()
-                    ? Icons.verified_outlined
-                    : Icons.badge_outlined,
-                color: cnh.permiteOferecerCarona()
-                    ? Colors.green
-                    : AppColors.primary,
-              ),
-              title: Text(cnh.textoStatus),
-              subtitle: Text(
-                cnh.permiteOferecerCarona()
-                    ? 'Categoria ${cnh.categoria} · Válida até ${cnh.validadeFormatada}'
-                    : 'Necessária para oferecer caronas',
-              ),
-              trailing: const Icon(Icons.chevron_right),
-              onTap: carregando ? null : abrirVerificacaoCnh,
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Meu veículo',
-              style: TextStyle(
-                color: AppColors.text,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8F5FA),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.black12),
-              ),
-              child: ListTile(
-                leading: const Icon(
-                  Icons.directions_car_outlined,
-                  color: AppColors.primary,
-                ),
-                title: Text(
-                  veiculo?['modelo']?.toString() ?? 'Cadastrar veículo',
-                ),
-                subtitle: Text(
-                  veiculo == null
-                      ? 'Necessário para oferecer caronas'
-                      : '${veiculo['cor']} • ${veiculo['placa']}',
-                ),
-                trailing: Icon(
-                  veiculo == null ? Icons.add : Icons.edit_outlined,
-                ),
-                onTap: carregando ? null : editarVeiculo,
-              ),
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Dados da conta',
-              style: TextStyle(
-                color: AppColors.text,
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            const SizedBox(height: 8),
-            itemPerfil(
-              icone: Icons.person_outline,
-              titulo: 'Nome',
-              valor: nome.isNotEmpty ? nome : 'Não informado',
-            ),
-            const Divider(),
-            itemPerfil(
-              icone: Icons.email_outlined,
-              titulo: 'E-mail',
-              valor: email.isNotEmpty ? email : 'Não informado',
-            ),
-            const SizedBox(height: 24),
-            SizedBox(
-              width: double.infinity,
-              child: OutlinedButton.icon(
-                onPressed: sair,
-                icon: const Icon(Icons.logout),
-                label: const Text('Sair'),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  side: const BorderSide(color: Colors.red),
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                ),
-              ),
+    return VisualBuscaEu(
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: BarraSuperiorPadrao(
+          titulo: 'Perfil',
+          actions: [
+            IconButton(
+              tooltip: 'Editar perfil',
+              onPressed: carregando ? null : editarPerfil,
+              icon: const Icon(Icons.edit_outlined),
             ),
           ],
+        ),
+        bottomNavigationBar: BarraNavegacaoHome(
+          currentIndex: 3,
+          onTap: (indice) =>
+              NavegacaoPrincipal.selecionar(context, indice, indiceAtual: 3),
+        ),
+        body: SafeArea(
+          child: ConteudoPerfilBuscaEu(
+            usuario: usuario,
+            carregando: carregando,
+            enviandoFoto: enviandoFoto,
+            media: mediaAvaliacao,
+            totalAvaliacoes: totalAvaliacoes,
+            erro: mensagemErro,
+            erroAvaliacoes: mensagemErroAvaliacoes,
+            tipoPerfil: textoTipoPerfil(
+              usuario['tipoPerfil']?.toString().trim() ?? 'PASSAGEIRO',
+            ),
+            situacaoPerfil: textoVerificacao(status),
+            iconeSituacao: iconeVerificacao(status),
+            corSituacao: corVerificacao(status),
+            onFoto: alterarFoto,
+            onEditar: editarPerfil,
+            onVeiculo: editarVeiculo,
+            onCnh: abrirVerificacaoCnh,
+            onAvaliacoes: abrirAvaliacoes,
+            onHistorico: abrirHistorico,
+            onSair: sair,
+            onRecarregar: carregarDados,
+            onRecorrencias: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const RecorrenciasTela()),
+            ),
+          ),
         ),
       ),
     );

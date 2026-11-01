@@ -33,7 +33,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('João'), findsOneWidget);
-    expect(find.text('4,5 / 5  ·  2 avaliações'), findsOneWidget);
+    expect(find.text('4,5 / 5'), findsOneWidget);
+    expect(find.text('2 avaliações'), findsOneWidget);
     expect(find.text('Maria'), findsOneWidget);
     expect(find.text('Motorista pontual'), findsOneWidget);
     expect(find.byIcon(Icons.star), findsNWidgets(6));

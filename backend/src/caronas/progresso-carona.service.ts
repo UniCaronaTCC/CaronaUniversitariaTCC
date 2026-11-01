@@ -8,10 +8,14 @@ import { DataSource, EntityManager } from 'typeorm';
 import { Carona } from './carona.entity';
 import { PontoEmbarque } from './ponto-embarque.entity';
 import { Solicitacao } from '../solicitacoes/solicitacao.entity';
+import { EncerramentoCorridasService } from './encerramento-corridas.service';
 
 @Injectable()
 export class ProgressoCaronaService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(
+    private readonly dataSource: DataSource,
+    private readonly encerramento: EncerramentoCorridasService,
+  ) {}
 
   private pontos(manager: EntityManager, idCarona: number) {
     return manager.getRepository(PontoEmbarque).find({
@@ -43,6 +47,7 @@ export class ProgressoCaronaService {
   }
 
   async marcar(idCarona: number, idPonto: number, idUsuario: number) {
+    await this.encerramento.encerrarVencidas();
     return this.dataSource.transaction(async (manager) => {
       // Serializa marcações simultâneas para preservar a ordem do percurso.
       const carona = await manager.getRepository(Carona).findOne({

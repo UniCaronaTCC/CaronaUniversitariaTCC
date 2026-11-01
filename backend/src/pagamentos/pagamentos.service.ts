@@ -194,6 +194,12 @@ export class PagamentosService {
         );
       }
 
+      if (solicitacao.carona.status === 'ENCERRADA_POR_TEMPO') {
+        throw new ConflictException(
+          'A corrida foi encerrada automaticamente por tempo',
+        );
+      }
+
       const expiraEmSegundos = this.calcularExpiracaoPix(
         solicitacao.pagamentoLimiteEm,
       );

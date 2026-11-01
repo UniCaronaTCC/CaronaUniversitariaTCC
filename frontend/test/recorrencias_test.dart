@@ -117,7 +117,8 @@ void main() {
       find.text('Primeiro encontro: Praca central • Rua do encontro, 100'),
       findsOneWidget,
     );
-    expect(find.text('Horário do primeiro encontro: 18:00'), findsOneWidget);
+    expect(find.text('Horário do primeiro encontro'), findsOneWidget);
+    expect(find.text('18:00'), findsOneWidget);
     expect(find.textContaining('Rua A, 10'), findsNothing);
     expect(find.text('Faculdade'), findsOneWidget);
     expect(find.text('EDITAR'), findsOneWidget);
@@ -135,7 +136,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Saída cadastrada: Rua A, 10'), findsOneWidget);
-    expect(find.text('Horário: 18:00'), findsOneWidget);
+    expect(find.text('Horário'), findsOneWidget);
+    expect(find.text('18:00'), findsOneWidget);
     expect(find.textContaining('Primeiro encontro'), findsNothing);
   });
 

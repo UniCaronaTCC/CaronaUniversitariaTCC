@@ -413,6 +413,7 @@ export class SolicitacoesService {
 
       if (
         solicitacao.carona.status === 'FINALIZADA' ||
+        solicitacao.carona.status === 'ENCERRADA_POR_TEMPO' ||
         solicitacao.carona.status === 'CANCELADA' ||
         solicitacao.carona.status === 'EM_ANDAMENTO'
       ) {

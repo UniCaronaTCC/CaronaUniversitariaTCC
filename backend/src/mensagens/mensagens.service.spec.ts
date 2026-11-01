@@ -256,7 +256,7 @@ describe('MensagensService', () => {
     expect(mensagensRepository.save).not.toHaveBeenCalled();
   });
 
-  it.each(['FINALIZADA', 'CANCELADA'])(
+  it.each(['FINALIZADA', 'CANCELADA', 'ENCERRADA_POR_TEMPO'])(
     'não envia mensagem quando a carona está %s, mesmo com solicitação ACEITA',
     async (status) => {
       conversasRepository.findOne.mockResolvedValue({

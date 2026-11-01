@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/recorrencia_carona.dart';
 import '../services/recorrencia_service.dart';
 import '../widgets/componentes_padrao.dart';
+import '../widgets/card_recorrencia.dart';
+import '../widgets/visual_buscaeu.dart';
 import 'ofertar_carona.dart';
 
 class RecorrenciasTela extends StatefulWidget {
@@ -78,88 +80,53 @@ class _RecorrenciasTelaState extends State<RecorrenciasTela> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Recorrências')),
-    body: RefreshIndicator(
-      onRefresh: _carregar,
-      child: ListView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(20),
-        children: [
-          const Text(
-            'Suas programações publicam caronas para as próximas duas semanas. Cada dia tem seus próprios passageiros e pagamento.',
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Editar vale para novas datas. Pausar interrompe novas publicações. As caronas já publicadas continuam disponíveis e podem ser editadas ou canceladas individualmente em Suas caronas.',
-          ),
-          const SizedBox(height: 20),
-          if (_carregando)
-            const Center(child: CircularProgressIndicator())
-          else if (_erro != null)
-            EstadoConteudoPadrao(
-              icone: Icons.cloud_off_outlined,
-              mensagem: _erro!,
-              textoBotao: 'Tentar novamente',
-              onPressed: _carregar,
-            )
-          else if (_modelos.isEmpty)
+  Widget build(BuildContext context) => VisualBuscaEu(
+    child: Scaffold(
+      appBar: AppBar(title: const Text('Recorrências')),
+      body: RefreshIndicator(
+        onRefresh: _carregar,
+        child: ListView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: const EdgeInsets.all(24),
+          children: [
             const Text(
-              'Nenhuma programação. Ao oferecer uma carona, ative a opção de recorrência.',
-            )
-          else
-            ..._modelos.map(
-              (modelo) => Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        modelo.configuracao.destino,
-                        style: const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(modelo.configuracao.resumoInicio),
-                      const SizedBox(height: 6),
-                      Text(modelo.configuracao.diasSemana.join(', ')),
-                      Text(
-                        '${modelo.configuracao.rotuloHorario}: ${modelo.configuracao.horarioFormatado}',
-                      ),
-                      Text(
-                        modelo.ativa
-                            ? 'Programação ativa'
-                            : 'Programação pausada',
-                      ),
-                      Wrap(
-                        spacing: 8,
-                        children: [
-                          TextButton(
-                            onPressed: _alterando != null
-                                ? null
-                                : () => _editar(modelo),
-                            child: const Text('EDITAR'),
-                          ),
-                          TextButton(
-                            onPressed: _alterando != null
-                                ? null
-                                : () => _alternar(modelo),
-                            child: Text(
-                              _alterando == modelo.id
-                                  ? 'AGUARDE...'
-                                  : modelo.ativa
-                                  ? 'PAUSAR'
-                                  : 'RETOMAR',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+              'Suas programações publicam caronas para as próximas duas semanas. Cada dia tem seus próprios passageiros e pagamento.',
+              style: VisualBuscaEu.descricao,
+            ),
+            const SizedBox(height: 12),
+            const Text(
+              'Editar vale para novas datas. Pausar interrompe novas publicações. As caronas já publicadas continuam disponíveis e podem ser editadas ou canceladas individualmente em Suas caronas.',
+              style: VisualBuscaEu.descricao,
+            ),
+            const SizedBox(height: 20),
+            if (_carregando)
+              const Center(child: CircularProgressIndicator())
+            else if (_erro != null)
+              EstadoConteudoPadrao(
+                icone: Icons.cloud_off_outlined,
+                mensagem: _erro!,
+                textoBotao: 'Tentar novamente',
+                onPressed: _carregar,
+              )
+            else if (_modelos.isEmpty)
+              const Text(
+                'Nenhuma programação. Ao oferecer uma carona, ative a opção de recorrência.',
+              )
+            else
+              ..._modelos.map(
+                (modelo) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: CardRecorrencia(
+                    recorrencia: modelo,
+                    processando: _alterando == modelo.id,
+                    bloqueada: _alterando != null,
+                    onEditar: () => _editar(modelo),
+                    onAlternar: () => _alternar(modelo),
                   ),
                 ),
               ),
-            ),
-        ],
+          ],
+        ),
       ),
     ),
   );

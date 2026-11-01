@@ -15,6 +15,7 @@ import '../widgets/card_solicitacao_recebida.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/dialogo_avaliacao.dart';
 import '../widgets/dialogo_cancelamento.dart';
+import '../widgets/visual_buscaeu.dart';
 import 'acompanhar_corrida.dart';
 import 'pagamento_pix.dart';
 
@@ -292,60 +293,92 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela>
         .where((solicitacao) => solicitacao.aceiteAguardandoAcao)
         .length;
 
-    return DefaultTabController(
-      initialIndex: widget.abaInicial,
-      length: 2,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          title: const Text('Caronas'),
+    final fonteAmpliada = MediaQuery.textScalerOf(context).scale(14) > 18;
+    final subtitulo = TextPainter(
+      text: TextSpan(
+        text: 'Acompanhe suas solicitações',
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium?.merge(VisualBuscaEu.descricao),
+      ),
+      textDirection: Directionality.of(context),
+      textScaler: MediaQuery.textScalerOf(context),
+    )..layout(maxWidth: MediaQuery.sizeOf(context).width - 48);
+    final alturaCabecalho = subtitulo.height + 12 + 48;
+    subtitulo.dispose();
+    return VisualBuscaEu(
+      child: DefaultTabController(
+        initialIndex: widget.abaInicial,
+        length: 2,
+        child: Scaffold(
           backgroundColor: AppColors.background,
-          foregroundColor: AppColors.text,
-          elevation: 0,
-          bottom: TabBar(
-            tabs: [
-              Tab(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('Recebidas'),
-                    if (totalPendentes > 0) ...[
-                      const SizedBox(width: 8),
-                      Badge.count(
-                        count: totalPendentes,
-                        backgroundColor: AppColors.primary,
+          appBar: AppBar(
+            title: const Text('Caronas'),
+            backgroundColor: AppColors.background,
+            foregroundColor: AppColors.text,
+            elevation: 0,
+            bottom: PreferredSize(
+              preferredSize: Size.fromHeight(alturaCabecalho),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.fromLTRB(24, 0, 24, 12),
+                    child: Text(
+                      'Acompanhe suas solicitações',
+                      style: VisualBuscaEu.descricao,
+                    ),
+                  ),
+                  TabBar(
+                    isScrollable: fonteAmpliada,
+                    tabAlignment: fonteAmpliada ? TabAlignment.start : null,
+                    tabs: [
+                      Tab(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('Recebidas'),
+                            if (totalPendentes > 0) ...[
+                              const SizedBox(width: 8),
+                              Badge.count(
+                                count: totalPendentes,
+                                backgroundColor: AppColors.primary,
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      Tab(
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Text('Enviadas'),
+                            if (totalAceitas > 0) ...[
+                              const SizedBox(width: 8),
+                              Badge.count(
+                                count: totalAceitas,
+                                backgroundColor: AppColors.primary,
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ],
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Tab(
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Text('Enviadas'),
-                    if (totalAceitas > 0) ...[
-                      const SizedBox(width: 8),
-                      Badge.count(
-                        count: totalAceitas,
-                        backgroundColor: AppColors.primary,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
-        bottomNavigationBar: BarraNavegacaoHome(
-          currentIndex: 2,
-          onTap: (indice) =>
-              NavegacaoPrincipal.selecionar(context, indice, indiceAtual: 2),
-        ),
-        body: SafeArea(
-          child: carregando || mensagemErro != null
-              ? _estadoGeral()
-              : TabBarView(children: [_abaRecebidas(), _abaEnviadas()]),
+          bottomNavigationBar: BarraNavegacaoHome(
+            currentIndex: 2,
+            onTap: (indice) =>
+                NavegacaoPrincipal.selecionar(context, indice, indiceAtual: 2),
+          ),
+          body: SafeArea(
+            child: carregando || mensagemErro != null
+                ? _estadoGeral()
+                : TabBarView(children: [_abaRecebidas(), _abaEnviadas()]),
+          ),
         ),
       ),
     );

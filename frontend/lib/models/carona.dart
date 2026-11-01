@@ -179,6 +179,12 @@ class Carona {
   }
 
   bool get finalizada => status == 'FINALIZADA';
+  bool get encerradaPorTempo => status == 'ENCERRADA_POR_TEMPO';
+  bool get encerrada =>
+      finalizada ||
+      encerradaPorTempo ||
+      status == 'CANCELADA' ||
+      status == 'EXPIRADA';
   bool get emAndamento => status == 'EM_ANDAMENTO';
 
   // Monta o periodo exibido no card.

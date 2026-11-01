@@ -13,18 +13,25 @@ import '../models/carona.dart';
 import '../mapa/services/progresso_corrida.dart';
 import '../mapa/widgets/status_progresso_corrida.dart';
 import '../services/carona_service.dart';
+import '../services/estado_corrida.dart';
 import '../widgets/componentes_padrao.dart';
 
 class CorridaEmAndamentoTela extends StatefulWidget {
   final Carona carona;
+  final Future<Map<String, dynamic>> Function(int)? carregarEstado;
 
-  const CorridaEmAndamentoTela({super.key, required this.carona});
+  const CorridaEmAndamentoTela({
+    super.key,
+    required this.carona,
+    this.carregarEstado,
+  });
 
   @override
   State<CorridaEmAndamentoTela> createState() => _CorridaEmAndamentoTelaState();
 }
 
-class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
+class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela>
+    with WidgetsBindingObserver {
   bool finalizando = false;
   RotaResultado? rota;
   late final RastreamentoGps _gps;
@@ -35,20 +42,51 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
   DateTime? _ultimoEnvioPosicao;
   bool _enviandoPosicao = false;
   bool _envioPosicaoAtivo = true;
+  bool _rastreamentoEncerrado = false;
+  Carona? _caronaEncerrada;
+  late final EstadoCorrida _estadoCorrida;
 
   static const _intervaloEnvioPosicao = Duration(seconds: 5);
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _progresso = ProgressoCorrida(widget.carona.id);
     _progresso.sincronizar();
     _gps = RastreamentoGps(onPosicao: _processarPosicao);
     _gps.iniciar();
+    _estadoCorrida = EstadoCorrida(
+      idCarona: widget.carona.id,
+      onEncerrada: _receberEncerramento,
+      carregar: widget.carregarEstado ?? CaronaService.buscarDetalhesCarona,
+    );
+    _estadoCorrida.iniciar();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_estadoCorrida.consultar());
+    }
+  }
+
+  void _pararRastreamento() {
+    if (_rastreamentoEncerrado) return;
+    _rastreamentoEncerrado = true;
+    _envioPosicaoAtivo = false;
+    _gps.dispose();
+    _progresso.dispose();
+  }
+
+  void _receberEncerramento(Carona carona) {
+    if (!mounted) return;
+    _pararRastreamento();
+    setState(() => _caronaEncerrada = carona);
   }
 
   void _processarPosicao(Position posicao) {
-    if (!mounted) return;
+    if (!mounted || _rastreamentoEncerrado) return;
 
     final anterior = _localizacaoMotorista;
     // A animação visual pertence ao mapa. Rota e servidor recebem o GPS filtrado.
@@ -107,13 +145,14 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
         : ((direcao % 360) + 360) % 360;
 
     try {
-      await CaronaService.atualizarPosicaoAtual(
+      final enviada = await CaronaService.atualizarPosicaoAtual(
         idCarona: widget.carona.id,
         latitude: ponto.latitude,
         longitude: ponto.longitude,
         direcao: direcaoNormalizada,
         precisao: precisao,
       );
+      if (!enviada) unawaited(_estadoCorrida.consultar());
     } finally {
       _enviandoPosicao = false;
     }
@@ -121,9 +160,9 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
 
   @override
   void dispose() {
-    _envioPosicaoAtivo = false;
-    _gps.dispose();
-    _progresso.dispose();
+    WidgetsBinding.instance.removeObserver(this);
+    _estadoCorrida.dispose();
+    _pararRastreamento();
     super.dispose();
   }
 
@@ -175,11 +214,35 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela> {
     final carona = resultado['dados'];
     if (resultado['sucesso'] == true && carona is Carona) {
       Navigator.pop(context, carona);
+    } else {
+      await _estadoCorrida.consultar();
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final encerrada = _caronaEncerrada;
+    if (encerrada != null) {
+      return Scaffold(
+        appBar: const BarraSuperiorPadrao(titulo: 'Corrida encerrada'),
+        body: SafeArea(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: EstadoConteudoPadrao(
+                icone: Icons.timer_off_outlined,
+                titulo: encerrada.encerradaPorTempo
+                    ? 'Encerrada automaticamente por tempo'
+                    : 'Esta corrida foi encerrada',
+                mensagem: 'A corrida está disponível no histórico.',
+                textoBotao: 'Voltar aos detalhes',
+                onPressed: () => Navigator.pop(context, encerrada),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: const BarraSuperiorPadrao(titulo: 'Corrida em andamento'),

@@ -6,6 +6,7 @@ import {
 import { DataSource, EntityManager } from 'typeorm';
 import { ProgressoCaronaService } from './progresso-carona.service';
 import { Carona } from './carona.entity';
+import { EncerramentoCorridasService } from './encerramento-corridas.service';
 import { PontoEmbarque } from './ponto-embarque.entity';
 
 describe('Progresso da corrida', () => {
@@ -42,10 +43,16 @@ describe('Progresso da corrida', () => {
             ? repository
             : solicitacoes,
     } as unknown as EntityManager;
-    service = new ProgressoCaronaService({
-      manager,
-      transaction: (fn: (m: EntityManager) => Promise<unknown>) => fn(manager),
-    } as unknown as DataSource);
+    service = new ProgressoCaronaService(
+      {
+        manager,
+        transaction: (fn: (m: EntityManager) => Promise<unknown>) =>
+          fn(manager),
+      } as unknown as DataSource,
+      {
+        encerrarVencidas: jest.fn().mockResolvedValue(undefined),
+      } as unknown as EncerramentoCorridasService,
+    );
   });
 
   it('marca uma vez e conserva o horário em requisições repetidas', async () => {

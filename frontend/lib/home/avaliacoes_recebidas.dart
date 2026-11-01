@@ -6,6 +6,8 @@ import '../services/avaliacao_service.dart';
 import '../utils/formatador_data.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/componentes_padrao.dart';
+import '../widgets/cartoes_avaliacao.dart';
+import '../widgets/visual_buscaeu.dart';
 
 typedef CarregarAvaliacoes =
     Future<Map<String, dynamic>> Function(int idUsuario, int pagina);
@@ -118,113 +120,69 @@ class _AvaliacoesRecebidasTelaState extends State<AvaliacoesRecebidasTela> {
     final comentario = avaliacao['comentario']?.toString().trim() ?? '';
     final data = formatarData(avaliacao['criadoEm']);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                nome,
-                style: const TextStyle(fontWeight: FontWeight.w600),
-              ),
-            ),
-            if (data.isNotEmpty)
-              Text(data, style: const TextStyle(color: Colors.black54)),
-          ],
-        ),
-        const SizedBox(height: 6),
-        Row(
-          children: List.generate(
-            5,
-            (indice) => Icon(
-              indice < nota ? Icons.star : Icons.star_border,
-              color: AppColors.primary,
-              size: 20,
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          comentario.isNotEmpty ? comentario : 'Sem comentário',
-          style: const TextStyle(color: Colors.black87),
-        ),
-        const SizedBox(height: 16),
-        const Divider(height: 1),
-        const SizedBox(height: 16),
-      ],
+    return CardAvaliacao(
+      nome: nome,
+      foto: avaliador['fotoPerfil']?.toString(),
+      data: data,
+      comentario: comentario,
+      nota: nota,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final textoMedia = media.toStringAsFixed(1).replaceAll('.', ',');
-    final textoTotal = total == 1 ? '1 avaliação' : '$total avaliações';
-
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: const BarraSuperiorPadrao(titulo: 'Avaliações recebidas'),
-      bottomNavigationBar: BarraNavegacaoHome(
-        currentIndex: 3,
-        onTap: (indice) =>
-            NavegacaoPrincipal.selecionar(context, indice, indiceAtual: 3),
-      ),
-      body: SafeArea(
-        child: carregando
-            ? const EstadoConteudoPadrao(
-                carregando: true,
-                mensagem: 'Carregando avaliações...',
-              )
-            : mensagemErro != null
-            ? EstadoConteudoPadrao(
-                icone: Icons.error_outline,
-                mensagem: mensagemErro,
-                textoBotao: 'Tentar novamente',
-                onPressed: carregarDados,
-              )
-            : ListView(
-                padding: const EdgeInsets.all(24),
-                children: [
-                  Text(
-                    widget.nomeUsuario,
-                    style: const TextStyle(
-                      color: AppColors.text,
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
+    return VisualBuscaEu(
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: const BarraSuperiorPadrao(titulo: 'Avaliações recebidas'),
+        bottomNavigationBar: BarraNavegacaoHome(
+          currentIndex: 3,
+          onTap: (indice) =>
+              NavegacaoPrincipal.selecionar(context, indice, indiceAtual: 3),
+        ),
+        body: SafeArea(
+          child: carregando
+              ? const EstadoConteudoPadrao(
+                  carregando: true,
+                  mensagem: 'Carregando avaliações...',
+                )
+              : mensagemErro != null
+              ? EstadoConteudoPadrao(
+                  icone: Icons.error_outline,
+                  mensagem: mensagemErro,
+                  textoBotao: 'Tentar novamente',
+                  onPressed: carregarDados,
+                )
+              : ListView(
+                  padding: const EdgeInsets.all(24),
+                  children: [
+                    ResumoAvaliacoes(
+                      nome: widget.nomeUsuario,
+                      media: media,
+                      total: total,
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      const Icon(Icons.star, color: AppColors.primary),
-                      const SizedBox(width: 6),
-                      Text(
-                        '$textoMedia / 5  ·  $textoTotal',
-                        style: const TextStyle(color: Colors.black54),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 28),
-                  if (avaliacoes.isEmpty)
-                    const EstadoConteudoPadrao(
-                      icone: Icons.star_border,
-                      mensagem: 'Nenhuma avaliação recebida',
-                    )
-                  else
-                    ...avaliacoes.map(itemAvaliacao),
-                  if (pagina < totalPaginas)
-                    Center(
-                      child: TextButton(
-                        onPressed: carregandoMais
-                            ? null
-                            : () => carregarDados(proximaPagina: true),
-                        child: Text(
-                          carregandoMais ? 'Carregando...' : 'Ver mais',
+                    const SizedBox(height: 16),
+                    if (avaliacoes.isEmpty)
+                      const EstadoConteudoPadrao(
+                        icone: Icons.star_border,
+                        mensagem: 'Nenhuma avaliação recebida',
+                      )
+                    else
+                      ...avaliacoes.map(itemAvaliacao),
+                    if (pagina < totalPaginas)
+                      Center(
+                        child: TextButton(
+                          onPressed: carregandoMais
+                              ? null
+                              : () => carregarDados(proximaPagina: true),
+                          child: Text(
+                            carregandoMais ? 'Carregando...' : 'Ver mais',
+                          ),
                         ),
                       ),
-                    ),
-                ],
-              ),
+                  ],
+                ),
+        ),
       ),
     );
   }

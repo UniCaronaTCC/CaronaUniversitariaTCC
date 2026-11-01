@@ -27,6 +27,11 @@ import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 import { UsersService } from '../users/users.service';
 import { RecorrenciasService } from './recorrencias.service';
 import { CARONA_VENCIDA_SQL } from './carona-vencida';
+import {
+  EncerramentoCorridasService,
+  STATUS_ENCERRADA_POR_TEMPO,
+  MENSAGEM_ENCERRADA_POR_TEMPO,
+} from './encerramento-corridas.service';
 
 @Injectable()
 export class CaronasService {
@@ -46,6 +51,7 @@ export class CaronasService {
     private readonly dataSource: DataSource,
     private readonly usersService: UsersService,
     private readonly recorrenciasService: RecorrenciasService,
+    private readonly encerramentoCorridas: EncerramentoCorridasService,
   ) {}
 
   // Cria a carona e os pontos de embarque juntos.
@@ -277,7 +283,12 @@ export class CaronasService {
   }
 
   async excluirCarona(idCarona: number, idUsuario: number): Promise<void> {
+    await this.encerramentoCorridas.encerrarVencidas();
     const carona = await this.buscarCaronaDoUsuario(idCarona, idUsuario);
+
+    if (carona.status === STATUS_ENCERRADA_POR_TEMPO) {
+      throw new ConflictException(MENSAGEM_ENCERRADA_POR_TEMPO);
+    }
 
     if (carona.status === 'EM_ANDAMENTO') {
       throw new ConflictException(
@@ -292,6 +303,7 @@ export class CaronasService {
   }
 
   async finalizarCaronasVencidas(): Promise<void> {
+    await this.encerramentoCorridas.encerrarVencidas();
     await this.caronasRepository
       .createQueryBuilder()
       .update(Carona)
@@ -311,51 +323,64 @@ export class CaronasService {
     idUsuario: number,
     agora = new Date(),
   ): Promise<Carona> {
-    const carona = await this.buscarCaronaDoUsuario(idCarona, idUsuario);
+    return this.comCaronaBloqueada(
+      idCarona,
+      idUsuario,
+      async (manager, carona) => {
+        if (carona.recorrente) {
+          throw new BadRequestException(
+            'O início de caronas recorrentes ainda não está disponível',
+          );
+        }
+        if (carona.status !== 'ATIVA' && carona.status !== 'LOTADA') {
+          throw new ConflictException('Esta carona não pode ser iniciada');
+        }
 
-    if (carona.recorrente) {
-      throw new BadRequestException(
-        'O início de caronas recorrentes ainda não está disponível',
-      );
-    }
-    if (carona.status !== 'ATIVA' && carona.status !== 'LOTADA') {
-      throw new ConflictException('Esta carona não pode ser iniciada');
-    }
+        const horarioMarcado = this.obterHorarioMarcado(carona);
+        const horarioAtual = this.obterHorarioBrasilia(agora);
+        const umaHora = 60 * 60 * 1000;
+        if (
+          horarioAtual < horarioMarcado - umaHora ||
+          horarioAtual > horarioMarcado + 2 * umaHora
+        ) {
+          throw new ConflictException(
+            'A corrida pode ser iniciada entre 1 hora antes e 2 horas depois do horário marcado',
+          );
+        }
 
-    const horarioMarcado = this.obterHorarioMarcado(carona);
-    const horarioAtual = this.obterHorarioBrasilia(agora);
-    const umaHora = 60 * 60 * 1000;
-    if (
-      horarioAtual < horarioMarcado - umaHora ||
-      horarioAtual > horarioMarcado + 2 * umaHora
-    ) {
-      throw new ConflictException(
-        'A corrida pode ser iniciada entre 1 hora antes e 2 horas depois do horário marcado',
-      );
-    }
-
-    carona.status = 'EM_ANDAMENTO';
-    return this.caronasRepository.save(carona);
+        carona.status = 'EM_ANDAMENTO';
+        await manager.getRepository(Carona).save(carona);
+        return this.buscarCaronaDoUsuario(
+          idCarona,
+          idUsuario,
+          manager.getRepository(Carona),
+        );
+      },
+    );
   }
 
   async finalizarCarona(idCarona: number, idUsuario: number): Promise<Carona> {
-    const carona = await this.buscarCaronaDoUsuario(idCarona, idUsuario);
+    return this.comCaronaBloqueada(
+      idCarona,
+      idUsuario,
+      async (manager, carona) => {
+        if (carona.recorrente) {
+          throw new BadRequestException(
+            'A finalização de caronas recorrentes ainda não está disponível',
+          );
+        }
+        this.exigirCorridaEmAndamento(carona);
 
-    if (carona.recorrente) {
-      throw new BadRequestException(
-        'A finalização de caronas recorrentes ainda não está disponível',
-      );
-    }
-    if (carona.status !== 'EM_ANDAMENTO') {
-      throw new ConflictException(
-        'Somente uma corrida em andamento pode ser finalizada',
-      );
-    }
-
-    carona.status = 'FINALIZADA';
-    const caronaFinalizada = await this.caronasRepository.save(carona);
-    await this.posicoesRepository.delete({ idCarona });
-    return caronaFinalizada;
+        carona.status = 'FINALIZADA';
+        await manager.getRepository(Carona).save(carona);
+        await manager.getRepository(PosicaoAtualCarona).delete({ idCarona });
+        return this.buscarCaronaDoUsuario(
+          idCarona,
+          idUsuario,
+          manager.getRepository(Carona),
+        );
+      },
+    );
   }
 
   async atualizarPosicaoAtual(
@@ -363,32 +388,34 @@ export class CaronasService {
     idUsuario: number,
     dados: DadosPosicaoAtualCarona,
   ): Promise<PosicaoAtualCarona> {
-    const carona = await this.buscarCaronaDoUsuario(idCarona, idUsuario);
+    return this.comCaronaBloqueada(
+      idCarona,
+      idUsuario,
+      async (manager, carona) => {
+        this.exigirCorridaEmAndamento(carona);
+        const posicoesRepository = manager.getRepository(PosicaoAtualCarona);
 
-    if (carona.status !== 'EM_ANDAMENTO') {
-      throw new ConflictException(
-        'A localização só pode ser atualizada durante a corrida',
-      );
-    }
+        const posicaoExistente = await posicoesRepository.findOne({
+          where: { idCarona },
+        });
+        const posicao =
+          posicaoExistente ?? posicoesRepository.create({ idCarona });
 
-    const posicaoExistente = await this.posicoesRepository.findOne({
-      where: { idCarona },
-    });
-    const posicao =
-      posicaoExistente ?? this.posicoesRepository.create({ idCarona });
+        posicao.latitude = dados.latitude;
+        posicao.longitude = dados.longitude;
+        posicao.direcao = dados.direcao;
+        posicao.precisao = dados.precisao;
 
-    posicao.latitude = dados.latitude;
-    posicao.longitude = dados.longitude;
-    posicao.direcao = dados.direcao;
-    posicao.precisao = dados.precisao;
-
-    return this.posicoesRepository.save(posicao);
+        return posicoesRepository.save(posicao);
+      },
+    );
   }
 
   async buscarPosicaoAtual(
     idCarona: number,
     idUsuario: number,
   ): Promise<PosicaoAtualCarona | null> {
+    await this.encerramentoCorridas.encerrarVencidas();
     const carona = await this.caronasRepository.findOne({
       where: { idCarona },
       relations: { usuario: true },
@@ -416,7 +443,7 @@ export class CaronasService {
     }
 
     if (carona.status !== 'EM_ANDAMENTO') {
-      throw new ConflictException('Esta corrida não está em andamento');
+      this.exigirCorridaEmAndamento(carona);
     }
 
     return this.posicoesRepository.findOne({ where: { idCarona } });
@@ -560,11 +587,44 @@ export class CaronasService {
     return carona;
   }
 
+  private exigirCorridaEmAndamento(carona: Carona): void {
+    if (carona.status === STATUS_ENCERRADA_POR_TEMPO) {
+      throw new ConflictException({
+        message: MENSAGEM_ENCERRADA_POR_TEMPO,
+        codigo: STATUS_ENCERRADA_POR_TEMPO,
+      });
+    }
+    if (carona.status !== 'EM_ANDAMENTO') {
+      throw new ConflictException('Esta corrida não está em andamento');
+    }
+  }
+
+  private async comCaronaBloqueada<T>(
+    idCarona: number,
+    idUsuario: number,
+    executar: (manager: EntityManager, carona: Carona) => Promise<T>,
+  ): Promise<T> {
+    await this.encerramentoCorridas.encerrarVencidas();
+    return this.dataSource.transaction(async (manager) => {
+      // A limpeza automatica bloqueia a mesma linha antes de remover o GPS.
+      const carona = await manager
+        .getRepository(Carona)
+        .createQueryBuilder('carona')
+        .where('carona.idCarona = :idCarona', { idCarona })
+        .andWhere('carona.id_usuario = :idUsuario', { idUsuario })
+        .setLock('pessimistic_write')
+        .getOne();
+      if (!carona) throw new NotFoundException('Carona não encontrada');
+      return executar(manager, carona);
+    });
+  }
+
   private async buscarCaronaDoUsuario(
     idCarona: number,
     idUsuario: number,
+    repository = this.caronasRepository,
   ): Promise<Carona> {
-    const carona = await this.caronasRepository.findOne({
+    const carona = await repository.findOne({
       where: {
         idCarona,
       },

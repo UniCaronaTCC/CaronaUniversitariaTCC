@@ -166,6 +166,11 @@ void main() {
     await tester.tap(find.text('Salvar'));
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.byTooltip('Alterar foto de perfil'),
+      -200,
+    );
+    await tester.pumpAndSettle();
     expect(find.text('Fatec - Campus Araçatuba'), findsOneWidget);
     expect(find.text('Motorista e passageiro'), findsOneWidget);
 

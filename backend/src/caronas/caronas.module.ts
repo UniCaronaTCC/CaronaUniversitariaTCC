@@ -16,6 +16,7 @@ import { RecorrenciaCarona } from './recorrencia.entity';
 import { PontoEmbarqueRecorrencia } from './ponto-embarque-recorrencia.entity';
 import { RecorrenciasService } from './recorrencias.service';
 import { RecorrenciasController } from './recorrencias.controller';
+import { EncerramentoCorridasService } from './encerramento-corridas.service';
 
 @Module({
   imports: [
@@ -39,7 +40,12 @@ import { RecorrenciasController } from './recorrencias.controller';
     ProgressoCaronaController,
   ],
 
-  providers: [CaronasService, RecorrenciasService, ProgressoCaronaService],
+  providers: [
+    CaronasService,
+    RecorrenciasService,
+    ProgressoCaronaService,
+    EncerramentoCorridasService,
+  ],
 
   exports: [CaronasService],
 })

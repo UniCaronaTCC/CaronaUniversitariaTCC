@@ -168,6 +168,18 @@ describe('AvaliacoesService', () => {
     expect(resultado.avaliacoes).toHaveLength(2);
   });
 
+  it.each([false, true])(
+    'nao habilita avaliacao de corrida encerrada por tempo (recorrente=%s)',
+    (recorrente) => {
+      expect(
+        service.podeAvaliarSolicitacao({
+          status: 'ACEITA',
+          carona: { status: 'ENCERRADA_POR_TEMPO', recorrente },
+        } as Solicitacao),
+      ).toBe(false);
+    },
+  );
+
   it('informa quando o usuario nao existe', async () => {
     usersService.buscarPorId.mockResolvedValue(null);
 

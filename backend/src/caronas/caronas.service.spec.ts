@@ -13,6 +13,7 @@ import { PosicaoAtualCarona } from './posicao-atual-carona.entity';
 import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 import { UsersService } from '../users/users.service';
 import { RecorrenciasService } from './recorrencias.service';
+import { EncerramentoCorridasService } from './encerramento-corridas.service';
 
 describe('CaronasService', () => {
   let service: CaronasService;
@@ -28,6 +29,8 @@ describe('CaronasService', () => {
     where: jest.Mock;
     andWhere: jest.Mock;
     execute: jest.Mock;
+    setLock: jest.Mock;
+    getOne: jest.Mock;
   };
   let posicoesRepository: {
     create: jest.Mock;
@@ -99,11 +102,21 @@ describe('CaronasService', () => {
       where: jest.fn().mockReturnThis(),
       andWhere: jest.fn().mockReturnThis(),
       execute: jest.fn().mockResolvedValue(undefined),
+      setLock: jest.fn().mockReturnThis(),
+      getOne: jest
+        .fn()
+        .mockImplementation(
+          () => repository.findOne() as Promise<Carona | null>,
+        ),
     };
     repository = {
       create: jest.fn((carona: Partial<Carona>) => carona as Carona),
       createQueryBuilder: jest.fn((): typeof queryBuilder => queryBuilder),
-      findOne: jest.fn(),
+      findOne: jest.fn().mockResolvedValue({
+        idCarona: 1,
+        usuario: { idUsuario: 1 },
+        pontosEmbarque: [],
+      }),
       save: jest.fn((carona: Carona) => Promise.resolve(carona)),
     };
     posicoesRepository = {
@@ -121,7 +134,21 @@ describe('CaronasService', () => {
       buscarVeiculo: jest.fn().mockResolvedValue({ idVeiculo: 1 }),
       exigirCnhParaOferecerCarona: jest.fn().mockResolvedValue(undefined),
     };
-    dataSource = { transaction: jest.fn().mockResolvedValue({ idCarona: 1 }) };
+    dataSource = {
+      transaction: jest
+        .fn()
+        .mockImplementation(
+          (executar: (manager: EntityManager) => Promise<unknown>) =>
+            executar({
+              getRepository: (entidade: unknown) =>
+                entidade === Carona
+                  ? repository
+                  : entidade === PosicaoAtualCarona
+                    ? posicoesRepository
+                    : solicitacoesRepository,
+            } as unknown as EntityManager),
+        ),
+    };
 
     service = new CaronasService(
       repository as unknown as Repository<Carona>,
@@ -131,6 +158,9 @@ describe('CaronasService', () => {
       dataSource as unknown as DataSource,
       usersService as unknown as UsersService,
       {} as RecorrenciasService,
+      {
+        encerrarVencidas: jest.fn().mockResolvedValue(undefined),
+      } as unknown as EncerramentoCorridasService,
     );
   });
 
@@ -160,7 +190,7 @@ describe('CaronasService', () => {
       };
       repository.createQueryBuilder.mockReturnValue(listagem);
       await expect(service[metodo](1)).resolves.toBe(caronas);
-      const campos = listagem.select.mock.calls[0][0] as string[];
+      const [campos] = listagem.select.mock.calls[0] as [string[]];
       expect(campos.filter((campo) => campo.startsWith('usuario'))).toEqual([
         'usuario.idUsuario',
         'usuario.nome',
@@ -466,5 +496,34 @@ describe('CaronasService', () => {
     await expect(
       service.atualizarCarona(5, dadosEdicao),
     ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('nao permite finalizar ou enviar GPS depois do encerramento por tempo', async () => {
+    repository.findOne.mockResolvedValue({
+      idCarona: 5,
+      usuario: { idUsuario: 1 },
+      status: 'ENCERRADA_POR_TEMPO',
+    });
+    await expect(service.finalizarCarona(5, 1)).rejects.toMatchObject({
+      response: { codigo: 'ENCERRADA_POR_TEMPO' },
+    });
+    await expect(
+      service.atualizarPosicaoAtual(5, 1, {
+        latitude: -21,
+        longitude: -50,
+        precisao: 5,
+        direcao: null,
+      }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    await expect(service.buscarPosicaoAtual(5, 1)).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(repository.save).not.toHaveBeenCalled();
+    expect(posicoesRepository.save).not.toHaveBeenCalled();
+    expect(queryBuilder.setLock).toHaveBeenCalledWith('pessimistic_write');
+    expect(queryBuilder.andWhere).toHaveBeenCalledWith(
+      'carona.id_usuario = :idUsuario',
+      { idUsuario: 1 },
+    );
   });
 });

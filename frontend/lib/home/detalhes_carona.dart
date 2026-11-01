@@ -14,6 +14,7 @@ import '../widgets/barra_navegacao_home.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/conteudo_detalhes_carona.dart';
 import '../widgets/painel_solicitacoes_carona.dart';
+import '../widgets/visual_buscaeu.dart';
 import 'ofertar_carona.dart';
 import 'corrida_em_andamento.dart';
 
@@ -188,8 +189,18 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
       context,
       MaterialPageRoute(builder: (_) => CorridaEmAndamentoTela(carona: carona)),
     );
-    if (!mounted || finalizada == null) return;
-    setState(() => _caronaAtualizada = finalizada);
+    if (!mounted) return;
+    if (finalizada != null) {
+      setState(() => _caronaAtualizada = finalizada);
+    } else {
+      // Atualiza tambem ao voltar pela seta/gesto apos um encerramento remoto.
+      final resultado = await CaronaService.buscarDetalhesCarona(carona.id);
+      if (mounted &&
+          resultado['sucesso'] == true &&
+          resultado['dados'] is Carona) {
+        setState(() => _caronaAtualizada = resultado['dados'] as Carona);
+      }
+    }
   }
 
   bool get usuarioEhMotorista {
@@ -432,43 +443,45 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
       'LOTADA',
       'EM_ANDAMENTO',
     ].contains(caronaAtual.status);
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: BarraSuperiorPadrao(
-        titulo: usuarioEhMotorista && !widget.somenteConsulta
-            ? 'Gerenciar carona'
-            : 'Detalhes da carona',
-      ),
-      body: SafeArea(
-        child: ConteudoDetalhesCarona(
-          carona: caronaAtual,
-          somenteConsulta: widget.somenteConsulta,
-          fotoMotorista: widget.fotoMotorista,
-          rodape: usuarioEhMotorista && !widget.somenteConsulta
-              ? PainelSolicitacoesCarona(
-                  idCarona: caronaAtual.id,
-                  onSolicitacaoAceita: _atualizarCarona,
-                )
-              : null,
+    return VisualBuscaEu(
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: BarraSuperiorPadrao(
+          titulo: usuarioEhMotorista && !widget.somenteConsulta
+              ? 'Gerenciar carona'
+              : 'Detalhes da carona',
         ),
-      ),
-      bottomNavigationBar: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (!widget.somenteConsulta && usuarioEhMotorista && permiteAcoes)
-            _acoesGerenciamento()
-          else if (_exibeSolicitacao)
-            _rodapeSolicitacao(),
-
-          BarraNavegacaoHome(
-            currentIndex: indiceNavegacao,
-            onTap: (indice) => NavegacaoPrincipal.selecionar(
-              context,
-              indice,
-              indiceAtual: indiceNavegacao,
-            ),
+        body: SafeArea(
+          child: ConteudoDetalhesCarona(
+            carona: caronaAtual,
+            somenteConsulta: widget.somenteConsulta,
+            fotoMotorista: widget.fotoMotorista,
+            rodape: usuarioEhMotorista && !widget.somenteConsulta
+                ? PainelSolicitacoesCarona(
+                    idCarona: caronaAtual.id,
+                    onSolicitacaoAceita: _atualizarCarona,
+                  )
+                : null,
           ),
-        ],
+        ),
+        bottomNavigationBar: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (!widget.somenteConsulta && usuarioEhMotorista && permiteAcoes)
+              _acoesGerenciamento()
+            else if (_exibeSolicitacao)
+              _rodapeSolicitacao(),
+
+            BarraNavegacaoHome(
+              currentIndex: indiceNavegacao,
+              onTap: (indice) => NavegacaoPrincipal.selecionar(
+                context,
+                indice,
+                indiceAtual: indiceNavegacao,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

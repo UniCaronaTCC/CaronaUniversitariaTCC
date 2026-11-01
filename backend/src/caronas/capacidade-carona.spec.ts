@@ -10,6 +10,7 @@ import { DadosEdicaoCarona } from './dados-carona';
 import { PontoEmbarque } from './ponto-embarque.entity';
 import { PosicaoAtualCarona } from './posicao-atual-carona.entity';
 import { RecorrenciasService } from './recorrencias.service';
+import { EncerramentoCorridasService } from './encerramento-corridas.service';
 import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 import { UsersService } from '../users/users.service';
 
@@ -119,6 +120,9 @@ describe('Edicao de capacidade com reservas', () => {
       { transaction } as unknown as DataSource,
       {} as UsersService,
       {} as RecorrenciasService,
+      {
+        encerrarVencidas: jest.fn().mockResolvedValue(undefined),
+      } as unknown as EncerramentoCorridasService,
     );
     return { service, carona, qb, save, count, eventos, transaction, manager };
   }

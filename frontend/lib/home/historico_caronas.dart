@@ -8,10 +8,11 @@ import '../services/avaliacao_service.dart';
 import '../services/carona_service.dart';
 import '../services/solicitacao_service.dart';
 import '../widgets/barra_navegacao_home.dart';
-import '../widgets/card_carona_disponivel.dart';
+import '../widgets/card_carona_historico.dart';
 import '../widgets/card_solicitacao_enviada.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/dialogo_avaliacao.dart';
+import '../widgets/visual_buscaeu.dart';
 import 'detalhes_carona.dart';
 
 typedef CarregarHistorico = Future<Map<String, dynamic>> Function();
@@ -135,33 +136,38 @@ class _HistoricoCaronasTelaState extends State<HistoricoCaronasTela> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        backgroundColor: AppColors.background,
-        appBar: AppBar(
-          title: const Text('Histórico de caronas'),
+    final fonteAmpliada = MediaQuery.textScalerOf(context).scale(14) > 18;
+    return VisualBuscaEu(
+      child: DefaultTabController(
+        length: 2,
+        child: Scaffold(
           backgroundColor: AppColors.background,
-          foregroundColor: AppColors.text,
-          elevation: 0,
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Como motorista'),
-              Tab(text: 'Como passageiro'),
-            ],
+          appBar: AppBar(
+            title: const Text('Histórico de caronas'),
+            backgroundColor: AppColors.background,
+            foregroundColor: AppColors.text,
+            elevation: 0,
+            bottom: TabBar(
+              isScrollable: fonteAmpliada,
+              tabAlignment: fonteAmpliada ? TabAlignment.start : null,
+              tabs: const [
+                Tab(text: 'Como motorista'),
+                Tab(text: 'Como passageiro'),
+              ],
+            ),
           ),
-        ),
-        bottomNavigationBar: BarraNavegacaoHome(
-          currentIndex: 3,
-          onTap: (indice) =>
-              NavegacaoPrincipal.selecionar(context, indice, indiceAtual: 3),
-        ),
-        body: SafeArea(
-          child: carregando || mensagemErro != null
-              ? _estadoGeral()
-              : TabBarView(
-                  children: [_historicoMotorista(), _historicoPassageiro()],
-                ),
+          bottomNavigationBar: BarraNavegacaoHome(
+            currentIndex: 3,
+            onTap: (indice) =>
+                NavegacaoPrincipal.selecionar(context, indice, indiceAtual: 3),
+          ),
+          body: SafeArea(
+            child: carregando || mensagemErro != null
+                ? _estadoGeral()
+                : TabBarView(
+                    children: [_historicoMotorista(), _historicoPassageiro()],
+                  ),
+          ),
         ),
       ),
     );
@@ -188,15 +194,15 @@ class _HistoricoCaronasTelaState extends State<HistoricoCaronasTela> {
   }
 
   Widget _historicoMotorista() {
-    final ativas = ofertas.where((carona) => !carona.finalizada).toList();
-    final finalizadas = ofertas.where((carona) => carona.finalizada).toList();
+    final ativas = ofertas.where((carona) => !carona.encerrada).toList();
+    final finalizadas = ofertas.where((carona) => carona.encerrada).toList();
 
     return _listaHistorico(
       tituloAtivas: 'Ofertas ativas',
       mensagemVazia: 'Você ainda não publicou caronas',
       itensAtivos: ativas,
       itensFinalizados: finalizadas,
-      construirItem: (carona) => CardCaronaDisponivel(
+      construirItem: (carona) => CardCaronaHistorico(
         carona: carona,
         onTap: () => abrirDetalhes(carona),
       ),
@@ -225,7 +231,7 @@ class _HistoricoCaronasTelaState extends State<HistoricoCaronasTela> {
 
   Widget _listaHistorico<T>({
     required String tituloAtivas,
-    String tituloEncerradas = 'Caronas finalizadas',
+    String tituloEncerradas = 'Caronas encerradas',
     required String mensagemVazia,
     required List<T> itensAtivos,
     required List<T> itensFinalizados,

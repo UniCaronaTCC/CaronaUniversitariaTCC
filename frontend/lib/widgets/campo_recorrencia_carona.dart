@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
+import 'visual_buscaeu.dart';
 
 class CampoRecorrenciaCarona extends StatelessWidget {
   final bool caronaRecorrente;
@@ -32,7 +33,8 @@ class CampoRecorrenciaCarona extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: VisualBuscaEu.borda),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

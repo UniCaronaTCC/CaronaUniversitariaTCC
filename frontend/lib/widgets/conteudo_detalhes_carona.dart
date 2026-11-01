@@ -6,6 +6,7 @@ import '../models/carona.dart';
 import '../models/ponto_embarque.dart';
 import '../utils/formatador_data.dart';
 import 'avatar_usuario.dart';
+import 'visual_buscaeu.dart';
 
 class ConteudoDetalhesCarona extends StatelessWidget {
   final Carona carona;
@@ -26,143 +27,167 @@ class ConteudoDetalhesCarona extends StatelessWidget {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
+          CartaoBuscaEu(
+            child: Row(
+              children: [
+                AvatarUsuario(
+                  nome: carona.motorista,
+                  urlFoto: fotoMotorista ?? carona.fotoMotorista,
+                  raio: 22,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Motorista', style: VisualBuscaEu.descricao),
+                      const SizedBox(height: 3),
+                      Text(carona.motorista, style: VisualBuscaEu.titulo),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: SeloBuscaEu(texto: _textoStatus()),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 16,
+            runSpacing: 8,
+            crossAxisAlignment: WrapCrossAlignment.center,
             children: [
-              AvatarUsuario(
-                nome: carona.motorista,
-                urlFoto: fotoMotorista ?? carona.fotoMotorista,
-                raio: 22,
+              Text(
+                carona.horarioFormatado,
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 34,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
+              Text(_textoData(), style: VisualBuscaEu.descricao),
+            ],
+          ),
+          Text(carona.rotuloHorario, style: VisualBuscaEu.descricao),
+          const SizedBox(height: 16),
+          CartaoBuscaEu(
+            cor: AppColors.primary.withValues(alpha: .06),
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              spacing: 20,
+              runSpacing: 12,
+              children: [
+                if (!somenteConsulta &&
+                    ['ATIVA', 'LOTADA'].contains(carona.status))
+                  Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.people_outline,
+                        size: 20,
+                        color: AppColors.primary,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        '${carona.vagas} ${carona.vagas == 1 ? 'vaga' : 'vagas'}',
+                        style: const TextStyle(
+                          color: AppColors.primary,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Motorista',
-                      style: TextStyle(color: Colors.black54, fontSize: 13),
-                    ),
-                    const SizedBox(height: 3),
                     Text(
-                      carona.motorista,
+                      carona.valorFormatado,
                       style: const TextStyle(
-                        color: AppColors.text,
+                        color: AppColors.primary,
                         fontSize: 20,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                       ),
+                    ),
+                    const Text(
+                      'Valor por passageiro',
+                      style: VisualBuscaEu.descricao,
                     ),
                   ],
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
-
+          const SizedBox(height: 24),
+          const Text('Percurso', style: VisualBuscaEu.titulo),
           const SizedBox(height: 12),
-          Text(
-            _textoStatus(),
-            style: const TextStyle(
-              color: Colors.black54,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+          CartaoBuscaEu(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (carona.pontosEmbarque.isEmpty &&
+                    carona.origem.trim().isNotEmpty) ...[
+                  _SecaoDetalhe(
+                    titulo: 'Saída cadastrada',
+                    icone: Icons.trip_origin,
+                    conteudo: carona.origem.trim(),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+                _SecaoPontosEmbarque(pontos: carona.pontosEmbarqueOrdenados),
+                const SizedBox(height: 20),
+                _SecaoDetalhe(
+                  titulo: 'Destino',
+                  icone: Icons.school_outlined,
+                  conteudo: carona.destino,
+                ),
+              ],
             ),
           ),
-          const Divider(height: 32),
-          Wrap(
-            spacing: 24,
-            runSpacing: 20,
-            children: [
-              SizedBox(
-                width: 150,
-                child: _SecaoDetalhe(
-                  titulo: 'Data',
-                  icone: Icons.access_time,
-                  conteudo: _textoData(),
-                ),
-              ),
-              SizedBox(
-                width: 150,
-                child: _SecaoDetalhe(
-                  titulo: carona.rotuloHorario,
-                  icone: Icons.schedule,
-                  conteudo: carona.horarioFormatado,
-                ),
-              ),
-              SizedBox(
-                width: 150,
-                child: _SecaoDetalhe(
-                  titulo: 'Valor por passageiro',
-                  icone: Icons.payments_outlined,
-                  conteudo: carona.valorFormatado,
-                ),
-              ),
-            ],
-          ),
-          const Divider(height: 32),
-          if (carona.pontosEmbarque.isEmpty &&
-              carona.origem.trim().isNotEmpty) ...[
-            _SecaoDetalhe(
-              titulo: 'Saída cadastrada',
-              icone: Icons.trip_origin,
-              conteudo: carona.origem.trim(),
-            ),
-            const SizedBox(height: 22),
-          ],
-          _SecaoPontosEmbarque(pontos: carona.pontosEmbarqueOrdenados),
-          const SizedBox(height: 22),
-          _SecaoDetalhe(
-            titulo: 'Destino',
-            icone: Icons.location_on_outlined,
-            conteudo: carona.destino,
-          ),
-          const Divider(height: 32),
-          if (carona.veiculoModelo?.trim().isNotEmpty == true) ...[
-            _SecaoDetalhe(
-              titulo: 'Veículo',
-              icone: Icons.directions_car_outlined,
-              conteudo: [
-                carona.veiculoModelo!.trim(),
-                if (carona.veiculoCor?.trim().isNotEmpty == true)
-                  carona.veiculoCor!.trim(),
-                if (carona.veiculoPlaca?.trim().isNotEmpty == true)
-                  carona.veiculoPlaca!.trim(),
-              ].join(' • '),
-            ),
-          ],
-
-          if (!somenteConsulta &&
-              ['ATIVA', 'LOTADA'].contains(carona.status)) ...[
-            const SizedBox(height: 22),
-            _SecaoDetalhe(
-              titulo: 'Vagas disponíveis',
-              icone: Icons.people_outline,
-              conteudo: '${carona.vagas} vagas',
-            ),
-          ],
-
-          if (carona.recorrente) ...[
-            const SizedBox(height: 22),
-            _SecaoDetalhe(
-              titulo: 'Repetição',
-              icone: Icons.repeat,
-              conteudo: _textoRecorrencia(),
-            ),
-          ],
-
-          if (carona.observacoes?.trim().isNotEmpty == true) ...[
-            const SizedBox(height: 22),
-            _SecaoDetalhe(
-              titulo: 'Observações',
-              icone: Icons.notes_outlined,
-              conteudo: carona.observacoes!.trim(),
-            ),
-          ],
-
-          const SizedBox(height: 30),
+          const SizedBox(height: 16),
           MapaRotaCarona(carona: carona),
-
-          if (rodape != null) ...[const SizedBox(height: 30), rodape!],
+          if (carona.veiculoModelo?.trim().isNotEmpty == true) ...[
+            const SizedBox(height: 24),
+            CartaoBuscaEu(
+              child: _SecaoDetalhe(
+                titulo: 'Veículo',
+                icone: Icons.directions_car_outlined,
+                conteudo: [
+                  carona.veiculoModelo!.trim(),
+                  if (carona.veiculoCor?.trim().isNotEmpty == true)
+                    carona.veiculoCor!.trim(),
+                  if (carona.veiculoPlaca?.trim().isNotEmpty == true)
+                    carona.veiculoPlaca!.trim(),
+                ].join(' • '),
+              ),
+            ),
+          ],
+          if (carona.recorrente) ...[
+            const SizedBox(height: 16),
+            CartaoBuscaEu(
+              child: _SecaoDetalhe(
+                titulo: 'Repetição',
+                icone: Icons.repeat,
+                conteudo: _textoRecorrencia(),
+              ),
+            ),
+          ],
+          if (carona.observacoes?.trim().isNotEmpty == true) ...[
+            const SizedBox(height: 16),
+            CartaoBuscaEu(
+              child: _SecaoDetalhe(
+                titulo: 'Observações',
+                icone: Icons.notes_outlined,
+                conteudo: carona.observacoes!.trim(),
+              ),
+            ),
+          ],
+          if (rodape != null) ...[const SizedBox(height: 24), rodape!],
         ],
       ),
     );
@@ -178,6 +203,7 @@ class ConteudoDetalhesCarona extends StatelessWidget {
       'LOTADA' => 'Carona lotada',
       'EM_ANDAMENTO' => 'Carona em andamento',
       'FINALIZADA' => 'Carona finalizada',
+      'ENCERRADA_POR_TEMPO' => 'Encerrada automaticamente por tempo',
       'CANCELADA' => 'Carona cancelada',
       'EXPIRADA' => 'Carona expirada',
       _ => 'Carona encerrada',

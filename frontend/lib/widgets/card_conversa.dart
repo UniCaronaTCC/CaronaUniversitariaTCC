@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../models/conversa.dart';
 import 'avatar_usuario.dart';
+import 'visual_buscaeu.dart';
 
 class CardConversa extends StatelessWidget {
   final Conversa conversa;
@@ -27,24 +28,19 @@ class CardConversa extends StatelessWidget {
         : conversa.encerrada
         ? const Color(0xFFF3F3F3)
         : Colors.white;
-    final corBorda = temMensagensNaoLidas
-        ? AppColors.primary
-        : const Color(0xFFE1E1E1);
+    const corBorda = VisualBuscaEu.borda;
 
     return Material(
       color: corFundo,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: BorderRadius.circular(10),
       child: InkWell(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(10),
         onTap: onTap,
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            border: Border.all(
-              color: corBorda,
-              width: temMensagensNaoLidas ? 1.5 : 1,
-            ),
-            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: corBorda, width: 1),
+            borderRadius: BorderRadius.circular(10),
           ),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -84,7 +80,7 @@ class CardConversa extends StatelessWidget {
                             style: TextStyle(
                               color: temMensagensNaoLidas
                                   ? AppColors.primary
-                                  : Colors.black45,
+                                  : VisualBuscaEu.secundario,
                               fontSize: 12,
                               fontWeight: temMensagensNaoLidas
                                   ? FontWeight.w600
@@ -105,7 +101,7 @@ class CardConversa extends StatelessWidget {
                             style: TextStyle(
                               color: temMensagensNaoLidas
                                   ? AppColors.text
-                                  : Colors.black54,
+                                  : VisualBuscaEu.secundario,
                               fontSize: 14,
                               fontWeight: temMensagensNaoLidas
                                   ? FontWeight.w600
@@ -129,7 +125,7 @@ class CardConversa extends StatelessWidget {
                         const Icon(
                           Icons.location_on_outlined,
                           size: 16,
-                          color: Colors.black45,
+                          color: VisualBuscaEu.secundario,
                         ),
                         const SizedBox(width: 4),
                         Expanded(
@@ -138,18 +134,16 @@ class CardConversa extends StatelessWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
-                              color: Colors.black54,
+                              color: VisualBuscaEu.secundario,
                               fontSize: 13,
                             ),
                           ),
                         ),
                         if (conversa.encerrada)
-                          const Text(
-                            'Encerrada',
-                            style: TextStyle(
-                              color: Colors.black45,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
+                          const Flexible(
+                            child: SeloBuscaEu(
+                              texto: 'Encerrada',
+                              cor: VisualBuscaEu.secundario,
                             ),
                           ),
                       ],

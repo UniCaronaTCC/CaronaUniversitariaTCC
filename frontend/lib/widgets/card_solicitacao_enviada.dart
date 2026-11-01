@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../models/solicitacao_enviada.dart';
 import 'status_solicitacao.dart';
+import 'avatar_usuario.dart';
+import 'visual_buscaeu.dart';
 
 class CardSolicitacaoEnviada extends StatelessWidget {
   final SolicitacaoEnviada solicitacao;
@@ -27,7 +29,10 @@ class CardSolicitacaoEnviada extends StatelessWidget {
     return Material(
       key: ValueKey('card-pedido-${solicitacao.id}'),
       color: solicitacao.arquivada ? const Color(0xFFF1F1F1) : Colors.white,
-      borderRadius: BorderRadius.circular(8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: const BorderSide(color: VisualBuscaEu.borda),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -35,9 +40,10 @@ class CardSolicitacaoEnviada extends StatelessWidget {
           children: [
             Row(
               children: [
-                const Icon(
-                  Icons.directions_car_outlined,
-                  color: AppColors.primary,
+                AvatarUsuario(
+                  nome: solicitacao.motorista,
+                  urlFoto: null,
+                  raio: 20,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -50,15 +56,19 @@ class CardSolicitacaoEnviada extends StatelessWidget {
                     ),
                   ),
                 ),
-                Text(
-                  solicitacao.valorFormatado,
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
               ],
+            ),
+            const SizedBox(height: 8),
+            Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                solicitacao.valorFormatado,
+                style: const TextStyle(
+                  color: AppColors.primary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
             const SizedBox(height: 8),
             Align(
@@ -163,7 +173,9 @@ class CardSolicitacaoEnviada extends StatelessWidget {
                 ),
               ),
             ],
-            if (solicitacao.podeAvaliar && onAvaliar != null) ...[
+            if (solicitacao.podeAvaliar &&
+                !solicitacao.encerradaPorTempo &&
+                onAvaliar != null) ...[
               const Divider(height: 30),
               SizedBox(
                 width: double.infinity,

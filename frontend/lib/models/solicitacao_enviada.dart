@@ -94,16 +94,24 @@ class SolicitacaoEnviada {
   String get valorFormatado => formatarDoubleComoMoedaReal(valor);
 
   bool get caronaFinalizada => statusCarona == 'FINALIZADA';
+  bool get encerradaPorTempo => statusCarona == 'ENCERRADA_POR_TEMPO';
 
   bool get cancelada => status.startsWith('CANCELADA_');
 
   bool get expirada => status == 'EXPIRADA' || statusCarona == 'EXPIRADA';
 
   bool get arquivada =>
-      caronaFinalizada || cancelada || expirada || statusCarona == 'CANCELADA';
+      caronaFinalizada ||
+      encerradaPorTempo ||
+      cancelada ||
+      expirada ||
+      statusCarona == 'CANCELADA';
 
-  String get statusExibicao =>
-      expirada ? 'EXPIRADA' : (pagamentoConfirmado ? 'CONFIRMADA' : status);
+  String get statusExibicao => encerradaPorTempo
+      ? 'ENCERRADA_POR_TEMPO'
+      : expirada
+      ? 'EXPIRADA'
+      : (pagamentoConfirmado ? 'CONFIRMADA' : status);
 
   bool get podePagarPix =>
       status == 'ACEITA' && !pagamentoConfirmado && !recorrente && !arquivada;

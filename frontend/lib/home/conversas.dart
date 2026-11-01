@@ -10,6 +10,7 @@ import '../services/mensagem_service.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/card_conversa.dart';
 import '../widgets/componentes_padrao.dart';
+import '../widgets/visual_buscaeu.dart';
 import 'conversa_detalhe.dart';
 
 typedef CarregarConversas = Future<Map<String, dynamic>> Function();
@@ -166,21 +167,37 @@ class _ConversasTelaState extends State<ConversasTela>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        title: const Text('Conversas'),
+    return VisualBuscaEu(
+      child: Scaffold(
         backgroundColor: AppColors.background,
-        foregroundColor: AppColors.text,
-        elevation: 0,
-        automaticallyImplyLeading: false,
+        appBar: AppBar(
+          title: const Text('Conversas'),
+          backgroundColor: AppColors.background,
+          foregroundColor: AppColors.text,
+          elevation: 0,
+          automaticallyImplyLeading: false,
+        ),
+        bottomNavigationBar: BarraNavegacaoHome(
+          currentIndex: 1,
+          onTap: (indice) =>
+              NavegacaoPrincipal.selecionar(context, indice, indiceAtual: 1),
+        ),
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Padding(
+                padding: EdgeInsets.fromLTRB(24, 8, 24, 8),
+                child: Text(
+                  'Combine os detalhes da sua carona',
+                  style: VisualBuscaEu.descricao,
+                ),
+              ),
+              Expanded(child: _conteudo()),
+            ],
+          ),
+        ),
       ),
-      bottomNavigationBar: BarraNavegacaoHome(
-        currentIndex: 1,
-        onTap: (indice) =>
-            NavegacaoPrincipal.selecionar(context, indice, indiceAtual: 1),
-      ),
-      body: SafeArea(child: _conteudo()),
     );
   }
 

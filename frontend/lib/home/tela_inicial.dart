@@ -189,7 +189,7 @@ class _TelaInicialState extends State<TelaInicial> {
     final dados = resultado['dados'];
 
     if (resultado['sucesso'] == true && dados is List<Carona>) {
-      final caronasAtivas = dados.where((carona) => !carona.finalizada).toList()
+      final caronasAtivas = dados.where((carona) => !carona.encerrada).toList()
         ..sort((a, b) => a.dataInicio.compareTo(b.dataInicio));
 
       setState(() {

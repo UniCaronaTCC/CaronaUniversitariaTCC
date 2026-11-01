@@ -280,6 +280,7 @@ export class CaronasController {
       diasSemana: carona.diasSemana,
       observacoes: carona.observacoes,
       status: carona.status,
+      iniciadaEm: carona.iniciadaEm ?? null,
 
       pontosEmbarque:
         carona.pontosEmbarque?.map((ponto) => ({

@@ -17,6 +17,7 @@ import '../utils/formatador_moeda.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/formulario_ofertar_carona.dart';
+import '../widgets/visual_buscaeu.dart';
 import 'verificacao_cnh.dart';
 
 class OfertarCaronaTela extends StatefulWidget {
@@ -619,131 +620,141 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: BarraSuperiorPadrao(
-        titulo: widget.idRecorrencia != null
-            ? 'Editar recorrência'
-            : editando
-            ? 'Editar carona'
-            : 'Ofertar carona',
-      ),
-      bottomNavigationBar: BarraNavegacaoHome(
-        currentIndex: widget.indiceNavegacao,
-        onTap: (indice) => NavegacaoPrincipal.selecionar(
-          context,
-          indice,
-          indiceAtual: widget.indiceNavegacao,
+    return VisualBuscaEu(
+      child: Scaffold(
+        backgroundColor: AppColors.background,
+        appBar: BarraSuperiorPadrao(
+          titulo: widget.idRecorrencia != null
+              ? 'Editar recorrência'
+              : editando
+              ? 'Editar carona'
+              : 'Ofertar carona',
         ),
-      ),
-      body: SafeArea(
-        child:
-            precisaCnh &&
-                (carregandoCnh ||
-                    erroCnh != null ||
-                    !verificacaoCnh.permiteOferecerCarona())
-            ? SingleChildScrollView(
-                child: Padding(
+        bottomNavigationBar: BarraNavegacaoHome(
+          currentIndex: widget.indiceNavegacao,
+          onTap: (indice) => NavegacaoPrincipal.selecionar(
+            context,
+            indice,
+            indiceAtual: widget.indiceNavegacao,
+          ),
+        ),
+        body: SafeArea(
+          child:
+              precisaCnh &&
+                  (carregandoCnh ||
+                      erroCnh != null ||
+                      !verificacaoCnh.permiteOferecerCarona())
+              ? SingleChildScrollView(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: EstadoConteudoPadrao(
+                      carregando: carregandoCnh,
+                      icone: Icons.badge_outlined,
+                      titulo: carregandoCnh
+                          ? 'Conferindo sua habilitação'
+                          : erroCnh != null
+                          ? 'Não foi possível continuar'
+                          : 'Verifique sua CNH',
+                      mensagem: carregandoCnh
+                          ? null
+                          : erroCnh ??
+                                'Para oferecer caronas, precisamos conferir uma CNH válida para dirigir automóveis',
+                      textoBotao: carregandoCnh
+                          ? null
+                          : erroCnh != null
+                          ? 'Tentar novamente'
+                          : 'Verificar CNH',
+                      iconeBotao: erroCnh != null
+                          ? Icons.refresh
+                          : Icons.badge_outlined,
+                      onPressed: carregandoCnh
+                          ? null
+                          : erroCnh != null
+                          ? atualizarCnh
+                          : abrirVerificacaoCnh,
+                    ),
+                  ),
+                )
+              : edicaoIndividual &&
+                    (carregandoCapacidade ||
+                        erroCapacidade != null ||
+                        capacidade == null)
+              ? SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
                   child: EstadoConteudoPadrao(
-                    carregando: carregandoCnh,
-                    icone: Icons.badge_outlined,
-                    titulo: carregandoCnh
-                        ? 'Conferindo sua habilitação'
-                        : erroCnh != null
-                        ? 'Não foi possível continuar'
-                        : 'Verifique sua CNH',
-                    mensagem: carregandoCnh
+                    carregando: carregandoCapacidade,
+                    icone: Icons.people_outline,
+                    titulo: carregandoCapacidade
+                        ? 'Conferindo vagas'
+                        : 'Não foi possível continuar',
+                    mensagem: erroCapacidade,
+                    textoBotao: carregandoCapacidade
                         ? null
-                        : erroCnh ??
-                              'Para oferecer caronas, precisamos conferir uma CNH válida para dirigir automóveis',
-                    textoBotao: carregandoCnh
+                        : 'Tentar novamente',
+                    iconeBotao: Icons.refresh,
+                    onPressed: carregandoCapacidade
                         ? null
-                        : erroCnh != null
-                        ? 'Tentar novamente'
-                        : 'Verificar CNH',
-                    iconeBotao: erroCnh != null
-                        ? Icons.refresh
-                        : Icons.badge_outlined,
-                    onPressed: carregandoCnh
-                        ? null
-                        : erroCnh != null
-                        ? atualizarCnh
-                        : abrirVerificacaoCnh,
+                        : atualizarCapacidade,
+                  ),
+                )
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: FormularioOfertarCarona(
+                    mostrarTitulo: false,
+                    titulo: widget.idRecorrencia != null
+                        ? 'Editar recorrência'
+                        : editando
+                        ? 'Editar carona'
+                        : 'Ofertar carona',
+                    descricao: widget.idRecorrencia != null
+                        ? 'Alterações valem para novas datas. Caronas já publicadas são mantidas.'
+                        : edicaoLimitada
+                        ? 'Passageiros confirmados. Dados da viagem bloqueados.'
+                        : editando
+                        ? 'Atualize os dados da viagem'
+                        : 'Informe os dados da viagem',
+                    textoBotao: editando
+                        ? 'SALVAR ALTERAÇÕES'
+                        : 'OFERTAR CARONA',
+                    textoCarregando: editando ? 'SALVANDO...' : 'ENVIANDO...',
+
+                    destinoController: destinoController,
+                    dataController: dataController,
+                    horarioController: horarioController,
+                    vagasController: vagasController,
+                    passageirosAceitos: edicaoIndividual
+                        ? capacidade?.aceitos
+                        : null,
+                    capacidadeMinima: edicaoLimitada ? capacidade!.total : 1,
+                    valorController: valorController,
+                    observacoesController: observacoesController,
+
+                    caronaRecorrente: caronaRecorrente,
+                    enviandoCarona: enviandoCarona,
+                    diasSelecionados: diasSelecionados,
+
+                    pontosEmbarque: pontosEmbarque,
+                    referenciaDestino: destinoSelecionado,
+                    pontosEmbarqueEditaveis:
+                        !editando || widget.idRecorrencia != null,
+                    mostrarRecorrencia:
+                        !editando || widget.idRecorrencia != null,
+                    possuiVeiculo: possuiVeiculo,
+
+                    onSelecionarDestino: escolherDestinoNoMapa,
+                    onAdicionarPontoEmbarque: adicionarPontoEmbarque,
+                    onRemoverPontoEmbarque: removerPontoEmbarque,
+                    onSelecionarData: escolherData,
+                    onSelecionarHorario: escolherHorario,
+                    onDestinoChanged: alterarTextoDestino,
+                    onDestinoSelecionado: selecionarDestino,
+                    onRecorrenciaChanged: alterarRecorrencia,
+                    onDiaSelecionado: alternarDiaSemana,
+                    onOfertarCarona: ofertarCarona,
+                    onCadastrarVeiculo: abrirCadastroVeiculo,
                   ),
                 ),
-              )
-            : edicaoIndividual &&
-                  (carregandoCapacidade ||
-                      erroCapacidade != null ||
-                      capacidade == null)
-            ? SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: EstadoConteudoPadrao(
-                  carregando: carregandoCapacidade,
-                  icone: Icons.people_outline,
-                  titulo: carregandoCapacidade
-                      ? 'Conferindo vagas'
-                      : 'Não foi possível continuar',
-                  mensagem: erroCapacidade,
-                  textoBotao: carregandoCapacidade ? null : 'Tentar novamente',
-                  iconeBotao: Icons.refresh,
-                  onPressed: carregandoCapacidade ? null : atualizarCapacidade,
-                ),
-              )
-            : SingleChildScrollView(
-                padding: const EdgeInsets.all(24),
-                child: FormularioOfertarCarona(
-                  titulo: widget.idRecorrencia != null
-                      ? 'Editar recorrência'
-                      : editando
-                      ? 'Editar carona'
-                      : 'Ofertar carona',
-                  descricao: widget.idRecorrencia != null
-                      ? 'Alterações valem para novas datas. Caronas já publicadas são mantidas.'
-                      : edicaoLimitada
-                      ? 'Passageiros confirmados. Dados da viagem bloqueados.'
-                      : editando
-                      ? 'Atualize os dados da viagem'
-                      : 'Informe os dados da viagem',
-                  textoBotao: editando ? 'SALVAR ALTERAÇÕES' : 'OFERTAR CARONA',
-                  textoCarregando: editando ? 'SALVANDO...' : 'ENVIANDO...',
-
-                  destinoController: destinoController,
-                  dataController: dataController,
-                  horarioController: horarioController,
-                  vagasController: vagasController,
-                  passageirosAceitos: edicaoIndividual
-                      ? capacidade?.aceitos
-                      : null,
-                  capacidadeMinima: edicaoLimitada ? capacidade!.total : 1,
-                  valorController: valorController,
-                  observacoesController: observacoesController,
-
-                  caronaRecorrente: caronaRecorrente,
-                  enviandoCarona: enviandoCarona,
-                  diasSelecionados: diasSelecionados,
-
-                  pontosEmbarque: pontosEmbarque,
-                  referenciaDestino: destinoSelecionado,
-                  pontosEmbarqueEditaveis:
-                      !editando || widget.idRecorrencia != null,
-                  mostrarRecorrencia: !editando || widget.idRecorrencia != null,
-                  possuiVeiculo: possuiVeiculo,
-
-                  onSelecionarDestino: escolherDestinoNoMapa,
-                  onAdicionarPontoEmbarque: adicionarPontoEmbarque,
-                  onRemoverPontoEmbarque: removerPontoEmbarque,
-                  onSelecionarData: escolherData,
-                  onSelecionarHorario: escolherHorario,
-                  onDestinoChanged: alterarTextoDestino,
-                  onDestinoSelecionado: selecionarDestino,
-                  onRecorrenciaChanged: alterarRecorrencia,
-                  onDiaSelecionado: alternarDiaSemana,
-                  onOfertarCarona: ofertarCarona,
-                  onCadastrarVeiculo: abrirCadastroVeiculo,
-                ),
-              ),
+        ),
       ),
     );
   }

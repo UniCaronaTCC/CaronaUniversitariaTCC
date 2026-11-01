@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../models/solicitacao_recebida.dart';
 import 'status_solicitacao.dart';
+import 'avatar_usuario.dart';
+import 'visual_buscaeu.dart';
 
 class CardSolicitacaoRecebida extends StatelessWidget {
   final SolicitacaoRecebida solicitacao;
@@ -38,28 +40,37 @@ class CardSolicitacaoRecebida extends StatelessWidget {
     return Material(
       key: ValueKey('card-solicitacao-${solicitacao.id}'),
       color: solicitacao.arquivada ? const Color(0xFFF1F1F1) : Colors.white,
-      borderRadius: BorderRadius.circular(8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(10),
+        side: const BorderSide(color: VisualBuscaEu.borda),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
+            Wrap(
+              spacing: 12,
+              runSpacing: 8,
+              crossAxisAlignment: WrapCrossAlignment.center,
               children: [
-                const Icon(Icons.person_outline, color: AppColors.primary),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    solicitacao.passageiro,
-                    style: const TextStyle(
-                      color: AppColors.text,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                AvatarUsuario(
+                  nome: solicitacao.passageiro,
+                  urlFoto: null,
+                  raio: 20,
+                ),
+                Text(
+                  solicitacao.passageiro,
+                  style: const TextStyle(
+                    color: AppColors.text,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
                 StatusSolicitacao(
-                  status: solicitacao.expirada
+                  status: solicitacao.encerradaPorTempo
+                      ? 'ENCERRADA_POR_TEMPO'
+                      : solicitacao.expirada
                       ? 'EXPIRADA'
                       : finalizada
                       ? 'FINALIZADA'
@@ -110,30 +121,24 @@ class CardSolicitacaoRecebida extends StatelessWidget {
 
             if (pendente) ...[
               const Divider(height: 30),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton.icon(
-                      onPressed: processando ? null : onRecusar,
-                      icon: const Icon(Icons.close),
-                      label: const Text('RECUSAR'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: processando ? null : onAceitar,
-                      icon: processando
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Icon(Icons.check),
-                      label: const Text('ACEITAR'),
-                    ),
-                  ),
-                ],
+              CamposLadoALado(
+                larguraMinima: 260,
+                primeiro: OutlinedButton.icon(
+                  onPressed: processando ? null : onRecusar,
+                  icon: const Icon(Icons.close),
+                  label: const Text('RECUSAR'),
+                ),
+                segundo: ElevatedButton.icon(
+                  onPressed: processando ? null : onAceitar,
+                  icon: processando
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.check),
+                  label: const Text('ACEITAR'),
+                ),
               ),
             ] else if (solicitacao.podeCancelar && onCancelar != null) ...[
               const Divider(height: 30),
@@ -145,7 +150,9 @@ class CardSolicitacaoRecebida extends StatelessWidget {
                   label: const Text('CANCELAR PARTICIPAÇÃO'),
                 ),
               ),
-            ] else if (solicitacao.podeAvaliar && onAvaliar != null) ...[
+            ] else if (solicitacao.podeAvaliar &&
+                !solicitacao.encerradaPorTempo &&
+                onAvaliar != null) ...[
               const Divider(height: 30),
               SizedBox(
                 width: double.infinity,

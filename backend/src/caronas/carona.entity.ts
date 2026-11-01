@@ -131,6 +131,16 @@ export class Carona {
   @Column({ length: 30, default: 'ATIVA' })
   status: string = 'ATIVA';
 
+  // Preenchido e preservado pelo banco na primeira transicao para a corrida.
+  @Column({
+    name: 'iniciada_em',
+    type: 'timestamptz',
+    nullable: true,
+    insert: false,
+    update: false,
+  })
+  iniciadaEm: Date | null = null;
+
   @ManyToOne(() => User)
   @JoinColumn({ name: 'id_usuario' })
   usuario!: User;

@@ -13,6 +13,7 @@ import '../services/carona_service.dart';
 import '../services/mensagem_service.dart';
 import '../widgets/avatar_usuario.dart';
 import '../widgets/componentes_padrao.dart';
+import '../widgets/visual_buscaeu.dart';
 import 'detalhes_carona.dart';
 
 typedef CarregarMensagens = Future<Map<String, dynamic>> Function();
@@ -375,81 +376,87 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
     final nome = widget.conversa.nomeOutroParticipante(idUsuarioAtual);
     final foto = widget.conversa.fotoOutroParticipante(idUsuarioAtual);
 
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: AppBar(
-        toolbarHeight: max(
-          kToolbarHeight,
-          MediaQuery.textScalerOf(context).scale(36) + 20,
-        ),
+    return VisualBuscaEu(
+      child: Scaffold(
         backgroundColor: AppColors.background,
-        foregroundColor: AppColors.text,
-        elevation: 0,
-        titleSpacing: 0,
-        title: Tooltip(
-          message: 'Ver detalhes da carona',
-          child: InkWell(
-            key: const ValueKey('cabecalho-detalhes-carona'),
-            onTap: carregandoCarona ? null : abrirDetalhesCarona,
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-              child: Row(
-                children: [
-                  AvatarUsuario(
-                    key: const ValueKey('avatar-cabecalho-conversa'),
-                    nome: nome,
-                    urlFoto: foto,
-                    raio: 18,
-                    desativado: encerrada,
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          nome,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            fontSize: 17,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        Text(
-                          widget.conversa.destino,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
-                            color: Colors.black54,
-                            fontSize: 12,
-                            fontWeight: FontWeight.normal,
-                          ),
-                        ),
-                      ],
+        appBar: AppBar(
+          toolbarHeight: max(
+            kToolbarHeight,
+            MediaQuery.textScalerOf(context).scale(36) + 20,
+          ),
+          backgroundColor: AppColors.background,
+          foregroundColor: AppColors.text,
+          elevation: 0,
+          bottom: const PreferredSize(
+            preferredSize: Size.fromHeight(1),
+            child: Divider(height: 1, color: VisualBuscaEu.borda),
+          ),
+          titleSpacing: 0,
+          title: Tooltip(
+            message: 'Ver detalhes da carona',
+            child: InkWell(
+              key: const ValueKey('cabecalho-detalhes-carona'),
+              onTap: carregandoCarona ? null : abrirDetalhesCarona,
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                child: Row(
+                  children: [
+                    AvatarUsuario(
+                      key: const ValueKey('avatar-cabecalho-conversa'),
+                      nome: nome,
+                      urlFoto: foto,
+                      raio: 18,
+                      desativado: encerrada,
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: carregandoCarona
-                        ? const CircularProgressIndicator(strokeWidth: 2)
-                        : const Icon(Icons.chevron_right, size: 20),
-                  ),
-                ],
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            nome,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              fontSize: 17,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            widget.conversa.destino,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                              color: VisualBuscaEu.secundario,
+                              fontSize: 12,
+                              fontWeight: FontWeight.normal,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: carregandoCarona
+                          ? const CircularProgressIndicator(strokeWidth: 2)
+                          : const Icon(Icons.chevron_right, size: 20),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
         ),
-      ),
-      body: SafeArea(
-        child: Column(
-          children: [
-            Expanded(child: _conteudo()),
-            if (encerrada) _avisoEncerrada() else _campoEnvio(),
-          ],
+        body: SafeArea(
+          child: Column(
+            children: [
+              Expanded(child: _conteudo()),
+              if (encerrada) _avisoEncerrada() else _campoEnvio(),
+            ],
+          ),
         ),
       ),
     );
@@ -490,9 +497,9 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
     return ListView.separated(
       key: const ValueKey('lista-mensagens'),
       controller: scrollController,
-      padding: const EdgeInsets.fromLTRB(16, 16, 16, 20),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
       itemCount: mensagens.length,
-      separatorBuilder: (_, _) => const SizedBox(height: 8),
+      separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) => _itemMensagem(index),
     );
   }
@@ -543,7 +550,7 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
         ? const Color(0xFFFFF1F1)
         : enviada
         ? AppColors.primary
-        : const Color(0xFFF0F0F0);
+        : VisualBuscaEu.suave;
     final corTexto = falhou
         ? AppColors.text
         : enviada
@@ -560,7 +567,12 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
         decoration: BoxDecoration(
           color: corBolha,
           border: falhou ? Border.all(color: const Color(0xFFD32F2F)) : null,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.only(
+            topLeft: const Radius.circular(12),
+            topRight: const Radius.circular(12),
+            bottomLeft: Radius.circular(enviada ? 12 : 4),
+            bottomRight: Radius.circular(enviada ? 4 : 12),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.end,
@@ -668,7 +680,7 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
       padding: const EdgeInsets.fromLTRB(16, 10, 12, 10),
       decoration: const BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Color(0xFFE5E5E5))),
+        border: Border(top: BorderSide(color: VisualBuscaEu.borda)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -684,14 +696,15 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
                 hintText: 'Mensagem',
                 counterText: '',
                 filled: true,
-                fillColor: const Color(0xFFF4F4F4),
+                fillColor: VisualBuscaEu.suave,
+                hintStyle: const TextStyle(color: VisualBuscaEu.secundario),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
                   vertical: 11,
                 ),
                 border: OutlineInputBorder(
                   borderSide: BorderSide.none,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(12),
                 ),
               ),
               onSubmitted: (_) => enviar(),
@@ -700,6 +713,10 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
           const SizedBox(width: 8),
           IconButton.filled(
             tooltip: 'Enviar mensagem',
+            style: IconButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+            ),
             onPressed: enviando ? null : enviar,
             icon: enviando
                 ? const SizedBox.square(

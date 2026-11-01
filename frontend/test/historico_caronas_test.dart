@@ -87,7 +87,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Ofertas ativas'), findsOneWidget);
-    expect(find.text('Caronas finalizadas'), findsOneWidget);
+    expect(find.text('Caronas encerradas'), findsOneWidget);
 
     final ofertaCinza = tester.widget<Material>(
       find.byKey(const ValueKey('card-carona-2')),

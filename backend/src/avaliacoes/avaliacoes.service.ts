@@ -53,7 +53,10 @@ export class AvaliacoesService {
       throw new NotFoundException('Solicitação não encontrada');
     }
 
-    if (solicitacao.status !== 'ACEITA') {
+    if (
+      solicitacao.status !== 'ACEITA' ||
+      solicitacao.carona.status === 'ENCERRADA_POR_TEMPO'
+    ) {
       throw new ConflictException(
         'Somente solicitações aceitas podem ser avaliadas',
       );

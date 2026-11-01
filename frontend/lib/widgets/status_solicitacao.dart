@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../config/app_colors.dart';
+import 'visual_buscaeu.dart';
 
 class StatusSolicitacao extends StatelessWidget {
   final String status;
@@ -17,12 +17,17 @@ class StatusSolicitacao extends StatelessWidget {
       'EXPIRADA' => Colors.black54,
       'FINALIZADA' => Colors.black54,
       _ when cancelada => Colors.black54,
-      _ => AppColors.primary,
+      'PENDENTE' => const Color(0xFF9A6100),
+      _ => VisualBuscaEu.secundario,
     };
 
-    return Text(
-      cancelada ? 'CANCELADA' : status,
-      style: TextStyle(color: cor, fontSize: 12, fontWeight: FontWeight.bold),
+    return SeloBuscaEu(
+      texto: status == 'ENCERRADA_POR_TEMPO'
+          ? 'Encerrada automaticamente por tempo'
+          : cancelada
+          ? 'CANCELADA'
+          : status,
+      cor: cor,
     );
   }
 }
