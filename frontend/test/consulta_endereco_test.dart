@@ -64,4 +64,31 @@ void main() {
     );
     expect(ConsultaEndereco.normalizarLogradouro('TV. Azul'), 'travessa azul');
   });
+
+  for (final separador in [', ', ' - ', ' – ']) {
+    test('separa numero antes de bairro e CEP com separador $separador', () {
+      final texto =
+          'Avenida Prestes Maia, 1764${separador}Jardim Ipanema - CEP 16052-045, Araçatuba SP';
+      final consulta = ConsultaEndereco(texto);
+      expect(consulta.texto, texto);
+      expect(consulta.logradouro, 'Avenida Prestes Maia');
+      expect(consulta.numero, '1764');
+      expect(
+        consulta.semNumero,
+        'Avenida Prestes Maia, Jardim Ipanema - CEP 16052-045, Araçatuba SP',
+      );
+    });
+  }
+
+  test('bairro com CEP nao substitui o numero da FAC-FEA', () {
+    final consulta = ConsultaEndereco(
+      'Rua Maurício de Nassau, 1191 - Santana - CEP 16050-480, Araçatuba SP',
+    );
+    expect(consulta.numero, '1191');
+    expect(consulta.cidadeExplicita('Aracatuba'), isTrue);
+  });
+
+  test('nao interpreta faixa numerica como numero unico confirmado', () {
+    expect(ConsultaEndereco('Rua Brasil, 123-125, Centro').numero, isNull);
+  });
 }

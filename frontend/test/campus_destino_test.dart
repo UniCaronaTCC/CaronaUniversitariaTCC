@@ -280,4 +280,28 @@ void main() {
       expect(campus.localizacao!.endereco.startsWith('x'), excesso == 0);
     }
   });
+
+  test('rotulo longo nao torna um destino antigo valido maior que 255', () {
+    final dados = {
+      ...campusJson(),
+      'nome': 'Universidade ${'x' * 180}',
+      'sigla': null,
+      'campus': 'Centro',
+    };
+    final antigo = CampusDestino.fromJson(dados);
+    final novo = CampusDestino.fromJson({
+      ...dados,
+      'rotuloUnidade': 'Campus ${'y' * 140}',
+      'enderecoCompleto': 'Rua da Universidade, 123',
+    });
+    expect(
+      antigo.localizacao!.descricaoCompleta.length,
+      lessThanOrEqualTo(255),
+    );
+    expect(novo.titulo, contains('Campus ${'y' * 140}'));
+    expect(novo.localizacao!.descricaoCompleta.length, lessThanOrEqualTo(255));
+    expect(novo.localizacao!.nome, antigo.titulo);
+    expect(novo.localizacao!.ponto, antigo.localizacao!.ponto);
+    expect(novo.mesmoLocal(novo.localizacao!), isTrue);
+  });
 }

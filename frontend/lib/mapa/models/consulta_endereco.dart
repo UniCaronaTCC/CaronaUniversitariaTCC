@@ -45,7 +45,7 @@ class ConsultaEndereco {
     }
 
     final comVirgula = RegExp(
-      r'^(.+?),\s*(\d{1,6}[a-zA-Z]?)(?:\s*,\s*(.+))?$',
+      r'^(.+?),\s*(\d{1,6}[a-zA-Z]?)(?:(?:\s*,\s*|\s+[-–]\s+)(.+))?$',
     ).firstMatch(original);
     final noFinal = RegExp(
       r'^(.+\S)\s+(\d{1,6}[a-zA-Z]?)$',

@@ -121,15 +121,19 @@ class CampusDestino {
 
   LocalizacaoSelecionada? get localizacao {
     if (ponto == null) return null;
-    final endereco = '$descricaoEndereco, Brasil';
-    // A carona aceita 255 caracteres para nome + separador + endereco.
-    final cabeNaCarona = titulo.length + 3 + endereco.length <= 255;
+    var nomeSelecionado = titulo;
+    var enderecoSelecionado = '$descricaoEndereco, Brasil';
+    // Preserva o formato antigo se os metadados excederem o limite da carona.
+    if (nomeSelecionado.length + 3 + enderecoSelecionado.length > 255) {
+      enderecoSelecionado = '${cidade.cidade}, ${cidade.uf}, Brasil';
+      if (nomeSelecionado.length + 3 + enderecoSelecionado.length > 255) {
+        nomeSelecionado = _tituloOriginal;
+      }
+    }
     return LocalizacaoSelecionada(
       ponto: ponto!,
-      nome: titulo,
-      endereco: cabeNaCarona
-          ? endereco
-          : '${cidade.cidade}, ${cidade.uf}, Brasil',
+      nome: nomeSelecionado,
+      endereco: enderecoSelecionado,
       cidade: cidade.cidade,
       estado: CidadeCampus.estados[cidade.uf],
       pais: 'Brasil',

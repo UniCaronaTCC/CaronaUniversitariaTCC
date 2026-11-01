@@ -44,6 +44,73 @@ Future<List<dynamic>> buscar(List<Map<String, dynamic>> features) async {
 }
 
 void main() {
+  for (final caso in [
+    ('Avenida Prestes Maia', '1764', 'Jardim Ipanema', '16052-045'),
+    ('Rua Maurício de Nassau', '1191', 'Santana', '16050-480'),
+  ]) {
+    test('endereco completo do campus preserva numero ${caso.$2}', () async {
+      var chamadas = 0;
+      final cliente = MockClient((request) async {
+        chamadas++;
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode({
+              'features': [
+                feature(nome: 'Campus', rua: caso.$1, numero: caso.$2),
+              ],
+            }),
+          ),
+          200,
+        );
+      });
+      addTearDown(cliente.close);
+      final locais = await EnderecoService(cliente: cliente)
+          .buscarLocalizacoesPorEndereco(
+            '${caso.$1}, ${caso.$2} - ${caso.$3} - CEP ${caso.$4}, Araçatuba SP',
+          );
+      expect(locais.single.numeroBuscado, caso.$2);
+      expect(locais.single.numeroNaoConfirmado, isFalse);
+      expect(chamadas, 1);
+    });
+  }
+
+  test(
+    'numero divergente no campus continua explicitamente nao confirmado',
+    () async {
+      final consultas = <String>[];
+      final cliente = MockClient((request) async {
+        consultas.add(request.url.queryParameters['q']!);
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode({
+              'features': [
+                feature(
+                  nome: 'Outro numero',
+                  rua: 'Avenida Prestes Maia',
+                  numero: '1763',
+                ),
+              ],
+            }),
+          ),
+          200,
+        );
+      });
+      addTearDown(cliente.close);
+      final locais = await EnderecoService(cliente: cliente)
+          .buscarLocalizacoesPorEndereco(
+            'Avenida Prestes Maia, 1764 - Jardim Ipanema - CEP 16052-045, Araçatuba SP',
+          );
+      expect(consultas, hasLength(2));
+      expect(
+        consultas.last,
+        'Avenida Prestes Maia, Jardim Ipanema - CEP 16052-045, Araçatuba SP',
+      );
+      expect(locais.single.numeroBuscado, '1764');
+      expect(locais.single.numeroNaoConfirmado, isTrue);
+      expect(locais.single.exigeAjusteNoMapa, isTrue);
+    },
+  );
+
   test('pede Brasil sem alterar texto nem restringir cidade', () async {
     final cliente = MockClient((request) async {
       expect(request.url.queryParameters, {
