@@ -12,6 +12,22 @@ export class InstituicaoCampus {
   @Column({ type: 'varchar', length: 150 })
   nome: string;
 
+  @Column({
+    name: 'rotulo_unidade',
+    type: 'varchar',
+    length: 150,
+    nullable: true,
+  })
+  rotuloUnidade: string | null = null;
+
+  @Column({
+    name: 'endereco_completo',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
+  enderecoCompleto: string | null = null;
+
   @Column({ type: 'varchar', length: 100 })
   municipio: string;
 

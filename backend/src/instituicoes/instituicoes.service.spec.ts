@@ -134,4 +134,25 @@ describe('InstituicoesService', () => {
       },
     });
   });
+
+  it('valida o nome interno mesmo quando a unidade tem outro rótulo visual', async () => {
+    const findOne = jest
+      .fn()
+      .mockImplementation((opcoes: { where: { nome: string } }) =>
+        Promise.resolve(
+          opcoes.where.nome === campusAracatuba.nome
+            ? { ...campusAracatuba, rotuloUnidade: 'Unidade Jardim Alvorada' }
+            : null,
+        ),
+      );
+    const service = criarService({}, { findOne });
+
+    expect(await service.campusValido(1, 'Araçatuba')).toBe(true);
+    expect(await service.campusValido(1, 'Unidade Jardim Alvorada')).toBe(
+      false,
+    );
+    expect(findOne).toHaveBeenNthCalledWith(1, {
+      where: { idInstituicao: 1, nome: 'Araçatuba', ativo: true },
+    });
+  });
 });

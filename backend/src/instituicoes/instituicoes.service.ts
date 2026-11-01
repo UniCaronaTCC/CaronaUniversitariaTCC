@@ -184,6 +184,8 @@ export class InstituicoesService {
             nome: instituicao.nome,
             sigla: instituicao.sigla,
             campus: campus.nome,
+            rotuloUnidade: campus.rotuloUnidade?.trim() || null,
+            enderecoCompleto: campus.enderecoCompleto?.trim() || null,
             municipio: campus.municipio,
             uf: campus.uf,
             latitude: coordenadasValidas ? latitude : null,

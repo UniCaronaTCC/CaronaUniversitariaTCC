@@ -96,6 +96,111 @@ describe('Destinos de campus', () => {
     });
   });
 
+  it('retorna metadados opcionais sem substituir nome, ids ou coordenadas', async () => {
+    const { service } = criar([
+      {
+        ...campus,
+        rotuloUnidade: '  Unidade José Bonifácio  ',
+        enderecoCompleto: '  Rua José Bonifácio, 1193 - Vila Mendonça  ',
+      },
+    ]);
+    expect((await service.listarDestinos('Araçatuba', 'SP'))[0]).toEqual({
+      idCampus: 10,
+      idInstituicao: 1,
+      nome: instituicao.nome,
+      sigla: 'UE',
+      campus: 'Odontologia',
+      rotuloUnidade: 'Unidade José Bonifácio',
+      enderecoCompleto: 'Rua José Bonifácio, 1193 - Vila Mendonça',
+      municipio: 'Araçatuba',
+      uf: 'SP',
+      latitude: -21.2,
+      longitude: -50.4,
+    });
+  });
+
+  it.each([
+    { rotuloUnidade: undefined, enderecoCompleto: undefined },
+    { rotuloUnidade: null, enderecoCompleto: null },
+    { rotuloUnidade: '', enderecoCompleto: '' },
+    { rotuloUnidade: ' \t ', enderecoCompleto: ' \n ' },
+  ])(
+    'retorna null para metadados ausentes ou vazios: %j',
+    async (metadados) => {
+      const { service } = criar([{ ...campus, ...metadados }]);
+      expect(
+        (await service.listarDestinos('Araçatuba', 'SP'))[0],
+      ).toMatchObject({
+        campus: campus.nome,
+        rotuloUnidade: null,
+        enderecoCompleto: null,
+      });
+    },
+  );
+
+  it('endereço preenchido não inventa coordenadas ausentes', async () => {
+    const { service } = criar([
+      {
+        ...campus,
+        latitude: null,
+        longitude: null,
+        enderecoCompleto: 'Rua Universitária, 123',
+      },
+    ]);
+    expect((await service.listarDestinos('Araçatuba', 'SP'))[0]).toMatchObject({
+      enderecoCompleto: 'Rua Universitária, 123',
+      latitude: null,
+      longitude: null,
+    });
+  });
+
+  it('não junta unidades diferentes que compartilham endereço ou rótulo', async () => {
+    const metadados = {
+      rotuloUnidade: 'Unidade Central',
+      enderecoCompleto: 'Rua Universitária, 123',
+    };
+    const { service } = criar([
+      { ...campus, ...metadados },
+      { ...campus, ...metadados, idCampus: 11, nome: 'Veterinária' },
+    ]);
+    const resultado = await service.listarDestinos('Araçatuba', 'SP');
+    expect(resultado.map((item) => item.idCampus)).toEqual([10, 11]);
+    expect(resultado.map((item) => item.campus)).toEqual([
+      'Odontologia',
+      'Veterinária',
+    ]);
+  });
+
+  it('metadados não mudam a ordenação existente nem alteram as entidades', async () => {
+    const campi = [
+      { ...campus, rotuloUnidade: 'Z', enderecoCompleto: '  Rua A  ' },
+      { ...campus, idCampus: 11, nome: 'Veterinária', rotuloUnidade: 'A' },
+    ];
+    const antes = structuredClone(campi);
+    const { service } = criar(campi);
+    const resultado = await service.listarDestinos('Araçatuba', 'SP');
+    expect(resultado.map((item) => item.idCampus)).toEqual([10, 11]);
+    expect(campi).toEqual(antes);
+  });
+
+  it('aceita metadados nacionais sem fixar a cidade de Araçatuba', async () => {
+    const { service } = criar([
+      {
+        ...campus,
+        municipio: 'Manaus',
+        uf: 'AM',
+        rotuloUnidade: 'Unidade Norte',
+        enderecoCompleto: 'Avenida Universitária, 200',
+      },
+    ]);
+    expect((await service.listarDestinos('Manaus', 'AM'))[0]).toMatchObject({
+      municipio: 'Manaus',
+      uf: 'AM',
+      rotuloUnidade: 'Unidade Norte',
+      enderecoCompleto: 'Avenida Universitária, 200',
+    });
+  });
+
   for (const valores of [
     { latitude: '91', longitude: '-50' },
     { latitude: '-21', longitude: '181' },
