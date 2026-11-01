@@ -11,6 +11,7 @@ import '../models/posicao_atual_carona.dart';
 import '../models/solicitacao_enviada.dart';
 import '../services/carona_service.dart';
 import '../widgets/componentes_padrao.dart';
+import '../widgets/visual_buscaeu.dart';
 
 class AcompanharCorridaTela extends StatefulWidget {
   final SolicitacaoEnviada solicitacao;
@@ -123,7 +124,10 @@ class _AcompanharCorridaTelaState extends State<AcompanharCorridaTela> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      VisualBuscaEu(child: Builder(builder: _conteudo));
+
+  Widget _conteudo(BuildContext context) {
     final posicao = _posicao;
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -145,10 +149,8 @@ class _AcompanharCorridaTelaState extends State<AcompanharCorridaTela> {
                   clipBehavior: Clip.antiAlias,
                   decoration: BoxDecoration(
                     color: AppColors.primary.withValues(alpha: 0.04),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.primary.withValues(alpha: 0.15),
-                    ),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: VisualBuscaEu.borda),
                   ),
                   child: _corridaEncerrada
                       ? const _CorridaEncerrada()
@@ -197,7 +199,8 @@ class _CartaoStatus extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: cor.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: cor.withValues(alpha: .15)),
       ),
       child: Row(
         children: [
@@ -209,9 +212,21 @@ class _CartaoStatus extends StatelessWidget {
               children: [
                 Text(
                   motorista,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    color: VisualBuscaEu.texto,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                  ),
                 ),
-                Text(mensagem, style: const TextStyle(fontSize: 12)),
+                const SizedBox(height: 4),
+                Text(
+                  mensagem,
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: VisualBuscaEu.secundario,
+                    height: 1.4,
+                  ),
+                ),
               ],
             ),
           ),

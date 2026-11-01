@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../config/app_colors.dart';
+import '../../widgets/visual_buscaeu.dart';
 import '../../models/carona.dart';
 import 'marcadores_percurso.dart';
 import 'avisos_rota.dart';
@@ -233,9 +234,30 @@ class _MapaPercursoState extends State<MapaPercurso>
                 ).construir(),
               ),
             ),
-            const SimpleAttributionWidget(
-              source: Text('OpenStreetMap contributors'),
-            ),
+            if (widget.interativo)
+              const SafeArea(
+                child: Align(
+                  alignment: Alignment.bottomRight,
+                  child: ColoredBox(
+                    color: Colors.white,
+                    child: Padding(
+                      padding: EdgeInsets.all(3),
+                      child: Text(
+                        'flutter_map | © OpenStreetMap contributors',
+                        textAlign: TextAlign.right,
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: VisualBuscaEu.secundario,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              )
+            else
+              const SimpleAttributionWidget(
+                source: Text('OpenStreetMap contributors'),
+              ),
           ],
         ),
         if (widget.atualizando) const AvisoAtualizandoRota(),
@@ -253,6 +275,11 @@ class _MapaPercursoState extends State<MapaPercurso>
                   : 'Mostrar percurso completo',
               backgroundColor: Colors.white,
               foregroundColor: AppColors.primary,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+                side: const BorderSide(color: VisualBuscaEu.borda),
+              ),
               child: Icon(
                 widget.navegacao ? Icons.navigation : Icons.center_focus_strong,
               ),

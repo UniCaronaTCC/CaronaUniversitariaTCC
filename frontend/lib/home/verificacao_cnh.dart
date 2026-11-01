@@ -10,6 +10,7 @@ import '../services/verificacao_cnh_service.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/foto_cnh.dart';
 import '../widgets/dados_cnh_extraidos.dart';
+import '../widgets/visual_buscaeu.dart';
 import 'selecionar_foto_cnh.dart';
 
 typedef CapturarFotoCnh = Future<XFile?> Function();
@@ -224,7 +225,10 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      VisualBuscaEu(child: Builder(builder: _conteudo));
+
+  Widget _conteudo(BuildContext context) {
     return PopScope(
       canPop: !enviando && !reiniciando,
       child: Scaffold(
@@ -232,7 +236,7 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
         appBar: const BarraSuperiorPadrao(titulo: 'Verificar CNH'),
         body: SafeArea(
           child: ListView(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
             children: [
               if (carregando) const LinearProgressIndicator(),
               if (aprovada) ...[
@@ -266,16 +270,17 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
               ] else ...[
                 const Text(
                   'Antes de oferecer caronas',
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w600),
+                  style: VisualBuscaEu.titulo,
                 ),
                 const SizedBox(height: 12),
                 const Text(
                   'A foto é lida no seu celular. Enviamos o texto e as posições das palavras para extrair os campos e conferir CPF, categoria e validade. A leitura precisa identificar nome, registro, CPF, categoria e validade. Guardamos esses cinco dados. A foto e o texto completo da leitura não são armazenados. O nome lido não altera seu perfil.',
-                  style: TextStyle(height: 1.4),
+                  style: VisualBuscaEu.descricao,
                 ),
                 CheckboxListTile(
                   contentPadding: EdgeInsets.zero,
                   controlAffinity: ListTileControlAffinity.leading,
+                  activeColor: AppColors.primary,
                   value: aceite,
                   onChanged: ocupada
                       ? null
@@ -285,6 +290,11 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
                         }),
                   title: const Text(
                     'Li e concordo com o uso desses dados para verificar minha CNH',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: VisualBuscaEu.texto,
+                      height: 1.4,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -296,7 +306,6 @@ class _VerificacaoCnhTelaState extends State<VerificacaoCnhTela> {
                   onEscolherGaleria: () =>
                       fotografar(origem: ImageSource.gallery),
                 ),
-                const SizedBox(height: 16),
                 const SizedBox(height: 24),
                 FilledButton.icon(
                   onPressed: ocupada || !aceite || frente == null

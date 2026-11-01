@@ -6,6 +6,7 @@ import '../services/recorte_guiado_cnh.dart';
 import '../services/foto_cnh_temporaria.dart'
     if (dart.library.io) '../services/foto_cnh_temporaria_io.dart';
 import '../widgets/moldura_camera_cnh.dart';
+import '../widgets/visual_buscaeu.dart';
 
 Future<Uint8List?> fotografarCnhGuiada(
   BuildContext context,
@@ -162,7 +163,10 @@ class _CameraCnhTelaState extends State<CameraCnhTela>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      VisualBuscaEu(child: Builder(builder: _conteudo));
+
+  Widget _conteudo(BuildContext context) {
     final atual = camera;
     return PopScope(
       canPop: !capturando,
@@ -172,43 +176,49 @@ class _CameraCnhTelaState extends State<CameraCnhTela>
           child: Row(
             children: [
               Expanded(
-                child: foto != null
-                    ? Image.memory(foto!, fit: BoxFit.contain)
-                    : atual == null
-                    ? Center(
-                        child: iniciando
-                            ? const CircularProgressIndicator()
-                            : const Icon(Icons.camera_alt_outlined),
-                      )
-                    : LayoutBuilder(
-                        builder: (context, limites) {
-                          final proporcao = atual.value.aspectRatio;
-                          final tamanho = applyBoxFit(
-                            BoxFit.contain,
-                            Size(proporcao, 1),
-                            limites.biggest,
-                          ).destination;
-                          final moldura = molduraCnh(tamanho);
-                          return Center(
-                            child: SizedBox(
-                              width: tamanho.width,
-                              height: tamanho.height,
-                              child: Stack(
-                                fit: StackFit.expand,
-                                children: [
-                                  CameraPreview(atual),
-                                  MolduraCameraCnh(area: moldura),
-                                ],
+                child: ColoredBox(
+                  color: const Color(0xFF202124),
+                  child: foto != null
+                      ? Image.memory(foto!, fit: BoxFit.contain)
+                      : atual == null
+                      ? Center(
+                          child: iniciando
+                              ? const CircularProgressIndicator()
+                              : const Icon(
+                                  Icons.camera_alt_outlined,
+                                  color: Colors.white70,
+                                ),
+                        )
+                      : LayoutBuilder(
+                          builder: (context, limites) {
+                            final proporcao = atual.value.aspectRatio;
+                            final tamanho = applyBoxFit(
+                              BoxFit.contain,
+                              Size(proporcao, 1),
+                              limites.biggest,
+                            ).destination;
+                            final moldura = molduraCnh(tamanho);
+                            return Center(
+                              child: SizedBox(
+                                width: tamanho.width,
+                                height: tamanho.height,
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    CameraPreview(atual),
+                                    MolduraCameraCnh(area: moldura),
+                                  ],
+                                ),
                               ),
-                            ),
-                          );
-                        },
-                      ),
+                            );
+                          },
+                        ),
+                ),
               ),
               SizedBox(
                 width: 190,
                 child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(12),
+                  padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
                       Text(
@@ -216,6 +226,7 @@ class _CameraCnhTelaState extends State<CameraCnhTela>
                             ? 'Encaixe a CNH inteira na moldura, com as letras em pé. Apoie o documento e evite reflexos.'
                             : 'Confira se todos os campos estão inteiros e legíveis.',
                         textAlign: TextAlign.center,
+                        style: VisualBuscaEu.descricao,
                       ),
                       const SizedBox(height: 12),
                       if (erro != null)

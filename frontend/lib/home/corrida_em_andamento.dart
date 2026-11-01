@@ -15,6 +15,7 @@ import '../mapa/widgets/status_progresso_corrida.dart';
 import '../services/carona_service.dart';
 import '../services/estado_corrida.dart';
 import '../widgets/componentes_padrao.dart';
+import '../widgets/visual_buscaeu.dart';
 
 class CorridaEmAndamentoTela extends StatefulWidget {
   final Carona carona;
@@ -220,7 +221,10 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela>
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      VisualBuscaEu(child: Builder(builder: _conteudo));
+
+  Widget _conteudo(BuildContext context) {
     final encerrada = _caronaEncerrada;
     if (encerrada != null) {
       return Scaffold(
@@ -249,34 +253,51 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela>
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-          child: Column(
-            children: [
-              StatusGpsCorrida(gps: _gps),
-              StatusProgressoCorrida(progresso: _progresso),
-              const SizedBox(height: 10),
-              Expanded(
-                child: ListenableBuilder(
-                  listenable: Listenable.merge([_gps, _progresso]),
-                  builder: (_, _) => !_progresso.carregado
-                      ? const Center(
-                          child: Text('Aguardando sincronização dos pontos...'),
-                        )
-                      : MapaNavegacaoCarona(
-                          carona: widget.carona,
-                          erroLocalizacao: _gps.precisaAtencao
-                              ? _gps.mensagem
-                              : null,
-                          localizacaoMotorista: _localizacaoMotorista,
-                          direcaoMotorista: _direcaoMotorista,
-                          precisaoMotorista: _precisaoMotorista,
-                          embarquesConcluidos: _progresso.concluidos,
-                          onRotaCarregada: (resultado) {
-                            if (mounted) setState(() => rota = resultado);
-                          },
-                        ),
+          child: LayoutBuilder(
+            builder: (context, limites) => Column(
+              children: [
+                ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxHeight: limites.maxHeight * .5,
+                  ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        StatusGpsCorrida(gps: _gps),
+                        const SizedBox(height: 10),
+                        StatusProgressoCorrida(progresso: _progresso),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-            ],
+                const SizedBox(height: 10),
+                Expanded(
+                  child: ListenableBuilder(
+                    listenable: Listenable.merge([_gps, _progresso]),
+                    builder: (_, _) => !_progresso.carregado
+                        ? const Center(
+                            child: Text(
+                              'Aguardando sincronização dos pontos...',
+                            ),
+                          )
+                        : MapaNavegacaoCarona(
+                            carona: widget.carona,
+                            erroLocalizacao: _gps.precisaAtencao
+                                ? _gps.mensagem
+                                : null,
+                            localizacaoMotorista: _localizacaoMotorista,
+                            direcaoMotorista: _direcaoMotorista,
+                            precisaoMotorista: _precisaoMotorista,
+                            embarquesConcluidos: _progresso.concluidos,
+                            onRotaCarregada: (resultado) {
+                              if (mounted) setState(() => rota = resultado);
+                            },
+                          ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
@@ -286,44 +307,58 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela>
           padding: const EdgeInsets.fromLTRB(16, 10, 16, 12),
           decoration: const BoxDecoration(
             color: Colors.white,
-            boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)],
+            border: Border(top: BorderSide(color: VisualBuscaEu.borda)),
           ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+          child: LayoutBuilder(
+            builder: (context, limites) {
+              final resumo = Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    distanciaFormatada,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: VisualBuscaEu.texto,
+                    ),
+                  ),
+                  Text(
+                    duracaoFormatada,
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: VisualBuscaEu.secundario,
+                    ),
+                  ),
+                ],
+              );
+              final botao = FilledButton.icon(
+                onPressed: finalizando ? null : finalizarCorrida,
+                icon: finalizando
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.flag_outlined, size: 18),
+                label: Text(finalizando ? 'FINALIZANDO...' : 'FINALIZAR'),
+              );
+              if (limites.maxWidth >= 500) {
+                return Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Text(
-                      distanciaFormatada,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Text(
-                      duracaoFormatada,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.black54,
-                      ),
-                    ),
+                    Expanded(child: resumo),
+                    const SizedBox(width: 16),
+                    Expanded(child: botao),
                   ],
-                ),
-              ),
-              SizedBox(
-                height: 46,
-                child: FilledButton.icon(
-                  onPressed: finalizando ? null : finalizarCorrida,
-                  icon: finalizando
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.flag_outlined, size: 18),
-                  label: Text(finalizando ? 'FINALIZANDO...' : 'FINALIZAR'),
-                ),
-              ),
-            ],
+                );
+              }
+              return CamposLadoALado(
+                larguraMinima: 260,
+                primeiro: resumo,
+                segundo: botao,
+              );
+            },
           ),
         ),
       ),

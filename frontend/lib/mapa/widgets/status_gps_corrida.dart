@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/rastreamento_gps.dart';
+import '../../widgets/visual_buscaeu.dart';
 
 class StatusGpsCorrida extends StatelessWidget {
   final RastreamentoGps gps;
@@ -15,7 +16,8 @@ class StatusGpsCorrida extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
           decoration: BoxDecoration(
             color: cor.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(color: cor.withValues(alpha: .15)),
           ),
           child: Row(
             children: [
@@ -27,9 +29,21 @@ class StatusGpsCorrida extends StatelessWidget {
                   children: [
                     const Text(
                       'CORRIDA INICIADA',
-                      style: TextStyle(fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: VisualBuscaEu.texto,
+                      ),
                     ),
-                    Text(gps.mensagem, style: const TextStyle(fontSize: 12)),
+                    const SizedBox(height: 4),
+                    Text(
+                      gps.mensagem,
+                      style: const TextStyle(
+                        fontSize: 12,
+                        height: 1.4,
+                        color: VisualBuscaEu.secundario,
+                      ),
+                    ),
                   ],
                 ),
               ),

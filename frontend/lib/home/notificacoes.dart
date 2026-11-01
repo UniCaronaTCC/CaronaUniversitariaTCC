@@ -11,6 +11,7 @@ import '../services/carona_service.dart';
 import '../services/mensagem_service.dart';
 import '../services/notificacao_service.dart';
 import '../widgets/componentes_padrao.dart';
+import '../widgets/visual_buscaeu.dart';
 import 'avaliacoes_recebidas.dart';
 import 'conversa_detalhe.dart';
 import 'detalhes_carona.dart';
@@ -267,7 +268,10 @@ class _NotificacoesTelaState extends State<NotificacoesTela>
       '${data.day.toString().padLeft(2, '0')}/${data.month.toString().padLeft(2, '0')}/${data.year} · ${data.hour.toString().padLeft(2, '0')}:${data.minute.toString().padLeft(2, '0')}';
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) =>
+      VisualBuscaEu(child: Builder(builder: _conteudo));
+
+  Widget _conteudo(BuildContext context) => Scaffold(
     backgroundColor: AppColors.background,
     appBar: const BarraSuperiorPadrao(titulo: 'Notificações'),
     body: SafeArea(
@@ -275,8 +279,13 @@ class _NotificacoesTelaState extends State<NotificacoesTela>
         onRefresh: () => carregar(),
         child: ListView(
           physics: const AlwaysScrollableScrollPhysics(),
-          padding: const EdgeInsets.symmetric(vertical: 12),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
           children: [
+            const Text(
+              'Acompanhe as atualizações das suas caronas',
+              style: VisualBuscaEu.descricao,
+            ),
+            const SizedBox(height: 20),
             if (carregando)
               const EstadoConteudoPadrao(carregando: true)
             else if (erro != null)
@@ -293,51 +302,58 @@ class _NotificacoesTelaState extends State<NotificacoesTela>
               )
             else ...[
               for (final item in itens) ...[
-                ListTile(
-                  key: ValueKey('notificacao_${item.id}'),
-                  contentPadding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 8,
-                  ),
-                  tileColor: item.lidaEm == null
-                      ? AppColors.primary.withAlpha(12)
-                      : null,
-                  leading: Icon(icone(item.tipo), color: AppColors.primary),
-                  title: Text(
-                    item.titulo,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 4),
-                      Text(
-                        item.descricao,
-                        style: const TextStyle(fontSize: 14),
+                CartaoBuscaEu(
+                  key: ValueKey('cartao-notificacao_${item.id}'),
+                  padding: EdgeInsets.zero,
+                  child: Material(
+                    color: Colors.transparent,
+                    borderRadius: BorderRadius.circular(10),
+                    clipBehavior: Clip.antiAlias,
+                    child: ListTile(
+                      key: ValueKey('notificacao_${item.id}'),
+                      tileColor: item.lidaEm == null
+                          ? AppColors.primary.withAlpha(12)
+                          : null,
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 12,
                       ),
-                      const SizedBox(height: 6),
-                      Text(
-                        horario(item.criadoEm),
+                      leading: Icon(icone(item.tipo), color: AppColors.primary),
+                      title: Text(
+                        item.titulo,
                         style: const TextStyle(
-                          fontSize: 12,
-                          color: Colors.black54,
+                          color: VisualBuscaEu.texto,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                    ],
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 4),
+                          Text(item.descricao, style: VisualBuscaEu.descricao),
+                          const SizedBox(height: 6),
+                          Text(
+                            horario(item.criadoEm),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: VisualBuscaEu.secundario,
+                            ),
+                          ),
+                        ],
+                      ),
+                      trailing: SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: abrindo == item.id
+                            ? const CircularProgressIndicator(strokeWidth: 2)
+                            : const Icon(Icons.chevron_right),
+                      ),
+                      onTap: () => abrirNotificacao(item),
+                    ),
                   ),
-                  trailing: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: abrindo == item.id
-                        ? const CircularProgressIndicator(strokeWidth: 2)
-                        : const Icon(Icons.chevron_right),
-                  ),
-                  onTap: () => abrirNotificacao(item),
                 ),
-                const Divider(height: 1, indent: 24, endIndent: 24),
+                const SizedBox(height: 12),
               ],
               if (temMais)
                 Padding(

@@ -2,6 +2,8 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
+import '../config/app_colors.dart';
+import '../widgets/visual_buscaeu.dart';
 
 Future<Uint8List?> recortarCnh(BuildContext context, Uint8List bytes) =>
     Navigator.of(context).push<Uint8List>(
@@ -139,7 +141,10 @@ class _RecortarCnhTelaState extends State<RecortarCnhTela> {
   }
 
   @override
-  Widget build(BuildContext context) => PopScope(
+  Widget build(BuildContext context) =>
+      VisualBuscaEu(child: Builder(builder: _conteudo));
+
+  Widget _conteudo(BuildContext context) => PopScope(
     canPop: !salvando,
     child: Scaffold(
       appBar: AppBar(
@@ -160,153 +165,207 @@ class _RecortarCnhTelaState extends State<RecortarCnhTela> {
         ],
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            const Padding(
+        child: LayoutBuilder(
+          builder: (context, tela) {
+            const instrucao = Padding(
               padding: EdgeInsets.all(16),
               child: Text(
                 'Arraste os quatro cantos para deixar somente a CNH. '
                 'Mantenha todas as bordas e as letras na posição de leitura.',
+                style: VisualBuscaEu.descricao,
               ),
-            ),
-            Expanded(
-              child: LayoutBuilder(
-                builder: (context, limites) {
-                  final foto = imagem;
-                  if (foto == null) {
+            );
+            final area = Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: VisualBuscaEu.suave,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: LayoutBuilder(
+                  builder: (context, limites) {
+                    final foto = imagem;
+                    if (foto == null) {
+                      return Center(
+                        child: erro == null
+                            ? const CircularProgressIndicator()
+                            : Text(erro!),
+                      );
+                    }
+                    final tamanho = applyBoxFit(
+                      BoxFit.contain,
+                      Size(
+                        (giros.isEven ? foto.width : foto.height).toDouble(),
+                        (giros.isEven ? foto.height : foto.width).toDouble(),
+                      ),
+                      Size(limites.maxWidth - 48, limites.maxHeight - 48),
+                    ).destination;
                     return Center(
-                      child: erro == null
-                          ? const CircularProgressIndicator()
-                          : Text(erro!),
-                    );
-                  }
-                  final tamanho = applyBoxFit(
-                    BoxFit.contain,
-                    Size(
-                      (giros.isEven ? foto.width : foto.height).toDouble(),
-                      (giros.isEven ? foto.height : foto.width).toDouble(),
-                    ),
-                    Size(limites.maxWidth - 48, limites.maxHeight - 48),
-                  ).destination;
-                  return Center(
-                    child: SizedBox(
-                      width: tamanho.width + 48,
-                      height: tamanho.height + 48,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Positioned(
-                            left: 24,
-                            top: 24,
-                            width: tamanho.width,
-                            height: tamanho.height,
-                            child: RotatedBox(
-                              quarterTurns: giros,
-                              child: RawImage(image: foto, fit: BoxFit.fill),
-                            ),
-                          ),
-                          Positioned.fromRect(
-                            rect: Rect.fromLTRB(
-                              24 + selecao.left * tamanho.width,
-                              24 + selecao.top * tamanho.height,
-                              24 + selecao.right * tamanho.width,
-                              24 + selecao.bottom * tamanho.height,
-                            ),
-                            child: IgnorePointer(
-                              child: Container(
-                                decoration: BoxDecoration(
-                                  border: Border.all(
-                                    color: Colors.orange,
-                                    width: 3,
-                                  ),
-                                ),
+                      child: SizedBox(
+                        width: tamanho.width + 48,
+                        height: tamanho.height + 48,
+                        child: Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            Positioned(
+                              left: 24,
+                              top: 24,
+                              width: tamanho.width,
+                              height: tamanho.height,
+                              child: RotatedBox(
+                                quarterTurns: giros,
+                                child: RawImage(image: foto, fit: BoxFit.fill),
                               ),
                             ),
-                          ),
-                          for (var canto = 0; canto < 4; canto++)
-                            Positioned(
-                              left:
-                                  ((canto % 2 == 0
-                                          ? selecao.left
-                                          : selecao.right) *
-                                      tamanho.width) -
-                                  22 +
-                                  24,
-                              top:
-                                  ((canto < 2 ? selecao.top : selecao.bottom) *
-                                      tamanho.height) -
-                                  22 +
-                                  24,
-                              child: Semantics(
-                                label: 'Canto ${canto + 1} do recorte',
-                                child: GestureDetector(
-                                  key: ValueKey('canto-$canto'),
-                                  behavior: HitTestBehavior.opaque,
-                                  onPanUpdate: salvando
-                                      ? null
-                                      : (evento) {
-                                          final dx =
-                                              evento.delta.dx / tamanho.width;
-                                          final dy =
-                                              evento.delta.dy / tamanho.height;
-                                          setState(
-                                            () => selecao = Rect.fromLTRB(
-                                              canto % 2 == 0
-                                                  ? (selecao.left + dx).clamp(
-                                                      0,
-                                                      selecao.right - .1,
-                                                    )
-                                                  : selecao.left,
-                                              canto < 2
-                                                  ? (selecao.top + dy).clamp(
-                                                      0,
-                                                      selecao.bottom - .1,
-                                                    )
-                                                  : selecao.top,
-                                              canto % 2 == 1
-                                                  ? (selecao.right + dx).clamp(
-                                                      selecao.left + .1,
-                                                      1,
-                                                    )
-                                                  : selecao.right,
-                                              canto >= 2
-                                                  ? (selecao.bottom + dy).clamp(
-                                                      selecao.top + .1,
-                                                      1,
-                                                    )
-                                                  : selecao.bottom,
-                                            ),
-                                          );
-                                        },
-                                  child: const SizedBox(
-                                    width: 44,
-                                    height: 44,
-                                    child: Icon(
-                                      Icons.crop_free,
-                                      color: Colors.orange,
-                                      size: 32,
+                            Positioned.fromRect(
+                              rect: Rect.fromLTRB(
+                                24 + selecao.left * tamanho.width,
+                                24 + selecao.top * tamanho.height,
+                                24 + selecao.right * tamanho.width,
+                                24 + selecao.bottom * tamanho.height,
+                              ),
+                              child: IgnorePointer(
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    border: Border.all(
+                                      color: AppColors.primary,
+                                      width: 3,
                                     ),
                                   ),
                                 ),
                               ),
                             ),
-                        ],
+                            for (var canto = 0; canto < 4; canto++)
+                              Positioned(
+                                left:
+                                    ((canto % 2 == 0
+                                            ? selecao.left
+                                            : selecao.right) *
+                                        tamanho.width) -
+                                    22 +
+                                    24,
+                                top:
+                                    ((canto < 2
+                                            ? selecao.top
+                                            : selecao.bottom) *
+                                        tamanho.height) -
+                                    22 +
+                                    24,
+                                child: Semantics(
+                                  label: 'Canto ${canto + 1} do recorte',
+                                  child: GestureDetector(
+                                    key: ValueKey('canto-$canto'),
+                                    behavior: HitTestBehavior.opaque,
+                                    onPanUpdate: salvando
+                                        ? null
+                                        : (evento) {
+                                            final dx =
+                                                evento.delta.dx / tamanho.width;
+                                            final dy =
+                                                evento.delta.dy /
+                                                tamanho.height;
+                                            setState(
+                                              () => selecao = Rect.fromLTRB(
+                                                canto % 2 == 0
+                                                    ? (selecao.left + dx).clamp(
+                                                        0,
+                                                        selecao.right - .1,
+                                                      )
+                                                    : selecao.left,
+                                                canto < 2
+                                                    ? (selecao.top + dy).clamp(
+                                                        0,
+                                                        selecao.bottom - .1,
+                                                      )
+                                                    : selecao.top,
+                                                canto % 2 == 1
+                                                    ? (selecao.right + dx)
+                                                          .clamp(
+                                                            selecao.left + .1,
+                                                            1,
+                                                          )
+                                                    : selecao.right,
+                                                canto >= 2
+                                                    ? (selecao.bottom + dy)
+                                                          .clamp(
+                                                            selecao.top + .1,
+                                                            1,
+                                                          )
+                                                    : selecao.bottom,
+                                              ),
+                                            );
+                                          },
+                                    child: const SizedBox(
+                                      width: 44,
+                                      height: 44,
+                                      child: Icon(
+                                        Icons.crop_free,
+                                        color: AppColors.primary,
+                                        size: 32,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ),
+                          ],
+                        ),
                       ),
-                    ),
-                  );
-                },
+                    );
+                  },
+                ),
               ),
-            ),
-            if (erro != null && imagem != null)
-              Padding(padding: const EdgeInsets.all(8), child: Text(erro!)),
-            Padding(
+            );
+            final aviso = erro != null && imagem != null
+                ? Padding(padding: const EdgeInsets.all(8), child: Text(erro!))
+                : const SizedBox.shrink();
+            final botao = Padding(
               padding: const EdgeInsets.all(16),
-              child: FilledButton(
-                onPressed: imagem == null || salvando ? null : confirmar,
-                child: Text(salvando ? 'Recortando...' : 'Usar recorte'),
+              child: SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  onPressed: imagem == null || salvando ? null : confirmar,
+                  child: Text(salvando ? 'Recortando...' : 'Usar recorte'),
+                ),
               ),
-            ),
-          ],
+            );
+            if (tela.maxWidth >= 560 && tela.maxWidth > tela.maxHeight) {
+              return Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: area,
+                    ),
+                  ),
+                  SizedBox(
+                    width: 240,
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: SingleChildScrollView(
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [instrucao, aviso],
+                            ),
+                          ),
+                        ),
+                        botao,
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            }
+            return Column(
+              children: [
+                instrucao,
+                Expanded(child: area),
+                aviso,
+                botao,
+              ],
+            );
+          },
         ),
       ),
     ),

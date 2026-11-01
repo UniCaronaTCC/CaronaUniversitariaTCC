@@ -5,6 +5,8 @@ import 'package:latlong2/latlong.dart';
 import '../../navigation/navegacao_principal.dart';
 import '../../widgets/barra_navegacao_home.dart';
 import '../../widgets/componentes_padrao.dart';
+import '../../widgets/visual_buscaeu.dart';
+import '../../config/app_colors.dart';
 import '../models/localizacao_selecionada.dart';
 import '../services/endereco_service.dart';
 import '../services/localizacao_service.dart';
@@ -267,7 +269,10 @@ class _TesteMapaState extends State<TesteMapa> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      VisualBuscaEu(child: Builder(builder: _conteudo));
+
+  Widget _conteudo(BuildContext context) {
     final mesmoPonto =
         _localizacaoAtual != null &&
         _pontoEncontro != null &&
@@ -340,7 +345,7 @@ class _TesteMapaState extends State<TesteMapa> {
                         height: 50,
                         child: const Icon(
                           Icons.place,
-                          color: Colors.blue,
+                          color: AppColors.primary,
                           size: 42,
                         ),
                       ),
@@ -350,14 +355,32 @@ class _TesteMapaState extends State<TesteMapa> {
             ),
             SafeArea(
               child: SingleChildScrollView(
-                child: BarraPesquisaEndereco(
-                  enderecoService: _enderecoService,
-                  ajusteOpcional: widget.ajusteOpcional,
-                  onSelecionado: _selecionarEnderecoPesquisado,
-                  latitudeReferencia: pontoReferencia?.latitude,
-                  longitudeReferencia: pontoReferencia?.longitude,
-                  cidadeReferencia: _cidadePontoEncontro,
-                  estadoReferencia: _estadoPontoEncontro,
+                child: Theme(
+                  data: Theme.of(context).copyWith(
+                    inputDecorationTheme: InputDecorationTheme(
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(
+                          color: VisualBuscaEu.borda,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        borderSide: const BorderSide(color: AppColors.primary),
+                      ),
+                    ),
+                  ),
+                  child: BarraPesquisaEndereco(
+                    elevacao: 0,
+                    borderRadius: 8,
+                    enderecoService: _enderecoService,
+                    ajusteOpcional: widget.ajusteOpcional,
+                    onSelecionado: _selecionarEnderecoPesquisado,
+                    latitudeReferencia: pontoReferencia?.latitude,
+                    longitudeReferencia: pontoReferencia?.longitude,
+                    cidadeReferencia: _cidadePontoEncontro,
+                    estadoReferencia: _estadoPontoEncontro,
+                  ),
                 ),
               ),
             ),
@@ -368,6 +391,13 @@ class _TesteMapaState extends State<TesteMapa> {
                 child: FloatingActionButton.small(
                   heroTag: null,
                   tooltip: 'Usar minha localização',
+                  backgroundColor: Colors.white,
+                  foregroundColor: AppColors.primary,
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                    side: const BorderSide(color: VisualBuscaEu.borda),
+                  ),
                   onPressed: _usarLocalizacaoAtual,
                   child: const Icon(Icons.my_location),
                 ),
@@ -386,7 +416,10 @@ class _TesteMapaState extends State<TesteMapa> {
                   0.45,
             ),
             padding: const EdgeInsets.all(16),
-            color: Colors.white,
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: VisualBuscaEu.borda)),
+            ),
             child: SafeArea(
               top: false,
               bottom: false,
@@ -399,10 +432,7 @@ class _TesteMapaState extends State<TesteMapa> {
                       _buscandoLocalizacao
                           ? 'Obtendo sua localização...'
                           : widget.instrucao,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
+                      style: VisualBuscaEu.titulo.copyWith(fontSize: 16),
                     ),
 
                     const SizedBox(height: 8),
@@ -417,6 +447,7 @@ class _TesteMapaState extends State<TesteMapa> {
                                   '${_enderecoPontoEncontro ?? ''}'
                             : _enderecoPontoEncontro ??
                                   'Toque no mapa para escolher o ponto',
+                        style: VisualBuscaEu.descricao,
                       ),
 
                     const SizedBox(height: 12),

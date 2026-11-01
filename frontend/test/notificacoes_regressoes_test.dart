@@ -100,10 +100,13 @@ class HistoricoQA extends NotificacaoService {
 List<int> idsCarregados(WidgetTester tester) {
   final lista = tester.widget<ListView>(find.byType(ListView));
   final filhos = (lista.childrenDelegate as SliverChildListDelegate).children;
-  return filhos.whereType<ListTile>().map((tile) {
-    final chave = (tile.key as ValueKey<String>).value;
-    return int.parse(chave.substring('notificacao_'.length));
-  }).toList();
+  const prefixo = 'cartao-notificacao_';
+  return filhos
+      .map((filho) => filho.key)
+      .whereType<ValueKey<String>>()
+      .where((chave) => chave.value.startsWith(prefixo))
+      .map((chave) => int.parse(chave.value.substring(prefixo.length)))
+      .toList();
 }
 
 void main() {

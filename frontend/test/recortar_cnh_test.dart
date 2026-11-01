@@ -31,10 +31,17 @@ void main() {
   Future<void> abrir(
     WidgetTester tester,
     Uint8List original,
-    void Function(Uint8List?) concluir,
-  ) async {
+    void Function(Uint8List?) concluir, {
+    double escalaTexto = 1,
+  }) async {
     await tester.pumpWidget(
       MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(escalaTexto)),
+          child: child!,
+        ),
         home: Builder(
           builder: (context) => TextButton(
             onPressed: () async =>
@@ -59,6 +66,38 @@ void main() {
     });
     await tester.pumpAndSettle();
   }
+
+  testWidgets(
+    'recorte deitado com fonte ampliada mantem foto e cantos utilizaveis',
+    (tester) async {
+      tester.view.physicalSize = const Size(640, 360);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+      final original = await criarFoto(tester);
+      Uint8List? resultado;
+      await abrir(
+        tester,
+        original,
+        (bytes) => resultado = bytes,
+        escalaTexto: 1.8,
+      );
+      expect(
+        tester.getSize(find.byType(RawImage)).height,
+        greaterThanOrEqualTo(160),
+      );
+      for (var canto = 0; canto < 4; canto++) {
+        expect(
+          find.byKey(ValueKey('canto-$canto')).hitTestable(),
+          findsOneWidget,
+        );
+      }
+      expect(find.text('Usar recorte').hitTestable(), findsOneWidget);
+      await confirmar(tester);
+      expect(resultado, isNotNull);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   for (final passos in [-1, 1, 2, 3, 4]) {
     testWidgets('rotação $passos preserva pixels, dimensões e original', (

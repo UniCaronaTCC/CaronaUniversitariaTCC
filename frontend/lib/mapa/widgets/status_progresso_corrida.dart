@@ -31,7 +31,7 @@ class StatusProgressoCorrida extends StatelessWidget {
         if (!progresso.carregado || ponto == null) {
           return const SizedBox.shrink();
         }
-        return TextButton.icon(
+        return OutlinedButton.icon(
           icon: const Icon(Icons.check_circle_outline, size: 18),
           label: Text(
             progresso.salvando

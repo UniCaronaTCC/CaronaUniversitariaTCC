@@ -177,6 +177,7 @@ class CamposLadoALado extends StatelessWidget {
       if (constraints.maxWidth < larguraMinima ||
           MediaQuery.textScalerOf(context).scale(16) > 20) {
         return Column(
+          mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [primeiro, const SizedBox(height: 16), segundo],
         );

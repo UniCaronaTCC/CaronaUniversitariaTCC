@@ -106,6 +106,42 @@ void main() {
     AuthService.usuarioLogado = null;
   });
 
+  for (final tamanho in [const Size(320, 700), const Size(640, 360)]) {
+    testWidgets(
+      'fonte ampliada preserva mapa e controles da corrida em $tamanho',
+      (tester) async {
+        tester.view.physicalSize = tamanho;
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        await tester.pumpWidget(
+          MaterialApp(
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(
+                context,
+              ).copyWith(textScaler: TextScaler.linear(1.8)),
+              child: child!,
+            ),
+            home: CorridaEmAndamentoTela(
+              carona: carona('EM_ANDAMENTO'),
+              carregarEstado: (_) async => {
+                'sucesso': true,
+                'dados': carona('EM_ANDAMENTO'),
+              },
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(find.text('Corrida em andamento').hitTestable(), findsOneWidget);
+        expect(find.text('CORRIDA INICIADA').hitTestable(), findsOneWidget);
+        expect(find.text('FINALIZAR').hitTestable(), findsOneWidget);
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pumpAndSettle();
+        expect(tester.takeException(), isNull);
+      },
+    );
+  }
+
   testWidgets('tela aberta para acompanhamento e volta ao estado encerrado', (
     tester,
   ) async {

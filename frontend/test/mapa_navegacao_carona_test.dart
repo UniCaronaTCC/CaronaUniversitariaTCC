@@ -20,9 +20,69 @@ class _RotasFake extends RotaService {
 }
 
 void main() {
-  testWidgets('ajuste visual na ponte preserva o GPS usado para a rota', (
+  testWidgets(
+    'avisos da rota continuam acessiveis com pouca altura e fonte ampliada',
+    (tester) async {
+      final service = _RotasFake();
+      final carona = Carona(
+        id: 1,
+        origem: 'Origem',
+        destino: 'Destino',
+        destinoLatitude: -21.1,
+        destinoLongitude: -50.3,
+        dataInicio: DateTime(2026, 11, 1),
+        horario: '18:00',
+        vagas: 2,
+        valor: 0,
+        recorrente: false,
+        diasSemana: const [],
+        motorista: 'Motorista',
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(
+              context,
+            ).copyWith(textScaler: TextScaler.linear(1.8)),
+            child: child!,
+          ),
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                height: 80,
+                child: MapaNavegacaoCarona(
+                  carona: carona,
+                  localizacaoMotorista: const LatLng(-21.2, -50.4),
+                  rotaService: service,
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      service.respostas.single.completeError(Exception('Sem conexão'));
+      await tester.pump();
+      await tester.drag(
+        find.byType(SingleChildScrollView),
+        const Offset(0, -250),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Tentar novamente').hitTestable(), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(const Duration(seconds: 20));
+    },
+  );
+
+  testWidgets('mapa estreito com fonte ampliada preserva o GPS na ponte', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
     final service = _RotasFake();
     const gps = LatLng(-21.199865, -50.4);
     const ponte = [LatLng(-21.2, -50.401), LatLng(-21.2, -50.399)];
@@ -42,6 +102,12 @@ void main() {
     );
     await tester.pumpWidget(
       MaterialApp(
+        builder: (context, child) => MediaQuery(
+          data: MediaQuery.of(
+            context,
+          ).copyWith(textScaler: TextScaler.linear(1.8)),
+          child: child!,
+        ),
         home: Scaffold(
           body: MapaNavegacaoCarona(
             carona: carona,
@@ -68,6 +134,11 @@ void main() {
         );
     expect(marcador.point.latitude, closeTo(-21.2, 0.0000001));
     expect(service.chamadas.single.first.latitude, gps.latitude);
+    expect(
+      find.text('flutter_map | © OpenStreetMap contributors'),
+      findsOneWidget,
+    );
+    expect(find.byTooltip('Voltar para a navegação'), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.pump(const Duration(seconds: 20));
     expect(tester.takeException(), isNull);

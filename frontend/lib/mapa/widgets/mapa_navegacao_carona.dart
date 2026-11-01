@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../config/app_colors.dart';
+import '../../widgets/visual_buscaeu.dart';
 import '../../models/carona.dart';
 import '../services/rota_service.dart';
 import '../utils/rota_mapa_utils.dart';
@@ -155,8 +156,8 @@ class _MapaNavegacaoCaronaState extends State<MapaNavegacaoCarona> {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         color: AppColors.primary.withValues(alpha: 0.04),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppColors.primary.withValues(alpha: 0.15)),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: VisualBuscaEu.borda),
       ),
       child: _conteudo(),
     );
@@ -207,13 +208,15 @@ class _EstadoCarregando extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const CircularProgressIndicator(),
-          const SizedBox(height: 14),
-          Text(mensagem),
-        ],
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: 14),
+            Text(mensagem),
+          ],
+        ),
       ),
     );
   }
@@ -228,7 +231,7 @@ class _EstadoErro extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Center(
-      child: Padding(
+      child: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           mainAxisSize: MainAxisSize.min,

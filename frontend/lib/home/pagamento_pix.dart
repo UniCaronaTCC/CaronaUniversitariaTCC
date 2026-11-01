@@ -9,6 +9,7 @@ import '../models/pagamento_pix.dart';
 import '../services/pagamento_service.dart';
 import '../utils/formatador_moeda.dart';
 import '../widgets/componentes_padrao.dart';
+import '../widgets/visual_buscaeu.dart';
 
 class PagamentoPixTela extends StatefulWidget {
   final PagamentoPix pagamento;
@@ -146,7 +147,10 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context) =>
+      VisualBuscaEu(child: Builder(builder: _conteudo));
+
+  Widget _conteudo(BuildContext context) {
     final qrCode = _decodificarQrCode(pagamento.qrCodeBase64);
 
     return Scaffold(
@@ -173,24 +177,29 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
       ),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.fromLTRB(24, 12, 24, 32),
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
           children: [
             const Align(alignment: Alignment.centerLeft, child: _SeloSandbox()),
-            const SizedBox(height: 24),
-            const Text(
-              'Valor da carona',
-              style: TextStyle(color: Colors.black54, fontSize: 14),
-            ),
-            const SizedBox(height: 4),
-            Text(
-              _formatarCentavos(pagamento.valorCentavos),
-              style: const TextStyle(
-                color: AppColors.text,
-                fontSize: 32,
-                fontWeight: FontWeight.bold,
+            const SizedBox(height: 16),
+            CartaoBuscaEu(
+              cor: AppColors.primary.withValues(alpha: .03),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Valor da carona', style: VisualBuscaEu.descricao),
+                  const SizedBox(height: 4),
+                  Text(
+                    _formatarCentavos(pagamento.valorCentavos),
+                    style: const TextStyle(
+                      color: AppColors.primary,
+                      fontSize: 28,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 12),
             _StatusPix(pagamento: pagamento),
             if (_erroAtualizacao != null &&
                 pagamento.aguardandoConfirmacao) ...[
@@ -204,13 +213,16 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
               const SizedBox(height: 28),
               if (qrCode != null) ...[
                 Center(
-                  child: SizedBox.square(
-                    dimension: 240,
-                    child: Image.memory(
-                      qrCode,
-                      key: const ValueKey('qr-code-pix'),
-                      fit: BoxFit.contain,
-                      filterQuality: FilterQuality.none,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 240),
+                    child: AspectRatio(
+                      aspectRatio: 1,
+                      child: Image.memory(
+                        qrCode,
+                        key: const ValueKey('qr-code-pix'),
+                        fit: BoxFit.contain,
+                        filterQuality: FilterQuality.none,
+                      ),
                     ),
                   ),
                 ),
@@ -221,10 +233,14 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
               const SizedBox(height: 8),
-              SelectableText(
-                pagamento.pixCopiaECola!,
-                key: const ValueKey('codigo-pix'),
-                style: const TextStyle(color: Colors.black54, height: 1.4),
+              CartaoBuscaEu(
+                padding: const EdgeInsets.all(12),
+                cor: VisualBuscaEu.suave,
+                child: SelectableText(
+                  pagamento.pixCopiaECola!,
+                  key: const ValueKey('codigo-pix'),
+                  style: VisualBuscaEu.descricao,
+                ),
               ),
               const SizedBox(height: 16),
               SizedBox(
@@ -377,7 +393,8 @@ class _StatusPix extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: cor.withValues(alpha: 0.08),
-        border: Border(left: BorderSide(color: cor, width: 4)),
+        border: Border.all(color: cor.withValues(alpha: .2)),
+        borderRadius: BorderRadius.circular(10),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
