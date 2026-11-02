@@ -220,13 +220,10 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela>
     setState(() => idProcessando = null);
 
     if (resultado['sucesso'] != true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            resultado['mensagem']?.toString() ??
-                'Não foi possível preparar o pagamento',
-          ),
-        ),
+      _mostrarMensagem(
+        resultado['mensagem']?.toString() ??
+            'Não foi possível preparar o pagamento',
+        tipo: TipoAviso.erro,
       );
       return;
     }

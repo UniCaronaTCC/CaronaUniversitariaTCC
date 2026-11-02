@@ -8,6 +8,7 @@ import '../config/app_colors.dart';
 import '../models/pagamento_pix.dart';
 import '../services/pagamento_service.dart';
 import '../utils/formatador_moeda.dart';
+import '../widgets/aviso_app.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/visual_buscaeu.dart';
 
@@ -36,6 +37,15 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
   bool _consultando = false;
   bool _simulando = false;
   String? _erroAtualizacao;
+
+  void _mostrarMensagem(
+    String mensagem, {
+    required TipoAviso tipo,
+    Duration? duracao,
+  }) {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+    AvisoApp.mostrar(context, mensagem, tipo: tipo, duracao: duracao);
+  }
 
   @override
   void initState() {
@@ -105,9 +115,7 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
     }
 
     if (pagamentoConfirmado) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Pagamento confirmado')));
+      _mostrarMensagem('Pagamento confirmado', tipo: TipoAviso.sucesso);
     }
   }
 
@@ -140,8 +148,9 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Pagamento simulado. Aguardando webhook')),
+    _mostrarMensagem(
+      'Pagamento simulado. Aguardando confirmação',
+      tipo: TipoAviso.informacao,
     );
     await _atualizarPagamento();
   }
@@ -296,9 +305,11 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Código Pix copiado')));
+    _mostrarMensagem(
+      'Código Pix copiado',
+      tipo: TipoAviso.sucesso,
+      duracao: const Duration(milliseconds: 1500),
+    );
   }
 
   Uint8List? _decodificarQrCode(String? valor) {

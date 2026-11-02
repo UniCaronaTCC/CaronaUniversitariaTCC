@@ -3,6 +3,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
 import '../../navigation/navegacao_principal.dart';
+import '../../widgets/aviso_app.dart';
 import '../../widgets/barra_navegacao_home.dart';
 import '../../widgets/componentes_padrao.dart';
 import '../../widgets/visual_buscaeu.dart';
@@ -59,6 +60,11 @@ class _TesteMapaState extends State<TesteMapa> {
   bool _buscandoEndereco = false;
   bool _pontoEspecifico = true;
   int _consultaEndereco = 0;
+
+  void _mostrarMensagem(String mensagem, {required TipoAviso tipo}) {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+    AvisoApp.mostrar(context, mensagem, tipo: tipo);
+  }
 
   @override
   void initState() {
@@ -117,8 +123,9 @@ class _TesteMapaState extends State<TesteMapa> {
         _buscandoLocalizacao = false;
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível obter sua localização')),
+      _mostrarMensagem(
+        'Não foi possível obter sua localização',
+        tipo: TipoAviso.erro,
       );
     }
   }
@@ -211,8 +218,9 @@ class _TesteMapaState extends State<TesteMapa> {
 
   void _confirmarPontoEncontro() {
     if (_pontoEncontro == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Aguarde a localização ou toque no mapa')),
+      _mostrarMensagem(
+        'Aguarde a localização ou toque no mapa',
+        tipo: TipoAviso.atencao,
       );
 
       return;
@@ -233,10 +241,9 @@ class _TesteMapaState extends State<TesteMapa> {
         );
 
     if (!localSelecionado.coordenadasValidas) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('O ponto escolhido possui coordenadas inválidas'),
-        ),
+      _mostrarMensagem(
+        'O ponto escolhido possui coordenadas inválidas',
+        tipo: TipoAviso.atencao,
       );
       return;
     }
@@ -245,14 +252,11 @@ class _TesteMapaState extends State<TesteMapa> {
         ? localSelecionado.localConfirmavel
         : _pontoEspecifico && !_exigeAjuste;
     if (!podeConfirmar) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.ajusteOpcional
-                ? 'Escolha uma rua ou estabelecimento, ou marque um ponto no mapa'
-                : 'Toque no mapa para confirmar o ponto exato',
-          ),
-        ),
+      _mostrarMensagem(
+        widget.ajusteOpcional
+            ? 'Escolha uma rua ou estabelecimento, ou marque um ponto no mapa'
+            : 'Toque no mapa para confirmar o ponto exato',
+        tipo: TipoAviso.atencao,
       );
       return;
     }
@@ -263,9 +267,7 @@ class _TesteMapaState extends State<TesteMapa> {
       return;
     }
 
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(const SnackBar(content: Text('Ponto confirmado')));
+    _mostrarMensagem('Ponto confirmado', tipo: TipoAviso.sucesso);
   }
 
   @override
