@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../config/app_colors.dart';
 import '../home/tela_inicial.dart';
 import '../services/auth_service.dart';
+import '../widgets/aviso_app.dart';
 import 'cadastro.dart';
 import 'esqueci_senha.dart';
 
@@ -34,16 +35,12 @@ class _LoginTelaState extends State<LoginTela> {
   Future<void> fazerLogin() async {
     if (carregando || !_telaAtiva) return;
     if (emailController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Informe seu e-mail')));
+      AvisoApp.mostrar(context, 'Informe seu e-mail', tipo: TipoAviso.atencao);
       return;
     }
 
     if (senhaController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Informe sua senha')));
+      AvisoApp.mostrar(context, 'Informe sua senha', tipo: TipoAviso.atencao);
       return;
     }
 
@@ -64,9 +61,7 @@ class _LoginTelaState extends State<LoginTela> {
         final mensagem = resultado['dados']['mensagem'] as String;
         final nomeUsuario = resultado['dados']['usuario']['nome'].toString();
         TextInput.finishAutofillContext(shouldSave: true);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(mensagem)));
+        AvisoApp.mostrar(context, mensagem, tipo: TipoAviso.sucesso);
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -74,21 +69,19 @@ class _LoginTelaState extends State<LoginTela> {
           ),
         );
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              resultado['mensagem']?.toString() ??
-                  'Não foi possível entrar. Tente novamente',
-            ),
-          ),
+        AvisoApp.mostrar(
+          context,
+          resultado['mensagem']?.toString() ??
+              'Não foi possível entrar. Tente novamente',
+          tipo: TipoAviso.erro,
         );
       }
     } catch (_) {
       if (!mounted || !_telaAtiva) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível entrar. Tente novamente'),
-        ),
+      AvisoApp.mostrar(
+        context,
+        'Não foi possível entrar. Tente novamente',
+        tipo: TipoAviso.erro,
       );
     } finally {
       if (mounted) setState(() => carregando = false);

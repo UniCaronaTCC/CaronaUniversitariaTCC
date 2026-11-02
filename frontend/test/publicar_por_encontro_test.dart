@@ -14,6 +14,7 @@ import 'package:uni_carona/services/mensagem_service.dart';
 import 'package:uni_carona/services/solicitacao_service.dart';
 import 'package:uni_carona/widgets/formulario_ofertar_carona.dart';
 import 'package:uni_carona/widgets/campo_destino_campus.dart';
+import 'package:uni_carona/widgets/aviso_app.dart';
 
 const destino = LocalizacaoSelecionada(
   ponto: LatLng(-21.1, -50.3),
@@ -140,6 +141,10 @@ void main() {
             await enviar(tester);
             expect(envios, 1);
             expect(find.text('Carona criada com sucesso'), findsOneWidget);
+            expect(
+              tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+              TipoAviso.sucesso,
+            );
             expect(tester.takeException(), isNull);
           },
           () => MockClient((req) async {
@@ -174,11 +179,51 @@ void main() {
           find.text('Adicione pelo menos um ponto de encontro'),
           findsOneWidget,
         );
+        expect(
+          tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+          TipoAviso.atencao,
+        );
       },
       () => MockClient((req) async {
         if (req.method != 'POST') return respostaVazia();
         envios++;
         return http.Response('{}', 201);
+      }),
+    );
+  });
+
+  testeIsolado('falha na publicacao usa aviso de erro e preserva formulario', (
+    tester,
+  ) async {
+    var envios = 0;
+    await http.runWithClient(
+      () async {
+        await abrir(tester, () async => primeiro);
+        await adicionar(tester);
+        await preencher(tester);
+        final destinoAntes = formulario(tester).destinoController.text;
+        await enviar(tester);
+        expect(envios, 1);
+        expect(
+          tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+          TipoAviso.erro,
+        );
+        expect(formulario(tester).destinoController.text, destinoAntes);
+        expect(find.text('Carona criada com sucesso'), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+      () => MockClient((req) async {
+        if (req.method != 'POST') return respostaVazia();
+        envios++;
+        return http.Response.bytes(
+          utf8.encode(
+            jsonEncode({
+              'sucesso': false,
+              'mensagem': 'Não foi possível publicar a carona',
+            }),
+          ),
+          400,
+        );
       }),
     );
   });

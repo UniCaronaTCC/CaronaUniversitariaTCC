@@ -17,6 +17,7 @@ import '../utils/formatador_moeda.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/formulario_ofertar_carona.dart';
+import '../widgets/aviso_app.dart';
 import '../widgets/visual_buscaeu.dart';
 import 'verificacao_cnh.dart';
 
@@ -348,6 +349,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
         widget.caronaParaEditar?.idRecorrencia != null) {
       mostrarMensagem(
         'Esta data pertence à programação. Para outra data, publique uma carona avulsa.',
+        tipo: TipoAviso.informacao,
       );
       return;
     }
@@ -407,6 +409,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     if (widget.idRecorrencia != null && !valor) {
       mostrarMensagem(
         'Para interromper a programação, use Pausar em Recorrências',
+        tipo: TipoAviso.informacao,
       );
       return;
     }
@@ -512,6 +515,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
             (editando
                 ? 'Carona atualizada com sucesso'
                 : 'Carona criada com sucesso'),
+        tipo: TipoAviso.sucesso,
       );
 
       if (Navigator.canPop(context)) {
@@ -527,6 +531,7 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     }
     mostrarMensagem(
       resultado['mensagem']?.toString() ?? 'Erro ao criar carona',
+      tipo: TipoAviso.erro,
     );
   }
 
@@ -590,10 +595,8 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
     return null;
   }
 
-  void mostrarMensagem(String mensagem) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(mensagem)));
+  void mostrarMensagem(String mensagem, {TipoAviso tipo = TipoAviso.atencao}) {
+    AvisoApp.mostrar(context, mensagem, tipo: tipo);
   }
 
   Future<void> abrirCadastroVeiculo() async {

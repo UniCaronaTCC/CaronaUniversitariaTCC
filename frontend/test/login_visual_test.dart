@@ -12,6 +12,7 @@ import 'package:uni_carona/config/app_theme.dart';
 import 'package:uni_carona/home/tela_inicial.dart';
 import 'package:uni_carona/services/auth_service.dart';
 import 'package:uni_carona/widgets/auth_widgets.dart';
+import 'package:uni_carona/widgets/aviso_app.dart';
 
 import 'atalhos_home_test.dart' as fixtures;
 
@@ -165,7 +166,65 @@ void main() {
         ),
         findsOneWidget,
       );
+      expect(
+        tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+        TipoAviso.atencao,
+      );
     });
+  }
+
+  testWidgets('excecao de login usa aviso de erro sem alterar a mensagem', (
+    tester,
+  ) async {
+    await abrir(
+      tester,
+      tela: LoginTela(autenticar: (_, _) async => throw StateError('Offline')),
+    );
+    await tester.enterText(find.byKey(email), 'usuario@exemplo.com');
+    await tester.enterText(find.byKey(senha), 'senha-teste');
+    await tester.ensureVisible(find.byKey(entrar));
+    await tester.tap(find.byKey(entrar));
+    await tester.pumpAndSettle();
+    expect(
+      find.text('Não foi possível entrar. Tente novamente'),
+      findsOneWidget,
+    );
+    expect(tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo, TipoAviso.erro);
+  });
+
+  for (final remover in [false, true]) {
+    testWidgets(
+      'resposta tardia nao mostra aviso em login ${remover ? 'removido' : 'coberto'}',
+      (tester) async {
+        final resposta = Completer<Map<String, dynamic>>();
+        await abrir(
+          tester,
+          tela: LoginTela(autenticar: (_, _) => resposta.future),
+        );
+        await tester.enterText(find.byKey(email), 'usuario@exemplo.com');
+        await tester.enterText(find.byKey(senha), 'senha-teste');
+        await tester.ensureVisible(find.byKey(entrar));
+        await tester.tap(find.byKey(entrar));
+        await tester.pump();
+        final navegador = Navigator.of(tester.element(find.byType(LoginTela)));
+        final rota = MaterialPageRoute<void>(
+          builder: (_) => const Scaffold(body: Text('Outra tela')),
+        );
+        if (remover) {
+          navegador.pushReplacement(rota);
+        } else {
+          navegador.push(rota);
+        }
+        await tester.pumpAndSettle();
+        resposta.complete({'sucesso': false, 'mensagem': 'Resposta antiga'});
+        await tester.pumpAndSettle();
+        expect(find.text('Outra tela'), findsOneWidget);
+        expect(find.byType(SnackBar), findsNothing);
+        expect(find.byType(AvisoApp), findsNothing);
+        expect(tester.takeException(), isNull);
+        await tester.pumpWidget(const SizedBox());
+      },
+    );
   }
 
   testWidgets(
@@ -200,6 +259,10 @@ void main() {
       });
       await tester.pumpAndSettle();
       expect(find.text('E-mail ou senha incorretos'), findsOneWidget);
+      expect(
+        tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+        TipoAviso.erro,
+      );
       expect(
         tester.widget<TextField>(find.byKey(email)).controller!.text,
         ' usuario@exemplo.com ',
@@ -273,6 +336,11 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.byType(LoginTela), findsNothing);
         expect(find.byType(TelaInicial), findsOneWidget);
+        expect(find.text('Login feito com sucesso'), findsOneWidget);
+        expect(
+          tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+          TipoAviso.sucesso,
+        );
         expect(
           Navigator.of(tester.element(find.byType(TelaInicial))).canPop(),
           isFalse,
