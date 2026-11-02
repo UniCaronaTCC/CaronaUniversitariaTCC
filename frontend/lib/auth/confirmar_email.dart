@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import '../config/app_colors.dart';
 import '../widgets/auth_secundario.dart';
+import '../widgets/aviso_app.dart';
 import '../services/email_verificacao_service.dart';
 import 'login.dart';
 
@@ -93,6 +94,7 @@ class _ConfirmarEmailTelaState extends State<ConfirmarEmailTela>
       if (resultado['sucesso'] == true) {
         mostrarMensagem(
           resultado['mensagem']?.toString() ?? 'E-mail confirmado com sucesso',
+          tipo: TipoAviso.sucesso,
         );
         _abrirLogin();
       } else {
@@ -134,20 +136,31 @@ class _ConfirmarEmailTelaState extends State<ConfirmarEmailTela>
             (resultado['sucesso'] == true
                 ? 'Novo código enviado'
                 : 'Não foi possível reenviar o código'),
+        tipo: resultado['sucesso'] == true
+            ? TipoAviso.informacao
+            : TipoAviso.erro,
+        duracao: resultado['sucesso'] == true
+            ? const Duration(seconds: 3)
+            : null,
       );
     } catch (_) {
       if (!mounted) return;
-      mostrarMensagem('Não foi possível reenviar o código. Tente novamente');
+      mostrarMensagem(
+        'Não foi possível reenviar o código. Tente novamente',
+        tipo: TipoAviso.erro,
+      );
     } finally {
       if (mounted) setState(() => reenviando = false);
     }
   }
 
-  void mostrarMensagem(String mensagem) {
+  void mostrarMensagem(
+    String mensagem, {
+    required TipoAviso tipo,
+    Duration? duracao,
+  }) {
     if (!_telaAtiva) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(mensagem)));
+    AvisoApp.mostrar(context, mensagem, tipo: tipo, duracao: duracao);
   }
 
   void _voltarParaLogin() {

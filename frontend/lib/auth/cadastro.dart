@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 import '../widgets/auth_secundario.dart';
+import '../widgets/aviso_app.dart';
 import '../services/auth_service.dart';
 import '../utils/validacao_email.dart';
 import '../utils/validacao_senha.dart';
@@ -48,37 +49,35 @@ class _CadastroTelaState extends State<CadastroTela> {
   Future<void> fazerCadastro() async {
     if (carregando || !_telaAtiva) return;
     if (nomeController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Informe seu nome')));
+      AvisoApp.mostrar(context, 'Informe seu nome', tipo: TipoAviso.atencao);
       return;
     }
 
     if (emailController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Informe seu e-mail')));
+      AvisoApp.mostrar(context, 'Informe seu e-mail', tipo: TipoAviso.atencao);
       return;
     }
 
     if (!ValidacaoEmail.ehValido(emailController.text)) {
-      ScaffoldMessenger.of(
+      AvisoApp.mostrar(
         context,
-      ).showSnackBar(const SnackBar(content: Text(ValidacaoEmail.mensagem)));
+        ValidacaoEmail.mensagem,
+        tipo: TipoAviso.atencao,
+      );
       return;
     }
 
     if (senhaController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Informe sua senha')));
+      AvisoApp.mostrar(context, 'Informe sua senha', tipo: TipoAviso.atencao);
       return;
     }
 
     if (!ValidacaoSenha.ehValida(senhaController.text)) {
-      ScaffoldMessenger.of(
+      AvisoApp.mostrar(
         context,
-      ).showSnackBar(const SnackBar(content: Text(ValidacaoSenha.mensagem)));
+        ValidacaoSenha.mensagem,
+        tipo: TipoAviso.atencao,
+      );
       return;
     }
 
@@ -101,13 +100,10 @@ class _CadastroTelaState extends State<CadastroTela> {
       if (!mounted || !_telaAtiva) return;
 
       if (resultado['sucesso'] == true) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              resultado['dados']['mensagem'] ??
-                  'Cadastro realizado com sucesso',
-            ),
-          ),
+        AvisoApp.mostrar(
+          context,
+          resultado['dados']['mensagem'] ?? 'Cadastro realizado com sucesso',
+          tipo: TipoAviso.sucesso,
         );
 
         Navigator.pushReplacement(
@@ -120,19 +116,17 @@ class _CadastroTelaState extends State<CadastroTela> {
         return;
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            resultado['mensagem']?.toString() ?? 'Erro ao cadastrar',
-          ),
-        ),
+      AvisoApp.mostrar(
+        context,
+        resultado['mensagem']?.toString() ?? 'Erro ao cadastrar',
+        tipo: TipoAviso.erro,
       );
     } catch (_) {
       if (!mounted || !_telaAtiva) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Não foi possível criar sua conta. Tente novamente'),
-        ),
+      AvisoApp.mostrar(
+        context,
+        'Não foi possível criar sua conta. Tente novamente',
+        tipo: TipoAviso.erro,
       );
     } finally {
       if (mounted) setState(() => carregando = false);

@@ -11,6 +11,7 @@ import 'package:uni_carona/config/app_theme.dart';
 import 'package:uni_carona/utils/validacao_email.dart';
 import 'package:uni_carona/utils/validacao_senha.dart';
 import 'package:uni_carona/widgets/auth_widgets.dart';
+import 'package:uni_carona/widgets/aviso_app.dart';
 
 void main() {
   const nome = ValueKey('nome-cadastro');
@@ -184,6 +185,14 @@ void main() {
         await tester.pumpAndSettle();
         expect(chamadas, 0);
         expect(find.text(caso.$4), findsOneWidget);
+        expect(
+          tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+          TipoAviso.atencao,
+        );
+        expect(
+          tester.widget<SnackBar>(find.byType(SnackBar)).duration,
+          const Duration(seconds: 4),
+        );
       },
     );
   }
@@ -207,6 +216,15 @@ void main() {
     expect(dados, ['João', 'usuario@exemplo.com', ' senha123 ']);
     expect(find.byType(CadastroTela), findsNothing);
     expect(find.byType(LoginTela), findsNothing);
+    expect(find.text('Confira seu e-mail'), findsOneWidget);
+    expect(
+      tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+      TipoAviso.sucesso,
+    );
+    expect(
+      tester.widget<SnackBar>(find.byType(SnackBar)).duration,
+      const Duration(seconds: 2),
+    );
     expect(
       tester.widget<ConfirmarEmailTela>(find.byType(ConfirmarEmailTela)).email,
       'usuario@exemplo.com',
@@ -219,6 +237,10 @@ void main() {
       ),
       isEmpty,
     );
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(find.byType(AvisoApp), findsNothing);
+    expect(find.byType(ConfirmarEmailTela), findsOneWidget);
     await tester.pumpWidget(const SizedBox());
     await tester.pumpAndSettle();
     expect(tester.takeException(), isNull);
@@ -278,6 +300,11 @@ void main() {
     resposta.complete(falha);
     await tester.pumpAndSettle();
     expect(find.text('Cadastro indisponível'), findsOneWidget);
+    expect(tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo, TipoAviso.erro);
+    expect(
+      tester.widget<SnackBar>(find.byType(SnackBar)).duration,
+      const Duration(seconds: 5),
+    );
     expect(tester.widget<TextField>(find.byKey(nome)).controller!.text, 'João');
     expect(
       tester.widget<TextField>(find.byKey(email)).controller!.text,
@@ -338,6 +365,7 @@ void main() {
       find.text('Não foi possível criar sua conta. Tente novamente'),
       findsOneWidget,
     );
+    expect(tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo, TipoAviso.erro);
     expect(
       tester.widget<ElevatedButton>(find.byKey(criar)).onPressed,
       isNotNull,
@@ -357,6 +385,7 @@ void main() {
     await enviar(tester);
     await tester.pumpAndSettle();
     expect(find.text('Erro ao cadastrar'), findsOneWidget);
+    expect(tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo, TipoAviso.erro);
   });
 
   for (final acao in [entrar, voltar]) {

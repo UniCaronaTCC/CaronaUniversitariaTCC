@@ -6,6 +6,7 @@ import '../services/email_verificacao_service.dart';
 import '../utils/validacao_email.dart';
 import '../utils/validacao_senha.dart';
 import '../widgets/auth_secundario.dart';
+import '../widgets/aviso_app.dart';
 import 'login.dart';
 
 typedef SolicitarCodigoSenha =
@@ -87,6 +88,8 @@ class _EsqueciSenhaTelaState extends State<EsqueciSenhaTela> {
         mostrarMensagem(
           resultado['mensagem']?.toString() ??
               'Código enviado para o seu e-mail',
+          tipo: TipoAviso.informacao,
+          duracao: const Duration(seconds: 3),
         );
       } else {
         _mostrarFalhaEnvio(
@@ -104,7 +107,7 @@ class _EsqueciSenhaTelaState extends State<EsqueciSenhaTela> {
 
   void _mostrarFalhaEnvio(String mensagem) {
     if (codigoEnviado) {
-      mostrarMensagem(mensagem);
+      mostrarMensagem(mensagem, tipo: TipoAviso.erro);
     } else {
       setState(() => _erroEmail = mensagem);
     }
@@ -118,17 +121,17 @@ class _EsqueciSenhaTelaState extends State<EsqueciSenhaTela> {
     final senha = senhaController.text;
 
     if (!RegExp(r'^\d{6}$').hasMatch(codigo)) {
-      mostrarMensagem('Informe o código de 6 dígitos');
+      mostrarMensagem('Informe o código de 6 dígitos', tipo: TipoAviso.atencao);
       return;
     }
 
     if (!ValidacaoSenha.ehValida(senha)) {
-      mostrarMensagem(ValidacaoSenha.mensagem);
+      mostrarMensagem(ValidacaoSenha.mensagem, tipo: TipoAviso.atencao);
       return;
     }
 
     if (senha != confirmarSenhaController.text) {
-      mostrarMensagem('As senhas não são iguais');
+      mostrarMensagem('As senhas não são iguais', tipo: TipoAviso.atencao);
       return;
     }
 
@@ -145,6 +148,7 @@ class _EsqueciSenhaTelaState extends State<EsqueciSenhaTela> {
             (resultado['sucesso'] == true
                 ? 'Senha redefinida com sucesso'
                 : 'Não foi possível redefinir a senha'),
+        tipo: resultado['sucesso'] == true ? TipoAviso.sucesso : TipoAviso.erro,
       );
 
       if (resultado['sucesso'] == true) {
@@ -156,17 +160,22 @@ class _EsqueciSenhaTelaState extends State<EsqueciSenhaTela> {
       }
     } catch (_) {
       if (!mounted || !_telaAtiva) return;
-      mostrarMensagem('Não foi possível redefinir a senha. Tente novamente');
+      mostrarMensagem(
+        'Não foi possível redefinir a senha. Tente novamente',
+        tipo: TipoAviso.erro,
+      );
     } finally {
       if (mounted) setState(() => carregando = false);
     }
   }
 
-  void mostrarMensagem(String mensagem) {
+  void mostrarMensagem(
+    String mensagem, {
+    required TipoAviso tipo,
+    Duration? duracao,
+  }) {
     if (!_telaAtiva) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(mensagem)));
+    AvisoApp.mostrar(context, mensagem, tipo: tipo, duracao: duracao);
   }
 
   @override

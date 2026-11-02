@@ -338,7 +338,15 @@ void main() {
         expect(find.byType(TelaInicial), findsOneWidget);
         expect(find.text('Login feito com sucesso'), findsOneWidget);
         final aviso = tester.widget<SnackBar>(find.byType(SnackBar));
-        expect(aviso.backgroundColor, AppColors.primary);
+        final cartao = tester.widget<Material>(
+          find
+              .descendant(
+                of: find.byType(AvisoApp),
+                matching: find.byType(Material),
+              )
+              .first,
+        );
+        expect(cartao.color, AppColors.primary);
         expect(aviso.behavior, SnackBarBehavior.floating);
         expect(aviso.duration, const Duration(seconds: 2));
         expect(aviso.showCloseIcon, isFalse);

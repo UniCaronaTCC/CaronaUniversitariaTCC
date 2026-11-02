@@ -8,6 +8,7 @@ import 'package:uni_carona/auth/login.dart';
 import 'package:uni_carona/config/app_colors.dart';
 import 'package:uni_carona/config/app_theme.dart';
 import 'package:uni_carona/widgets/auth_widgets.dart';
+import 'package:uni_carona/widgets/aviso_app.dart';
 
 void main() {
   const campo = ValueKey('codigo-confirmacao');
@@ -253,6 +254,18 @@ void main() {
     expect(find.text('Reenviar código em 60s'), findsOneWidget);
     expect(tester.widget<TextField>(find.byKey(campo)).enabled, isTrue);
     expect(tester.widget<TextButton>(find.byKey(reenviar)).onPressed, isNull);
+    expect(
+      tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+      TipoAviso.informacao,
+    );
+    expect(
+      tester.widget<SnackBar>(find.byType(SnackBar)).duration,
+      const Duration(seconds: 3),
+    );
+    await tester.pump(const Duration(seconds: 3));
+    await tester.pumpAndSettle();
+    expect(find.byType(AvisoApp), findsNothing);
+    expect(tester.widget<TextButton>(find.byKey(reenviar)).onPressed, isNull);
   });
 
   for (final excecao in [false, true]) {
@@ -279,6 +292,8 @@ void main() {
           ),
           findsOneWidget,
         );
+        expect(find.byType(AvisoApp), findsNothing);
+        expect(find.byType(SnackBar), findsNothing);
         expect(
           tester.widget<TextField>(find.byKey(campo)).controller!.text,
           '001234',
@@ -319,6 +334,14 @@ void main() {
           findsOneWidget,
         );
         expect(
+          tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+          TipoAviso.erro,
+        );
+        expect(
+          tester.widget<SnackBar>(find.byType(SnackBar)).duration,
+          const Duration(seconds: 5),
+        );
+        expect(
           tester.widget<TextField>(find.byKey(campo)).controller!.text,
           '001234',
         );
@@ -355,6 +378,15 @@ void main() {
     await tester.pumpAndSettle();
     expect(chamadas, 1);
     expect(find.byType(LoginTela), findsOneWidget);
+    expect(find.text('E-mail confirmado com sucesso'), findsOneWidget);
+    expect(
+      tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+      TipoAviso.sucesso,
+    );
+    expect(
+      tester.widget<SnackBar>(find.byType(SnackBar)).duration,
+      const Duration(seconds: 2),
+    );
     expect(
       Navigator.of(tester.element(find.byType(LoginTela))).canPop(),
       isFalse,
@@ -367,6 +399,10 @@ void main() {
       ),
       isEmpty,
     );
+    await tester.pump(const Duration(seconds: 2));
+    await tester.pumpAndSettle();
+    expect(find.byType(AvisoApp), findsNothing);
+    expect(find.byType(LoginTela), findsOneWidget);
   });
 
   testWidgets('reenvio aguarda sessenta segundos completos', (tester) async {

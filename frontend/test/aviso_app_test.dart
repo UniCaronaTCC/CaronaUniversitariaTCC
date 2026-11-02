@@ -60,8 +60,8 @@ void main() {
       segundos: 4,
     ),
     TipoAviso.erro: (
-      fundo: Color(0xFFFDEBEC),
-      texto: Color(0xFF9B2433),
+      fundo: Color(0xFFC62828),
+      texto: Colors.white,
       icone: Icons.error_outline_rounded,
       rotulo: 'Erro',
       segundos: 5,
@@ -86,13 +86,25 @@ void main() {
         expect(tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo, tipo);
         final aviso = tester.widget<SnackBar>(find.byType(SnackBar));
         expect(aviso.duration, Duration(seconds: estilo.segundos));
-        expect(aviso.backgroundColor, estilo.fundo);
+        expect(aviso.backgroundColor, Colors.transparent);
+        final cartao = tester.widget<Material>(
+          find
+              .descendant(
+                of: find.byType(AvisoApp),
+                matching: find.byType(Material),
+              )
+              .first,
+        );
+        expect(cartao.color, estilo.fundo);
+        expect(cartao.elevation, 3);
+        expect(cartao.borderRadius, BorderRadius.circular(8));
         expect(aviso.behavior, SnackBarBehavior.floating);
         expect(
           (aviso.shape! as RoundedRectangleBorder).borderRadius,
           BorderRadius.circular(8),
         );
-        expect(aviso.elevation, 3);
+        expect(aviso.elevation, 0);
+        expect(aviso.clipBehavior, Clip.none);
         expect(aviso.margin, const EdgeInsets.fromLTRB(16, 8, 16, 12));
         expect(aviso.showCloseIcon, isFalse);
         expect(aviso.persist, isFalse);
@@ -390,7 +402,7 @@ void main() {
     );
   });
 
-  testWidgets('entrada e saida usam animacao nativa de 200 e 150 ms', (
+  testWidgets('entrada e saida usam o ciclo nativo de 360 e 240 ms', (
     tester,
   ) async {
     final contexto = await montar(tester);
@@ -399,19 +411,69 @@ void main() {
     final animacao = tester.widget<SnackBar>(find.byType(SnackBar)).animation!;
     expect(
       (animacao as AnimationController).duration,
-      const Duration(milliseconds: 200),
+      const Duration(milliseconds: 360),
     );
-    expect(animacao.reverseDuration, const Duration(milliseconds: 150));
+    expect(animacao.reverseDuration, const Duration(milliseconds: 240));
     await tester.pump(const Duration(milliseconds: 100));
     expect(animacao.value, inExclusiveRange(0, 1));
     await tester.pumpAndSettle();
     expect(animacao.status, AnimationStatus.completed);
+    final repouso = tester.widget<Transform>(
+      find.byKey(const ValueKey('movimento-aviso')),
+    );
+    expect(repouso.transform.getTranslation().y, closeTo(0, 0.001));
+    expect(
+      tester
+          .widget<Transform>(find.byKey(const ValueKey('escala-aviso')))
+          .transform
+          .entry(0, 0),
+      1,
+    );
     controle.close();
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 75));
     expect(animacao.value, inExclusiveRange(0, 1));
     await tester.pumpAndSettle();
     expect(find.byType(SnackBar), findsNothing);
+  });
+
+  testWidgets('o cartao inteiro desliza e expande junto com a animacao', (
+    tester,
+  ) async {
+    final contexto = await montar(tester);
+    final controle = AvisoApp.mostrar(contexto, 'Salvo')!;
+    await tester.pump();
+    final movimento = find.byKey(const ValueKey('movimento-aviso'));
+    final escala = find.byKey(const ValueKey('escala-aviso'));
+    expect(
+      tester.widget<Transform>(movimento).transform.getTranslation().y,
+      28,
+    );
+    expect(tester.widget<Transform>(escala).transform.entry(0, 0), 0.94);
+    expect(
+      find.descendant(of: movimento, matching: find.byType(Material)),
+      findsOneWidget,
+    );
+    await tester.pump(const Duration(milliseconds: 180));
+    expect(
+      tester.widget<Transform>(movimento).transform.getTranslation().y,
+      inExclusiveRange(0, 28),
+    );
+    expect(
+      tester.widget<Transform>(escala).transform.entry(0, 0),
+      inExclusiveRange(0.94, 1),
+    );
+    await tester.pumpAndSettle();
+    controle.close();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 120));
+    expect(
+      tester.widget<Transform>(movimento).transform.getTranslation().y,
+      greaterThan(0),
+    );
+    expect(tester.widget<Transform>(escala).transform.entry(0, 0), lessThan(1));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets(
@@ -556,6 +618,8 @@ void main() {
         await tester.pumpAndSettle();
         final aviso = tester.widget<SnackBar>(find.byType(SnackBar));
         expect(aviso.persist, isTrue);
+        expect(find.byKey(const ValueKey('movimento-aviso')), findsNothing);
+        expect(find.byKey(const ValueKey('escala-aviso')), findsNothing);
         expect(
           (aviso.animation! as AnimationController).duration,
           Duration.zero,
@@ -598,6 +662,8 @@ void main() {
       )!;
       await tester.pumpAndSettle();
       final aviso = tester.widget<SnackBar>(find.byType(SnackBar));
+      expect(find.byKey(const ValueKey('movimento-aviso')), findsNothing);
+      expect(find.byKey(const ValueKey('escala-aviso')), findsNothing);
       expect((aviso.animation! as AnimationController).duration, Duration.zero);
       expect(aviso.persist, isFalse);
       await tester.pump(const Duration(seconds: 2));

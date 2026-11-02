@@ -31,12 +31,13 @@ class AvisoApp extends StatelessWidget {
     return ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: AvisoApp(mensagem: mensagem, tipo: tipo, acao: acao),
-        backgroundColor: estilo.fundo,
+        backgroundColor: Colors.transparent,
         behavior: SnackBarBehavior.floating,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        elevation: 3,
+        elevation: 0,
         margin: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        padding: EdgeInsets.zero,
+        clipBehavior: Clip.none,
         showCloseIcon: false,
         dismissDirection: DismissDirection.down,
         duration: duracao ?? _duracao(mensagem, estilo.duracao, acao != null),
@@ -46,8 +47,8 @@ class AvisoApp extends StatelessWidget {
       snackBarAnimationStyle: semAnimacao
           ? AnimationStyle.noAnimation
           : const AnimationStyle(
-              duration: Duration(milliseconds: 200),
-              reverseDuration: Duration(milliseconds: 150),
+              duration: Duration(milliseconds: 360),
+              reverseDuration: Duration(milliseconds: 240),
             ),
     );
   }
@@ -90,8 +91,8 @@ class AvisoApp extends StatelessWidget {
       duracao: const Duration(seconds: 4),
     ),
     TipoAviso.erro => (
-      fundo: const Color(0xFFFDEBEC),
-      conteudo: const Color(0xFF9B2433),
+      fundo: const Color(0xFFC62828),
+      conteudo: Colors.white,
       icone: Icons.error_outline_rounded,
       rotulo: 'Erro',
       duracao: const Duration(seconds: 5),
@@ -133,26 +134,67 @@ class AvisoApp extends StatelessWidget {
         ],
       ),
     );
-    if (acao == null) return mensagemVisual;
     // A acao dentro do conteudo recebe largura limitada, inclusive com fonte ampliada.
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        mensagemVisual,
-        Align(
-          alignment: AlignmentDirectional.centerEnd,
-          child: SnackBarAction(
-            key: acao!.key,
-            label: acao!.label,
-            onPressed: acao!.onPressed,
-            textColor: acao!.textColor ?? estilo.conteudo,
-            disabledTextColor: acao!.disabledTextColor,
-            backgroundColor: acao!.backgroundColor,
-            disabledBackgroundColor: acao!.disabledBackgroundColor,
+    final conteudo = acao == null
+        ? mensagemVisual
+        : Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              mensagemVisual,
+              Align(
+                alignment: AlignmentDirectional.centerEnd,
+                child: SnackBarAction(
+                  key: acao!.key,
+                  label: acao!.label,
+                  onPressed: acao!.onPressed,
+                  textColor: acao!.textColor ?? estilo.conteudo,
+                  disabledTextColor: acao!.disabledTextColor,
+                  backgroundColor: acao!.backgroundColor,
+                  disabledBackgroundColor: acao!.disabledBackgroundColor,
+                ),
+              ),
+            ],
+          );
+    final cartao = Material(
+      color: estilo.fundo,
+      elevation: 3,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: conteudo,
+      ),
+    );
+    final animacao = context
+        .findAncestorWidgetOfExactType<SnackBar>()
+        ?.animation;
+    if (animacao == null ||
+        tela.disableAnimations ||
+        tela.accessibleNavigation) {
+      return cartao;
+    }
+    // Reutiliza o ciclo nativo: nao cria timers nem controladores independentes.
+    return AnimatedBuilder(
+      animation: animacao,
+      child: cartao,
+      builder: (context, child) {
+        final saindo = animacao.status == AnimationStatus.reverse;
+        // O fade nativo comeca perto de 40% do ciclo de entrada.
+        final valor = saindo
+            ? animacao.value
+            : ((animacao.value - 0.35) / 0.65).clamp(0.0, 1.0);
+        final curva = saindo ? Curves.easeInCubic : Curves.easeOutCubic;
+        final progresso = curva.transform(valor);
+        return Transform.translate(
+          key: const ValueKey('movimento-aviso'),
+          offset: Offset(0, 28 * (1 - progresso)),
+          child: Transform.scale(
+            key: const ValueKey('escala-aviso'),
+            scale: 0.94 + 0.06 * progresso,
+            child: child,
           ),
-        ),
-      ],
+        );
+      },
     );
   }
 }

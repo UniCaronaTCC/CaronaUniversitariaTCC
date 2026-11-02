@@ -8,6 +8,7 @@ import 'package:uni_carona/config/app_colors.dart';
 import 'package:uni_carona/config/app_theme.dart';
 import 'package:uni_carona/utils/validacao_email.dart';
 import 'package:uni_carona/widgets/auth_widgets.dart';
+import 'package:uni_carona/widgets/aviso_app.dart';
 
 void main() {
   const email = ValueKey('email-recuperacao');
@@ -319,6 +320,9 @@ void main() {
         ),
         findsOneWidget,
       );
+      expect(find.byKey(const ValueKey('erro-recuperacao')), findsOneWidget);
+      expect(find.byType(AvisoApp), findsNothing);
+      expect(find.byType(SnackBar), findsNothing);
       expect(
         tester.widget<TextField>(find.byKey(email)).controller!.text,
         'pessoa@exemplo.com',
