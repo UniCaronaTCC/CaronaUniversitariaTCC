@@ -7,6 +7,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:uni_carona/config/app_colors.dart';
 import 'package:uni_carona/home/ofertar_carona.dart';
 import 'package:uni_carona/mapa/models/localizacao_selecionada.dart';
 import 'package:uni_carona/services/auth_service.dart';
@@ -141,6 +142,11 @@ void main() {
             await enviar(tester);
             expect(envios, 1);
             expect(find.text('Carona criada com sucesso'), findsOneWidget);
+            final aviso = tester.widget<SnackBar>(find.byType(SnackBar));
+            expect(aviso.backgroundColor, AppColors.primary);
+            expect(aviso.behavior, SnackBarBehavior.floating);
+            expect(aviso.duration, const Duration(seconds: 2));
+            expect(aviso.showCloseIcon, isFalse);
             expect(
               tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
               TipoAviso.sucesso,
@@ -183,6 +189,10 @@ void main() {
           tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
           TipoAviso.atencao,
         );
+        expect(
+          tester.widget<SnackBar>(find.byType(SnackBar)).duration,
+          const Duration(seconds: 4),
+        );
       },
       () => MockClient((req) async {
         if (req.method != 'POST') return respostaVazia();
@@ -207,6 +217,10 @@ void main() {
         expect(
           tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
           TipoAviso.erro,
+        );
+        expect(
+          tester.widget<SnackBar>(find.byType(SnackBar)).duration,
+          const Duration(seconds: 5),
         );
         expect(formulario(tester).destinoController.text, destinoAntes);
         expect(find.text('Carona criada com sucesso'), findsNothing);
