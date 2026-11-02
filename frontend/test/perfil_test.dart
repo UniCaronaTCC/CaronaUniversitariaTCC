@@ -7,6 +7,8 @@ import 'package:uni_carona/home/avaliacoes_recebidas.dart';
 import 'package:uni_carona/home/perfil.dart';
 import 'package:uni_carona/models/instituicao.dart';
 import 'package:uni_carona/services/auth_service.dart';
+import 'package:uni_carona/widgets/aviso_app.dart';
+import 'package:uni_carona/widgets/conteudo_perfil_buscaeu.dart';
 
 void main() {
   setUp(() {
@@ -103,14 +105,26 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    final rolagemPerfil = find.descendant(
+      of: find.byType(ConteudoPerfilBuscaEu),
+      matching: find.byType(Scrollable),
+    );
     expect(find.text('João'), findsOneWidget);
     expect(find.text('UniSalesiano - Campus Araçatuba'), findsOneWidget);
     expect(find.text('Motorista e passageiro'), findsOneWidget);
     expect(find.text('Perfil verificado'), findsOneWidget);
-    await tester.scrollUntilVisible(find.text('joao@email.com'), 200);
+    await tester.scrollUntilVisible(
+      find.text('joao@email.com'),
+      200,
+      scrollable: rolagemPerfil,
+    );
     expect(find.text('joao@email.com'), findsOneWidget);
 
-    await tester.scrollUntilVisible(find.text('Cadastrar veículo'), -200);
+    await tester.scrollUntilVisible(
+      find.text('Cadastrar veículo'),
+      -200,
+      scrollable: rolagemPerfil,
+    );
     await tester.tap(find.text('Cadastrar veículo'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).at(0), 'Onix');
@@ -124,12 +138,17 @@ void main() {
 
     expect(veiculoEnviado, ['Onix', 'Branco', 'ABC1D23']);
     expect(find.text('Veículo salvo com sucesso'), findsOneWidget);
+    expect(
+      tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+      TipoAviso.sucesso,
+    );
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
 
     await tester.scrollUntilVisible(
       find.byTooltip('Alterar foto de perfil'),
       -200,
+      scrollable: rolagemPerfil,
     );
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Alterar foto de perfil'));
@@ -137,11 +156,19 @@ void main() {
 
     expect(fotoEnviada, 'foto-teste.jpg');
     expect(find.text('Foto atualizada com sucesso'), findsOneWidget);
+    expect(
+      tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+      TipoAviso.sucesso,
+    );
 
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(find.text('4,7 / 5'), 200);
+    await tester.scrollUntilVisible(
+      find.text('4,7 / 5'),
+      200,
+      scrollable: rolagemPerfil,
+    );
 
     expect(find.text('4,7 / 5'), findsOneWidget);
     expect(find.text('12 avaliações'), findsOneWidget);
@@ -166,9 +193,15 @@ void main() {
     await tester.tap(find.text('Salvar'));
     await tester.pumpAndSettle();
 
+    expect(find.text('Perfil atualizado com sucesso'), findsOneWidget);
+    expect(
+      tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+      TipoAviso.sucesso,
+    );
     await tester.scrollUntilVisible(
       find.byTooltip('Alterar foto de perfil'),
       -200,
+      scrollable: rolagemPerfil,
     );
     await tester.pumpAndSettle();
     expect(find.text('Fatec - Campus Araçatuba'), findsOneWidget);
@@ -177,7 +210,11 @@ void main() {
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
 
-    await tester.scrollUntilVisible(find.text('Sair'), 200);
+    await tester.scrollUntilVisible(
+      find.text('Sair'),
+      200,
+      scrollable: rolagemPerfil,
+    );
     await tester.pumpAndSettle();
     await Scrollable.ensureVisible(
       tester.element(find.text('Sair')),

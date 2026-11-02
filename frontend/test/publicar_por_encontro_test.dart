@@ -7,7 +7,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:uni_carona/config/app_colors.dart';
 import 'package:uni_carona/home/ofertar_carona.dart';
 import 'package:uni_carona/mapa/models/localizacao_selecionada.dart';
 import 'package:uni_carona/services/auth_service.dart';
@@ -151,7 +150,7 @@ void main() {
                   )
                   .first,
             );
-            expect(cartao.color, AppColors.primary);
+            expect(cartao.color, const Color(0xFF15803D));
             expect(aviso.behavior, SnackBarBehavior.floating);
             expect(aviso.duration, const Duration(seconds: 2));
             expect(aviso.showCloseIcon, isFalse);

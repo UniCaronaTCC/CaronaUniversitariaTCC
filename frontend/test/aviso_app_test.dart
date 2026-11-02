@@ -2,7 +2,6 @@ import 'dart:ui' show SemanticsAction, SemanticsActionEvent;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:uni_carona/config/app_colors.dart';
 import 'package:uni_carona/config/app_theme.dart';
 import 'package:uni_carona/widgets/aviso_app.dart';
 
@@ -39,7 +38,7 @@ void main() {
 
   const estilos = {
     TipoAviso.sucesso: (
-      fundo: AppColors.primary,
+      fundo: Color(0xFF15803D),
       texto: Colors.white,
       icone: Icons.check_circle_outline_rounded,
       rotulo: 'Sucesso',
@@ -110,6 +109,10 @@ void main() {
         expect(aviso.persist, isFalse);
         expect(aviso.dismissDirection, DismissDirection.down);
         expect(find.byIcon(estilo.icone), findsOneWidget);
+        expect(
+          tester.widget<Icon>(find.byIcon(estilo.icone)).color,
+          estilo.texto,
+        );
         expect(find.byType(IconButton), findsNothing);
         final texto = tester.widget<Text>(find.text('Mensagem atual'));
         expect(texto.style!.color, estilo.texto);

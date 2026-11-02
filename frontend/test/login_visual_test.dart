@@ -346,7 +346,7 @@ void main() {
               )
               .first,
         );
-        expect(cartao.color, AppColors.primary);
+        expect(cartao.color, const Color(0xFF15803D));
         expect(aviso.behavior, SnackBarBehavior.floating);
         expect(aviso.duration, const Duration(seconds: 2));
         expect(aviso.showCloseIcon, isFalse);

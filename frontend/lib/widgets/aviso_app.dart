@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../config/app_colors.dart';
-
 enum TipoAviso { informacao, sucesso, atencao, erro }
 
 class AvisoApp extends StatelessWidget {
@@ -70,7 +68,7 @@ class AvisoApp extends StatelessWidget {
   })
   _estilo(TipoAviso tipo) => switch (tipo) {
     TipoAviso.sucesso => (
-      fundo: AppColors.primary,
+      fundo: const Color(0xFF15803D),
       conteudo: Colors.white,
       icone: Icons.check_circle_outline_rounded,
       rotulo: 'Sucesso',

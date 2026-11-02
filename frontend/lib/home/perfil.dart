@@ -10,6 +10,7 @@ import '../services/auth_service.dart';
 import '../services/mensagem_service.dart';
 import '../services/solicitacao_service.dart';
 import '../widgets/barra_navegacao_home.dart';
+import '../widgets/aviso_app.dart';
 import '../widgets/campo_busca_instituicao.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/conteudo_perfil_buscaeu.dart';
@@ -72,6 +73,11 @@ class _PerfilTelaState extends State<PerfilTela> {
   String? mensagemErroAvaliacoes;
   double mediaAvaliacao = 0;
   int totalAvaliacoes = 0;
+
+  void _mostrarAviso(String mensagem, {required TipoAviso tipo}) {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+    AvisoApp.mostrar(context, mensagem, tipo: tipo);
+  }
 
   @override
   void initState() {
@@ -261,12 +267,12 @@ class _PerfilTelaState extends State<PerfilTela> {
       }
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          resultado['mensagem']?.toString() ?? 'Erro ao atualizar perfil',
-        ),
-      ),
+    _mostrarAviso(
+      resultado['mensagem']?.toString() ??
+          (resultado['sucesso'] == true
+              ? 'Perfil atualizado com sucesso'
+              : 'Erro ao atualizar perfil'),
+      tipo: resultado['sucesso'] == true ? TipoAviso.sucesso : TipoAviso.erro,
     );
   }
 
@@ -303,22 +309,25 @@ class _PerfilTelaState extends State<PerfilTela> {
         }
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            resultado['mensagem']?.toString() ??
-                'Não foi possível atualizar a foto',
-          ),
-        ),
+      _mostrarAviso(
+        resultado['mensagem']?.toString() ??
+            (resultado['sucesso'] == true
+                ? 'Foto atualizada com sucesso'
+                : 'Não foi possível atualizar a foto'),
+        tipo: resultado['sucesso'] == true ? TipoAviso.sucesso : TipoAviso.erro,
       );
     } catch (erro) {
       if (!mounted) {
         return;
       }
 
+      final falhaNoEnvio = enviandoFoto;
       setState(() => enviandoFoto = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Não foi possível selecionar a foto')),
+      _mostrarAviso(
+        falhaNoEnvio
+            ? 'Não foi possível atualizar a foto. Tente novamente'
+            : 'Não foi possível selecionar a foto',
+        tipo: TipoAviso.erro,
       );
     }
   }
@@ -364,12 +373,12 @@ class _PerfilTelaState extends State<PerfilTela> {
       }
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          resultado['mensagem']?.toString() ?? 'Erro ao salvar veículo',
-        ),
-      ),
+    _mostrarAviso(
+      resultado['mensagem']?.toString() ??
+          (resultado['sucesso'] == true
+              ? 'Veículo salvo com sucesso'
+              : 'Erro ao salvar veículo'),
+      tipo: resultado['sucesso'] == true ? TipoAviso.sucesso : TipoAviso.erro,
     );
   }
 
