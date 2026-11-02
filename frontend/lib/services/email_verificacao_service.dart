@@ -8,6 +8,15 @@ class EmailVerificacaoService {
     'mensagem': 'Supabase não configurado no aplicativo',
   };
 
+  static String _mensagemErro(AuthException erro) {
+    if (erro.statusCode == '429' ||
+        erro.code == 'over_email_send_rate_limit' ||
+        erro.code == 'over_request_rate_limit') {
+      return 'Por segurança, aguarde um pouco antes de tentar novamente.';
+    }
+    return erro.message;
+  }
+
   static Future<Map<String, dynamic>> confirmarEmail(
     String email,
     String codigo,
@@ -18,7 +27,7 @@ class EmailVerificacaoService {
       await SupabaseAuthService.confirmarEmail(email, codigo);
       return {'sucesso': true, 'mensagem': 'E-mail confirmado com sucesso'};
     } on AuthException catch (erro) {
-      return {'sucesso': false, 'mensagem': erro.message};
+      return {'sucesso': false, 'mensagem': _mensagemErro(erro)};
     }
   }
 
@@ -29,7 +38,7 @@ class EmailVerificacaoService {
       await SupabaseAuthService.reenviarCodigo(email);
       return {'sucesso': true, 'mensagem': 'Novo código enviado'};
     } on AuthException catch (erro) {
-      return {'sucesso': false, 'mensagem': erro.message};
+      return {'sucesso': false, 'mensagem': _mensagemErro(erro)};
     }
   }
 
@@ -42,7 +51,7 @@ class EmailVerificacaoService {
       await SupabaseAuthService.solicitarRedefinicao(email);
       return {'sucesso': true, 'mensagem': 'Código enviado para o seu e-mail'};
     } on AuthException catch (erro) {
-      return {'sucesso': false, 'mensagem': erro.message};
+      return {'sucesso': false, 'mensagem': _mensagemErro(erro)};
     }
   }
 
@@ -57,7 +66,7 @@ class EmailVerificacaoService {
       await SupabaseAuthService.redefinirSenha(email, codigo, novaSenha);
       return {'sucesso': true, 'mensagem': 'Senha redefinida com sucesso'};
     } on AuthException catch (erro) {
-      return {'sucesso': false, 'mensagem': erro.message};
+      return {'sucesso': false, 'mensagem': _mensagemErro(erro)};
     }
   }
 }
