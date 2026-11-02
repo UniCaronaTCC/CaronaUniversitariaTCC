@@ -14,6 +14,7 @@ import '../mapa/services/progresso_corrida.dart';
 import '../mapa/widgets/status_progresso_corrida.dart';
 import '../services/carona_service.dart';
 import '../services/estado_corrida.dart';
+import '../widgets/aviso_app.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/visual_buscaeu.dart';
 
@@ -206,15 +207,23 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela>
     if (!mounted) return;
     setState(() => finalizando = false);
 
-    final mensagem =
-        resultado['mensagem']?.toString() ??
-        'Não foi possível finalizar a corrida';
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(mensagem)));
     final carona = resultado['dados'];
-    if (resultado['sucesso'] == true && carona is Carona) {
-      Navigator.pop(context, carona);
+    final sucesso = resultado['sucesso'] == true && carona is Carona;
+    if (ModalRoute.of(context)?.isCurrent == true) {
+      AvisoApp.mostrar(
+        context,
+        resultado['mensagem']?.toString() ??
+            (sucesso
+                ? 'Corrida finalizada com sucesso'
+                : 'Não foi possível finalizar a corrida'),
+        tipo: sucesso ? TipoAviso.sucesso : TipoAviso.erro,
+      );
+    }
+    if (sucesso) {
+      _receberEncerramento(carona);
+      if (ModalRoute.of(context)?.isCurrent == true) {
+        Navigator.pop(context, carona);
+      }
     } else {
       await _estadoCorrida.consultar();
     }

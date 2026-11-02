@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/recorrencia_carona.dart';
 import '../services/recorrencia_service.dart';
+import '../widgets/aviso_app.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/card_recorrencia.dart';
 import '../widgets/visual_buscaeu.dart';
@@ -65,13 +66,11 @@ class _RecorrenciasTelaState extends State<RecorrenciasTela> {
       );
       if (mounted) await _carregar();
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Não foi possível alterar a programação. Tente novamente.',
-            ),
-          ),
+      if (mounted && ModalRoute.of(context)?.isCurrent == true) {
+        AvisoApp.mostrar(
+          context,
+          'Não foi possível alterar a programação. Tente novamente.',
+          tipo: TipoAviso.erro,
         );
       }
     } finally {

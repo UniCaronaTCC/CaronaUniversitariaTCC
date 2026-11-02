@@ -8,6 +8,7 @@ import '../services/avaliacao_service.dart';
 import '../services/carona_service.dart';
 import '../services/solicitacao_service.dart';
 import '../widgets/barra_navegacao_home.dart';
+import '../widgets/aviso_app.dart';
 import '../widgets/card_carona_historico.dart';
 import '../widgets/card_solicitacao_enviada.dart';
 import '../widgets/componentes_padrao.dart';
@@ -121,13 +122,16 @@ class _HistoricoCaronasTelaState extends State<HistoricoCaronasTela> {
 
     setState(() => idProcessando = null);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          resultado['mensagem']?.toString() ?? 'Erro ao enviar avaliação',
-        ),
-      ),
-    );
+    if (ModalRoute.of(context)?.isCurrent == true) {
+      AvisoApp.mostrar(
+        context,
+        resultado['mensagem']?.toString() ??
+            (resultado['sucesso'] == true
+                ? 'Avaliação enviada'
+                : 'Erro ao enviar avaliação'),
+        tipo: resultado['sucesso'] == true ? TipoAviso.sucesso : TipoAviso.erro,
+      );
+    }
 
     if (resultado['sucesso'] == true) {
       await carregarDados();

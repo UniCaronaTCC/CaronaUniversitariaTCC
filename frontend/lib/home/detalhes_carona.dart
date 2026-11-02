@@ -11,6 +11,7 @@ import '../services/auth_service.dart';
 import '../services/carona_service.dart';
 import '../services/solicitacao_service.dart';
 import '../widgets/barra_navegacao_home.dart';
+import '../widgets/aviso_app.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/conteudo_detalhes_carona.dart';
 import '../widgets/painel_solicitacoes_carona.dart';
@@ -152,13 +153,10 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
       if (!mounted || atualizacao != _ultimaAtualizacao) return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text(
-          'A solicitação foi aceita, mas não foi possível atualizar o percurso.',
-        ),
-        action: SnackBarAction(label: 'ATUALIZAR', onPressed: _atualizarCarona),
-      ),
+    _mostrarMensagem(
+      'A solicitação foi aceita, mas não foi possível atualizar o percurso.',
+      tipo: TipoAviso.atencao,
+      acao: SnackBarAction(label: 'ATUALIZAR', onPressed: _atualizarCarona),
     );
   }
 
@@ -178,6 +176,7 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
         _mostrarMensagem(
           resultado['mensagem']?.toString() ??
               'Não foi possível iniciar a corrida',
+          tipo: TipoAviso.erro,
         );
         return;
       }
@@ -236,7 +235,7 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
     final ponto = escolha as PontoEmbarque;
 
     if (ponto.id == null) {
-      _mostrarMensagem('Ponto de embarque inválido');
+      _mostrarMensagem('Ponto de embarque inválido', tipo: TipoAviso.atencao);
       return;
     }
 
@@ -359,7 +358,11 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
     });
 
     _mostrarMensagem(
-      resultado['mensagem']?.toString() ?? 'Erro ao solicitar vaga',
+      resultado['mensagem']?.toString() ??
+          (resultado['sucesso'] == true
+              ? 'Solicitação enviada ao motorista'
+              : 'Erro ao solicitar vaga'),
+      tipo: resultado['sucesso'] == true ? TipoAviso.sucesso : TipoAviso.erro,
     );
 
     // Uma falha de resposta não garante que o servidor deixou de registrar.
@@ -422,7 +425,11 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
     });
 
     _mostrarMensagem(
-      resultado['mensagem']?.toString() ?? 'Erro ao excluir carona',
+      resultado['mensagem']?.toString() ??
+          (resultado['sucesso'] == true
+              ? 'Carona excluída'
+              : 'Erro ao excluir carona'),
+      tipo: resultado['sucesso'] == true ? TipoAviso.sucesso : TipoAviso.erro,
     );
 
     if (resultado['sucesso'] == true) {
@@ -430,10 +437,13 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
     }
   }
 
-  void _mostrarMensagem(String mensagem) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(mensagem)));
+  void _mostrarMensagem(
+    String mensagem, {
+    required TipoAviso tipo,
+    SnackBarAction? acao,
+  }) {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+    AvisoApp.mostrar(context, mensagem, tipo: tipo, acao: acao);
   }
 
   @override

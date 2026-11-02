@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../models/solicitacao_recebida.dart';
 import '../services/solicitacao_service.dart';
+import 'aviso_app.dart';
 import 'card_solicitacao_recebida.dart';
 import 'componentes_padrao.dart';
 import 'dialogo_cancelamento.dart';
@@ -55,6 +56,7 @@ class _PainelSolicitacoesCaronaState extends State<PainelSolicitacoesCarona> {
     if (resultado['sucesso'] != true) {
       _mostrarMensagem(
         resultado['mensagem']?.toString() ?? 'Erro ao carregar solicitações',
+        tipo: TipoAviso.erro,
       );
     }
   }
@@ -78,7 +80,13 @@ class _PainelSolicitacoesCaronaState extends State<PainelSolicitacoesCarona> {
     });
 
     _mostrarMensagem(
-      resultado['mensagem']?.toString() ?? 'Erro ao responder solicitação',
+      resultado['mensagem']?.toString() ??
+          (resultado['sucesso'] == true
+              ? status == 'ACEITA'
+                    ? 'Solicitação aceita'
+                    : 'Solicitação recusada'
+              : 'Erro ao responder solicitação'),
+      tipo: resultado['sucesso'] == true ? TipoAviso.sucesso : TipoAviso.erro,
     );
 
     if (resultado['sucesso'] == true) {
@@ -111,17 +119,22 @@ class _PainelSolicitacoesCaronaState extends State<PainelSolicitacoesCarona> {
     }
 
     setState(() => idProcessando = null);
-    _mostrarMensagem(resultado['mensagem']?.toString() ?? 'Erro ao cancelar');
+    _mostrarMensagem(
+      resultado['mensagem']?.toString() ??
+          (resultado['sucesso'] == true
+              ? 'Solicitação cancelada'
+              : 'Erro ao cancelar'),
+      tipo: resultado['sucesso'] == true ? TipoAviso.sucesso : TipoAviso.erro,
+    );
 
     if (resultado['sucesso'] == true) {
       await carregarSolicitacoes();
     }
   }
 
-  void _mostrarMensagem(String mensagem) {
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(mensagem)));
+  void _mostrarMensagem(String mensagem, {required TipoAviso tipo}) {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+    AvisoApp.mostrar(context, mensagem, tipo: tipo);
   }
 
   @override

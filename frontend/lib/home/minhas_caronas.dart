@@ -10,6 +10,7 @@ import '../services/mensagem_service.dart';
 import '../services/pagamento_service.dart';
 import '../services/solicitacao_service.dart';
 import '../widgets/barra_navegacao_home.dart';
+import '../widgets/aviso_app.dart';
 import '../widgets/card_solicitacao_enviada.dart';
 import '../widgets/card_solicitacao_recebida.dart';
 import '../widgets/componentes_padrao.dart';
@@ -48,6 +49,11 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela>
   String? mensagemErro;
   int? idProcessando;
   late final PagamentoService _pagamentoService;
+
+  void _mostrarMensagem(String mensagem, {required TipoAviso tipo}) {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+    AvisoApp.mostrar(context, mensagem, tipo: tipo);
+  }
 
   @override
   void initState() {
@@ -154,12 +160,14 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela>
       idProcessando = null;
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          resultado['mensagem']?.toString() ?? 'Erro ao responder solicitação',
-        ),
-      ),
+    _mostrarMensagem(
+      resultado['mensagem']?.toString() ??
+          (resultado['sucesso'] == true
+              ? status == 'ACEITA'
+                    ? 'Solicitação aceita'
+                    : 'Solicitação recusada'
+              : 'Erro ao responder solicitação'),
+      tipo: resultado['sucesso'] == true ? TipoAviso.sucesso : TipoAviso.erro,
     );
 
     if (resultado['sucesso'] == true) {
@@ -188,12 +196,12 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela>
 
     setState(() => idProcessando = null);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          resultado['mensagem']?.toString() ?? 'Erro ao enviar avaliação',
-        ),
-      ),
+    _mostrarMensagem(
+      resultado['mensagem']?.toString() ??
+          (resultado['sucesso'] == true
+              ? 'Avaliação enviada'
+              : 'Erro ao enviar avaliação'),
+      tipo: resultado['sucesso'] == true ? TipoAviso.sucesso : TipoAviso.erro,
     );
 
     if (resultado['sucesso'] == true) {
@@ -273,10 +281,12 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela>
     }
 
     setState(() => idProcessando = null);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(resultado['mensagem']?.toString() ?? 'Erro ao cancelar'),
-      ),
+    _mostrarMensagem(
+      resultado['mensagem']?.toString() ??
+          (resultado['sucesso'] == true
+              ? 'Solicitação cancelada'
+              : 'Erro ao cancelar'),
+      tipo: resultado['sucesso'] == true ? TipoAviso.sucesso : TipoAviso.erro,
     );
 
     if (resultado['sucesso'] == true) {

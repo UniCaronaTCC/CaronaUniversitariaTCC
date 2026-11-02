@@ -13,6 +13,7 @@ import '../services/auth_service.dart';
 import '../services/destino_preferido_service.dart';
 import '../utils/filtro_caronas.dart';
 import '../widgets/barra_navegacao_home.dart';
+import '../widgets/aviso_app.dart';
 import '../widgets/botao_acao_home.dart';
 import '../widgets/card_carona_disponivel.dart';
 import '../widgets/card_destino_home.dart';
@@ -377,14 +378,16 @@ class _TelaInicialState extends State<TelaInicial> {
       return;
     }
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          resultado['mensagem']?.toString() ??
-              'Não foi possível cancelar a carona',
-        ),
-      ),
-    );
+    if (ModalRoute.of(context)?.isCurrent == true) {
+      AvisoApp.mostrar(
+        context,
+        resultado['mensagem']?.toString() ??
+            (resultado['sucesso'] == true
+                ? 'Carona cancelada'
+                : 'Não foi possível cancelar a carona'),
+        tipo: resultado['sucesso'] == true ? TipoAviso.sucesso : TipoAviso.erro,
+      );
+    }
 
     if (resultado['sucesso'] == true) {
       await carregarConteudo();

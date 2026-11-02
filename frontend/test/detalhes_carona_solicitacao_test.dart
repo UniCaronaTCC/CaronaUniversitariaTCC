@@ -12,6 +12,7 @@ import 'package:uni_carona/models/ponto_embarque.dart';
 import 'package:uni_carona/services/auth_service.dart';
 import 'package:uni_carona/services/mensagem_service.dart';
 import 'package:uni_carona/services/solicitacao_service.dart';
+import 'package:uni_carona/widgets/aviso_app.dart';
 
 Carona caronaTeste({
   int id = 1,
@@ -326,6 +327,10 @@ void main() {
         expect(find.text('SOLICITAR VAGA'), findsNothing);
         expect(find.text('Carona já solicitada'), findsOneWidget);
         expect(find.text('Aguardando resposta do motorista.'), findsOneWidget);
+        expect(
+          tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+          TipoAviso.sucesso,
+        );
       },
       () => MockClient((request) async {
         if (request.method == 'GET') return lista([]);
@@ -352,6 +357,10 @@ void main() {
         await tester.pumpAndSettle();
         expect(find.text('Carona já solicitada'), findsOneWidget);
         expect(find.text('SOLICITAR VAGA'), findsNothing);
+        expect(
+          tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+          TipoAviso.erro,
+        );
       },
       () => MockClient((request) async {
         if (request.method == 'GET') {
