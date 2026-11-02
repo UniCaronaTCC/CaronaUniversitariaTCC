@@ -12,6 +12,7 @@ import '../services/auth_service.dart';
 import '../services/carona_service.dart';
 import '../services/mensagem_service.dart';
 import '../widgets/avatar_usuario.dart';
+import '../widgets/aviso_app.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/visual_buscaeu.dart';
 import 'detalhes_carona.dart';
@@ -81,14 +82,14 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
     if (resultado['sucesso'] != true ||
         carona is! Carona ||
         carona.id != widget.conversa.idCarona) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            resultado['mensagem']?.toString() ??
-                'Não foi possível carregar a carona',
-          ),
-        ),
-      );
+      if (ModalRoute.of(context)?.isCurrent == true) {
+        AvisoApp.mostrar(
+          context,
+          resultado['mensagem']?.toString() ??
+              'Não foi possível carregar a carona',
+          tipo: TipoAviso.erro,
+        );
+      }
       return;
     }
     await Navigator.push<bool>(

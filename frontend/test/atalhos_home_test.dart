@@ -13,6 +13,7 @@ import 'package:uni_carona/services/destino_preferido_service.dart';
 import 'package:uni_carona/services/mensagem_service.dart';
 import 'package:uni_carona/services/solicitacao_service.dart';
 import 'package:uni_carona/widgets/card_destino_home.dart';
+import 'package:uni_carona/widgets/aviso_app.dart';
 
 import 'destino_home_test.dart' as fixtures;
 
@@ -158,6 +159,10 @@ void main() {
         await tester.pump(const Duration(seconds: 11));
         await tester.pumpAndSettle();
         expect(find.textContaining('a tempo'), findsOneWidget);
+        expect(
+          tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+          TipoAviso.erro,
+        );
         expect(acao(tester, 'Buscar carona'), isNotNull);
         expect(acao(tester, 'Oferecer carona'), isNotNull);
         expect(observador.aberturas, 0);

@@ -76,9 +76,7 @@ class _TelaInicialState extends State<TelaInicial> {
 
   void _avisarFalha(String mensagem) {
     if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(mensagem)));
+    AvisoApp.mostrar(context, mensagem, tipo: TipoAviso.erro);
   }
 
   Future<bool> _aguardarDestinoParaNavegar() async {
@@ -110,13 +108,7 @@ class _TelaInicialState extends State<TelaInicial> {
       final destino = await widget.destinoPreferidoService.carregar(idUsuario!);
       if (mounted) setState(() => destinoSelecionado = destino);
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Não foi possível carregar seu destino salvo'),
-          ),
-        );
-      }
+      _avisarFalha('Não foi possível carregar seu destino salvo');
     }
   }
 
@@ -285,15 +277,7 @@ class _TelaInicialState extends State<TelaInicial> {
       await widget.destinoPreferidoService.salvar(idUsuario!, resultado);
       if (mounted) setState(() => destinoSelecionado = resultado);
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Não foi possível salvar seu destino. Tente novamente',
-            ),
-          ),
-        );
-      }
+      _avisarFalha('Não foi possível salvar seu destino. Tente novamente');
     } finally {
       _finalizarAcao();
     }

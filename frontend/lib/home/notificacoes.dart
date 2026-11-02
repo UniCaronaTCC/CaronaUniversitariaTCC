@@ -10,6 +10,7 @@ import '../services/auth_service.dart';
 import '../services/carona_service.dart';
 import '../services/mensagem_service.dart';
 import '../services/notificacao_service.dart';
+import '../widgets/aviso_app.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/visual_buscaeu.dart';
 import 'avaliacoes_recebidas.dart';
@@ -165,13 +166,17 @@ class _NotificacoesTelaState extends State<NotificacoesTela>
   }
 
   void mostrarErro(String mensagem) {
+    if (!mounted) return;
     if (itens.isEmpty) {
       erro = mensagem;
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(mensagem)));
+      _avisarFalha(mensagem);
     }
+  }
+
+  void _avisarFalha(String mensagem) {
+    if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
+    AvisoApp.mostrar(context, mensagem, tipo: TipoAviso.erro);
   }
 
   Future<void> abrirNotificacao(Notificacao item) async {
@@ -238,15 +243,7 @@ class _NotificacoesTelaState extends State<NotificacoesTela>
         MaterialPageRoute(builder: (_) => tela!),
       );
     } catch (_) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Não foi possível abrir esta atualização. Tente novamente',
-            ),
-          ),
-        );
-      }
+      _avisarFalha('Não foi possível abrir esta atualização. Tente novamente');
     } finally {
       if (mounted) setState(() => abrindo = null);
     }

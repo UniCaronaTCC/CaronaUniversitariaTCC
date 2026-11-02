@@ -17,6 +17,7 @@ import 'package:uni_carona/services/destino_preferido_service.dart';
 import 'package:uni_carona/services/mensagem_service.dart';
 import 'package:uni_carona/services/solicitacao_service.dart';
 import 'package:uni_carona/widgets/card_destino_home.dart';
+import 'package:uni_carona/widgets/aviso_app.dart';
 import 'package:uni_carona/widgets/sino_notificacoes.dart';
 
 const local = LocalizacaoSelecionada(
@@ -218,6 +219,10 @@ void main() {
         local.descricaoCompleta,
       );
       expect(find.textContaining('salvar seu destino'), findsOneWidget);
+      expect(
+        tester.widget<AvisoApp>(find.byType(AvisoApp)).tipo,
+        TipoAviso.erro,
+      );
       expect(
         (await const DestinoPreferidoService().carregar(7))?.toJson(),
         local.toJson(),
