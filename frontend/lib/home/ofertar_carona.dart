@@ -554,6 +554,13 @@ class _OfertarCaronaTelaState extends State<OfertarCaronaTela> {
       return 'Preencha todos os campos obrigatórios';
     }
 
+    final valor = edicaoLimitada
+        ? widget.caronaParaEditar!.valor
+        : converterMoedaRealParaDouble(valorController.text);
+    if (!valor.isFinite || valor < 1) {
+      return r'O valor mínimo por passageiro é R$ 1,00';
+    }
+
     if (destinoSelecionado == null) {
       return 'Busque e selecione o destino';
     }

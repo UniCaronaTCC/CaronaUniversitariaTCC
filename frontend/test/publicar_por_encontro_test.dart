@@ -180,6 +180,82 @@ void main() {
     );
   }
 
+  for (final recorrente in [false, true]) {
+    testeIsolado('valor zero nao publica carona recorrente=$recorrente', (
+      tester,
+    ) async {
+      var envios = 0;
+      await http.runWithClient(
+        () async {
+          await abrir(tester, () async => primeiro);
+          await adicionar(tester);
+          await preencher(tester);
+          formulario(tester).valorController.text = 'R\$ 0,00';
+          if (recorrente) {
+            formulario(tester).onRecorrenciaChanged(true);
+            await tester.pump();
+            formulario(tester).onDiaSelecionado('SEG');
+            await tester.pump();
+          }
+          await enviar(tester);
+          expect(envios, 0);
+          expect(
+            find.text(r'O valor mínimo por passageiro é R$ 1,00'),
+            findsOneWidget,
+          );
+        },
+        () => MockClient((req) async {
+          if (req.method == 'POST') envios++;
+          return respostaVazia();
+        }),
+      );
+    });
+  }
+
+  testeIsolado('valor minimo de um real pode ser publicado', (tester) async {
+    var envios = 0;
+    await http.runWithClient(
+      () async {
+        await abrir(tester, () async => primeiro);
+        await adicionar(tester);
+        await preencher(tester);
+        formulario(tester).valorController.text = 'R\$ 1,00';
+        await enviar(tester);
+        expect(envios, 1);
+      },
+      () => MockClient((req) async {
+        if (req.method != 'POST') return respostaVazia();
+        envios++;
+        expect(jsonDecode(req.body)['valor'], 1);
+        return http.Response('{"sucesso":true}', 201);
+      }),
+    );
+  });
+
+  for (final valor in ['0,01', '0,99']) {
+    testeIsolado('nao publica valor abaixo de um real: $valor', (tester) async {
+      var envios = 0;
+      await http.runWithClient(
+        () async {
+          await abrir(tester, () async => primeiro);
+          await adicionar(tester);
+          await preencher(tester);
+          formulario(tester).valorController.text = valor;
+          await enviar(tester);
+          expect(envios, 0);
+          expect(
+            find.text('O valor mínimo por passageiro é R\$ 1,00'),
+            findsOneWidget,
+          );
+        },
+        () => MockClient((req) async {
+          if (req.method == 'POST') envios++;
+          return respostaVazia();
+        }),
+      );
+    });
+  }
+
   testeIsolado('sem encontro nao envia a publicacao', (tester) async {
     var envios = 0;
     await http.runWithClient(

@@ -43,6 +43,7 @@ describe('PagamentosService', () => {
     passageiro: { idUsuario: 1 },
     carona: {
       idCarona: 20,
+      status: 'ATIVA',
       recorrente: false,
       valor: 12.5,
       dataInicio: '2026-09-03',
@@ -62,7 +63,10 @@ describe('PagamentosService', () => {
 
     pagamentosRepository = {
       findOne: jest.fn(),
-      save: jest.fn((pagamento: Pagamento) => Promise.resolve(pagamento)),
+      save: jest.fn((pagamento: Pagamento) => {
+        pagamentosRepository.findOne.mockResolvedValue(pagamento);
+        return Promise.resolve(pagamento);
+      }),
       update: jest.fn().mockResolvedValue({ affected: 1 }),
     };
     pagamentosTransacaoRepository = {
@@ -137,7 +141,7 @@ describe('PagamentosService', () => {
         idPagamento: 30,
         solicitacao: { passageiro: { idUsuario: 1 } },
       },
-      relations: { solicitacao: true },
+      relations: { solicitacao: { carona: true } },
     });
   });
 
@@ -208,7 +212,7 @@ describe('PagamentosService', () => {
     expect(consultaSolicitacao.setLock).toHaveBeenCalledWith(
       'pessimistic_write',
       undefined,
-      ['solicitacao'],
+      ['solicitacao', 'carona'],
     );
     expect(pagamentosTransacaoRepository.create).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -343,6 +347,7 @@ describe('PagamentosService', () => {
       solicitacao: solicitacaoAceita,
     } as Pagamento;
     pagamentosTransacaoRepository.findOne.mockResolvedValue(existente);
+    pagamentosRepository.findOne.mockResolvedValue(existente);
 
     await expect(service.criarOuObterPix(10, 1)).resolves.toBe(existente);
     expect(pagamentosTransacaoRepository.findOne).toHaveBeenCalledWith(
@@ -433,15 +438,186 @@ describe('PagamentosService', () => {
     });
   });
 
-  it('recusa valor gratuito ou invalido antes de chamar o provedor', async () => {
+  it.each([0, 0.01, 0.99])(
+    'recusa valor abaixo de um real antes do provedor: %s',
+    async (valor) => {
+      consultaSolicitacao.getOne.mockResolvedValue({
+        ...solicitacaoAceita,
+        carona: { ...solicitacaoAceita.carona, valor },
+      });
+
+      await expect(service.criarOuObterPix(10, 1)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(abacatePayService.criarPix).not.toHaveBeenCalled();
+    },
+  );
+  it('permite Pix a partir de um real', async () => {
     consultaSolicitacao.getOne.mockResolvedValue({
       ...solicitacaoAceita,
-      carona: { ...solicitacaoAceita.carona, valor: 0 },
+      carona: { ...solicitacaoAceita.carona, valor: 1 },
     });
-
-    await expect(service.criarOuObterPix(10, 1)).rejects.toBeInstanceOf(
-      ConflictException,
+    await service.criarOuObterPix(10, 1);
+    expect(abacatePayService.criarPix).toHaveBeenCalledWith(
+      expect.objectContaining({ valorCentavos: 100 }),
     );
-    expect(abacatePayService.criarPix).not.toHaveBeenCalled();
+  });
+
+  describe('disponibilidade da carona', () => {
+    const encerrados = [
+      'CANCELADA',
+      'FINALIZADA',
+      'ENCERRADA_POR_TEMPO',
+      'EXPIRADA',
+    ];
+    it.each(encerrados)(
+      'recusa criar e reutilizar Pix de carona %s',
+      async (status) => {
+        consultaSolicitacao.getOne.mockResolvedValue({
+          ...solicitacaoAceita,
+          carona: { ...solicitacaoAceita.carona, status },
+        });
+        pagamentosTransacaoRepository.findOne.mockResolvedValue({
+          idPagamento: 8,
+          statusCriacao: 'CONFIRMADA',
+          statusProvedor: 'PENDING',
+          idProvedor: 'pix_antigo',
+        });
+        await expect(service.criarOuObterPix(10, 1)).rejects.toMatchObject({
+          response: { codigo: 'PAGAMENTO_INDISPONIVEL' },
+        });
+        expect(pagamentosTransacaoRepository.findOne).not.toHaveBeenCalled();
+        expect(pagamentosTransacaoRepository.save).not.toHaveBeenCalled();
+        expect(abacatePayService.criarPix).not.toHaveBeenCalled();
+        expect(abacatePayService.consultarPix).not.toHaveBeenCalled();
+      },
+    );
+    it.each(encerrados)(
+      'nao entrega codigo pendente nem simula carona %s',
+      async (status) => {
+        pagamentosRepository.findOne.mockResolvedValue({
+          idPagamento: 8,
+          statusCriacao: 'CONFIRMADA',
+          statusProvedor: 'PENDING',
+          idProvedor: 'pix_antigo',
+          modoTeste: true,
+          solicitacao: {
+            ...solicitacaoAceita,
+            carona: { ...solicitacaoAceita.carona, status },
+          },
+        });
+        await expect(service.obterPagamento(8, 1)).rejects.toMatchObject({
+          response: { codigo: 'PAGAMENTO_INDISPONIVEL' },
+        });
+        await expect(service.simularPagamento(8, 1)).rejects.toBeInstanceOf(
+          ConflictException,
+        );
+        expect(abacatePayService.simularPagamento).not.toHaveBeenCalled();
+      },
+    );
+    it.each(['ATIVA', 'LOTADA', 'EM_ANDAMENTO'])(
+      'preserva pagamento com prazo valido em carona %s',
+      async (status) => {
+        consultaSolicitacao.getOne.mockResolvedValue({
+          ...solicitacaoAceita,
+          carona: { ...solicitacaoAceita.carona, status },
+        });
+        await expect(service.criarOuObterPix(10, 1)).resolves.toMatchObject({
+          statusProvedor: 'PENDING',
+        });
+      },
+    );
+    it('preserva a consulta de pagamento ja confirmado apos o encerramento', async () => {
+      pagamentosRepository.findOne.mockResolvedValue({
+        idPagamento: 8,
+        statusProvedor: 'PAID',
+        solicitacao: {
+          ...solicitacaoAceita,
+          carona: { ...solicitacaoAceita.carona, status: 'FINALIZADA' },
+        },
+      });
+      await expect(service.obterPagamento(8, 1)).resolves.toMatchObject({
+        statusProvedor: 'PAID',
+      });
+    });
+    it('bloqueia codigo de uma participacao cancelada mesmo com carona ativa', async () => {
+      pagamentosRepository.findOne.mockResolvedValue({
+        idPagamento: 8,
+        statusProvedor: 'PENDING',
+        solicitacao: { ...solicitacaoAceita, status: 'CANCELADA_PASSAGEIRO' },
+      });
+      await expect(service.obterPagamento(8, 1)).rejects.toMatchObject({
+        response: { codigo: 'PAGAMENTO_INDISPONIVEL' },
+      });
+    });
+    it('reconfere cancelamento ocorrido durante a consulta de um Pix existente', async () => {
+      const existente = {
+        idPagamento: 8,
+        idProvedor: 'pix_antigo',
+        statusCriacao: 'CONFIRMADA',
+        statusProvedor: 'PENDING',
+        solicitacao: {
+          ...solicitacaoAceita,
+          carona: { ...solicitacaoAceita.carona },
+        },
+      } as Pagamento;
+      pagamentosTransacaoRepository.findOne.mockResolvedValue(existente);
+      abacatePayService.consultarPix.mockImplementation(() => {
+        existente.solicitacao.carona.status = 'CANCELADA';
+        return Promise.resolve({
+          id: 'pix_antigo',
+          status: 'PENDING',
+          expiraEm: '2026-09-03T14:00:00Z',
+        });
+      });
+      await expect(service.criarOuObterPix(10, 1)).rejects.toMatchObject({
+        response: { codigo: 'PAGAMENTO_INDISPONIVEL' },
+      });
+      expect(abacatePayService.criarPix).not.toHaveBeenCalled();
+    });
+    it('salva a cobranca mas nao expoe o codigo se a carona cancelar durante a criacao', async () => {
+      const solicitacao: Solicitacao = {
+        ...solicitacaoAceita,
+        carona: { ...solicitacaoAceita.carona },
+      };
+      consultaSolicitacao.getOne.mockResolvedValue(solicitacao);
+      abacatePayService.criarPix.mockImplementation(() => {
+        solicitacao.carona.status = 'CANCELADA';
+        return Promise.resolve({
+          id: 'pix_123',
+          status: 'PENDING',
+          expiraEm: '2026-09-03T14:00:00Z',
+          valorCentavos: 1250,
+          pixCopiaECola: 'codigo-pix',
+          qrCodeBase64: 'qr',
+          modoTeste: true,
+        });
+      });
+      await expect(service.criarOuObterPix(10, 1)).rejects.toMatchObject({
+        response: { codigo: 'PAGAMENTO_INDISPONIVEL' },
+      });
+      expect(pagamentosRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          idProvedor: 'pix_123',
+          statusCriacao: 'CONFIRMADA',
+        }),
+      );
+      expect(pagamentosRepository.update).not.toHaveBeenCalled();
+    });
+    it('nao reutiliza tentativa existente de uma carona com valor zero', async () => {
+      consultaSolicitacao.getOne.mockResolvedValue({
+        ...solicitacaoAceita,
+        carona: { ...solicitacaoAceita.carona, valor: 0 },
+      });
+      pagamentosTransacaoRepository.findOne.mockResolvedValue({
+        idPagamento: 8,
+        statusCriacao: 'PREPARADA',
+      });
+      await expect(service.criarOuObterPix(10, 1)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(abacatePayService.criarPix).not.toHaveBeenCalled();
+      expect(pagamentosTransacaoRepository.findOne).not.toHaveBeenCalled();
+    });
   });
 });

@@ -53,13 +53,16 @@ export class PagamentosService {
         idPagamento,
         solicitacao: { passageiro: { idUsuario: idPassageiro } },
       },
-      relations: { solicitacao: true },
+      relations: { solicitacao: { carona: true } },
     });
 
     if (!pagamento) {
       throw new NotFoundException('Pagamento nao encontrado');
     }
 
+    if (pagamento.statusProvedor !== 'PAID') {
+      this.exigirSolicitacaoPagavel(pagamento.solicitacao);
+    }
     return pagamento;
   }
 
@@ -75,13 +78,19 @@ export class PagamentosService {
       );
 
       if (deveReutilizar) {
-        return preparacao.pagamento;
+        return this.obterPagamento(
+          preparacao.pagamento.idPagamento,
+          idPassageiro,
+        );
       }
 
       preparacao = await this.prepararPagamento(idSolicitacao, idPassageiro);
 
       if (!preparacao.criadoAgora) {
-        return preparacao.pagamento;
+        return this.obterPagamento(
+          preparacao.pagamento.idPagamento,
+          idPassageiro,
+        );
       }
     }
 
@@ -114,13 +123,15 @@ export class PagamentosService {
     pagamento.modoTeste = cobranca.modoTeste;
 
     try {
-      return await this.pagamentosRepository.save(pagamento);
+      await this.pagamentosRepository.save(pagamento);
     } catch {
       await this.registrarStatusComTolerancia(pagamento, 'INCERTA');
       throw new ServiceUnavailableException(
         'A cobranca foi criada, mas nao foi possivel salvar sua confirmacao. Nao tente novamente agora',
       );
     }
+    // Reconfere o estado apos a chamada externa, antes de devolver o codigo Pix.
+    return this.obterPagamento(pagamento.idPagamento, idPassageiro);
   }
 
   async simularPagamento(
@@ -139,9 +150,7 @@ export class PagamentosService {
       return pagamento;
     }
 
-    if (pagamento.solicitacao.status !== 'ACEITA') {
-      throw new ConflictException('A solicitacao nao esta mais ativa');
-    }
+    this.exigirSolicitacaoPagavel(pagamento.solicitacao);
     this.calcularExpiracaoPix(pagamento.solicitacao.pagamentoLimiteEm);
 
     if (
@@ -175,30 +184,17 @@ export class PagamentosService {
         .where('solicitacao.idSolicitacao = :idSolicitacao', {
           idSolicitacao,
         })
-        .setLock('pessimistic_write', undefined, ['solicitacao'])
+        .setLock('pessimistic_write', undefined, ['solicitacao', 'carona'])
         .getOne();
 
       if (!solicitacao || solicitacao.passageiro.idUsuario !== idPassageiro) {
         throw new NotFoundException('Solicitacao nao encontrada');
       }
 
-      if (solicitacao.status !== 'ACEITA') {
-        throw new ConflictException(
-          'O pagamento so pode ser criado para uma solicitacao aceita',
-        );
-      }
-
-      if (solicitacao.carona.recorrente) {
-        throw new ConflictException(
-          'Pagamentos de caronas recorrentes ainda nao estao disponiveis',
-        );
-      }
-
-      if (solicitacao.carona.status === 'ENCERRADA_POR_TEMPO') {
-        throw new ConflictException(
-          'A corrida foi encerrada automaticamente por tempo',
-        );
-      }
+      this.exigirSolicitacaoPagavel(solicitacao);
+      const valorCentavos = this.converterValorParaCentavos(
+        solicitacao.carona.valor,
+      );
 
       const expiraEmSegundos = this.calcularExpiracaoPix(
         solicitacao.pagamentoLimiteEm,
@@ -220,9 +216,6 @@ export class PagamentosService {
         return { pagamento: existente, criadoAgora: false };
       }
 
-      const valorCentavos = this.converterValorParaCentavos(
-        solicitacao.carona.valor,
-      );
       const pagamento = pagamentosRepository.create({
         solicitacao,
         referencia: randomUUID(),
@@ -241,6 +234,28 @@ export class PagamentosService {
     });
   }
 
+  private exigirSolicitacaoPagavel(solicitacao: Solicitacao): void {
+    if (solicitacao.status !== 'ACEITA') {
+      throw new ConflictException({
+        message: 'A solicitação não está disponível para pagamento',
+        codigo: 'PAGAMENTO_INDISPONIVEL',
+      });
+    }
+    if (solicitacao.carona.recorrente) {
+      throw new ConflictException(
+        'Pagamentos de caronas recorrentes ainda nao estao disponiveis',
+      );
+    }
+    if (
+      !['ATIVA', 'LOTADA', 'EM_ANDAMENTO'].includes(solicitacao.carona.status)
+    ) {
+      throw new ConflictException({
+        message: 'Esta carona não está disponível para pagamento',
+        codigo: 'PAGAMENTO_INDISPONIVEL',
+      });
+    }
+  }
+
   private converterValorParaCentavos(valor: number): number {
     const valorEmCentavos = Number(valor) * 100;
     const valorArredondado = Math.round(valorEmCentavos);
@@ -248,7 +263,7 @@ export class PagamentosService {
     if (
       !Number.isFinite(valorEmCentavos) ||
       !Number.isSafeInteger(valorArredondado) ||
-      valorArredondado <= 0 ||
+      valorArredondado < 100 ||
       valorArredondado > 9_999_999_999 ||
       Math.abs(valorEmCentavos - valorArredondado) > 0.000001
     ) {

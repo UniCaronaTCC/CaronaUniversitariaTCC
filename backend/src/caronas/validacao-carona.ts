@@ -2,6 +2,7 @@ import { BadRequestException, ConflictException } from '@nestjs/common';
 import type { DadosCriacaoCarona } from './caronas.service';
 import { DIAS_SEMANA, validarData } from './datas-recorrencia';
 import type { DadosEdicaoCarona } from './dados-carona';
+import { validarValorCarona } from './valor-carona';
 type DadosCaronaRecebidos = Record<string, unknown> | undefined;
 
 export class ValidacaoCarona {
@@ -90,14 +91,10 @@ export class ValidacaoCarona {
     }
 
     const vagas = Number(dados.vagas);
-    const valor = Number(dados.valor);
+    const valor = validarValorCarona(dados.valor);
 
     if (!Number.isInteger(vagas) || vagas <= 0 || vagas > 4) {
       throw new BadRequestException('Quantidade de vagas inválida');
-    }
-
-    if (!Number.isFinite(valor) || valor < 0) {
-      throw new BadRequestException('Valor da carona inválido');
     }
 
     validarData(dataInicio);

@@ -171,6 +171,85 @@ void main() {
     expect(requisicaoRecebida.url.path, '/pagamentos/30');
   });
 
+  testWidgets(
+    'cancelamento retira o codigo e interrompe a consulta automatica',
+    (tester) async {
+      AuthService.tokenUsuarioLogado = 'token-teste';
+      var consultas = 0;
+      final service = PagamentoService(
+        cliente: MockClient((_) async {
+          consultas++;
+          return http.Response(
+            jsonEncode({
+              'message': 'Esta carona não está disponível para pagamento',
+              'codigo': 'PAGAMENTO_INDISPONIVEL',
+            }),
+            409,
+          );
+        }),
+      );
+      await tester.pumpWidget(
+        MaterialApp(
+          home: PagamentoPixTela(
+            pagamento: pagamento,
+            pagamentoService: service,
+            intervaloAtualizacao: const Duration(milliseconds: 100),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byKey(const ValueKey('codigo-pix')), findsNothing);
+      expect(find.text('COPIAR CÓDIGO PIX'), findsNothing);
+      expect(find.text('SIMULAR PAGAMENTO'), findsNothing);
+      expect(find.text('Aguardando pagamento'), findsNothing);
+      expect(
+        find.text('Esta carona não está disponível para pagamento'),
+        findsOneWidget,
+      );
+      final chamadas = consultas;
+      await tester.pump(const Duration(seconds: 1));
+      expect(consultas, chamadas);
+      await tester.pumpWidget(const SizedBox());
+    },
+  );
+
+  testWidgets('bloqueio na simulacao tambem retira o codigo antigo', (
+    tester,
+  ) async {
+    AuthService.tokenUsuarioLogado = 'token-teste';
+    final service = PagamentoService(
+      cliente: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'message': 'Esta carona não está disponível para pagamento',
+            'codigo': 'PAGAMENTO_INDISPONIVEL',
+          }),
+          409,
+        ),
+      ),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: PagamentoPixTela(
+          pagamento: pagamento,
+          pagamentoService: service,
+          atualizarAutomaticamente: false,
+        ),
+      ),
+    );
+    await tester.ensureVisible(find.text('SIMULAR PAGAMENTO'));
+    await tester.tap(find.text('SIMULAR PAGAMENTO'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const ValueKey('codigo-pix')), findsNothing);
+    expect(find.text('COPIAR CÓDIGO PIX'), findsNothing);
+    expect(find.text('SIMULAR PAGAMENTO'), findsNothing);
+    expect(
+      find.text('Esta carona não está disponível para pagamento'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('simula no backend e aguarda a confirmacao do webhook', (
     tester,
   ) async {

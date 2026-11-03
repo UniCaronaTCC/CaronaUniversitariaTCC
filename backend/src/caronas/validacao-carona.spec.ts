@@ -31,6 +31,53 @@ describe('Validação de programação', () => {
       validacao.validarDadosCarona({ ...dados, ...alteracao }, 1),
     ).toThrow();
   });
+  it.each([
+    0,
+    '0',
+    '',
+    null,
+    undefined,
+    true,
+    false,
+    [],
+    {},
+    -1,
+    0.001,
+    0.01,
+    0.99,
+    '0.99',
+    0.9999,
+    5.001,
+    NaN,
+    Infinity,
+    100_000_000,
+  ])('recusa valor gratuito ou invalido em oferta e edicao: %j', (valor) => {
+    for (const recorrente of [false, true]) {
+      expect(() =>
+        validacao.validarDadosCarona({ ...dados, recorrente, valor }, 1),
+      ).toThrow();
+    }
+    expect(() =>
+      validacao.validarEdicaoCarona(
+        {
+          ...dados,
+          recorrente: false,
+          valor,
+          capacidadePassageiros: 3,
+          capacidadeAnterior: 3,
+        },
+        1,
+      ),
+    ).toThrow();
+  });
+  it.each([1, 1.01, '1.00', 12.5, '12.50', 99_999_999.99])(
+    'aceita valor a partir de um real: %j',
+    (valor) => {
+      expect(validacao.validarDadosCarona({ ...dados, valor }, 1).valor).toBe(
+        Number(valor),
+      );
+    },
+  );
   it('remove dias repetidos e usa o motorista autenticado', () => {
     const resultado = validacao.validarDadosCarona(
       { ...dados, idUsuario: 999, diasSemana: ['SEG', 'SEG', 'TER'] },
