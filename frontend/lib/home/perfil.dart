@@ -567,6 +567,11 @@ class _PerfilTelaState extends State<PerfilTela> {
   Widget build(BuildContext context) {
     final status =
         usuario['statusVerificacao']?.toString().trim() ?? 'NAO_ENVIADO';
+    // O selo representa a conferencia interna, sem alterar a verificacao salva.
+    final statusVisual =
+        VerificacaoCnh.fromPerfil(usuario).permiteOferecerCarona()
+        ? 'APROVADO'
+        : status;
     return VisualBuscaEu(
       child: Scaffold(
         backgroundColor: AppColors.background,
@@ -595,9 +600,9 @@ class _PerfilTelaState extends State<PerfilTela> {
             erro: mensagemErro,
             erroAvaliacoes: mensagemErroAvaliacoes,
             tipoPerfil: textoTipoPerfil(),
-            situacaoPerfil: textoVerificacao(status),
-            iconeSituacao: iconeVerificacao(status),
-            corSituacao: corVerificacao(status),
+            situacaoPerfil: textoVerificacao(statusVisual),
+            iconeSituacao: iconeVerificacao(statusVisual),
+            corSituacao: corVerificacao(statusVisual),
             onFoto: alterarFoto,
             onEditar: editarPerfil,
             onVeiculo: editarVeiculo,

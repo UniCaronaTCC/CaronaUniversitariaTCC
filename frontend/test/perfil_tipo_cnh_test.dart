@@ -74,7 +74,9 @@ void main() {
         expect(perfil['tipoPerfil'], 'PASSAGEIRO');
         expect(AuthService.usuarioLogado!['tipoPerfil'], 'PASSAGEIRO');
         expect(find.text('Cadastrar veículo'), findsOneWidget);
-        expect(find.text('Perfil não verificado'), findsOneWidget);
+        expect(find.text('Perfil verificado'), findsOneWidget);
+        expect(perfil['statusVerificacao'], 'NAO_ENVIADO');
+        expect(AuthService.usuarioLogado!['statusVerificacao'], 'NAO_ENVIADO');
       },
     );
   }
@@ -111,15 +113,15 @@ void main() {
     'PENDENTE': ('Verificação pendente', Icons.schedule, Colors.orange),
     'RECUSADO': ('Verificação recusada', Icons.error_outline, Colors.red),
   }.entries) {
-    testWidgets('etapa 1 preserva selo geral ${caso.key}', (tester) async {
+    testWidgets('sem CNH preserva selo geral ${caso.key}', (tester) async {
       await abrirPerfil(
         tester,
-        () => {...perfilBase, ...cnhValida, 'statusVerificacao': caso.key},
+        () => {...perfilBase, 'statusVerificacao': caso.key},
       );
       final conteudo = tester.widget<ConteudoPerfilBuscaEu>(
         find.byType(ConteudoPerfilBuscaEu),
       );
-      expect(conteudo.tipoPerfil, 'Passageiro e motorista');
+      expect(conteudo.tipoPerfil, 'Passageiro');
       expect(conteudo.situacaoPerfil, caso.value.$1);
       expect(conteudo.iconeSituacao, caso.value.$2);
       expect(conteudo.corSituacao, caso.value.$3);
@@ -164,7 +166,7 @@ void main() {
       find.byType(ConteudoPerfilBuscaEu),
     );
     expect(conteudo.tipoPerfil, 'Passageiro e motorista');
-    expect(conteudo.situacaoPerfil, 'Perfil não verificado');
+    expect(conteudo.situacaoPerfil, 'Perfil verificado');
   });
 
   testWidgets(
