@@ -66,6 +66,7 @@ flutter:
 
   assets:
     - assets/imagens/icone_buscaeu.png
+    - assets/imagens/simbolo_buscaeu_branco.png
 
   fonts:
     - family: Inter
