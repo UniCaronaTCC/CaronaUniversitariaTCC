@@ -276,6 +276,21 @@ class AuthService {
     );
   }
 
+  static Future<Map<String, dynamic>> removerFotoPerfil(String fotoAtual) {
+    return _requisicaoPerfil(
+      (cliente, token) => cliente.delete(
+        Uri.parse('${ApiConfig.baseUrl}/usuarios/perfil/foto'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'fotoAtual': fotoAtual}),
+      ),
+      alteracao: true,
+      prazo: const Duration(seconds: 45),
+    );
+  }
+
   static Future<Map<String, dynamic>> salvarVeiculo(
     String modelo,
     String cor,
@@ -363,7 +378,12 @@ class AuthService {
         usuarioLogado = perfil;
         await SessaoService.salvar(tokenUsuarioLogado!, perfil);
       }
-      return {'sucesso': true, 'dados': dados, 'mensagem': corpo?['mensagem']};
+      return {
+        'sucesso': true,
+        'dados': dados,
+        'mensagem': corpo?['mensagem'],
+        if (corpo?['aviso'] is String) 'aviso': corpo!['aviso'],
+      };
     } on TimeoutException {
       return falha(
         alteracao

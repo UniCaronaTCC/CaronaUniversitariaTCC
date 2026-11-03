@@ -2,7 +2,10 @@ import {
   BadRequestException,
   Body,
   Controller,
+  ConflictException,
+  Delete,
   Get,
+  Logger,
   NotFoundException,
   Patch,
   Put,
@@ -28,6 +31,7 @@ interface FotoRecebida {
 
 @Controller('usuarios')
 export class UsersController {
+  private readonly logger = new Logger(UsersController.name);
   constructor(
     private readonly usersService: UsersService,
     private readonly fotoPerfilService: FotoPerfilService,
@@ -149,9 +153,30 @@ export class UsersController {
       foto.buffer,
       tipoArquivo,
     );
-    const usuarioAtualizado = await this.usersService.atualizarFotoPerfil(
-      usuario,
-      url,
+    const fotoAnterior = usuario.fotoPerfil;
+    let usuarioAtualizado: User;
+    try {
+      usuarioAtualizado = await this.usersService.atualizarFotoPerfil(
+        usuario,
+        url,
+      );
+    } catch (erro) {
+      // Uma falha de conexao pode ocorrer depois de o banco confirmar o UPDATE.
+      if (
+        erro instanceof ConflictException ||
+        erro instanceof NotFoundException
+      ) {
+        await this.limparArquivoFoto(usuario.idUsuario, url);
+      } else {
+        this.logger.warn(
+          `Resultado de gravacao de foto incerto para usuario ${usuario.idUsuario}; arquivo preservado`,
+        );
+      }
+      throw erro;
+    }
+    const limpezaCompleta = await this.limparArquivoFoto(
+      usuario.idUsuario,
+      fotoAnterior,
     );
     const veiculo = await this.usersService.buscarVeiculo(usuario.idUsuario);
 
@@ -159,7 +184,69 @@ export class UsersController {
       sucesso: true,
       mensagem: 'Foto de perfil atualizada',
       dados: this.formatarPerfil(usuarioAtualizado, veiculo),
+      ...(!limpezaCompleta && {
+        aviso:
+          'Foto atualizada. Não foi possível excluir o arquivo anterior do armazenamento.',
+      }),
     };
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Delete('perfil/foto')
+  async removerFotoPerfil(
+    @Body() body: DadosPerfilRecebidos,
+    @Req() request: RequisicaoComUsuario,
+  ) {
+    if (
+      typeof body?.fotoAtual !== 'string' ||
+      !body.fotoAtual.trim() ||
+      body.fotoAtual.length > 500
+    ) {
+      throw new BadRequestException(
+        'Atualize o perfil antes de remover a foto',
+      );
+    }
+    const usuario = await this.usersService.buscarPorId(request.usuario.sub);
+    if (!usuario) throw new NotFoundException('Usuário não encontrado');
+    const fotoAnterior = usuario.fotoPerfil;
+    if (fotoAnterior && fotoAnterior !== body.fotoAtual) {
+      throw new ConflictException(
+        'A foto foi alterada em outro acesso. Atualize o perfil e tente novamente',
+      );
+    }
+    const usuarioAtualizado = fotoAnterior
+      ? await this.usersService.atualizarFotoPerfil(usuario, null)
+      : usuario;
+    const limpezaCompleta = await this.limparArquivoFoto(
+      usuario.idUsuario,
+      fotoAnterior,
+    );
+    const veiculo = await this.usersService.buscarVeiculo(usuario.idUsuario);
+    return {
+      sucesso: true,
+      mensagem: 'Foto removida do perfil',
+      dados: this.formatarPerfil(usuarioAtualizado, veiculo),
+      ...(!limpezaCompleta && {
+        aviso:
+          'Foto removida do perfil. Não foi possível excluir o arquivo do armazenamento.',
+      }),
+    };
+  }
+
+  private async limparArquivoFoto(
+    idUsuario: number,
+    urlFoto: string | null | undefined,
+  ) {
+    if (!urlFoto) return true;
+    try {
+      await this.fotoPerfilService.remover(idUsuario, urlFoto);
+      return true;
+    } catch {
+      this.logger.warn(
+        `Limpeza de arquivo de foto pendente para usuario ${idUsuario}`,
+      );
+      return false;
+    }
   }
 
   private formatarPerfil(usuario: User, veiculo: Veiculo | null = null) {

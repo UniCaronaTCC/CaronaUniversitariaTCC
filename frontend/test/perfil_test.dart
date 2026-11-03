@@ -153,6 +153,8 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Alterar foto de perfil'));
     await tester.pumpAndSettle();
+    await tester.tap(find.text('Escolher da galeria'));
+    await tester.pumpAndSettle();
 
     expect(fotoEnviada, 'foto-teste.jpg');
     expect(find.text('Foto atualizada com sucesso'), findsOneWidget);

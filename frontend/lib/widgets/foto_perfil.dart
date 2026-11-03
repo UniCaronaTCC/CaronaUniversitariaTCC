@@ -32,8 +32,12 @@ class FotoPerfil extends StatelessWidget {
             CircleAvatar(
               radius: 42,
               backgroundColor: const Color(0xFFECDDF5),
-              foregroundImage: possuiFoto ? NetworkImage(urlFoto!) : null,
-              onForegroundImageError: possuiFoto ? (_, _) {} : null,
+              foregroundImage: possuiFoto && !carregando
+                  ? NetworkImage(urlFoto!)
+                  : null,
+              onForegroundImageError: possuiFoto && !carregando
+                  ? (_, _) {}
+                  : null,
               child: carregando
                   ? const SizedBox(
                       width: 26,
@@ -61,7 +65,7 @@ class FotoPerfil extends StatelessWidget {
                   border: Border.all(color: Colors.white, width: 2),
                 ),
                 child: const Icon(
-                  Icons.photo_library_outlined,
+                  Icons.add_a_photo_outlined,
                   color: Colors.white,
                   size: 16,
                 ),

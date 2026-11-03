@@ -82,6 +82,11 @@ Future<void> tocar(
   await tester.pumpAndSettle();
   await tester.tap(alvo);
   await tester.pump();
+  if (find.text('Escolher da galeria').evaluate().isNotEmpty) {
+    await tester.pump(const Duration(milliseconds: 400));
+    await tester.tap(find.text('Escolher da galeria'));
+    await tester.pump();
+  }
   if (aguardar) await tester.pumpAndSettle();
 }
 

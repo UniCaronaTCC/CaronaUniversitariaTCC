@@ -5,7 +5,7 @@ import { User } from './user.entity';
 import { UsersService } from './users.service';
 import { Veiculo } from './veiculo.entity';
 import { ForbiddenException } from '@nestjs/common';
-import { EntityManager, In, QueryFailedError } from 'typeorm';
+import { EntityManager, In, IsNull, QueryFailedError } from 'typeorm';
 import { Carona } from '../caronas/carona.entity';
 import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 
@@ -199,9 +199,10 @@ describe('UsersService', () => {
     );
 
     expect(resultado.fotoPerfil).toBe('https://exemplo.com/foto');
-    expect(repository.update).toHaveBeenCalledWith(1, {
-      fotoPerfil: 'https://exemplo.com/foto',
-    });
+    expect(repository.update).toHaveBeenCalledWith(
+      { idUsuario: 1, fotoPerfil: IsNull() },
+      { fotoPerfil: 'https://exemplo.com/foto' },
+    );
     expect(repository.save).not.toHaveBeenCalled();
   });
 
@@ -223,9 +224,10 @@ describe('UsersService', () => {
         'https://exemplo.com/nova',
       );
 
-      expect(repository.update).toHaveBeenCalledWith(1, {
-        fotoPerfil: 'https://exemplo.com/nova',
-      });
+      expect(repository.update).toHaveBeenCalledWith(
+        { idUsuario: 1, fotoPerfil: 'https://exemplo.com/antiga' },
+        { fotoPerfil: 'https://exemplo.com/nova' },
+      );
       expect(resultado).toEqual({
         ...antes,
         fotoPerfil: 'https://exemplo.com/nova',
@@ -260,6 +262,41 @@ describe('UsersService', () => {
       service.atualizarFotoPerfil(usuario, 'https://exemplo.com/nova'),
     ).rejects.toThrow('Usuário não encontrado');
     expect(usuario.fotoPerfil).toBeNull();
+  });
+
+  it('limpa apenas a foto usando a URL anterior como controle de concorrencia', async () => {
+    const usuario = Object.assign(new User(), {
+      idUsuario: 1,
+      fotoPerfil: 'https://exemplo.com/antiga',
+      statusVerificacaoCnh: 'APROVADA',
+      veiculo: { idVeiculo: 7 },
+    });
+    const antes = { ...usuario };
+    await expect(service.atualizarFotoPerfil(usuario, null)).resolves.toEqual({
+      ...antes,
+      fotoPerfil: null,
+    });
+    expect(repository.update).toHaveBeenCalledWith(
+      { idUsuario: 1, fotoPerfil: antes.fotoPerfil },
+      { fotoPerfil: null },
+    );
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it('conflito de foto nao sobrescreve alteracao concorrente nem a memoria', async () => {
+    const usuario = Object.assign(new User(), {
+      idUsuario: 1,
+      fotoPerfil: 'antiga',
+    });
+    repository.update.mockResolvedValue({ affected: 0 });
+    repository.findOne.mockResolvedValue({
+      idUsuario: 1,
+      fotoPerfil: 'mais-nova',
+    });
+    await expect(service.atualizarFotoPerfil(usuario, null)).rejects.toThrow(
+      'outro acesso',
+    );
+    expect(usuario.fotoPerfil).toBe('antiga');
   });
 
   it('preserva veiculo, foto e CNH ao editar instituicao e campus', async () => {

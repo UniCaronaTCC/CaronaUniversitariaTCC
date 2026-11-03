@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
 
 import '../auth/login.dart';
@@ -27,6 +28,12 @@ typedef AtualizarPerfil =
 typedef SelecionarFotoPerfil = Future<XFile?> Function();
 typedef EnviarFotoPerfil =
     Future<Map<String, dynamic>> Function(String caminho);
+
+typedef RemoverFotoPerfil =
+    Future<Map<String, dynamic>> Function(String fotoAtual);
+
+enum _AcaoFotoPerfil { camera, galeria, remover }
+
 typedef SalvarVeiculo =
     Future<Map<String, dynamic>> Function(
       String modelo,
@@ -47,7 +54,9 @@ class PerfilTela extends StatefulWidget {
   final CarregarAvaliacoes? carregarAvaliacoes;
   final BuscarInstituicoes? buscarInstituicoes;
   final SelecionarFotoPerfil? selecionarFoto;
+  final SelecionarFotoPerfil? capturarFoto;
   final EnviarFotoPerfil? enviarFoto;
+  final RemoverFotoPerfil? removerFoto;
   final SalvarVeiculo? salvarVeiculo;
 
   const PerfilTela({
@@ -57,7 +66,9 @@ class PerfilTela extends StatefulWidget {
     this.carregarAvaliacoes,
     this.buscarInstituicoes,
     this.selecionarFoto,
+    this.capturarFoto,
     this.enviarFoto,
+    this.removerFoto,
     this.salvarVeiculo,
   });
 
@@ -69,6 +80,7 @@ class _PerfilTelaState extends State<PerfilTela> {
   Map<String, dynamic> usuario = AuthService.usuarioLogado ?? {};
   bool carregando = true;
   bool enviandoFoto = false;
+  bool _selecionandoFoto = false;
   String? mensagemErro;
   String? mensagemErroAvaliacoes;
   double mediaAvaliacao = 0;
@@ -181,6 +193,7 @@ class _PerfilTelaState extends State<PerfilTela> {
   }
 
   Future<void> editarPerfil() async {
+    if (enviandoFoto || _selecionandoFoto) return;
     final nomeInstituicao = usuario['instituicao']?.toString() ?? '';
     final idInstituicao = int.tryParse(
       usuario['idInstituicao']?.toString() ?? '',
@@ -277,58 +290,156 @@ class _PerfilTelaState extends State<PerfilTela> {
   }
 
   Future<void> alterarFoto() async {
+    if (carregando || enviandoFoto || _selecionandoFoto) return;
+    _selecionandoFoto = true;
+    final contaInicial = AuthService.usuarioLogado?['id'];
+    bool mesmaConta() => AuthService.usuarioLogado?['id'] == contaInicial;
+    _AcaoFotoPerfil? acao;
+    var enviando = false;
     try {
-      final foto =
-          await (widget.selecionarFoto?.call() ??
-              ImagePicker().pickImage(
-                source: ImageSource.gallery,
-                maxWidth: 1024,
-                maxHeight: 1024,
-                imageQuality: 80,
-              ));
-
-      if (foto == null || !mounted) {
-        return;
+      final fotoAtual = usuario['fotoPerfil']?.toString().trim() ?? '';
+      acao = await showModalBottomSheet<_AcaoFotoPerfil>(
+        context: context,
+        showDragHandle: true,
+        builder: (context) => SafeArea(
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.camera_alt_outlined),
+                  title: const Text('Tirar foto'),
+                  onTap: () => Navigator.pop(context, _AcaoFotoPerfil.camera),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.photo_library_outlined),
+                  title: const Text('Escolher da galeria'),
+                  onTap: () => Navigator.pop(context, _AcaoFotoPerfil.galeria),
+                ),
+                if (fotoAtual.isNotEmpty)
+                  ListTile(
+                    leading: const Icon(
+                      Icons.delete_outline,
+                      color: Color(0xFFC62828),
+                    ),
+                    title: const Text(
+                      'Remover foto',
+                      style: TextStyle(color: Color(0xFFC62828)),
+                    ),
+                    onTap: () =>
+                        Navigator.pop(context, _AcaoFotoPerfil.remover),
+                  ),
+                const SizedBox(height: 12),
+              ],
+            ),
+          ),
+        ),
+      );
+      if (!mounted || acao == null || !mesmaConta()) return;
+      Map<String, dynamic> resultado;
+      if (acao == _AcaoFotoPerfil.remover) {
+        final confirmou = await showDialog<bool>(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Remover foto de perfil?'),
+            content: const Text(
+              'A inicial do seu nome aparecerá no lugar da foto.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(context, true),
+                style: TextButton.styleFrom(
+                  foregroundColor: const Color(0xFFC62828),
+                ),
+                child: const Text('Remover'),
+              ),
+            ],
+          ),
+        );
+        if (!mounted || confirmou != true || !mesmaConta()) return;
+        setState(() => enviandoFoto = true);
+        enviando = true;
+        resultado =
+            await (widget.removerFoto?.call(fotoAtual) ??
+                AuthService.removerFotoPerfil(fotoAtual));
+      } else {
+        final camera = acao == _AcaoFotoPerfil.camera;
+        final selecionar = camera ? widget.capturarFoto : widget.selecionarFoto;
+        final foto =
+            await (selecionar?.call() ??
+                ImagePicker().pickImage(
+                  source: camera ? ImageSource.camera : ImageSource.gallery,
+                  preferredCameraDevice: CameraDevice.front,
+                  maxWidth: 1024,
+                  maxHeight: 1024,
+                  imageQuality: 80,
+                ));
+        if (foto == null || !mounted || !mesmaConta()) return;
+        setState(() => enviandoFoto = true);
+        enviando = true;
+        resultado =
+            await (widget.enviarFoto?.call(foto.path) ??
+                AuthService.atualizarFotoPerfil(foto.path));
       }
-
-      setState(() => enviandoFoto = true);
-
-      final resultado =
-          await (widget.enviarFoto?.call(foto.path) ??
-              AuthService.atualizarFotoPerfil(foto.path));
-
-      if (!mounted) {
-        return;
-      }
-
+      if (!mounted || !mesmaConta()) return;
       setState(() {
         enviandoFoto = false;
-
         if (resultado['sucesso'] == true && resultado['dados'] is Map) {
           usuario = Map<String, dynamic>.from(resultado['dados']);
         }
       });
-
+      final sucesso = resultado['sucesso'] == true;
+      final aviso = sucesso ? resultado['aviso']?.toString() : null;
       _mostrarAviso(
-        resultado['mensagem']?.toString() ??
-            (resultado['sucesso'] == true
-                ? 'Foto atualizada com sucesso'
-                : 'Não foi possível atualizar a foto'),
-        tipo: resultado['sucesso'] == true ? TipoAviso.sucesso : TipoAviso.erro,
+        aviso ??
+            resultado['mensagem']?.toString() ??
+            (sucesso
+                ? (acao == _AcaoFotoPerfil.remover
+                      ? 'Foto removida do perfil'
+                      : 'Foto atualizada com sucesso')
+                : (acao == _AcaoFotoPerfil.remover
+                      ? 'Não foi possível remover a foto'
+                      : 'Não foi possível atualizar a foto')),
+        tipo: !sucesso
+            ? TipoAviso.erro
+            : aviso != null
+            ? TipoAviso.atencao
+            : TipoAviso.sucesso,
+      );
+    } on PlatformException catch (erro) {
+      if (!mounted || !mesmaConta()) return;
+      final negado =
+          erro.code.contains('access_denied') ||
+          erro.code.contains('restricted');
+      _mostrarAviso(
+        enviando
+            ? (acao == _AcaoFotoPerfil.remover
+                  ? 'Não foi possível remover a foto. Tente novamente'
+                  : 'Não foi possível atualizar a foto. Tente novamente')
+            : negado
+            ? (acao == _AcaoFotoPerfil.camera
+                  ? 'Permita o acesso à câmera nas configurações do celular para tirar uma foto'
+                  : 'Permita o acesso às fotos nas configurações do celular')
+            : 'Não foi possível abrir ${acao == _AcaoFotoPerfil.camera ? 'a câmera' : 'a galeria'}. Tente novamente',
+        tipo: TipoAviso.erro,
       );
     } catch (erro) {
-      if (!mounted) {
-        return;
-      }
-
-      final falhaNoEnvio = enviandoFoto;
-      setState(() => enviandoFoto = false);
+      if (!mounted || !mesmaConta()) return;
       _mostrarAviso(
-        falhaNoEnvio
+        acao == _AcaoFotoPerfil.remover
+            ? 'Não foi possível remover a foto. Tente novamente'
+            : enviando
             ? 'Não foi possível atualizar a foto. Tente novamente'
             : 'Não foi possível selecionar a foto',
         tipo: TipoAviso.erro,
       );
+    } finally {
+      _selecionandoFoto = false;
+      if (mounted) setState(() => enviandoFoto = false);
     }
   }
 
@@ -348,6 +459,7 @@ class _PerfilTelaState extends State<PerfilTela> {
   }
 
   Future<void> editarVeiculo() async {
+    if (enviandoFoto || _selecionandoFoto) return;
     final veiculoAtual = usuario['veiculo'] is Map
         ? Map<String, dynamic>.from(usuario['veiculo'])
         : <String, dynamic>{};

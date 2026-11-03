@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, QueryFailedError, Repository } from 'typeorm';
+import { In, IsNull, QueryFailedError, Repository } from 'typeorm';
 
 import { InstituicoesService } from '../instituicoes/instituicoes.service';
 import { User } from './user.entity';
@@ -84,12 +84,24 @@ export class UsersService {
     return Object.assign(usuario, alteracoes);
   }
 
-  async atualizarFotoPerfil(usuario: User, fotoPerfil: string): Promise<User> {
+  async atualizarFotoPerfil(
+    usuario: User,
+    fotoPerfil: string | null,
+  ): Promise<User> {
     // Salvar a entidade inteira pode desvincular relacoes nao carregadas.
-    const resultado = await this.usersRepository.update(usuario.idUsuario, {
-      fotoPerfil,
-    });
+    const resultado = await this.usersRepository.update(
+      {
+        idUsuario: usuario.idUsuario,
+        fotoPerfil: usuario.fotoPerfil ?? IsNull(),
+      },
+      { fotoPerfil },
+    );
     if (resultado.affected === 0) {
+      if (await this.buscarPorId(usuario.idUsuario)) {
+        throw new ConflictException(
+          'A foto foi alterada em outro acesso. Atualize o perfil e tente novamente',
+        );
+      }
       throw new NotFoundException('Usuário não encontrado');
     }
 

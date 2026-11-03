@@ -1,4 +1,8 @@
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Request } from 'express';
 
 import { FotoPerfilService } from './foto-perfil.service';
@@ -14,7 +18,7 @@ describe('UsersController', () => {
     buscarVeiculo: jest.Mock;
     salvarVeiculo: jest.Mock;
   };
-  let fotoPerfilService: { enviar: jest.Mock };
+  let fotoPerfilService: { enviar: jest.Mock; remover: jest.Mock };
 
   beforeEach(() => {
     usersService = {
@@ -24,7 +28,10 @@ describe('UsersController', () => {
       buscarVeiculo: jest.fn().mockResolvedValue(null),
       salvarVeiculo: jest.fn(),
     };
-    fotoPerfilService = { enviar: jest.fn() };
+    fotoPerfilService = {
+      enviar: jest.fn(),
+      remover: jest.fn().mockResolvedValue(undefined),
+    };
 
     controller = new UsersController(
       usersService as unknown as UsersService,
@@ -239,6 +246,151 @@ describe('UsersController', () => {
       'ABC1D23',
     );
     expect(resultado.dados.placa).toBe('ABC1D23');
+  });
+
+  describe('remocao e troca de foto', () => {
+    const antiga = 'https://exemplo.com/antiga';
+    const nova = 'https://exemplo.com/nova';
+    const request = { usuario: { sub: 1 } } as never;
+    const usuario = {
+      idUsuario: 1,
+      fotoPerfil: antiga,
+      statusVerificacaoCnh: 'APROVADA',
+      cnhCategoria: 'AB',
+      cnhValidade: '2099-05-01',
+    };
+
+    beforeEach(() => {
+      usersService.buscarPorId.mockResolvedValue({ ...usuario });
+      usersService.atualizarFotoPerfil.mockImplementation(
+        async (atual, fotoPerfil) => ({ ...atual, fotoPerfil }),
+      );
+      fotoPerfilService.enviar.mockResolvedValue(nova);
+    });
+
+    it('remove a foto da propria conta preservando CNH e veiculo', async () => {
+      usersService.buscarVeiculo.mockResolvedValue({
+        idVeiculo: 7,
+        modelo: 'Onix',
+      });
+      const resultado = await controller.removerFotoPerfil(
+        { fotoAtual: antiga, idUsuario: 99 },
+        request,
+      );
+      expect(usersService.buscarPorId).toHaveBeenCalledWith(1);
+      expect(usersService.atualizarFotoPerfil).toHaveBeenCalledWith(
+        usuario,
+        null,
+      );
+      expect(fotoPerfilService.remover).toHaveBeenCalledWith(1, antiga);
+      expect(resultado.dados).toMatchObject({
+        fotoPerfil: null,
+        statusVerificacaoCnh: 'APROVADA',
+        veiculo: { id: 7 },
+      });
+      expect(resultado).not.toHaveProperty('aviso');
+    });
+
+    it('repetir remocao de perfil sem foto nao exclui outros arquivos', async () => {
+      usersService.buscarPorId.mockResolvedValue({
+        ...usuario,
+        fotoPerfil: null,
+      });
+      expect(
+        (await controller.removerFotoPerfil({ fotoAtual: antiga }, request))
+          .dados.fotoPerfil,
+      ).toBeNull();
+      expect(usersService.atualizarFotoPerfil).not.toHaveBeenCalled();
+      expect(fotoPerfilService.remover).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      undefined,
+      {},
+      { fotoAtual: null },
+      { fotoAtual: 1 },
+      { fotoAtual: '' },
+      { fotoAtual: 'x'.repeat(501) },
+    ])('recusa pedido malformado: %j', async (body) => {
+      await expect(
+        controller.removerFotoPerfil(body, request),
+      ).rejects.toBeInstanceOf(BadRequestException);
+      expect(usersService.atualizarFotoPerfil).not.toHaveBeenCalled();
+      expect(fotoPerfilService.remover).not.toHaveBeenCalled();
+    });
+
+    it('remocao antiga nao atinge foto mais recente', async () => {
+      usersService.buscarPorId.mockResolvedValue({
+        ...usuario,
+        fotoPerfil: nova,
+      });
+      await expect(
+        controller.removerFotoPerfil({ fotoAtual: antiga }, request),
+      ).rejects.toThrow('outro acesso');
+      expect(usersService.atualizarFotoPerfil).not.toHaveBeenCalled();
+      expect(fotoPerfilService.remover).not.toHaveBeenCalled();
+    });
+
+    it('falha no banco nao apaga arquivo nem anuncia sucesso', async () => {
+      usersService.atualizarFotoPerfil.mockRejectedValue(
+        new Error('banco indisponivel'),
+      );
+      await expect(
+        controller.removerFotoPerfil({ fotoAtual: antiga }, request),
+      ).rejects.toThrow('banco');
+      expect(fotoPerfilService.remover).not.toHaveBeenCalled();
+    });
+
+    it('limpeza parcial retorna perfil sem foto e aviso explicito', async () => {
+      fotoPerfilService.remover.mockRejectedValue(
+        new Error('storage indisponivel'),
+      );
+      const resultado = await controller.removerFotoPerfil(
+        { fotoAtual: antiga },
+        request,
+      );
+      expect(resultado.dados.fotoPerfil).toBeNull();
+      expect(resultado.aviso).toContain('armazenamento');
+    });
+
+    it('troca de foto limpa apenas a antiga depois de salvar a nova', async () => {
+      const resultado = await controller.atualizarFotoPerfil(
+        { buffer: Buffer.from([0xff, 0xd8, 0xff]) },
+        request,
+      );
+      expect(resultado.dados.fotoPerfil).toBe(nova);
+      expect(fotoPerfilService.remover).toHaveBeenCalledWith(1, antiga);
+      expect(
+        usersService.atualizarFotoPerfil.mock.invocationCallOrder[0],
+      ).toBeLessThan(fotoPerfilService.remover.mock.invocationCallOrder[0]);
+    });
+
+    it('falha ao persistir upload limpa apenas o novo arquivo e preserva a antiga', async () => {
+      usersService.atualizarFotoPerfil.mockRejectedValue(
+        new ConflictException('conflito'),
+      );
+      await expect(
+        controller.atualizarFotoPerfil(
+          { buffer: Buffer.from([0xff, 0xd8, 0xff]) },
+          request,
+        ),
+      ).rejects.toThrow('conflito');
+      expect(fotoPerfilService.remover).toHaveBeenCalledTimes(1);
+      expect(fotoPerfilService.remover).toHaveBeenCalledWith(1, nova);
+    });
+
+    it('falha ambigua no banco nao exclui foto que pode ter sido persistida', async () => {
+      usersService.atualizarFotoPerfil.mockRejectedValue(
+        new Error('conexao interrompida'),
+      );
+      await expect(
+        controller.atualizarFotoPerfil(
+          { buffer: Buffer.from([0xff, 0xd8, 0xff]) },
+          request,
+        ),
+      ).rejects.toThrow('conexao');
+      expect(fotoPerfilService.remover).not.toHaveBeenCalled();
+    });
   });
 
   it.each(['modelo', 'cor', 'placa'])(
