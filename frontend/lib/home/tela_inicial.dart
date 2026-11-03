@@ -200,7 +200,7 @@ class _TelaInicialState extends State<TelaInicial> {
     });
   }
 
-  Future<void> abrirBusca() async {
+  Future<void> abrirBusca({bool semDestino = false}) async {
     if (!_iniciarAcao(_AcaoHome.busca)) return;
     try {
       if (!await _aguardarDestinoParaNavegar()) return;
@@ -209,7 +209,7 @@ class _TelaInicialState extends State<TelaInicial> {
         context,
         MaterialPageRoute(
           builder: (context) => BuscarCaronaTela(
-            destinoInicial: destinoSelecionado,
+            destinoInicial: semDestino ? null : destinoSelecionado,
             cidadeInicial: cidadeAtual,
           ),
         ),
@@ -402,7 +402,21 @@ class _TelaInicialState extends State<TelaInicial> {
       destinoLongitude: destinoSelecionado?.ponto.longitude,
       cidadePreferida: cidadeAtual,
     );
-    final caronasHome = caronasOrdenadas.take(3).toList();
+    final mostrarOutrosDestinos =
+        !carregando &&
+        mensagemErro == null &&
+        destinoSelecionado != null &&
+        caronasOrdenadas.isEmpty &&
+        caronas.isNotEmpty;
+    final caronasHome =
+        (mostrarOutrosDestinos
+                ? FiltroCaronas.aplicar(
+                    caronas: caronas,
+                    cidadePreferida: cidadeAtual,
+                  )
+                : caronasOrdenadas)
+            .take(3)
+            .toList();
 
     return Scaffold(
       backgroundColor: AppColors.background,
@@ -522,22 +536,36 @@ class _TelaInicialState extends State<TelaInicial> {
                     spacing: 8,
                     runSpacing: 4,
                     children: [
-                      const Text(
-                        'Caronas disponíveis',
-                        style: TextStyle(
+                      Text(
+                        mostrarOutrosDestinos
+                            ? 'Outros destinos'
+                            : 'Caronas disponíveis',
+                        style: const TextStyle(
                           color: AppColors.text,
                           fontSize: 22,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       TextButton(
-                        onPressed: _acaoEmAndamento == null ? abrirBusca : null,
+                        key: const ValueKey('ver-todas-disponiveis'),
+                        onPressed: _acaoEmAndamento == null
+                            ? () =>
+                                  abrirBusca(semDestino: mostrarOutrosDestinos)
+                            : null,
                         child: const Text('Ver todas'),
                       ),
                     ],
                   ),
                 ),
                 const SizedBox(height: 12),
+
+                if (mostrarOutrosDestinos) ...[
+                  const Text(
+                    'Nenhuma carona para o destino selecionado.',
+                    style: TextStyle(fontSize: 14, color: Colors.black54),
+                  ),
+                  const SizedBox(height: 12),
+                ],
 
                 if (carregando)
                   const EstadoConteudoPadrao(
