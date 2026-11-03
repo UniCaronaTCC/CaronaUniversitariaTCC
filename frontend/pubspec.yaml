@@ -65,6 +65,7 @@ flutter:
   uses-material-design: true
 
   assets:
+    - assets/dados/municipios_ibge.json
     - assets/imagens/icone_buscaeu.png
     - assets/imagens/simbolo_buscaeu_branco.png
 

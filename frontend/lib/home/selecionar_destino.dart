@@ -5,6 +5,8 @@ import '../mapa/models/localizacao_selecionada.dart';
 import '../mapa/services/endereco_service.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/campus_destino_service.dart';
+import '../services/catalogo_cidades_service.dart';
+import '../services/cidade_pesquisa_service.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/campo_destino_campus.dart';
@@ -14,6 +16,9 @@ class SelecionarDestinoTela extends StatefulWidget {
   final LocalizacaoSelecionada? localizacaoReferencia;
   final CampusDestinoService campusService;
   final EnderecoService? enderecoService;
+  final int? idUsuario;
+  final CidadePesquisaService cidadePesquisaService;
+  final CatalogoCidadesService catalogoCidadesService;
 
   const SelecionarDestinoTela({
     super.key,
@@ -21,6 +26,9 @@ class SelecionarDestinoTela extends StatefulWidget {
     this.localizacaoReferencia,
     this.campusService = const CampusDestinoService(),
     this.enderecoService,
+    this.idUsuario,
+    this.cidadePesquisaService = const CidadePesquisaService(),
+    this.catalogoCidadesService = const CatalogoCidadesService(),
   });
 
   @override
@@ -59,8 +67,11 @@ class _SelecionarDestinoTelaState extends State<SelecionarDestinoTela> {
         child: CampoDestinoCampus(
           controller: destinoController,
           onSelecionado: selecionarDestino,
-          referenciaInicial:
-              widget.localizacaoReferencia ?? widget.destinoInicial,
+          referenciaInicial: widget.localizacaoReferencia,
+          selecionarCidadeNaLista: true,
+          idUsuario: widget.idUsuario,
+          cidadePesquisaService: widget.cidadePesquisaService,
+          catalogoCidadesService: widget.catalogoCidadesService,
           mostrarAoAbrir: true,
           telaCompleta: true,
           campusService: widget.campusService,

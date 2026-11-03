@@ -261,6 +261,7 @@ class _TelaInicialState extends State<TelaInicial> {
         context,
         MaterialPageRoute(
           builder: (context) => SelecionarDestinoTela(
+            idUsuario: idUsuario,
             destinoInicial: destinoSelecionado,
             localizacaoReferencia: localizacaoAtual,
           ),

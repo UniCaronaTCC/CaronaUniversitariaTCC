@@ -12,6 +12,7 @@ import 'package:uni_carona/mapa/models/localizacao_selecionada.dart';
 import 'package:uni_carona/models/campus_destino.dart';
 import 'package:uni_carona/services/auth_service.dart';
 import 'package:uni_carona/services/destino_preferido_service.dart';
+import 'package:uni_carona/services/cidade_pesquisa_service.dart';
 import 'package:uni_carona/services/mensagem_service.dart';
 import 'package:uni_carona/services/solicitacao_service.dart';
 import 'package:uni_carona/widgets/card_destino_home.dart';
@@ -35,6 +36,10 @@ void main() {
         AuthService.usuarioLogado = {'id': 7, 'nome': 'Pessoa'};
         AuthService.tokenUsuarioLogado = 'token-sintetico';
         const preferencia = DestinoPreferidoService();
+        await const CidadePesquisaService().salvar(
+          7,
+          const CidadeCampus('Araçatuba', 'SP'),
+        );
         await preferencia.salvar(
           7,
           const LocalizacaoSelecionada(

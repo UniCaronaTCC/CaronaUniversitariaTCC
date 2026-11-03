@@ -9,10 +9,20 @@ import 'package:uni_carona/home/selecionar_destino.dart';
 import 'package:uni_carona/mapa/models/localizacao_selecionada.dart';
 import 'package:uni_carona/mapa/services/endereco_service.dart';
 import 'package:uni_carona/models/campus_destino.dart';
+import 'package:uni_carona/services/catalogo_cidades_service.dart';
 import 'package:uni_carona/widgets/campo_destino_campus.dart';
 
 import 'campo_destino_campus_test.dart'
     show CatalogoTeste, EnderecosTeste, campi, cidadeA, referenciaA;
+
+class CatalogoCidadesVisualTeste extends CatalogoCidadesService {
+  const CatalogoCidadesVisualTeste();
+  @override
+  Future<List<CidadeCampus>> listar() async => const [
+    CidadeCampus('Araçatuba', 'SP'),
+    CidadeCampus('Rio Branco', 'AC'),
+  ];
+}
 
 Future<void> abrirDestino(
   WidgetTester tester, {
@@ -44,6 +54,8 @@ Future<void> abrirDestino(
                         destinoInicial: destinoInicial,
                         campusService: catalogo,
                         enderecoService: enderecos,
+                        catalogoCidadesService:
+                            const CatalogoCidadesVisualTeste(),
                       ),
                     ),
                   );
@@ -245,12 +257,12 @@ void main() {
     expect(find.textContaining('Localização indisponível'), findsOneWidget);
     await tester.tap(find.byTooltip('Alterar cidade'));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextFormField).first, 'Rio Branco');
-    await tester.tap(find.byType(DropdownButtonFormField<String>));
+    await tester.enterText(
+      find.byKey(const ValueKey('pesquisa-cidade')),
+      'Rio Branco',
+    );
     await tester.pumpAndSettle();
-    await tester.tap(find.text('AC · Acre').last);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Aplicar'));
+    await tester.tap(find.byKey(const ValueKey('cidade-Rio Branco-AC')));
     await tester.pumpAndSettle();
     expect(find.text('Rio Branco, AC'), findsOneWidget);
     expect(catalogo.buscas.single.uf, 'AC');

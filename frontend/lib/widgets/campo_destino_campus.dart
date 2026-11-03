@@ -8,6 +8,10 @@ import '../mapa/screens/mapa_screen.dart';
 import '../mapa/services/endereco_service.dart';
 import '../models/campus_destino.dart';
 import '../services/campus_destino_service.dart';
+import '../services/catalogo_cidades_service.dart';
+import '../services/cidade_pesquisa_service.dart';
+import 'aviso_app.dart';
+import 'seletor_cidade.dart';
 
 class CampoDestinoCampus extends StatefulWidget {
   final TextEditingController controller;
@@ -18,6 +22,10 @@ class CampoDestinoCampus extends StatefulWidget {
   final EnderecoService? enderecoService;
   final bool mostrarAoAbrir;
   final bool visualAtualizado;
+  final bool selecionarCidadeNaLista;
+  final int? idUsuario;
+  final CidadePesquisaService cidadePesquisaService;
+  final CatalogoCidadesService catalogoCidadesService;
 
   /// Controla a rolagem da tela; não deve ficar dentro de outra lista.
   final bool telaCompleta;
@@ -32,6 +40,10 @@ class CampoDestinoCampus extends StatefulWidget {
     this.enderecoService,
     this.mostrarAoAbrir = false,
     this.visualAtualizado = false,
+    this.selecionarCidadeNaLista = false,
+    this.idUsuario,
+    this.cidadePesquisaService = const CidadePesquisaService(),
+    this.catalogoCidadesService = const CatalogoCidadesService(),
     this.telaCompleta = false,
   });
 
@@ -59,6 +71,8 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
   bool _visivel = false;
   bool _cidadeManual = false;
   bool _abrindoMapa = false;
+  bool _restaurandoCidade = false;
+  bool _alterandoCidade = false;
 
   @override
   void initState() {
@@ -81,6 +95,8 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
     }
     final nova = CidadeCampus.deLocalizacao(widget.referenciaInicial);
     if (!_cidadeManual &&
+        !_restaurandoCidade &&
+        !_alterandoCidade &&
         nova != null &&
         (_cidade == null || !_cidade!.mesmaCidade(nova))) {
       if (_iniciado) {
@@ -111,6 +127,7 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
 
   Future<void> _iniciar() async {
     _iniciado = true;
+    if (widget.selecionarCidadeNaLista) return _restaurarCidade();
     if (_cidade != null) return _carregarCampi(_cidade!);
     final consulta = ++_consultaCampi;
     setState(() => _carregandoCampi = true);
@@ -126,6 +143,49 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
       return;
     }
     await _carregarCampi(cidade);
+  }
+
+  Future<void> _restaurarCidade() async {
+    final consulta = ++_consultaCampi;
+    _restaurandoCidade = true;
+    setState(() => _carregandoCampi = true);
+    CidadeCampus? preferida;
+    final id = widget.idUsuario;
+    try {
+      if (id != null && id > 0) {
+        preferida = await widget.cidadePesquisaService.carregar(id);
+      }
+    } catch (_) {
+      if (mounted && consulta == _consultaCampi) {
+        _avisarCidade('Não foi possível recuperar a cidade salva.');
+      }
+    }
+    if (!mounted || consulta != _consultaCampi) return;
+    _restaurandoCidade = false;
+    if (preferida != null) {
+      _cidadeManual = true;
+      return _carregarCampi(preferida);
+    }
+    var cidade = CidadeCampus.deLocalizacao(widget.referenciaInicial);
+    if (cidade == null) {
+      try {
+        cidade = await widget.campusService.identificarCidade();
+      } catch (_) {
+        cidade = null;
+      }
+    }
+    if (!mounted || consulta != _consultaCampi) return;
+    if (cidade == null) {
+      setState(() => _carregandoCampi = false);
+      return;
+    }
+    await _carregarCampi(cidade);
+  }
+
+  void _avisarCidade(String mensagem) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) AvisoApp.mostrar(context, mensagem, tipo: TipoAviso.erro);
+    });
   }
 
   Future<void> _carregarCampi(CidadeCampus cidade) async {
@@ -230,7 +290,7 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
   }
 
   Future<void> _selecionar(LocalizacaoSelecionada local) async {
-    if (_abrindoMapa) return;
+    if (_abrindoMapa || _alterandoCidade) return;
     _debounce?.cancel();
     final consulta = ++_consultaEndereco;
     final texto = widget.controller.text;
@@ -273,6 +333,7 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
   }
 
   void _selecionarCampus(CampusDestino campus) {
+    if (_alterandoCidade) return;
     final local = campus.localizacao;
     if (local != null) {
       _selecionar(local);
@@ -293,6 +354,8 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
   }
 
   Future<void> _trocarCidade() async {
+    if (_alterandoCidade) return;
+    if (widget.selecionarCidadeNaLista) return _trocarCidadeNaLista();
     var nome = _cidade?.cidade ?? '';
     final formulario = GlobalKey<FormState>();
     String? uf = _cidade?.uf;
@@ -357,6 +420,78 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
     if (cidade == null) return;
     _cidadeManual = true;
     await _carregarCampi(cidade);
+  }
+
+  Future<void> _trocarCidadeNaLista() async {
+    final escolha = await showModalBottomSheet<SelecaoCidade>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(8)),
+      ),
+      builder: (_) => SeletorCidade(
+        cidadeAtual: _cidade,
+        catalogoService: widget.catalogoCidadesService,
+      ),
+    );
+    if (!mounted || escolha == null || _alterandoCidade) return;
+    final consultaPendente = _carregandoCampi;
+    var alteracaoAplicada = false;
+    // Invalida GPS e buscas anteriores antes de aguardar a gravacao local.
+    _consultaCampi++;
+    _consultaEndereco++;
+    _debounce?.cancel();
+    _restaurandoCidade = false;
+    setState(() {
+      _alterandoCidade = true;
+      _carregandoCampi = true;
+      _buscandoEndereco = false;
+      _pesquisouEndereco = false;
+      _erroEndereco = null;
+      _visivel = true;
+    });
+    try {
+      var cidade = escolha.cidade;
+      if (cidade == null) {
+        cidade = await widget.campusService.identificarCidade();
+        if (!mounted) return;
+        if (cidade == null) {
+          _avisarCidade('Não foi possível identificar sua cidade.');
+          return;
+        }
+      }
+      final id = widget.idUsuario;
+      if (id != null && id > 0) {
+        if (escolha.cidade == null) {
+          await widget.cidadePesquisaService.usarLocalizacaoAtual(id);
+        } else {
+          await widget.cidadePesquisaService.salvar(id, cidade);
+        }
+      }
+      if (!mounted) return;
+      _cidadeManual = escolha.cidade != null;
+      alteracaoAplicada = true;
+      if (_cidade?.mesmaCidade(cidade) != true) {
+        widget.controller.clear();
+        widget.onChanged?.call('');
+      }
+      await _carregarCampi(cidade);
+    } catch (_) {
+      if (mounted) {
+        _avisarCidade('Não foi possível alterar sua cidade. Tente novamente.');
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _alterandoCidade = false;
+          _carregandoCampi = false;
+          if (!alteracaoAplicada && consultaPendente && _cidade != null) {
+            _erroCampi = 'Não foi possível atualizar as faculdades.';
+          }
+        });
+      }
+    }
   }
 
   @override
@@ -481,7 +616,7 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
               ),
               IconButton(
                 tooltip: 'Alterar cidade',
-                onPressed: _trocarCidade,
+                onPressed: _alterandoCidade ? null : _trocarCidade,
                 icon: const Icon(Icons.location_city_outlined),
               ),
             ],
@@ -641,7 +776,7 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
         Tooltip(
           message: 'Alterar cidade',
           child: TextButton.icon(
-            onPressed: _trocarCidade,
+            onPressed: _alterandoCidade ? null : _trocarCidade,
             style: TextButton.styleFrom(foregroundColor: AppColors.primary),
             icon: const Icon(Icons.keyboard_arrow_down, size: 20),
             iconAlignment: IconAlignment.end,
