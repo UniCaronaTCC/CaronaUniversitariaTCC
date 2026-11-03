@@ -155,6 +155,7 @@ export class SolicitacoesController {
         motorista: {
           id: solicitacao.carona.usuario.idUsuario,
           nome: solicitacao.carona.usuario.nome,
+          fotoPerfil: solicitacao.carona.usuario.fotoPerfil ?? null,
         },
 
         carona: {
@@ -262,6 +263,7 @@ export class SolicitacoesController {
       passageiro: {
         id: solicitacao.passageiro.idUsuario,
         nome: solicitacao.passageiro.nome,
+        fotoPerfil: solicitacao.passageiro.fotoPerfil ?? null,
       },
 
       carona: {

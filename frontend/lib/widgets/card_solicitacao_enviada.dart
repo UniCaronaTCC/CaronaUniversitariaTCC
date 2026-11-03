@@ -42,7 +42,7 @@ class CardSolicitacaoEnviada extends StatelessWidget {
               children: [
                 AvatarUsuario(
                   nome: solicitacao.motorista,
-                  urlFoto: null,
+                  urlFoto: solicitacao.fotoMotorista,
                   raio: 20,
                 ),
                 const SizedBox(width: 8),

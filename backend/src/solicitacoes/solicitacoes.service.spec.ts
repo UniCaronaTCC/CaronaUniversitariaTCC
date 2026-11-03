@@ -174,6 +174,33 @@ describe('SolicitacoesService', () => {
     );
   });
 
+  it('inclui a foto do motorista nas solicitacoes enviadas', async () => {
+    await service.listarEnviadas(1);
+    expect(atualizarQueryBuilder.select).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        'motorista.idUsuario',
+        'motorista.nome',
+        'motorista.fotoPerfil',
+      ]),
+    );
+  });
+
+  it('inclui a foto do passageiro nas recebidas e no painel da carona', async () => {
+    await service.listarRecebidas(2);
+    await service.listarRecebidasDaCarona(2, 10);
+    expect(atualizarQueryBuilder.select).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        'passageiro.idUsuario',
+        'passageiro.nome',
+        'passageiro.fotoPerfil',
+      ]),
+    );
+    expect(atualizarQueryBuilder.andWhere).toHaveBeenCalledWith(
+      'carona.idCarona = :idCarona',
+      { idCarona: 10 },
+    );
+  });
+
   it('marca como confirmado o pagamento PAID ao listar solicitações', async () => {
     const solicitacao = {
       idSolicitacao: 12,

@@ -14,6 +14,7 @@ class SolicitacaoRecebida {
   final double embarqueLongitude;
 
   final String passageiro;
+  final String? fotoPassageiro;
   final int idCarona;
   final String destino;
   final DateTime dataInicio;
@@ -34,6 +35,7 @@ class SolicitacaoRecebida {
     required this.embarqueLatitude,
     required this.embarqueLongitude,
     required this.passageiro,
+    this.fotoPassageiro,
     required this.idCarona,
     required this.destino,
     required this.dataInicio,
@@ -52,6 +54,7 @@ class SolicitacaoRecebida {
     if (passageiro is! Map || carona is! Map) {
       throw const FormatException('Solicitação incompleta');
     }
+    final foto = passageiro['fotoPerfil'];
 
     return SolicitacaoRecebida(
       id: converterJsonParaInt(json['id']),
@@ -70,6 +73,9 @@ class SolicitacaoRecebida {
       embarqueLongitude: converterJsonParaDouble(json['embarqueLongitude']),
 
       passageiro: passageiro['nome']?.toString() ?? 'Passageiro',
+      fotoPassageiro: foto is String && foto.trim().isNotEmpty
+          ? foto.trim()
+          : null,
 
       idCarona: converterJsonParaInt(carona['id']),
 

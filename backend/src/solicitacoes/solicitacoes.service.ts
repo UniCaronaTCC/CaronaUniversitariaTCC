@@ -218,6 +218,7 @@ export class SolicitacoesService {
         'carona.diasSemana',
         'passageiro.idUsuario',
         'passageiro.nome',
+        'passageiro.fotoPerfil',
       ])
       .where('motorista.idUsuario = :idMotorista', { idMotorista })
       .orderBy("CASE WHEN solicitacao.status = 'PENDENTE' THEN 0 ELSE 1 END")
@@ -248,6 +249,7 @@ export class SolicitacoesService {
         'carona.diasSemana',
         'motorista.idUsuario',
         'motorista.nome',
+        'motorista.fotoPerfil',
       ])
       .where('passageiro.idUsuario = :idPassageiro', { idPassageiro })
       .orderBy("CASE WHEN solicitacao.status = 'PENDENTE' THEN 0 ELSE 1 END")

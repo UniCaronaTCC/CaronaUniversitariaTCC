@@ -56,7 +56,7 @@ class CardSolicitacaoRecebida extends StatelessWidget {
               children: [
                 AvatarUsuario(
                   nome: solicitacao.passageiro,
-                  urlFoto: null,
+                  urlFoto: solicitacao.fotoPassageiro,
                   raio: 20,
                 ),
                 Text(
