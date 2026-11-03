@@ -42,6 +42,17 @@ A rota nao recebe valor no corpo. Ela usa o usuario autenticado pelo Supabase e
 busca o valor da carona no banco. Somente o passageiro de uma solicitacao ACEITA
 e nao recorrente pode usa-la nesta primeira versao.
 
+A carona precisa estar ATIVA, LOTADA ou EM_ANDAMENTO. Canceladas, finalizadas,
+expiradas e encerradas por tempo nao permitem gerar, reutilizar ou simular Pix.
+O estado e conferido novamente depois da chamada externa antes de devolver o
+codigo. A consulta de pagamentos ja confirmados continua disponivel ao dono.
+Para cobrancas pendentes bloqueadas, a API retorna PAGAMENTO_INDISPONIVEL; a tela
+retira o codigo e interrompe as consultas automaticas. Isso nao revoga um codigo
+ja emitido no provedor nem implementa reembolso.
+
+As ofertas exigem valor positivo, de pelo menos R$ 1,00, com ate duas casas
+decimais. A regra vale na publicacao, edicao e geracao de novas ocorrencias.
+
 Ao aceitar uma solicitacao avulsa, o backend reserva a vaga e define
 `pagamento_limite_em` como o menor valor entre duas horas apos o aceite e quinze
 minutos antes do inicio da carona. O Pix e criado somente quando o passageiro

@@ -14,6 +14,7 @@ import type { DadosCriacaoCarona } from './caronas.service';
 import { datasRecorrencia } from './datas-recorrencia';
 import { UsersService } from '../users/users.service';
 import { User } from '../users/user.entity';
+import { validarValorCarona } from './valor-carona';
 import {
   cnhPermiteOferecerCarona,
   hojeEmSaoPaulo,
@@ -157,6 +158,7 @@ export class RecorrenciasService
     modelo: RecorrenciaCarona,
   ): Promise<Carona[]> {
     if (!modelo.ativa) return [];
+    validarValorCarona(modelo.valor);
     const usuario = await manager.getRepository(User).findOne({
       where: { idUsuario: modelo.idUsuario },
     });

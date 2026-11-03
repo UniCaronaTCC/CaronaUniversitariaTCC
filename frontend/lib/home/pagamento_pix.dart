@@ -36,6 +36,7 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
   Timer? _timer;
   bool _consultando = false;
   bool _simulando = false;
+  bool _pagamentoIndisponivel = false;
   String? _erroAtualizacao;
 
   void _mostrarMensagem(
@@ -78,7 +79,9 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
   }
 
   Future<void> _atualizarPagamento() async {
-    if (_consultando || !pagamento.aguardandoConfirmacao) {
+    if (_consultando ||
+        _pagamentoIndisponivel ||
+        !pagamento.aguardandoConfirmacao) {
       return;
     }
 
@@ -100,6 +103,9 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
 
     setState(() {
       _consultando = false;
+      if (resultado['codigo'] == 'PAGAMENTO_INDISPONIVEL') {
+        _pagamentoIndisponivel = true;
+      }
 
       if (pagamentoAtualizado != null) {
         pagamento = pagamentoAtualizado;
@@ -110,7 +116,7 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
       }
     });
 
-    if (!pagamento.aguardandoConfirmacao) {
+    if (_pagamentoIndisponivel || !pagamento.aguardandoConfirmacao) {
       _timer?.cancel();
     }
 
@@ -120,7 +126,9 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
   }
 
   Future<void> _simularPagamento() async {
-    if (_simulando || !pagamento.aguardandoConfirmacao) {
+    if (_simulando ||
+        _pagamentoIndisponivel ||
+        !pagamento.aguardandoConfirmacao) {
       return;
     }
 
@@ -136,6 +144,10 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
 
     setState(() {
       _simulando = false;
+      if (resultado['codigo'] == 'PAGAMENTO_INDISPONIVEL') {
+        _pagamentoIndisponivel = true;
+        _timer?.cancel();
+      }
 
       if (resultado['sucesso'] != true) {
         _erroAtualizacao =
@@ -161,12 +173,13 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
 
   Widget _conteudo(BuildContext context) {
     final qrCode = _decodificarQrCode(pagamento.qrCodeBase64);
+    final pixDisponivel = pagamento.pixDisponivel && !_pagamentoIndisponivel;
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: BarraSuperiorPadrao(
         titulo: 'Pagamento Pix',
-        actions: pagamento.aguardandoConfirmacao
+        actions: pagamento.aguardandoConfirmacao && !_pagamentoIndisponivel
             ? [
                 SizedBox.square(
                   dimension: 48,
@@ -209,7 +222,7 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
               ),
             ),
             const SizedBox(height: 12),
-            _StatusPix(pagamento: pagamento),
+            if (!_pagamentoIndisponivel) _StatusPix(pagamento: pagamento),
             if (_erroAtualizacao != null &&
                 pagamento.aguardandoConfirmacao) ...[
               const SizedBox(height: 12),
@@ -218,7 +231,7 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
                 style: const TextStyle(color: Colors.black54),
               ),
             ],
-            if (pagamento.pixDisponivel) ...[
+            if (pixDisponivel) ...[
               const SizedBox(height: 28),
               if (qrCode != null) ...[
                 Center(
@@ -277,7 +290,7 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
                 ),
               ],
             ],
-            if (pagamento.pixDisponivel && pagamento.expiraEm != null) ...[
+            if (pixDisponivel && pagamento.expiraEm != null) ...[
               const SizedBox(height: 20),
               Row(
                 children: [
@@ -299,6 +312,7 @@ class _PagamentoPixTelaState extends State<PagamentoPixTela> {
   }
 
   Future<void> _copiarCodigo(BuildContext context) async {
+    if (_pagamentoIndisponivel) return;
     await Clipboard.setData(ClipboardData(text: pagamento.pixCopiaECola!));
 
     if (!context.mounted) {

@@ -72,6 +72,29 @@ void main() {
     );
   });
 
+  test('repassa bloqueio de pagamento de carona indisponivel', () async {
+    AuthService.tokenUsuarioLogado = 'token-teste';
+    final service = PagamentoService(
+      cliente: MockClient(
+        (_) async => http.Response(
+          jsonEncode({
+            'message': 'Esta carona não está disponível para pagamento',
+            'codigo': 'PAGAMENTO_INDISPONIVEL',
+          }),
+          409,
+        ),
+      ),
+    );
+    for (final resultado in [
+      await service.criarOuObterPix(10),
+      await service.obterPagamento(30),
+      await service.simularPagamento(30),
+    ]) {
+      expect(resultado['sucesso'], isFalse);
+      expect(resultado['codigo'], 'PAGAMENTO_INDISPONIVEL');
+    }
+  });
+
   test('consulta o status do pagamento pelo backend', () async {
     AuthService.tokenUsuarioLogado = 'token-teste';
     late http.Request requisicaoRecebida;

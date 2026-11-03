@@ -139,6 +139,15 @@ describe('Recorrências', () => {
     expect(caronas[0]).not.toHaveProperty('solicitacoes');
   });
 
+  it.each([0, 0.99])(
+    'nao gera novas ofertas com valor abaixo do minimo: %s',
+    async (valor) => {
+      modelo.valor = valor;
+      await service.completarProgramacoes();
+      expect(caronas).toHaveLength(0);
+    },
+  );
+
   it('não cria programação sem CNH aprovada', async () => {
     usersService.exigirCnhParaOferecerCarona.mockRejectedValue(
       new ForbiddenException(),

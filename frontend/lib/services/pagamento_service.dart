@@ -76,6 +76,8 @@ class PagamentoService {
 
       return {
         'sucesso': false,
+        if (corpo['codigo'] == 'PAGAMENTO_INDISPONIVEL')
+          'codigo': 'PAGAMENTO_INDISPONIVEL',
         'mensagem':
             corpo['mensagem']?.toString() ??
             corpo['message']?.toString() ??

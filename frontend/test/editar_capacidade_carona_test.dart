@@ -46,6 +46,54 @@ Carona carona({int vagas = 0}) => Carona(
 );
 
 void main() {
+  testWidgets('edicao nao permite valor abaixo de um real', (tester) async {
+    FlutterSecureStorage.setMockInitialValues({});
+    AuthService.tokenUsuarioLogado = 'token-sintetico';
+    var gravacoes = 0;
+    await http.runWithClient(
+      () async {
+        try {
+          await tester.pumpWidget(
+            MaterialApp(
+              home: OfertarCaronaTela(
+                caronaParaEditar: carona(vagas: 3),
+                carregarCapacidade: () async => {
+                  'sucesso': true,
+                  'dados': const CapacidadeCarona(
+                    total: 3,
+                    aceitos: 0,
+                    livres: 3,
+                  ),
+                },
+              ),
+            ),
+          );
+          await tester.pumpAndSettle();
+          final form = tester.widget<FormularioOfertarCarona>(
+            find.byType(FormularioOfertarCarona),
+          );
+          form.valorController.text = r'R$ 0,99';
+          await tester.ensureVisible(find.text('SALVAR ALTERAÇÕES'));
+          await tester.tap(find.text('SALVAR ALTERAÇÕES'));
+          await tester.pumpAndSettle();
+          expect(gravacoes, 0);
+          expect(
+            find.text(r'O valor mínimo por passageiro é R$ 1,00'),
+            findsOneWidget,
+          );
+        } finally {
+          await tester.pumpWidget(const SizedBox());
+          SolicitacaoService.pararContadorSolicitacoesPendentes();
+          await MensagemService.pararContadorMensagensNaoLidas();
+          AuthService.tokenUsuarioLogado = null;
+        }
+      },
+      () => MockClient((req) async {
+        if (req.method == 'PATCH') gravacoes++;
+        return http.Response('{"sucesso":true,"dados":[]}', 200);
+      }),
+    );
+  });
   for (final status in [200, 409]) {
     testWidgets('salvamento pela tela com resposta HTTP $status', (
       tester,
