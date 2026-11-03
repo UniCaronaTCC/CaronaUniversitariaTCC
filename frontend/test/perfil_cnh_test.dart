@@ -30,6 +30,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.text('Passageiro e motorista'), findsOneWidget);
     await tester.scrollUntilVisible(find.text('CNH conferida'), 200);
     await tester.pumpAndSettle();
     await tester.tap(find.text('CNH conferida'));

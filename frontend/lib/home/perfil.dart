@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import '../auth/login.dart';
 import '../config/app_colors.dart';
 import '../models/instituicao.dart';
+import '../models/verificacao_cnh.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/avaliacao_service.dart';
 import '../services/auth_service.dart';
@@ -507,16 +508,11 @@ class _PerfilTelaState extends State<PerfilTela> {
     );
   }
 
-  String textoTipoPerfil(String tipoPerfil) {
-    if (tipoPerfil == 'MOTORISTA') {
-      return 'Motorista';
-    }
-
-    if (tipoPerfil == 'AMBOS') {
-      return 'Motorista e passageiro';
-    }
-
-    return 'Passageiro';
+  String textoTipoPerfil() {
+    final cnh = VerificacaoCnh.fromPerfil(usuario);
+    return cnh.permiteOferecerCarona()
+        ? 'Passageiro e motorista'
+        : 'Passageiro';
   }
 
   String textoVerificacao(String status) {
@@ -598,9 +594,7 @@ class _PerfilTelaState extends State<PerfilTela> {
             totalAvaliacoes: totalAvaliacoes,
             erro: mensagemErro,
             erroAvaliacoes: mensagemErroAvaliacoes,
-            tipoPerfil: textoTipoPerfil(
-              usuario['tipoPerfil']?.toString().trim() ?? 'PASSAGEIRO',
-            ),
+            tipoPerfil: textoTipoPerfil(),
             situacaoPerfil: textoVerificacao(status),
             iconeSituacao: iconeVerificacao(status),
             corSituacao: corVerificacao(status),

@@ -32,6 +32,9 @@ void main() {
       'instituicao': 'UniSalesiano',
       'campus': 'Araçatuba',
       'tipoPerfil': 'AMBOS',
+      'statusVerificacaoCnh': 'APROVADA',
+      'cnhCategoria': 'AB',
+      'cnhValidade': '2099-10-07',
       'statusVerificacao': 'APROVADO',
       'avaliacaoMedia': 4.7,
       'totalAvaliacoes': 12,
@@ -111,7 +114,7 @@ void main() {
     );
     expect(find.text('João'), findsOneWidget);
     expect(find.text('UniSalesiano - Campus Araçatuba'), findsOneWidget);
-    expect(find.text('Motorista e passageiro'), findsOneWidget);
+    expect(find.text('Passageiro e motorista'), findsOneWidget);
     expect(find.text('Perfil verificado'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('joao@email.com'),
@@ -207,7 +210,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(find.text('Fatec - Campus Araçatuba'), findsOneWidget);
-    expect(find.text('Motorista e passageiro'), findsOneWidget);
+    expect(find.text('Passageiro e motorista'), findsOneWidget);
 
     await tester.pump(const Duration(seconds: 4));
     await tester.pumpAndSettle();
