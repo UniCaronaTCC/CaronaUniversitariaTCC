@@ -17,6 +17,7 @@ class CampoDestinoCampus extends StatefulWidget {
   final TextEditingController controller;
   final ValueChanged<LocalizacaoSelecionada> onSelecionado;
   final ValueChanged<String>? onChanged;
+  final ValueChanged<CidadeCampus>? onCidadeDefinida;
   final LocalizacaoSelecionada? referenciaInicial;
   final CampusDestinoService campusService;
   final EnderecoService? enderecoService;
@@ -35,6 +36,7 @@ class CampoDestinoCampus extends StatefulWidget {
     required this.controller,
     required this.onSelecionado,
     this.onChanged,
+    this.onCidadeDefinida,
     this.referenciaInicial,
     this.campusService = const CampusDestinoService(),
     this.enderecoService,
@@ -82,7 +84,7 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
     _visivel = widget.mostrarAoAbrir;
     widget.controller.addListener(_textoAlterado);
     _foco.addListener(_focoAlterado);
-    if (_visivel) _iniciar();
+    if (_visivel || widget.selecionarCidadeNaLista) _iniciar();
   }
 
   @override
@@ -167,6 +169,12 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
       return _carregarCampi(preferida);
     }
     var cidade = CidadeCampus.deLocalizacao(widget.referenciaInicial);
+    if (cidade == null && !_visivel) {
+      // Sem referencia ou preferencia, consulta o GPS ao abrir o campo.
+      _iniciado = false;
+      setState(() => _carregandoCampi = false);
+      return;
+    }
     if (cidade == null) {
       try {
         cidade = await widget.campusService.identificarCidade();
@@ -204,6 +212,14 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
       _carregandoCampi = true;
       _erroCampi = null;
     });
+    if (widget.onCidadeDefinida != null) {
+      // A cidade pode ser restaurada durante a montagem do campo.
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && consulta == _consultaCampi) {
+          widget.onCidadeDefinida?.call(cidade);
+        }
+      });
+    }
     try {
       final campi = await widget.campusService.listar(cidade);
       if (!mounted || consulta != _consultaCampi) return;

@@ -211,6 +211,8 @@ class _TelaInicialState extends State<TelaInicial> {
           builder: (context) => BuscarCaronaTela(
             destinoInicial: semDestino ? null : destinoSelecionado,
             cidadeInicial: cidadeAtual,
+            localizacaoReferencia: localizacaoAtual,
+            idUsuario: idUsuario,
           ),
         ),
       );

@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
+import '../mapa/services/endereco_service.dart';
+import '../models/campus_destino.dart';
 import '../models/carona.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/carona_service.dart';
+import '../services/campus_destino_service.dart';
+import '../services/catalogo_cidades_service.dart';
+import '../services/cidade_pesquisa_service.dart';
 import '../utils/data_hora_utils.dart';
 import '../utils/filtro_caronas.dart';
 import '../widgets/card_carona_disponivel.dart';
@@ -16,8 +21,24 @@ import 'detalhes_carona.dart';
 class BuscarCaronaTela extends StatefulWidget {
   final LocalizacaoSelecionada? destinoInicial;
   final String? cidadeInicial;
+  final LocalizacaoSelecionada? localizacaoReferencia;
+  final int? idUsuario;
+  final CampusDestinoService campusService;
+  final EnderecoService? enderecoService;
+  final CidadePesquisaService cidadePesquisaService;
+  final CatalogoCidadesService catalogoCidadesService;
 
-  const BuscarCaronaTela({super.key, this.destinoInicial, this.cidadeInicial});
+  const BuscarCaronaTela({
+    super.key,
+    this.destinoInicial,
+    this.cidadeInicial,
+    this.localizacaoReferencia,
+    this.idUsuario,
+    this.campusService = const CampusDestinoService(),
+    this.enderecoService,
+    this.cidadePesquisaService = const CidadePesquisaService(),
+    this.catalogoCidadesService = const CatalogoCidadesService(),
+  });
 
   @override
   State<BuscarCaronaTela> createState() => _BuscarCaronaTelaState();
@@ -34,6 +55,7 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
   DateTime? dataSelecionada;
   TimeOfDay? horarioSelecionado;
   LocalizacaoSelecionada? destinoSelecionado;
+  String? _cidadePesquisa;
 
   bool carregando = true;
   String? mensagemErro;
@@ -49,6 +71,8 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
   void initState() {
     super.initState();
     destinoSelecionado = widget.destinoInicial;
+    _cidadePesquisa =
+        widget.cidadeInicial ?? widget.localizacaoReferencia?.cidade;
     destinoController.text = destinoSelecionado?.descricaoCompleta ?? '';
     carregarCaronas();
   }
@@ -103,7 +127,7 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
       horarioPreferidoEmMinutos: horarioPreferido,
       destinoLatitude: destinoSelecionado?.ponto.latitude,
       destinoLongitude: destinoSelecionado?.ponto.longitude,
-      cidadePreferida: widget.cidadeInicial,
+      cidadePreferida: _cidadePesquisa,
     );
 
     setState(() {
@@ -165,6 +189,12 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
     aplicarFiltros();
   }
 
+  void atualizarCidade(CidadeCampus cidade) {
+    if (_cidadePesquisa == cidade.cidade) return;
+    _cidadePesquisa = cidade.cidade;
+    aplicarFiltros();
+  }
+
   void limparFiltros() {
     destinoController.clear();
     dataController.clear();
@@ -223,6 +253,13 @@ class _BuscarCaronaTelaState extends State<BuscarCaronaTela> {
                 onSelecionarData: selecionarData,
                 onSelecionarHorario: selecionarHorario,
                 onLimparFiltros: limparFiltros,
+                localizacaoReferencia: widget.localizacaoReferencia,
+                idUsuario: widget.idUsuario,
+                onCidadeDefinida: atualizarCidade,
+                campusService: widget.campusService,
+                enderecoService: widget.enderecoService,
+                cidadePesquisaService: widget.cidadePesquisaService,
+                catalogoCidadesService: widget.catalogoCidadesService,
               ),
 
               const SizedBox(height: 24),

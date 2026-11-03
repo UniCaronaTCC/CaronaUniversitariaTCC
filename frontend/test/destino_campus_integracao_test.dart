@@ -16,6 +16,7 @@ import 'package:uni_carona/services/cidade_pesquisa_service.dart';
 import 'package:uni_carona/services/mensagem_service.dart';
 import 'package:uni_carona/services/solicitacao_service.dart';
 import 'package:uni_carona/widgets/card_destino_home.dart';
+import 'package:uni_carona/widgets/campo_destino_campus.dart';
 
 import 'campus_destino_test.dart' show campusJson;
 
@@ -77,6 +78,18 @@ void main() {
               );
               await tester.tap(find.text('Buscar carona'));
               await tester.pumpAndSettle();
+              expect(
+                tester
+                    .widget<BuscarCaronaTela>(find.byType(BuscarCaronaTela))
+                    .idUsuario,
+                7,
+              );
+              expect(
+                tester
+                    .widget<CampoDestinoCampus>(find.byType(CampoDestinoCampus))
+                    .selecionarCidadeNaLista,
+                isTrue,
+              );
               expect(
                 tester
                     .widget<BuscarCaronaTela>(find.byType(BuscarCaronaTela))

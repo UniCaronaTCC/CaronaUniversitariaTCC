@@ -2,6 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 import '../mapa/models/localizacao_selecionada.dart';
+import '../mapa/services/endereco_service.dart';
+import '../models/campus_destino.dart';
+import '../services/campus_destino_service.dart';
+import '../services/catalogo_cidades_service.dart';
+import '../services/cidade_pesquisa_service.dart';
 import 'campo_destino_campus.dart';
 import 'campo_texto_carona.dart';
 
@@ -17,6 +22,13 @@ class FiltrosBuscaCarona extends StatelessWidget {
   final VoidCallback onSelecionarData;
   final VoidCallback onSelecionarHorario;
   final VoidCallback onLimparFiltros;
+  final LocalizacaoSelecionada? localizacaoReferencia;
+  final int? idUsuario;
+  final ValueChanged<CidadeCampus>? onCidadeDefinida;
+  final CampusDestinoService campusService;
+  final EnderecoService? enderecoService;
+  final CidadePesquisaService cidadePesquisaService;
+  final CatalogoCidadesService catalogoCidadesService;
 
   const FiltrosBuscaCarona({
     super.key,
@@ -29,6 +41,13 @@ class FiltrosBuscaCarona extends StatelessWidget {
     required this.onSelecionarData,
     required this.onSelecionarHorario,
     required this.onLimparFiltros,
+    this.localizacaoReferencia,
+    this.idUsuario,
+    this.onCidadeDefinida,
+    this.campusService = const CampusDestinoService(),
+    this.enderecoService,
+    this.cidadePesquisaService = const CidadePesquisaService(),
+    this.catalogoCidadesService = const CatalogoCidadesService(),
   });
 
   @override
@@ -75,6 +94,14 @@ class FiltrosBuscaCarona extends StatelessWidget {
           controller: destinoController,
           onChanged: onDestinoChanged,
           onSelecionado: onDestinoSelecionado,
+          selecionarCidadeNaLista: true,
+          referenciaInicial: localizacaoReferencia,
+          idUsuario: idUsuario,
+          onCidadeDefinida: onCidadeDefinida,
+          campusService: campusService,
+          enderecoService: enderecoService,
+          cidadePesquisaService: cidadePesquisaService,
+          catalogoCidadesService: catalogoCidadesService,
           visualAtualizado: true,
         ),
         const SizedBox(height: 16),
