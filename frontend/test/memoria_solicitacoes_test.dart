@@ -331,4 +331,46 @@ void main() {
     expect(consultas, 2);
     expect(memoria.confirmada(escopo), isTrue);
   });
+
+  test('publica estado de consulta e falha sem perder as listas', () async {
+    await carregar();
+    final anterior = memoria.ler(escopo);
+    final pendente = Completer<Map<String, dynamic>>();
+    var avisos = 0;
+    void ouvir() => avisos++;
+    memoria.alteracoes.addListener(ouvir);
+    final consulta = memoria.atualizar(
+      escopo,
+      recebidas: () => pendente.future,
+      enviadas: () async => enviadasOk(),
+    );
+    expect(memoria.consultando, isTrue);
+    await Future<void>.delayed(Duration.zero);
+    expect(avisos, greaterThan(0));
+    pendente.complete({'sucesso': false, 'mensagem': 'Sem internet'});
+    await consulta;
+    await Future<void>.delayed(Duration.zero);
+    expect(memoria.consultando, isFalse);
+    expect(memoria.erroAtualizacao, 'Sem internet');
+    expect(identical(memoria.ler(escopo), anterior), isTrue);
+    await carregar();
+    expect(memoria.erroAtualizacao, isNull);
+    memoria.alteracoes.removeListener(ouvir);
+  });
+
+  test(
+    'notificacoes sao adiadas e agrupadas para nao reconstruir durante montagem',
+    () async {
+      var avisos = 0;
+      void ouvir() => avisos++;
+      memoria.alteracoes.addListener(ouvir);
+      memoria.ler(escopo);
+      memoria.invalidar(escopo);
+      memoria.invalidar(escopo);
+      expect(avisos, 0);
+      await Future<void>.delayed(Duration.zero);
+      expect(avisos, 1);
+      memoria.alteracoes.removeListener(ouvir);
+    },
+  );
 }

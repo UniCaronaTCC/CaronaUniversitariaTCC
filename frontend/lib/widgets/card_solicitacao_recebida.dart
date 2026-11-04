@@ -9,6 +9,7 @@ import 'visual_buscaeu.dart';
 class CardSolicitacaoRecebida extends StatelessWidget {
   final SolicitacaoRecebida solicitacao;
   final bool processando;
+  final bool acoesHabilitadas;
   final VoidCallback onAceitar;
   final VoidCallback onRecusar;
   final VoidCallback? onAvaliar;
@@ -18,6 +19,7 @@ class CardSolicitacaoRecebida extends StatelessWidget {
     super.key,
     required this.solicitacao,
     required this.processando,
+    this.acoesHabilitadas = true,
     required this.onAceitar,
     required this.onRecusar,
     this.onAvaliar,
@@ -124,12 +126,16 @@ class CardSolicitacaoRecebida extends StatelessWidget {
               CamposLadoALado(
                 larguraMinima: 260,
                 primeiro: OutlinedButton.icon(
-                  onPressed: processando ? null : onRecusar,
+                  onPressed: processando || !acoesHabilitadas
+                      ? null
+                      : onRecusar,
                   icon: const Icon(Icons.close),
                   label: const Text('RECUSAR'),
                 ),
                 segundo: ElevatedButton.icon(
-                  onPressed: processando ? null : onAceitar,
+                  onPressed: processando || !acoesHabilitadas
+                      ? null
+                      : onAceitar,
                   icon: processando
                       ? const SizedBox(
                           width: 18,
@@ -145,7 +151,9 @@ class CardSolicitacaoRecebida extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: processando ? null : onCancelar,
+                  onPressed: processando || !acoesHabilitadas
+                      ? null
+                      : onCancelar,
                   icon: const Icon(Icons.close),
                   label: const Text('CANCELAR PARTICIPAÇÃO'),
                 ),
@@ -157,7 +165,9 @@ class CardSolicitacaoRecebida extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: processando ? null : onAvaliar,
+                  onPressed: processando || !acoesHabilitadas
+                      ? null
+                      : onAvaliar,
                   icon: const Icon(Icons.star_outline),
                   label: Text(processando ? 'ENVIANDO...' : 'AVALIAR'),
                 ),

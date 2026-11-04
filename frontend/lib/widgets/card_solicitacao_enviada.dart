@@ -9,6 +9,7 @@ import 'visual_buscaeu.dart';
 class CardSolicitacaoEnviada extends StatelessWidget {
   final SolicitacaoEnviada solicitacao;
   final bool processando;
+  final bool acoesHabilitadas;
   final VoidCallback? onAvaliar;
   final VoidCallback? onCancelar;
   final VoidCallback? onPagarPix;
@@ -18,6 +19,7 @@ class CardSolicitacaoEnviada extends StatelessWidget {
     super.key,
     required this.solicitacao,
     this.processando = false,
+    this.acoesHabilitadas = true,
     this.onAvaliar,
     this.onCancelar,
     this.onPagarPix,
@@ -112,7 +114,9 @@ class CardSolicitacaoEnviada extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: processando ? null : onAcompanhar,
+                  onPressed: processando || !acoesHabilitadas
+                      ? null
+                      : onAcompanhar,
                   icon: const Icon(Icons.location_searching_outlined),
                   label: const Text('ACOMPANHAR MOTORISTA'),
                 ),
@@ -123,7 +127,9 @@ class CardSolicitacaoEnviada extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: processando ? null : onPagarPix,
+                  onPressed: processando || !acoesHabilitadas
+                      ? null
+                      : onPagarPix,
                   icon: const Icon(Icons.pix),
                   label: Text(processando ? 'PREPARANDO...' : 'PAGAR COM PIX'),
                 ),
@@ -163,7 +169,9 @@ class CardSolicitacaoEnviada extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
-                  onPressed: processando ? null : onCancelar,
+                  onPressed: processando || !acoesHabilitadas
+                      ? null
+                      : onCancelar,
                   icon: const Icon(Icons.close),
                   label: Text(
                     solicitacao.status == 'ACEITA'
@@ -180,7 +188,9 @@ class CardSolicitacaoEnviada extends StatelessWidget {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  onPressed: processando ? null : onAvaliar,
+                  onPressed: processando || !acoesHabilitadas
+                      ? null
+                      : onAvaliar,
                   icon: const Icon(Icons.star_outline),
                   label: Text(processando ? 'ENVIANDO...' : 'AVALIAR'),
                 ),

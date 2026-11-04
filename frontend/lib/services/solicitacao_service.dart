@@ -14,6 +14,7 @@ import 'memoria_solicitacoes.dart';
 class SolicitacaoService {
   static final ValueNotifier<int> totalSolicitacoesPendentes = ValueNotifier(0);
   static Timer? _timerSolicitacoesPendentes;
+  static int _geracaoContador = 0;
 
   static EscopoSolicitacoes? get _escopoAtual {
     final id = int.tryParse(AuthService.usuarioLogado?['id']?.toString() ?? '');
@@ -66,7 +67,13 @@ class SolicitacaoService {
       return;
     }
 
+    final escopo = _escopoAtual;
+    if (escopo == null) return;
+    final geracao = _geracaoContador;
+
     await atualizarTotalSolicitacoesPendentes();
+
+    if (escopo != _escopoAtual || geracao != _geracaoContador) return;
 
     if (_timerSolicitacoesPendentes?.isActive == true) {
       return;
@@ -84,15 +91,20 @@ class SolicitacaoService {
       return;
     }
 
-    final resultados = await Future.wait([listarRecebidas(), listarEnviadas()]);
-    final recebidas = resultados[0]['dados'];
-    final enviadas = resultados[1]['dados'];
-
-    if (resultados[0]['sucesso'] == true &&
-        resultados[1]['sucesso'] == true &&
-        recebidas is List<SolicitacaoRecebida> &&
-        enviadas is List<SolicitacaoEnviada>) {
-      sincronizarTotalSolicitacoesPendentes(recebidas, enviadas: enviadas);
+    final escopo = _escopoAtual;
+    if (escopo == null) return;
+    final geracao = _geracaoContador;
+    final resultado = await atualizarListas();
+    if (escopo != _escopoAtual || geracao != _geracaoContador) return;
+    final listas = resultado['dados'];
+    if (resultado['sucesso'] == true &&
+        listas is ListasSolicitacoes &&
+        listasConfirmadas &&
+        identical(lerListas(), listas)) {
+      sincronizarTotalSolicitacoesPendentes(
+        listas.recebidas,
+        enviadas: listas.enviadas,
+      );
     }
   }
 
@@ -115,6 +127,7 @@ class SolicitacaoService {
   }
 
   static void pararContadorSolicitacoesPendentes({bool limparTotal = true}) {
+    _geracaoContador++;
     _timerSolicitacoesPendentes?.cancel();
     _timerSolicitacoesPendentes = null;
 

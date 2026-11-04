@@ -284,7 +284,7 @@ void main() {
             await tester.pumpAndSettle();
             await operacao;
             conferirAviso(tester, sucesso);
-            expect(cargas, sucesso ? 4 : 2);
+            expect(cargas, historico && !sucesso ? 2 : 4);
           },
           (request) async {
             if (request.url.path == '/avaliacoes') {

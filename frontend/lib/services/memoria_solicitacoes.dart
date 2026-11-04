@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import '../models/solicitacao_enviada.dart';
 import '../models/solicitacao_recebida.dart';
 
@@ -27,6 +29,23 @@ class MemoriaSolicitacoes {
   int _geracao = 0;
   int _revisao = 0;
   int? _revisaoConfirmada;
+  final _alteracoes = ValueNotifier<int>(0);
+  bool _notificacaoAgendada = false;
+  String? _erroAtualizacao;
+
+  ValueListenable<int> get alteracoes => _alteracoes;
+  bool get consultando => _consulta != null;
+  String? get erroAtualizacao => _erroAtualizacao;
+
+  void _notificar() {
+    if (_notificacaoAgendada) return;
+    _notificacaoAgendada = true;
+    // O contador pode iniciar uma consulta enquanto a barra esta sendo montada.
+    scheduleMicrotask(() {
+      _notificacaoAgendada = false;
+      _alteracoes.value++;
+    });
+  }
 
   void limpar() {
     _geracao++;
@@ -35,6 +54,8 @@ class MemoriaSolicitacoes {
     _escopo = null;
     _dados = null;
     _consulta = null;
+    _erroAtualizacao = null;
+    _notificar();
   }
 
   void _preparar(EscopoSolicitacoes escopo) {
@@ -54,6 +75,7 @@ class MemoriaSolicitacoes {
   void invalidar(EscopoSolicitacoes escopo) {
     _preparar(escopo);
     _revisao++;
+    _notificar();
   }
 
   Future<Map<String, dynamic>> atualizar(
@@ -65,8 +87,10 @@ class MemoriaSolicitacoes {
     if (_consulta != null) return _consulta!;
     // Uma leitura anterior nao confirma que os botoes ainda sao aplicaveis.
     _revisaoConfirmada = null;
+    _erroAtualizacao = null;
     final conclusao = Completer<Map<String, dynamic>>();
     _consulta = conclusao.future;
+    _notificar();
     unawaited(_executar(_geracao, recebidas, enviadas, conclusao));
     return conclusao.future;
   }
@@ -128,12 +152,20 @@ class MemoriaSolicitacoes {
         if (resultado['sucesso'] == true) {
           _dados = resultado['dados'] as ListasSolicitacoes;
           _revisaoConfirmada = revisao;
+          _erroAtualizacao = null;
+        } else {
+          _erroAtualizacao =
+              resultado['mensagem']?.toString() ??
+              'Nao foi possivel atualizar suas solicitacoes. Tente novamente.';
         }
         conclusao.complete(resultado);
         return;
       }
     } finally {
-      if (geracao == _geracao) _consulta = null;
+      if (geracao == _geracao) {
+        _consulta = null;
+        _notificar();
+      }
     }
   }
 }
