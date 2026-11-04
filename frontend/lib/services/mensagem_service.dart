@@ -9,6 +9,7 @@ import '../config/api_config.dart';
 import '../models/conversa.dart';
 import '../models/mensagem.dart';
 import 'auth_service.dart';
+import 'cliente_http_com_prazo.dart';
 import 'supabase_auth_service.dart';
 
 class MensagemService {
@@ -17,18 +18,35 @@ class MensagemService {
   static const Duration tempoLimiteEnvio = Duration(seconds: 10);
   static final ValueNotifier<int> totalMensagensNaoLidas = ValueNotifier(0);
   static final ValueNotifier<int> versaoConversas = ValueNotifier(0);
+  static final ValueNotifier<int> versaoListaConversas = ValueNotifier(0);
   static final ValueNotifier<int> versaoNotificacoes = ValueNotifier(0);
   static RealtimeChannel? _canalMensagensNaoLidas;
   static int? _idUsuarioAcompanhado;
 
   static Future<Map<String, dynamic>> listarConversas() async {
-    return _requisicao(
-      () => http.get(
-        Uri.parse('${ApiConfig.baseUrl}/conversas'),
-        headers: _cabecalhos(),
-      ),
-      converterDados: (dados) => _converterLista(dados, Conversa.fromJson),
-    );
+    final cliente = ClienteHttpComPrazo();
+    try {
+      return await _requisicao(
+        () => cliente.get(
+          Uri.parse('${ApiConfig.baseUrl}/conversas'),
+          headers: _cabecalhos(),
+        ),
+        validarConversas: true,
+        converterDados: (dados) {
+          if (dados is! List || dados.any((item) => item is! Map)) {
+            throw const FormatException('Lista de conversas invalida');
+          }
+          return dados
+              .map(
+                (item) =>
+                    Conversa.fromJson(Map<String, dynamic>.from(item as Map)),
+              )
+              .toList();
+        },
+      );
+    } finally {
+      cliente.close();
+    }
   }
 
   static Future<Map<String, dynamic>> obterConversa(int idSolicitacao) async {
@@ -115,7 +133,10 @@ class MensagemService {
         )
         .onBroadcast(
           event: 'INSERT',
-          callback: (_) => unawaited(atualizarTotalMensagensNaoLidas()),
+          callback: (_) {
+            versaoListaConversas.value++;
+            unawaited(atualizarTotalMensagensNaoLidas());
+          },
         )
         .onBroadcast(
           event: 'CONVERSA_ATUALIZADA',
@@ -213,6 +234,7 @@ class MensagemService {
   static Future<Map<String, dynamic>> _requisicao(
     Future<http.Response> Function() enviar, {
     required dynamic Function(dynamic dados) converterDados,
+    bool validarConversas = false,
   }) async {
     try {
       final resposta = await AuthService.enviarComToken((_) => enviar());
@@ -221,11 +243,23 @@ class MensagemService {
         return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
       }
 
+      if (validarConversas && resposta.statusCode == 401) {
+        await pararContadorMensagensNaoLidas();
+        await AuthService.sair();
+        return {
+          'sucesso': false,
+          'mensagem': 'Sua sessão expirou. Entre novamente.',
+        };
+      }
+
       final corpo = resposta.body.isEmpty
           ? <String, dynamic>{}
           : Map<String, dynamic>.from(jsonDecode(resposta.body) as Map);
 
       if (resposta.statusCode >= 200 && resposta.statusCode < 300) {
+        if (validarConversas && corpo['sucesso'] != true) {
+          throw const FormatException('Resposta de conversas invalida');
+        }
         return {
           'sucesso': true,
           'mensagem': corpo['mensagem'],
@@ -249,6 +283,13 @@ class MensagemService {
             corpo['mensagem']?.toString() ??
             corpo['message']?.toString() ??
             'Não foi possível concluir a operação',
+      };
+    } on FormatException {
+      return {
+        'sucesso': false,
+        'mensagem': validarConversas
+            ? 'O servidor retornou uma lista de conversas inválida. Tente novamente.'
+            : 'Não foi possível conectar ao servidor',
       };
     } catch (erro) {
       return {

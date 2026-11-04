@@ -7,6 +7,7 @@ import '../models/conversa.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/auth_service.dart';
 import '../services/mensagem_service.dart';
+import '../services/memoria_conversas.dart';
 import '../widgets/barra_navegacao_home.dart';
 import '../widgets/card_conversa.dart';
 import '../widgets/componentes_padrao.dart';
@@ -20,6 +21,7 @@ class ConversasTela extends StatefulWidget {
   final ValueChanged<Conversa>? abrirConversa;
   final int? idUsuario;
   final DateTime Function()? agora;
+  final MemoriaConversas? memoria;
 
   const ConversasTela({
     super.key,
@@ -27,6 +29,7 @@ class ConversasTela extends StatefulWidget {
     this.abrirConversa,
     this.idUsuario,
     this.agora,
+    this.memoria,
   });
 
   @override
@@ -40,6 +43,27 @@ class _ConversasTelaState extends State<ConversasTela>
   String? mensagemErro;
   bool mostrarEncerradas = false;
   Timer? _timerArquivamento;
+  late final MemoriaConversas _memoria;
+  late final EscopoConversas _escopo;
+  bool _temListaValida = false;
+  Future<void>? _consulta;
+
+  bool get _sessaoValida =>
+      _escopo == (idUsuarioAtual, AuthService.versaoSessao) &&
+      (widget.carregarConversas != null || AuthService.estaLogado);
+
+  void _aoMudarSessao() {
+    _memoria.limpar();
+    _timerArquivamento?.cancel();
+    if (!mounted) return;
+    setState(() {
+      conversas = [];
+      _temListaValida = false;
+      carregando = false;
+      mensagemErro =
+          'Sua sessão mudou. Entre novamente para consultar as conversas.';
+    });
+  }
 
   DateTime get agora => widget.agora?.call() ?? DateTime.now();
 
@@ -75,6 +99,22 @@ class _ConversasTelaState extends State<ConversasTela>
   @override
   void initState() {
     super.initState();
+    _escopo = (idUsuarioAtual, AuthService.versaoSessao);
+    _memoria =
+        widget.memoria ??
+        (widget.carregarConversas == null
+            ? MemoriaConversas.compartilhada
+            : MemoriaConversas());
+    final anteriores = _sessaoValida && idUsuarioAtual > 0
+        ? _memoria.ler(_escopo)
+        : null;
+    if (anteriores != null) {
+      conversas = anteriores;
+      _temListaValida = true;
+      carregando = false;
+      _agendarArquivamento();
+    }
+    AuthService.alteracoesSessao.addListener(_aoMudarSessao);
     WidgetsBinding.instance.addObserver(this);
 
     if (widget.carregarConversas == null) {
@@ -83,12 +123,19 @@ class _ConversasTelaState extends State<ConversasTela>
       );
     }
     MensagemService.versaoConversas.addListener(atualizarConversasEmTempoReal);
+    MensagemService.versaoListaConversas.addListener(
+      atualizarConversasEmTempoReal,
+    );
 
-    carregarDados();
+    carregarDados(invalidar: false);
   }
 
   @override
   void dispose() {
+    AuthService.alteracoesSessao.removeListener(_aoMudarSessao);
+    MensagemService.versaoListaConversas.removeListener(
+      atualizarConversasEmTempoReal,
+    );
     _timerArquivamento?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     MensagemService.totalMensagensNaoLidas.removeListener(
@@ -105,45 +152,56 @@ class _ConversasTelaState extends State<ConversasTela>
     if (state == AppLifecycleState.resumed) {
       setState(() {});
       _agendarArquivamento();
-      carregarDados(silencioso: true);
+      carregarDados();
     }
   }
 
   void atualizarConversasEmTempoReal() {
-    carregarDados(silencioso: true);
+    carregarDados();
   }
 
-  Future<void> carregarDados({bool silencioso = false}) async {
-    if (!silencioso) {
-      setState(() {
-        carregando = true;
-        mensagemErro = null;
-      });
+  Future<void> carregarDados({bool invalidar = true}) {
+    if (!_sessaoValida || idUsuarioAtual <= 0) {
+      _timerArquivamento?.cancel();
+      if (mounted) {
+        setState(() {
+          conversas = [];
+          _temListaValida = false;
+          carregando = false;
+          mensagemErro = 'Entre novamente para consultar suas conversas.';
+        });
+      }
+      return Future<void>.value();
     }
+    if (invalidar) _memoria.invalidar(_escopo);
+    return _consulta ??= _carregarLista().whenComplete(() => _consulta = null);
+  }
 
-    final resultado =
-        await (widget.carregarConversas?.call() ??
-            MensagemService.listarConversas());
-
-    if (!mounted) {
-      return;
-    }
-
-    if (resultado['sucesso'] == true && resultado['dados'] is List) {
+  Future<void> _carregarLista() async {
+    setState(() {
+      carregando = !_temListaValida;
+      mensagemErro = null;
+    });
+    final resultado = await _memoria.atualizar(
+      _escopo,
+      widget.carregarConversas ?? MensagemService.listarConversas,
+    );
+    if (!mounted || !_sessaoValida) return;
+    if (resultado['sucesso'] == true) {
       setState(() {
-        conversas = (resultado['dados'] as List).whereType<Conversa>().toList();
+        conversas = resultado['dados'] as List<Conversa>;
+        _temListaValida = true;
         carregando = false;
         mensagemErro = null;
       });
       _agendarArquivamento();
-      return;
+    } else {
+      setState(() {
+        carregando = false;
+        mensagemErro =
+            resultado['mensagem']?.toString() ?? 'Erro ao carregar conversas';
+      });
     }
-
-    setState(() {
-      carregando = false;
-      mensagemErro =
-          resultado['mensagem']?.toString() ?? 'Erro ao carregar conversas';
-    });
   }
 
   Future<void> abrirConversa(Conversa conversa) async {
@@ -193,6 +251,28 @@ class _ConversasTelaState extends State<ConversasTela>
                   style: VisualBuscaEu.descricao,
                 ),
               ),
+              if (_temListaValida && mensagemErro != null)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          mensagemErro!,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.black54,
+                          ),
+                        ),
+                      ),
+                      IconButton(
+                        tooltip: 'Tentar atualizar conversas novamente',
+                        icon: const Icon(Icons.refresh_rounded),
+                        onPressed: carregarDados,
+                      ),
+                    ],
+                  ),
+                ),
               Expanded(child: _conteudo()),
             ],
           ),
@@ -202,7 +282,7 @@ class _ConversasTelaState extends State<ConversasTela>
   }
 
   Widget _conteudo() {
-    if (carregando || mensagemErro != null) {
+    if (carregando || (!_temListaValida && mensagemErro != null)) {
       return _estadoAtualizavel(
         carregando
             ? const EstadoConteudoPadrao(

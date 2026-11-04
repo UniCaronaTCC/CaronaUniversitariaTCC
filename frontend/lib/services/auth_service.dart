@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/api_config.dart';
+import 'memoria_conversas.dart';
 import 'sessao_service.dart';
 import 'supabase_auth_service.dart';
 
@@ -12,12 +14,22 @@ class AuthService {
   static String? _tokenUsuarioLogado;
   static Map<String, dynamic>? usuarioLogado;
   static int _versaoSessao = 0;
+  static final _alteracoesSessao = ValueNotifier<int>(0);
+
+  static int get versaoSessao => _versaoSessao;
+  static ValueListenable<int> get alteracoesSessao => _alteracoesSessao;
+
+  static void _invalidarGeracaoSessao() {
+    _versaoSessao++;
+    MemoriaConversas.compartilhada.limpar();
+    _alteracoesSessao.value = _versaoSessao;
+  }
 
   static String? get tokenUsuarioLogado =>
       SupabaseAuthService.tokenAtual ?? _tokenUsuarioLogado;
 
   static set tokenUsuarioLogado(String? token) {
-    if (token == null) _versaoSessao++;
+    if (token == null) _invalidarGeracaoSessao();
     _tokenUsuarioLogado = token;
   }
 
@@ -47,7 +59,7 @@ class AuthService {
   }
 
   static Future<void> sair() async {
-    _versaoSessao++;
+    _invalidarGeracaoSessao();
     try {
       await SupabaseAuthService.sair();
     } finally {
@@ -117,7 +129,7 @@ class AuthService {
     }
 
     try {
-      _versaoSessao++;
+      _invalidarGeracaoSessao();
       final resposta = await SupabaseAuthService.entrar(email, senha);
       tokenUsuarioLogado = resposta.session?.accessToken;
 
