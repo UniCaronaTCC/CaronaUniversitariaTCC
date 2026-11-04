@@ -14,6 +14,7 @@ import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 import { UsersService } from '../users/users.service';
 import { RecorrenciasService } from './recorrencias.service';
 import { EncerramentoCorridasService } from './encerramento-corridas.service';
+import { PARTIDA_FUTURA_SQL } from './partida-carona';
 
 describe('CaronasService', () => {
   let service: CaronasService;
@@ -196,6 +197,29 @@ describe('CaronasService', () => {
         'usuario.nome',
         'usuario.fotoPerfil',
       ]);
+    },
+  );
+
+  it.each(['listarCaronas', 'listarMinhasCaronas'] as const)(
+    '%s aplica o limite de partida apenas na busca publica',
+    async (metodo) => {
+      const listagem = {
+        ...queryBuilder,
+        leftJoinAndMapOne: jest.fn().mockReturnThis(),
+        innerJoinAndSelect: jest.fn().mockReturnThis(),
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        addOrderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      };
+      repository.createQueryBuilder.mockReturnValue(listagem);
+      await service[metodo](1);
+      if (metodo === 'listarCaronas') {
+        expect(listagem.andWhere).toHaveBeenCalledWith(PARTIDA_FUTURA_SQL);
+      } else {
+        expect(listagem.andWhere).not.toHaveBeenCalledWith(PARTIDA_FUTURA_SQL);
+      }
     },
   );
 

@@ -27,6 +27,7 @@ import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 import { UsersService } from '../users/users.service';
 import { RecorrenciasService } from './recorrencias.service';
 import { CARONA_VENCIDA_SQL } from './carona-vencida';
+import { PARTIDA_FUTURA_SQL } from './partida-carona';
 import {
   EncerramentoCorridasService,
   STATUS_ENCERRADA_POR_TEMPO,
@@ -493,22 +494,7 @@ export class CaronasService {
         },
       )
 
-      .andWhere(
-        `
-        (
-          carona.dataInicio >=
-            (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date
-          OR (
-            carona.recorrente = true
-            AND (
-              carona.dataFim IS NULL
-              OR carona.dataFim >=
-                (CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo')::date
-            )
-          )
-        )
-        `,
-      )
+      .andWhere(PARTIDA_FUTURA_SQL)
 
       .orderBy('carona.dataInicio', 'ASC')
       .addOrderBy('carona.horario', 'ASC')

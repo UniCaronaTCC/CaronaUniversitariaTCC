@@ -10,6 +10,7 @@ import { DataSource, Repository, SelectQueryBuilder } from 'typeorm';
 import { AvaliacoesService } from '../avaliacoes/avaliacoes.service';
 import { Carona } from '../caronas/carona.entity';
 import { CaronasService } from '../caronas/caronas.service';
+import { partidaNoFuturo } from '../caronas/partida-carona';
 import { PontoEmbarque } from '../caronas/ponto-embarque.entity';
 import { Conversa } from '../mensagens/conversa.entity';
 import { Pagamento } from '../pagamentos/pagamento.entity';
@@ -67,6 +68,10 @@ export class SolicitacoesService {
 
     if (carona.status !== 'ATIVA' || carona.vagas <= 0) {
       throw new ConflictException('Esta carona não está disponível');
+    }
+
+    if (!partidaNoFuturo(carona)) {
+      throw new ConflictException('O horário de saída desta carona já passou');
     }
 
     if (carona.usuario.idUsuario === dados.idPassageiro) {

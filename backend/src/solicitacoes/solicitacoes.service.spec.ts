@@ -130,6 +130,8 @@ describe('SolicitacoesService', () => {
   it('cria uma solicitação pendente para outro motorista', async () => {
     caronasRepository.findOne.mockResolvedValue({
       idCarona: 10,
+      dataInicio: '2026-09-15',
+      horario: '14:00:00',
       status: 'ATIVA',
       vagas: 2,
       usuario: { idUsuario: 2 },
@@ -151,6 +153,51 @@ describe('SolicitacoesService', () => {
     expect(resultado.status).toBe('PENDENTE');
     expect(caronasService.finalizarCaronasVencidas).toHaveBeenCalledTimes(1);
     expect(solicitacoesRepository.save).toHaveBeenCalledTimes(1);
+  });
+
+  it.each(['2026-11-03T21:35:00Z', '2026-11-03T23:19:00Z'])(
+    'bloqueia pedido tardio de uma tela antiga em %s',
+    async (instante) => {
+      jest.setSystemTime(new Date(instante));
+      caronasRepository.findOne.mockResolvedValue({
+        idCarona: 10,
+        status: 'ATIVA',
+        vagas: 2,
+        dataInicio: '2026-11-03',
+        horario: '18:35:00',
+        usuario: { idUsuario: 2 },
+      });
+      await expect(
+        service.criarSolicitacao({
+          idCarona: 10,
+          idPassageiro: 1,
+          tipoPontoEmbarque: 'EXISTENTE',
+          idPontoEmbarque: 5,
+        }),
+      ).rejects.toThrow('O horário de saída desta carona já passou');
+      expect(solicitacoesRepository.save).not.toHaveBeenCalled();
+      expect(pontosEmbarqueRepository.findOne).not.toHaveBeenCalled();
+    },
+  );
+
+  it('mantem a carona das 18h35 para o passageiro aceito as 20h19', async () => {
+    jest.setSystemTime(new Date('2026-11-03T23:19:00Z'));
+    const solicitacao = {
+      idSolicitacao: 1,
+      status: 'ACEITA',
+      carona: {
+        idCarona: 10,
+        status: 'ATIVA',
+        dataInicio: '2026-11-03',
+        horario: '18:35:00',
+        recorrente: false,
+      },
+    } as Solicitacao;
+    atualizarQueryBuilder.getMany.mockResolvedValue([solicitacao]);
+    const enviadas = await service.listarEnviadas(1);
+    expect(enviadas).toContain(solicitacao);
+    expect(solicitacao.status).toBe('ACEITA');
+    expect(solicitacao.carona.status).toBe('ATIVA');
   });
 
   it('expira pedidos pendentes de caronas finalizadas', async () => {
@@ -224,6 +271,8 @@ describe('SolicitacoesService', () => {
   it('impede solicitar vaga na própria carona', async () => {
     caronasRepository.findOne.mockResolvedValue({
       idCarona: 10,
+      dataInicio: '2026-09-15',
+      horario: '14:00:00',
       status: 'ATIVA',
       vagas: 2,
       usuario: { idUsuario: 1 },
@@ -244,6 +293,8 @@ describe('SolicitacoesService', () => {
   it('impede solicitar vaga quando a carona não possui vagas', async () => {
     caronasRepository.findOne.mockResolvedValue({
       idCarona: 10,
+      dataInicio: '2026-09-15',
+      horario: '14:00:00',
       status: 'ATIVA',
       vagas: 0,
       usuario: { idUsuario: 2 },
@@ -266,6 +317,8 @@ describe('SolicitacoesService', () => {
   it('impede uma segunda solicitação ativa para a mesma carona', async () => {
     caronasRepository.findOne.mockResolvedValue({
       idCarona: 10,
+      dataInicio: '2026-09-15',
+      horario: '14:00:00',
       status: 'ATIVA',
       vagas: 2,
       usuario: { idUsuario: 2 },
