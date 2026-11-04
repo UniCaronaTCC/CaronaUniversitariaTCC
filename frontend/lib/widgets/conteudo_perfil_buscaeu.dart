@@ -7,6 +7,8 @@ import 'visual_buscaeu.dart';
 class ConteudoPerfilBuscaEu extends StatelessWidget {
   final Map<String, dynamic> usuario;
   final bool carregando, enviandoFoto;
+  final bool atualizando, acoesHabilitadas;
+  final bool carregandoAvaliacoes, avaliacoesDisponiveis;
   final double media;
   final int totalAvaliacoes;
   final String? erro, erroAvaliacoes;
@@ -15,11 +17,17 @@ class ConteudoPerfilBuscaEu extends StatelessWidget {
   final Color corSituacao;
   final VoidCallback onFoto, onEditar, onVeiculo, onCnh, onAvaliacoes;
   final VoidCallback onHistorico, onRecorrencias, onSair, onRecarregar;
+  final VoidCallback? onRecarregarAvaliacoes;
 
   const ConteudoPerfilBuscaEu({
     super.key,
     required this.usuario,
     required this.carregando,
+    this.atualizando = false,
+    this.acoesHabilitadas = true,
+    this.carregandoAvaliacoes = false,
+    this.avaliacoesDisponiveis = true,
+    this.onRecarregarAvaliacoes,
     required this.enviandoFoto,
     required this.media,
     required this.totalAvaliacoes,
@@ -63,16 +71,18 @@ class ConteudoPerfilBuscaEu extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(24, 12, 24, 24),
       children: [
-        if (carregando) ...[
-          const LinearProgressIndicator(),
-          const SizedBox(height: 20),
-        ],
+        SizedBox(
+          height: 2,
+          child: carregando || atualizando
+              ? const LinearProgressIndicator(minHeight: 2)
+              : null,
+        ),
         Center(
           child: FotoPerfil(
             nome: nome,
             urlFoto: usuario['fotoPerfil']?.toString().trim(),
             carregando: enviandoFoto,
-            onTap: carregando ? null : onFoto,
+            onTap: carregando || !acoesHabilitadas ? null : onFoto,
           ),
         ),
         const SizedBox(height: 14),
@@ -134,7 +144,7 @@ class ConteudoPerfilBuscaEu extends StatelessWidget {
                     const SizedBox(width: 6),
                     Flexible(
                       child: Text(
-                        '$nota / 5',
+                        avaliacoesDisponiveis ? '$nota / 5' : 'Avaliações',
                         style: const TextStyle(
                           fontWeight: FontWeight.w600,
                           fontSize: 17,
@@ -149,20 +159,44 @@ class ConteudoPerfilBuscaEu extends StatelessWidget {
                   ],
                 ),
                 Text(
-                  erroAvaliacoes ?? avaliacoes,
+                  avaliacoesDisponiveis
+                      ? avaliacoes
+                      : carregandoAvaliacoes
+                      ? 'Consultando avaliações'
+                      : 'Avaliações indisponíveis',
                   textAlign: TextAlign.center,
                   style: VisualBuscaEu.descricao,
                 ),
+                if (erroAvaliacoes != null) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    erroAvaliacoes!,
+                    textAlign: TextAlign.center,
+                    style: VisualBuscaEu.descricao,
+                  ),
+                ],
               ],
             ),
           ),
         ),
-        if (erro != null)
+        if (erroAvaliacoes != null && onRecarregarAvaliacoes != null)
           TextButton.icon(
-            onPressed: onRecarregar,
+            onPressed: carregandoAvaliacoes ? null : onRecarregarAvaliacoes,
+            icon: const Icon(Icons.refresh),
+            label: const Text('Atualizar avaliações'),
+          ),
+        if (erro != null) ...[
+          Text(
+            erro!,
+            textAlign: TextAlign.center,
+            style: VisualBuscaEu.descricao,
+          ),
+          TextButton.icon(
+            onPressed: carregando || atualizando ? null : onRecarregar,
             icon: const Icon(Icons.refresh),
             label: const Text('Tentar atualizar novamente'),
           ),
+        ],
         const SizedBox(height: 20),
         const Text('Meu veículo', style: VisualBuscaEu.titulo),
         const SizedBox(height: 10),
@@ -177,7 +211,7 @@ class ConteudoPerfilBuscaEu extends StatelessWidget {
                   : '${veiculo['cor']} • ${veiculo['placa']}',
             ),
             trailing: Icon(veiculo == null ? Icons.add : Icons.chevron_right),
-            onTap: carregando ? null : onVeiculo,
+            onTap: carregando || !acoesHabilitadas ? null : onVeiculo,
           ),
         ),
         const SizedBox(height: 20),
@@ -199,7 +233,7 @@ class ConteudoPerfilBuscaEu extends StatelessWidget {
                   : 'Necessária para oferecer caronas',
             ),
             trailing: const Icon(Icons.chevron_right),
-            onTap: carregando ? null : onCnh,
+            onTap: carregando || !acoesHabilitadas ? null : onCnh,
           ),
         ),
         const SizedBox(height: 20),
@@ -250,7 +284,7 @@ class ConteudoPerfilBuscaEu extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         OutlinedButton.icon(
-          onPressed: carregando ? null : onEditar,
+          onPressed: carregando || !acoesHabilitadas ? null : onEditar,
           icon: const Icon(Icons.edit_outlined, size: 20),
           label: const Text('Editar perfil'),
         ),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -9,6 +11,7 @@ import '../models/verificacao_cnh.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/avaliacao_service.dart';
 import '../services/auth_service.dart';
+import '../services/memoria_resumo_perfil.dart';
 import '../services/mensagem_service.dart';
 import '../services/solicitacao_service.dart';
 import '../widgets/barra_navegacao_home.dart';
@@ -59,6 +62,7 @@ class PerfilTela extends StatefulWidget {
   final EnviarFotoPerfil? enviarFoto;
   final RemoverFotoPerfil? removerFoto;
   final SalvarVeiculo? salvarVeiculo;
+  final MemoriaResumoPerfil? memoriaResumo;
 
   const PerfilTela({
     super.key,
@@ -71,6 +75,7 @@ class PerfilTela extends StatefulWidget {
     this.enviarFoto,
     this.removerFoto,
     this.salvarVeiculo,
+    this.memoriaResumo,
   });
 
   @override
@@ -78,7 +83,9 @@ class PerfilTela extends StatefulWidget {
 }
 
 class _PerfilTelaState extends State<PerfilTela> {
-  Map<String, dynamic> usuario = AuthService.usuarioLogado ?? {};
+  Map<String, dynamic> usuario = Map<String, dynamic>.from(
+    AuthService.usuarioLogado ?? {},
+  );
   bool carregando = true;
   bool enviandoFoto = false;
   bool _selecionandoFoto = false;
@@ -86,6 +93,61 @@ class _PerfilTelaState extends State<PerfilTela> {
   String? mensagemErroAvaliacoes;
   double mediaAvaliacao = 0;
   int totalAvaliacoes = 0;
+  bool carregandoAvaliacoes = false;
+  bool _temResumo = false;
+  bool _temPerfil = false;
+  bool _perfilConfirmado = false;
+  bool _dialogoAberto = false;
+  bool _salvandoPerfil = false;
+  late final (int, int) _sessao;
+  late final MemoriaResumoPerfil _memoriaResumo;
+  Future<void>? _consultaPerfil;
+  Future<void>? _consultaResumo;
+
+  int get _idConta =>
+      int.tryParse(AuthService.usuarioLogado?['id']?.toString() ?? '') ?? 0;
+  int? get _idPerfil => int.tryParse(usuario['id']?.toString() ?? '');
+  bool get _personalizado =>
+      widget.carregarPerfil != null ||
+      widget.carregarAvaliacoes != null ||
+      widget.memoriaResumo != null;
+  bool get _sessaoValida =>
+      _sessao == (_idConta, AuthService.versaoSessao) &&
+      (_personalizado || AuthService.estaLogado);
+  bool get _ocupada =>
+      enviandoFoto || _selecionandoFoto || _dialogoAberto || _salvandoPerfil;
+  bool get _podeAlterar =>
+      _sessaoValida &&
+      _perfilConfirmado &&
+      !carregando &&
+      _consultaPerfil == null &&
+      !_ocupada;
+
+  void _aoMudarSessao() {
+    if (_personalizado) _memoriaResumo.limpar();
+    if (!mounted) return;
+    setState(() {
+      usuario = {};
+      mediaAvaliacao = 0;
+      totalAvaliacoes = 0;
+      _temResumo = false;
+      _temPerfil = false;
+      _perfilConfirmado = false;
+      carregando = false;
+      carregandoAvaliacoes = false;
+      mensagemErroAvaliacoes = null;
+      mensagemErro =
+          'Sua sessão mudou. Entre novamente para consultar o perfil.';
+    });
+  }
+
+  void _restaurarResumo(int id) {
+    final resumo = _memoriaResumo.ler((id, _sessao.$2));
+    if (resumo == null) return;
+    _temResumo = true;
+    mediaAvaliacao = resumo.media;
+    totalAvaliacoes = resumo.total;
+  }
 
   void _mostrarAviso(String mensagem, {required TipoAviso tipo}) {
     if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
@@ -95,75 +157,147 @@ class _PerfilTelaState extends State<PerfilTela> {
   @override
   void initState() {
     super.initState();
+    _sessao = (_idConta, AuthService.versaoSessao);
+    _memoriaResumo =
+        widget.memoriaResumo ??
+        (_personalizado
+            ? MemoriaResumoPerfil()
+            : MemoriaResumoPerfil.compartilhada);
+    _temPerfil = _sessaoValida && (_idPerfil ?? 0) > 0;
+    if (_temPerfil) _restaurarResumo(_idPerfil!);
+    AuthService.alteracoesSessao.addListener(_aoMudarSessao);
     carregarDados();
   }
 
-  Future<void> carregarDados() async {
+  @override
+  void dispose() {
+    AuthService.alteracoesSessao.removeListener(_aoMudarSessao);
+    super.dispose();
+  }
+
+  Future<void> carregarDados() {
+    if (!mounted) return Future<void>.value();
+    if (!_sessaoValida || (!_personalizado && _idConta <= 0)) {
+      if (mounted) {
+        _aoMudarSessao();
+      }
+      return Future<void>.value();
+    }
+    if (_ocupada) return Future<void>.value();
+    final perfil = _consultaPerfil ??= _carregarPerfil().whenComplete(
+      () => _consultaPerfil = null,
+    );
+    final id = _idPerfil;
+    final resumo = id != null && id > 0
+        ? atualizarAvaliacoes()
+        : perfil.then((_) {
+            if (mounted && _sessaoValida && (_idPerfil ?? 0) > 0) {
+              return atualizarAvaliacoes();
+            }
+          });
+    return Future.wait<void>([perfil, resumo]).then((_) {});
+  }
+
+  Future<void> _carregarPerfil() async {
     setState(() {
       carregando = true;
+      _perfilConfirmado = false;
       mensagemErro = null;
+    });
+    try {
+      final resultado = await Future.sync(
+        widget.carregarPerfil ?? AuthService.buscarPerfil,
+      ).timeout(const Duration(seconds: 25));
+      if (!mounted) return;
+      if (!_sessaoValida) {
+        _aoMudarSessao();
+        return;
+      }
+      final dados = resultado['dados'];
+      final id = dados is Map
+          ? int.tryParse(dados['id']?.toString() ?? '')
+          : null;
+      if (resultado['sucesso'] != true ||
+          dados is! Map ||
+          id == null ||
+          id <= 0 ||
+          (_sessao.$1 > 0 && id != _sessao.$1)) {
+        setState(
+          () => mensagemErro =
+              resultado['mensagem']?.toString() ??
+              'Não foi possível atualizar seu perfil. Tente novamente.',
+        );
+        return;
+      }
+      setState(() {
+        usuario = Map<String, dynamic>.from(dados);
+        _temPerfil = true;
+        _perfilConfirmado = true;
+        _restaurarResumo(id);
+      });
+    } catch (_) {
+      if (mounted && _sessaoValida) {
+        setState(
+          () => mensagemErro =
+              'Não foi possível atualizar seu perfil. Tente novamente.',
+        );
+      }
+    } finally {
+      if (mounted && _sessaoValida) setState(() => carregando = false);
+    }
+  }
+
+  Future<void> atualizarAvaliacoes({bool invalidar = false}) {
+    final id = _idPerfil;
+    if (!mounted || !_sessaoValida || id == null || id <= 0) {
+      return Future<void>.value();
+    }
+    if (invalidar) _memoriaResumo.invalidar((id, _sessao.$2));
+    return _consultaResumo ??= _carregarResumo(
+      id,
+    ).whenComplete(() => _consultaResumo = null);
+  }
+
+  Future<void> _carregarResumo(int id) async {
+    setState(() {
+      _restaurarResumo(id);
+      carregandoAvaliacoes = true;
       mensagemErroAvaliacoes = null;
     });
-
-    final resultadoPerfil =
-        await (widget.carregarPerfil?.call() ?? AuthService.buscarPerfil());
-
-    if (!mounted) {
-      return;
-    }
-
-    if (resultadoPerfil['sucesso'] != true ||
-        resultadoPerfil['dados'] is! Map) {
-      setState(() {
-        carregando = false;
-        mensagemErro = resultadoPerfil['mensagem']?.toString();
-      });
-      return;
-    }
-
-    final novoUsuario = Map<String, dynamic>.from(resultadoPerfil['dados']);
-    final idUsuario = int.tryParse(novoUsuario['id']?.toString() ?? '');
-    Map<String, dynamic>? dadosAvaliacoes;
-    String? erroAvaliacoes;
-
-    if (idUsuario != null) {
-      final resultadoAvaliacoes =
-          await (widget.carregarAvaliacoes?.call(idUsuario, 1) ??
-              AvaliacaoService.listarRecebidas(idUsuario));
-
-      if (resultadoAvaliacoes['sucesso'] == true &&
-          resultadoAvaliacoes['dados'] is Map) {
-        dadosAvaliacoes = Map<String, dynamic>.from(
-          resultadoAvaliacoes['dados'],
-        );
-      } else {
-        erroAvaliacoes = resultadoAvaliacoes['mensagem']?.toString();
-      }
-    }
-
-    if (!mounted) {
-      return;
-    }
-
+    final resultado = _personalizado
+        ? await _memoriaResumo.atualizar(
+            (id, _sessao.$2),
+            () =>
+                widget.carregarAvaliacoes?.call(id, 1) ??
+                AvaliacaoService.listarRecebidas(id),
+          )
+        : await AvaliacaoService.atualizarResumoPerfil();
+    if (!mounted || !_sessaoValida || _idPerfil != id) return;
     setState(() {
-      usuario = novoUsuario;
-      mediaAvaliacao =
-          double.tryParse(dadosAvaliacoes?['media']?.toString() ?? '') ?? 0;
-      totalAvaliacoes =
-          int.tryParse(dadosAvaliacoes?['total']?.toString() ?? '') ?? 0;
-      mensagemErroAvaliacoes = erroAvaliacoes;
-      carregando = false;
+      carregandoAvaliacoes = false;
+      if (resultado['sucesso'] == true &&
+          resultado['dados'] is ResumoAvaliacoesPerfil) {
+        final resumo = resultado['dados'] as ResumoAvaliacoesPerfil;
+        mediaAvaliacao = resumo.media;
+        totalAvaliacoes = resumo.total;
+        _temResumo = true;
+        mensagemErroAvaliacoes = null;
+      } else {
+        mensagemErroAvaliacoes =
+            resultado['mensagem']?.toString() ??
+            'Não foi possível atualizar suas avaliações. Tente novamente.';
+      }
     });
   }
 
-  void abrirAvaliacoes() {
+  Future<void> abrirAvaliacoes() async {
     final idUsuario = int.tryParse(usuario['id']?.toString() ?? '');
 
-    if (idUsuario == null) {
+    if (!_sessaoValida || idUsuario == null) {
       return;
     }
 
-    Navigator.push(
+    await Navigator.push<void>(
       context,
       MaterialPageRoute(
         builder: (_) => AvaliacoesRecebidasTela(
@@ -173,6 +307,7 @@ class _PerfilTelaState extends State<PerfilTela> {
         ),
       ),
     );
+    if (mounted && _sessaoValida) await atualizarAvaliacoes(invalidar: true);
   }
 
   void abrirHistorico() {
@@ -183,6 +318,7 @@ class _PerfilTelaState extends State<PerfilTela> {
   }
 
   Future<void> abrirVerificacaoCnh() async {
+    if (!_podeAlterar) return;
     await Navigator.push<bool>(
       context,
       MaterialPageRoute(
@@ -190,11 +326,12 @@ class _PerfilTelaState extends State<PerfilTela> {
             VerificacaoCnhTela(carregarPerfil: widget.carregarPerfil),
       ),
     );
-    if (mounted) await carregarDados();
+    if (mounted && _sessaoValida) await carregarDados();
   }
 
   Future<void> editarPerfil() async {
-    if (enviandoFoto || _selecionandoFoto) return;
+    if (!_podeAlterar) return;
+    setState(() => _dialogoAberto = true);
     final nomeInstituicao = usuario['instituicao']?.toString() ?? '';
     final idInstituicao = int.tryParse(
       usuario['idInstituicao']?.toString() ?? '',
@@ -256,25 +393,36 @@ class _PerfilTelaState extends State<PerfilTela> {
       ),
     );
 
-    if (!mounted || dados == null) {
+    if (!mounted || !_sessaoValida) return;
+    setState(() => _dialogoAberto = false);
+    if (dados == null || !_podeAlterar) {
       return;
     }
 
-    setState(() => carregando = true);
+    setState(() => _salvandoPerfil = true);
 
-    final resultado =
-        await (widget.atualizarPerfil?.call(
-              dados.idInstituicao,
-              dados.campus,
-            ) ??
-            AuthService.atualizarPerfil(dados.idInstituicao, dados.campus));
+    Map<String, dynamic> resultado;
+    try {
+      resultado =
+          await (widget.atualizarPerfil?.call(
+                dados.idInstituicao,
+                dados.campus,
+              ) ??
+              AuthService.atualizarPerfil(dados.idInstituicao, dados.campus));
+    } catch (_) {
+      resultado = {
+        'sucesso': false,
+        'mensagem':
+            'Não foi possível confirmar a atualização do perfil. Tente novamente.',
+      };
+    }
 
-    if (!mounted) {
+    if (!mounted || !_sessaoValida) {
       return;
     }
 
     setState(() {
-      carregando = false;
+      _salvandoPerfil = false;
 
       if (resultado['sucesso'] == true && resultado['dados'] is Map) {
         usuario = Map<String, dynamic>.from(resultado['dados']);
@@ -291,10 +439,11 @@ class _PerfilTelaState extends State<PerfilTela> {
   }
 
   Future<void> alterarFoto() async {
-    if (carregando || enviandoFoto || _selecionandoFoto) return;
+    if (!_podeAlterar) return;
     _selecionandoFoto = true;
     final contaInicial = AuthService.usuarioLogado?['id'];
-    bool mesmaConta() => AuthService.usuarioLogado?['id'] == contaInicial;
+    bool mesmaConta() =>
+        _sessaoValida && AuthService.usuarioLogado?['id'] == contaInicial;
     _AcaoFotoPerfil? acao;
     var enviando = false;
     try {
@@ -460,7 +609,8 @@ class _PerfilTelaState extends State<PerfilTela> {
   }
 
   Future<void> editarVeiculo() async {
-    if (enviandoFoto || _selecionandoFoto) return;
+    if (!_podeAlterar) return;
+    setState(() => _dialogoAberto = true);
     final veiculoAtual = usuario['veiculo'] is Map
         ? Map<String, dynamic>.from(usuario['veiculo'])
         : <String, dynamic>{};
@@ -469,11 +619,25 @@ class _PerfilTelaState extends State<PerfilTela> {
       barrierDismissible: false,
       builder: (_) => DialogoVeiculo(
         veiculo: veiculoAtual,
-        salvar: widget.salvarVeiculo ?? AuthService.salvarVeiculo,
+        salvar: (modelo, cor, placa) {
+          if (!_sessaoValida) {
+            return Future.value({
+              'sucesso': false,
+              'mensagem': 'Sua sessão mudou. Entre novamente.',
+            });
+          }
+          return (widget.salvarVeiculo ?? AuthService.salvarVeiculo)(
+            modelo,
+            cor,
+            placa,
+          );
+        },
       ),
     );
 
-    if (!mounted || resultado == null) {
+    if (!mounted || !_sessaoValida) return;
+    setState(() => _dialogoAberto = false);
+    if (resultado == null) {
       return;
     }
 
@@ -580,7 +744,7 @@ class _PerfilTelaState extends State<PerfilTela> {
           actions: [
             IconButton(
               tooltip: 'Editar perfil',
-              onPressed: carregando ? null : editarPerfil,
+              onPressed: _podeAlterar ? editarPerfil : null,
               icon: const Icon(Icons.edit_outlined),
             ),
           ],
@@ -593,7 +757,11 @@ class _PerfilTelaState extends State<PerfilTela> {
         body: SafeArea(
           child: ConteudoPerfilBuscaEu(
             usuario: usuario,
-            carregando: carregando,
+            carregando: carregando && !_temPerfil,
+            atualizando: (carregando && _temPerfil) || _salvandoPerfil,
+            acoesHabilitadas: _podeAlterar,
+            carregandoAvaliacoes: carregandoAvaliacoes,
+            avaliacoesDisponiveis: _temResumo,
             enviandoFoto: enviandoFoto,
             media: mediaAvaliacao,
             totalAvaliacoes: totalAvaliacoes,
@@ -611,6 +779,7 @@ class _PerfilTelaState extends State<PerfilTela> {
             onHistorico: abrirHistorico,
             onSair: sair,
             onRecarregar: carregarDados,
+            onRecarregarAvaliacoes: () => atualizarAvaliacoes(invalidar: true),
             onRecorrencias: () => Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const RecorrenciasTela()),
