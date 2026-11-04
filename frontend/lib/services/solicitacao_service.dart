@@ -8,10 +8,57 @@ import '../config/api_config.dart';
 import '../models/solicitacao_enviada.dart';
 import '../models/solicitacao_recebida.dart';
 import 'auth_service.dart';
+import 'cliente_http_com_prazo.dart';
+import 'memoria_solicitacoes.dart';
 
 class SolicitacaoService {
   static final ValueNotifier<int> totalSolicitacoesPendentes = ValueNotifier(0);
   static Timer? _timerSolicitacoesPendentes;
+
+  static EscopoSolicitacoes? get _escopoAtual {
+    final id = int.tryParse(AuthService.usuarioLogado?['id']?.toString() ?? '');
+    return AuthService.estaLogado && id != null && id > 0
+        ? (id, AuthService.versaoSessao)
+        : null;
+  }
+
+  static ListasSolicitacoes? lerListas() {
+    final escopo = _escopoAtual;
+    return escopo == null
+        ? null
+        : MemoriaSolicitacoes.compartilhada.ler(escopo);
+  }
+
+  static bool get listasConfirmadas {
+    final escopo = _escopoAtual;
+    return escopo != null &&
+        MemoriaSolicitacoes.compartilhada.confirmada(escopo);
+  }
+
+  static Future<Map<String, dynamic>> atualizarListas({
+    bool invalidar = false,
+  }) {
+    final escopo = _escopoAtual;
+    if (escopo == null) {
+      return Future.value({
+        'sucesso': false,
+        'mensagem': 'Usuário não está logado',
+      });
+    }
+    final memoria = MemoriaSolicitacoes.compartilhada;
+    if (invalidar) memoria.invalidar(escopo);
+    return memoria.atualizar(
+      escopo,
+      recebidas: () => listarRecebidas(),
+      enviadas: listarEnviadas,
+    );
+  }
+
+  static void _invalidarListas(EscopoSolicitacoes? escopo) {
+    if (escopo != null && escopo == _escopoAtual) {
+      MemoriaSolicitacoes.compartilhada.invalidar(escopo);
+    }
+  }
 
   static Future<void> iniciarContadorSolicitacoesPendentes() async {
     if (AuthService.tokenUsuarioLogado == null) {
@@ -77,13 +124,14 @@ class SolicitacaoService {
   }
 
   static Future<Map<String, dynamic>> listarEnviadas() async {
+    final cliente = ClienteHttpComPrazo();
     try {
       final resposta = await AuthService.enviarComToken(
-        (token) => http.get(
+        (token) => cliente.get(
           Uri.parse('${ApiConfig.baseUrl}/solicitacoes/enviadas'),
           headers: {'Authorization': 'Bearer $token'},
         ),
-      );
+      ).timeout(const Duration(seconds: 20));
 
       if (resposta == null) {
         return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
@@ -118,10 +166,13 @@ class SolicitacaoService {
       };
     } catch (erro) {
       return _erroConexao();
+    } finally {
+      cliente.close();
     }
   }
 
   static Future<Map<String, dynamic>> listarRecebidas({int? idCarona}) async {
+    final cliente = ClienteHttpComPrazo();
     try {
       final url = Uri.parse(
         idCarona == null
@@ -129,8 +180,9 @@ class SolicitacaoService {
             : '${ApiConfig.baseUrl}/caronas/$idCarona/solicitacoes',
       );
       final resposta = await AuthService.enviarComToken(
-        (token) => http.get(url, headers: {'Authorization': 'Bearer $token'}),
-      );
+        (token) =>
+            cliente.get(url, headers: {'Authorization': 'Bearer $token'}),
+      ).timeout(const Duration(seconds: 20));
 
       if (resposta == null) {
         return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
@@ -141,22 +193,32 @@ class SolicitacaoService {
         final solicitacoes = <SolicitacaoRecebida>[];
         final dados = corpo['dados'];
 
-        if (dados is List) {
-          for (final item in dados) {
-            if (item is Map) {
-              solicitacoes.add(
-                SolicitacaoRecebida.fromJson(Map<String, dynamic>.from(item)),
-              );
-            }
+        if (corpo['sucesso'] == false || dados is! List) {
+          throw const FormatException('Lista de solicitacoes invalida');
+        }
+        for (final item in dados) {
+          if (item is! Map) {
+            throw const FormatException('Solicitacao invalida');
           }
+          solicitacoes.add(
+            SolicitacaoRecebida.fromJson(Map<String, dynamic>.from(item)),
+          );
         }
 
         return {'sucesso': true, 'dados': solicitacoes};
       }
 
       return await _tratarErro(resposta.statusCode, corpo);
+    } on FormatException {
+      return {
+        'sucesso': false,
+        'mensagem':
+            'O servidor retornou uma resposta inválida ao consultar suas solicitações. Tente novamente.',
+      };
     } catch (erro) {
       return _erroConexao();
+    } finally {
+      cliente.close();
     }
   }
 
@@ -164,6 +226,8 @@ class SolicitacaoService {
     required int idSolicitacao,
     required String status,
   }) async {
+    final escopo = _escopoAtual;
+    _invalidarListas(escopo);
     try {
       final resposta = await AuthService.enviarComToken(
         (token) => http.patch(
@@ -192,12 +256,16 @@ class SolicitacaoService {
       return await _tratarErro(resposta.statusCode, corpo);
     } catch (erro) {
       return _erroConexao();
+    } finally {
+      _invalidarListas(escopo);
     }
   }
 
   static Future<Map<String, dynamic>> cancelarSolicitacao(
     int idSolicitacao,
   ) async {
+    final escopo = _escopoAtual;
+    _invalidarListas(escopo);
     try {
       final resposta = await AuthService.enviarComToken(
         (token) => http.patch(
@@ -224,6 +292,8 @@ class SolicitacaoService {
       return await _tratarErro(resposta.statusCode, corpo);
     } catch (erro) {
       return _erroConexao();
+    } finally {
+      _invalidarListas(escopo);
     }
   }
 
@@ -263,6 +333,8 @@ class SolicitacaoService {
     required int idCarona,
     required Map<String, dynamic> corpo,
   }) async {
+    final escopo = _escopoAtual;
+    _invalidarListas(escopo);
     try {
       final resposta = await AuthService.enviarComToken(
         (token) => http.post(
@@ -294,6 +366,8 @@ class SolicitacaoService {
       return await _tratarErro(resposta.statusCode, respostaJson);
     } catch (erro) {
       return _erroConexao();
+    } finally {
+      _invalidarListas(escopo);
     }
   }
 
