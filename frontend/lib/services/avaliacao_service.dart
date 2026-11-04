@@ -1,11 +1,43 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
 
 import '../config/api_config.dart';
 import 'auth_service.dart';
+import 'cliente_http_com_prazo.dart';
+import 'memoria_resumo_perfil.dart';
 
 class AvaliacaoService {
+  static EscopoResumoPerfil? get _escopoAtual {
+    final id = int.tryParse(AuthService.usuarioLogado?['id']?.toString() ?? '');
+    return AuthService.estaLogado && id != null && id > 0
+        ? (id, AuthService.versaoSessao)
+        : null;
+  }
+
+  static ResumoAvaliacoesPerfil? lerResumoPerfil() {
+    final escopo = _escopoAtual;
+    return escopo == null
+        ? null
+        : MemoriaResumoPerfil.compartilhada.ler(escopo);
+  }
+
+  static Future<Map<String, dynamic>> atualizarResumoPerfil({
+    bool invalidar = false,
+  }) {
+    final escopo = _escopoAtual;
+    if (escopo == null) {
+      return Future.value({
+        'sucesso': false,
+        'mensagem': 'Usuário não está logado',
+      });
+    }
+    final memoria = MemoriaResumoPerfil.compartilhada;
+    if (invalidar) memoria.invalidar(escopo);
+    return memoria.atualizar(escopo, () => listarRecebidas(escopo.$1));
+  }
+
   static Future<Map<String, dynamic>> enviar({
     required int idSolicitacao,
     required int nota,
@@ -62,16 +94,15 @@ class AvaliacaoService {
     int idUsuario, {
     int pagina = 1,
   }) async {
+    final cliente = ClienteHttpComPrazo();
     try {
       final url = Uri.parse(
         '${ApiConfig.baseUrl}/usuarios/$idUsuario/avaliacoes?pagina=$pagina',
       );
       final resposta = await AuthService.enviarComToken(
-        (token) => http.get(
-          url,
-          headers: {'Authorization': 'Bearer $token'},
-        ),
-      );
+        (token) =>
+            cliente.get(url, headers: {'Authorization': 'Bearer $token'}),
+      ).timeout(const Duration(seconds: 20));
 
       if (resposta == null) {
         return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
@@ -79,7 +110,10 @@ class AvaliacaoService {
 
       final corpo = _decodificarResposta(resposta.body);
 
-      if (resposta.statusCode == 200 && corpo['dados'] is Map) {
+      if (resposta.statusCode == 200) {
+        if (corpo['sucesso'] == false || corpo['dados'] is! Map) {
+          throw const FormatException('Resposta de avaliacoes invalida');
+        }
         return {
           'sucesso': true,
           'dados': Map<String, dynamic>.from(corpo['dados']),
@@ -97,11 +131,24 @@ class AvaliacaoService {
             corpo['message'] ??
             'Erro ao buscar avaliações',
       };
+    } on TimeoutException {
+      return {
+        'sucesso': false,
+        'mensagem': 'O servidor demorou para responder. Tente novamente',
+      };
+    } on FormatException {
+      return {
+        'sucesso': false,
+        'mensagem':
+            'O servidor retornou uma resposta inválida ao consultar avaliações. Tente novamente.',
+      };
     } catch (erro) {
       return {
         'sucesso': false,
         'mensagem': 'Não foi possível conectar ao servidor',
       };
+    } finally {
+      cliente.close();
     }
   }
 

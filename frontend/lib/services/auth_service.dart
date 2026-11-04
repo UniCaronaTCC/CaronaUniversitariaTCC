@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../config/api_config.dart';
 import 'memoria_conversas.dart';
+import 'memoria_resumo_perfil.dart';
 import 'memoria_solicitacoes.dart';
 import 'sessao_service.dart';
 import 'supabase_auth_service.dart';
@@ -23,6 +24,7 @@ class AuthService {
   static void _invalidarGeracaoSessao() {
     _versaoSessao++;
     MemoriaConversas.compartilhada.limpar();
+    MemoriaResumoPerfil.compartilhada.limpar();
     MemoriaSolicitacoes.compartilhada.limpar();
     _alteracoesSessao.value = _versaoSessao;
   }
