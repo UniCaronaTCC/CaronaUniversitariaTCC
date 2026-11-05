@@ -481,6 +481,7 @@ describe('SolicitacoesService', () => {
 
       if (resposta === 'ACEITA' && tipo === 'NOVO_SOLICITADO') {
         expect(pontosRepository.create).toHaveBeenCalledWith({
+          sugeridoPorPassageiro: true,
           nome: null,
           endereco: 'Rua A, 100',
           latitude: -21.2,

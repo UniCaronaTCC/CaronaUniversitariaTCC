@@ -9,6 +9,7 @@ import { Carona } from './carona.entity';
 import { PontoEmbarque } from './ponto-embarque.entity';
 import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 import { EncerramentoCorridasService } from './encerramento-corridas.service';
+import { consultarPontosDoPercurso } from './pontos-percurso';
 
 @Injectable()
 export class ProgressoCaronaService {
@@ -17,11 +18,8 @@ export class ProgressoCaronaService {
     private readonly encerramento: EncerramentoCorridasService,
   ) {}
 
-  private pontos(manager: EntityManager, idCarona: number) {
-    return manager.getRepository(PontoEmbarque).find({
-      where: { carona: { idCarona } },
-      order: { ordem: 'ASC', idPontoEmbarque: 'ASC' },
-    });
+  private pontos(manager: EntityManager, idCarona: number, status: string) {
+    return consultarPontosDoPercurso(manager, idCarona, status);
   }
 
   async consultar(idCarona: number, idUsuario: number) {
@@ -43,7 +41,7 @@ export class ProgressoCaronaService {
     ) {
       throw new ForbiddenException('Você não pode acompanhar esta corrida');
     }
-    return this.pontos(manager, idCarona);
+    return this.pontos(manager, idCarona, carona.status);
   }
 
   async marcar(idCarona: number, idPonto: number, idUsuario: number) {
@@ -60,7 +58,7 @@ export class ProgressoCaronaService {
           'Somente corridas em andamento podem registrar pontos',
         );
       }
-      const pontos = await this.pontos(manager, idCarona);
+      const pontos = await this.pontos(manager, idCarona, carona.status);
       const ponto = pontos.find((p) => p.idPontoEmbarque === idPonto);
       if (!ponto)
         throw new NotFoundException('Ponto não pertence a esta carona');

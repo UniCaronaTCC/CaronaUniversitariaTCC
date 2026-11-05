@@ -55,7 +55,7 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _progresso = ProgressoCorrida(widget.carona.id);
-    _progresso.sincronizar();
+    _progresso.iniciar();
     _gps = RastreamentoGps(onPosicao: _processarPosicao);
     _gps.iniciar();
     _estadoCorrida = EstadoCorrida(
@@ -70,6 +70,7 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       unawaited(_estadoCorrida.consultar());
+      unawaited(_progresso.sincronizar());
     }
   }
 
@@ -292,6 +293,7 @@ class _CorridaEmAndamentoTelaState extends State<CorridaEmAndamentoTela>
                           )
                         : MapaNavegacaoCarona(
                             carona: widget.carona,
+                            pontosPercurso: _progresso.pontos,
                             erroLocalizacao: _gps.precisaAtencao
                                 ? _gps.mensagem
                                 : null,

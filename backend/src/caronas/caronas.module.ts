@@ -17,6 +17,8 @@ import { PontoEmbarqueRecorrencia } from './ponto-embarque-recorrencia.entity';
 import { RecorrenciasService } from './recorrencias.service';
 import { RecorrenciasController } from './recorrencias.controller';
 import { EncerramentoCorridasService } from './encerramento-corridas.service';
+import { ExpiracaoSolicitacoesService } from '../solicitacoes/expiracao-solicitacoes.service';
+import { PagamentosModule } from '../pagamentos/pagamentos.module';
 
 @Module({
   imports: [
@@ -31,6 +33,7 @@ import { EncerramentoCorridasService } from './encerramento-corridas.service';
     // Permite usar os repositórios de Carona e PontoEmbarque
 
     AuthModule,
+    PagamentosModule,
     // Permite proteger rotas de caronas com JWT
   ],
 
@@ -45,6 +48,7 @@ import { EncerramentoCorridasService } from './encerramento-corridas.service';
     RecorrenciasService,
     ProgressoCaronaService,
     EncerramentoCorridasService,
+    ExpiracaoSolicitacoesService,
   ],
 
   exports: [CaronasService],

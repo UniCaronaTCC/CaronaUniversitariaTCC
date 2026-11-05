@@ -11,6 +11,7 @@ import { PontoEmbarque } from './ponto-embarque.entity';
 import { PosicaoAtualCarona } from './posicao-atual-carona.entity';
 import { RecorrenciasService } from './recorrencias.service';
 import { EncerramentoCorridasService } from './encerramento-corridas.service';
+import { ExpiracaoSolicitacoesService } from '../solicitacoes/expiracao-solicitacoes.service';
 import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 import { UsersService } from '../users/users.service';
 
@@ -123,6 +124,9 @@ describe('Edicao de capacidade com reservas', () => {
       {
         encerrarVencidas: jest.fn().mockResolvedValue(undefined),
       } as unknown as EncerramentoCorridasService,
+      {
+        expirarVencidas: jest.fn().mockResolvedValue(undefined),
+      } as unknown as ExpiracaoSolicitacoesService,
     );
     return { service, carona, qb, save, count, eventos, transaction, manager };
   }

@@ -146,6 +146,36 @@ class Carona {
     );
   }
 
+  Carona comPontosDoPercurso(List<PontoEmbarque> pontos) => Carona(
+    id: id,
+    idRecorrencia: idRecorrencia,
+    diasRecorrencia: diasRecorrencia,
+    origem: origem,
+    origemCidade: origemCidade,
+    origemLatitude: origemLatitude,
+    origemLongitude: origemLongitude,
+    destino: destino,
+    destinoCidade: destinoCidade,
+    destinoLatitude: destinoLatitude,
+    destinoLongitude: destinoLongitude,
+    pontosEmbarque: List.unmodifiable(pontos),
+    dataInicio: dataInicio,
+    dataFim: dataFim,
+    horario: horario,
+    vagas: vagas,
+    valor: valor,
+    recorrente: recorrente,
+    diasSemana: diasSemana,
+    observacoes: observacoes,
+    status: status,
+    idMotorista: idMotorista,
+    motorista: motorista,
+    fotoMotorista: fotoMotorista,
+    veiculoModelo: veiculoModelo,
+    veiculoCor: veiculoCor,
+    veiculoPlaca: veiculoPlaca,
+  );
+
   // Formata a data para o padrao brasileiro.
   String get dataFormatada => FormatadorData.relativa(dataInicio);
 

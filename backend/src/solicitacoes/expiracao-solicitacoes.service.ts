@@ -40,7 +40,7 @@ export class ExpiracaoSolicitacoesService
     if (this.timer) clearInterval(this.timer);
   }
 
-  async expirarVencidas(): Promise<void> {
+  async expirarVencidas(idCarona?: number): Promise<void> {
     if (this.emExecucao) return;
     this.emExecucao = true;
 
@@ -53,13 +53,14 @@ export class ExpiracaoSolicitacoesService
          FROM unicarona.solicitacoes solicitacao
          WHERE solicitacao.status = 'ACEITA'
            AND solicitacao.pagamento_limite_em <= $1
+           AND ($2::integer IS NULL OR solicitacao.id_carona = $2)
            AND NOT EXISTS (
              SELECT 1 FROM unicarona.pagamentos pagamento
              WHERE pagamento.id_solicitacao = solicitacao.id_solicitacao
                AND pagamento.status_provedor = 'PAID'
            )
          ORDER BY solicitacao.pagamento_limite_em`,
-        [agora],
+        [agora, idCarona ?? null],
       );
 
       for (const candidata of candidatas) {
@@ -128,6 +129,7 @@ export class ExpiracaoSolicitacoesService
       if (
         !solicitacao ||
         solicitacao.status !== 'ACEITA' ||
+        !['ATIVA', 'LOTADA'].includes(solicitacao.carona.status) ||
         !solicitacao.pagamentoLimiteEm ||
         solicitacao.pagamentoLimiteEm.getTime() > agora.getTime()
       )

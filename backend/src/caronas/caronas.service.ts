@@ -28,6 +28,9 @@ import { UsersService } from '../users/users.service';
 import { RecorrenciasService } from './recorrencias.service';
 import { CARONA_VENCIDA_SQL } from './carona-vencida';
 import { PARTIDA_FUTURA_SQL } from './partida-carona';
+import { exigirPagamentosParaInicio } from './pagamentos-inicio';
+import { filtrarPontosDoPercurso } from './pontos-percurso';
+import { ExpiracaoSolicitacoesService } from '../solicitacoes/expiracao-solicitacoes.service';
 import {
   EncerramentoCorridasService,
   STATUS_ENCERRADA_POR_TEMPO,
@@ -53,6 +56,7 @@ export class CaronasService {
     private readonly usersService: UsersService,
     private readonly recorrenciasService: RecorrenciasService,
     private readonly encerramentoCorridas: EncerramentoCorridasService,
+    private readonly expiracaoSolicitacoes: ExpiracaoSolicitacoesService,
   ) {}
 
   // Cria a carona e os pontos de embarque juntos.
@@ -324,6 +328,8 @@ export class CaronasService {
     idUsuario: number,
     agora = new Date(),
   ): Promise<Carona> {
+    await this.buscarCaronaDoUsuario(idCarona, idUsuario);
+    await this.expiracaoSolicitacoes.expirarVencidas(idCarona);
     return this.comCaronaBloqueada(
       idCarona,
       idUsuario,
@@ -349,6 +355,7 @@ export class CaronasService {
           );
         }
 
+        await exigirPagamentosParaInicio(manager, idCarona);
         carona.status = 'EM_ANDAMENTO';
         await manager.getRepository(Carona).save(carona);
         return this.buscarCaronaDoUsuario(
@@ -502,13 +509,13 @@ export class CaronasService {
 
       .getMany();
 
-    return caronas;
+    return filtrarPontosDoPercurso(this.dataSource.manager, caronas);
   }
 
   async listarMinhasCaronas(idUsuario: number): Promise<Carona[]> {
     await this.finalizarCaronasVencidas();
 
-    return this.caronasRepository
+    const caronas = await this.caronasRepository
       .createQueryBuilder('carona')
       .leftJoinAndMapOne(
         'carona.programacao',
@@ -547,6 +554,7 @@ export class CaronasService {
       .addOrderBy('pontoEmbarque.ordem', 'ASC')
 
       .getMany();
+    return filtrarPontosDoPercurso(this.dataSource.manager, caronas);
   }
 
   async buscarDetalhesCarona(
@@ -570,6 +578,7 @@ export class CaronasService {
 
     carona.pontosEmbarque ??= [];
     carona.pontosEmbarque.sort((a, b) => a.ordem - b.ordem);
+    await filtrarPontosDoPercurso(this.dataSource.manager, [carona]);
     return carona;
   }
 
@@ -627,7 +636,7 @@ export class CaronasService {
 
     carona.pontosEmbarque ??= [];
     carona.pontosEmbarque.sort((a, b) => a.ordem - b.ordem);
-
+    await filtrarPontosDoPercurso(repository.manager, [carona]);
     return carona;
   }
 

@@ -6,6 +6,7 @@ import 'package:latlong2/latlong.dart';
 import 'package:uni_carona/mapa/services/rota_service.dart';
 import 'package:uni_carona/mapa/widgets/mapa_navegacao_carona.dart';
 import 'package:uni_carona/models/carona.dart';
+import 'package:uni_carona/models/ponto_embarque.dart';
 
 class _RotasFake extends RotaService {
   final chamadas = <List<LatLng>>[];
@@ -20,6 +21,93 @@ class _RotasFake extends RotaService {
 }
 
 void main() {
+  testWidgets(
+    'refaz rota e marcadores com os pontos sincronizados, sem ressuscitar parada removida',
+    (tester) async {
+      final service = _RotasFake();
+      const primeiro = PontoEmbarque(
+        id: 1,
+        ordem: 1,
+        endereco: 'Primeiro',
+        latitude: -21.19,
+        longitude: -50.39,
+      );
+      const compartilhado = PontoEmbarque(
+        id: 2,
+        ordem: 2,
+        endereco: 'Compartilhado',
+        latitude: -21.18,
+        longitude: -50.38,
+      );
+      final carona = Carona(
+        id: 1,
+        origem: 'Origem',
+        destino: 'Destino',
+        pontosEmbarque: const [primeiro, compartilhado],
+        destinoLatitude: -21.1,
+        destinoLongitude: -50.3,
+        dataInicio: DateTime(2026, 11, 5),
+        horario: '18:00',
+        vagas: 2,
+        valor: 1,
+        recorrente: false,
+        diasSemana: const [],
+        motorista: 'Motorista',
+      );
+      Widget tela(List<PontoEmbarque> pontos) => MaterialApp(
+        home: Scaffold(
+          body: MapaNavegacaoCarona(
+            carona: carona,
+            pontosPercurso: pontos,
+            localizacaoMotorista: const LatLng(-21.2, -50.4),
+            rotaService: service,
+          ),
+        ),
+      );
+      await tester.pumpWidget(tela(const [primeiro, compartilhado]));
+      expect(service.chamadas.single, hasLength(4));
+      // A lista mudou enquanto o cálculo anterior ainda estava pendente.
+      await tester.pumpWidget(tela(const [compartilhado]));
+      service.respostas.first.complete(
+        RotaResultado(
+          pontos: service.chamadas.first,
+          distanciaMetros: 100,
+          duracaoSegundos: 10,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 15));
+      expect(service.chamadas, hasLength(2));
+      expect(service.chamadas.last, [
+        const LatLng(-21.2, -50.4),
+        const LatLng(-21.18, -50.38),
+        const LatLng(-21.1, -50.3),
+      ]);
+      service.respostas.last.complete(
+        RotaResultado(
+          pontos: service.chamadas.last,
+          distanciaMetros: 80,
+          duracaoSegundos: 8,
+        ),
+      );
+      await tester.pump();
+      final titulos = tester
+          .widgetList<MarkerLayer>(find.byType(MarkerLayer))
+          .expand((camada) => camada.markers)
+          .map((m) => m.child)
+          .whereType<Tooltip>()
+          .map((t) => t.message);
+      expect(titulos, isNot(contains('Encontro 1')));
+      expect(titulos, contains('Encontro 2'));
+      // Outra resposta com os mesmos dados não precisa de novo cálculo.
+      await tester.pumpWidget(tela(const [compartilhado]));
+      await tester.pump(const Duration(seconds: 15));
+      expect(service.chamadas, hasLength(2));
+      await tester.pumpWidget(const SizedBox());
+      expect(tester.takeException(), isNull);
+    },
+  );
+
   testWidgets(
     'avisos da rota continuam acessiveis com pouca altura e fonte ampliada',
     (tester) async {

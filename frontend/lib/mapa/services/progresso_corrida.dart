@@ -17,6 +17,7 @@ class ProgressoCorrida extends ChangeNotifier {
   DateTime? _leituraProxima;
   Position? _ultimaPosicao;
   Timer? _retry;
+  Timer? _sincronizacao;
 
   ProgressoCorrida(this.idCarona, {ProgressoCaronaService? service})
     : service = service ?? ProgressoCaronaService();
@@ -32,6 +33,14 @@ class ProgressoCorrida extends ChangeNotifier {
 
   bool get salvando => _pendente != null;
 
+  void iniciar() {
+    if (_descartado || _sincronizacao != null) return;
+    unawaited(sincronizar());
+    _sincronizacao = Timer.periodic(const Duration(seconds: 30), (_) {
+      unawaited(sincronizar());
+    });
+  }
+
   Future<void> sincronizar() async {
     if (_descartado || _ocupado) return;
     _retry?.cancel();
@@ -42,7 +51,12 @@ class ProgressoCorrida extends ChangeNotifier {
           ? await service.consultar(idCarona)
           : await service.marcar(idCarona, pendente);
       if (_descartado) return;
+      final proximoAnterior = proximo?.id;
       pontos = recebidos..sort((a, b) => a.ordem.compareTo(b.ordem));
+      if (proximoAnterior != proximo?.id) {
+        _leituraProxima = null;
+        _ultimaPosicao = null;
+      }
       carregado = true;
       _pendente = null;
       erro = null;
@@ -119,6 +133,7 @@ class ProgressoCorrida extends ChangeNotifier {
   @override
   void dispose() {
     _descartado = true;
+    _sincronizacao?.cancel();
     _retry?.cancel();
     super.dispose();
   }

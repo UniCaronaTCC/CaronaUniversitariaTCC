@@ -9,7 +9,6 @@ import { PontoEmbarque } from '../caronas/ponto-embarque.entity';
 import { Pagamento } from '../pagamentos/pagamento.entity';
 import { PagamentosModule } from '../pagamentos/pagamentos.module';
 
-import { ExpiracaoSolicitacoesService } from './expiracao-solicitacoes.service';
 import { Solicitacao } from './solicitacao.entity';
 import { SolicitacoesController } from './solicitacoes.controller';
 import { SolicitacoesService } from './solicitacoes.service';
@@ -23,7 +22,7 @@ import { SolicitacoesService } from './solicitacoes.service';
     PagamentosModule,
   ],
   controllers: [SolicitacoesController],
-  providers: [SolicitacoesService, ExpiracaoSolicitacoesService],
+  providers: [SolicitacoesService],
   exports: [SolicitacoesService],
 })
 export class SolicitacoesModule {}

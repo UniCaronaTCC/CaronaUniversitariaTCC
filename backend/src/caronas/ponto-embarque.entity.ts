@@ -14,6 +14,9 @@ export class PontoEmbarque {
   @PrimaryGeneratedColumn({ name: 'id_ponto_embarque' })
   idPontoEmbarque!: number;
 
+  @Column({ name: 'sugerido_por_passageiro', default: false })
+  sugeridoPorPassageiro: boolean = false;
+
   @Column({ name: 'percorrido_em', type: 'timestamptz', nullable: true })
   percorridoEm: Date | null = null;
 

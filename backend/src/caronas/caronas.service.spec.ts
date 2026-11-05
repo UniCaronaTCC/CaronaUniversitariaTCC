@@ -14,6 +14,7 @@ import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 import { UsersService } from '../users/users.service';
 import { RecorrenciasService } from './recorrencias.service';
 import { EncerramentoCorridasService } from './encerramento-corridas.service';
+import { ExpiracaoSolicitacoesService } from '../solicitacoes/expiracao-solicitacoes.service';
 import { PARTIDA_FUTURA_SQL } from './partida-carona';
 
 describe('CaronasService', () => {
@@ -41,6 +42,7 @@ describe('CaronasService', () => {
   };
   let solicitacoesRepository: {
     exists: jest.Mock;
+    createQueryBuilder: jest.Mock;
   };
   let usersService: {
     buscarVeiculo: jest.Mock;
@@ -130,6 +132,11 @@ describe('CaronasService', () => {
     };
     solicitacoesRepository = {
       exists: jest.fn().mockResolvedValue(false),
+      createQueryBuilder: jest.fn(() => ({
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getCount: jest.fn().mockResolvedValue(0),
+      })),
     };
     usersService = {
       buscarVeiculo: jest.fn().mockResolvedValue({ idVeiculo: 1 }),
@@ -162,6 +169,9 @@ describe('CaronasService', () => {
       {
         encerrarVencidas: jest.fn().mockResolvedValue(undefined),
       } as unknown as EncerramentoCorridasService,
+      {
+        expirarVencidas: jest.fn().mockResolvedValue(undefined),
+      } as unknown as ExpiracaoSolicitacoesService,
     );
   });
 

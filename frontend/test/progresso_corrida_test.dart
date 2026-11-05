@@ -48,6 +48,25 @@ class _Service extends ProgressoCaronaService {
 }
 
 void main() {
+  testWidgets(
+    'sincroniza paradas removidas periodicamente sem perder as compartilhadas',
+    (tester) async {
+      final service = _Service();
+      final progresso = ProgressoCorrida(1, service: service);
+      progresso.iniciar();
+      await tester.pump();
+      expect(progresso.pontos.map((p) => p.id), [1, 2]);
+      service.salvos = [ponto(2)];
+      await tester.pump(const Duration(seconds: 30));
+      expect(progresso.pontos.map((p) => p.id), [2]);
+      expect(progresso.proximo?.id, 2);
+      progresso.dispose();
+      service.salvos = [];
+      await tester.pump(const Duration(seconds: 30));
+      expect(progresso.pontos, hasLength(1));
+    },
+  );
+
   for (final cenario in [
     (
       nome: 'apenas se aproxima do ponto',
