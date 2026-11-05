@@ -143,25 +143,25 @@ class CaronaService {
     return _listarCaronas('caronas/minhas');
   }
 
-  static Future<Map<String, dynamic>> buscarDetalhesCarona(int idCarona) async {
+  static Future<Map<String, dynamic>> buscarDetalhesCarona(
+    int idCarona, {
+    Duration prazo = const Duration(seconds: 20),
+  }) async {
+    if (idCarona <= 0) {
+      return {'sucesso': false, 'mensagem': 'Carona inválida'};
+    }
+    final cliente = ClienteHttpComPrazo(prazo: prazo);
+    var encerrada = false;
     try {
-      final resposta = await AuthService.enviarComToken(
-        (token) => http.get(
+      final resposta = await AuthService.enviarComToken((token) {
+        if (encerrada) throw TimeoutException('Consulta encerrada');
+        return cliente.get(
           Uri.parse('${ApiConfig.baseUrl}/caronas/$idCarona'),
           headers: {'Authorization': 'Bearer $token'},
-        ),
-      );
+        );
+      }).timeout(prazo);
       if (resposta == null) {
         return {'sucesso': false, 'mensagem': 'Usuário não está logado'};
-      }
-
-      final corpo = _decodificarResposta(resposta);
-      final dados = corpo['dados'];
-      if (resposta.statusCode == 200 && dados is Map) {
-        return {
-          'sucesso': true,
-          'dados': Carona.fromJson(Map<String, dynamic>.from(dados)),
-        };
       }
       if (resposta.statusCode == 401) {
         await AuthService.sair();
@@ -170,15 +170,47 @@ class CaronaService {
           'mensagem': 'Sua sessão expirou. Entre novamente.',
         };
       }
+      if (resposta.statusCode >= 500) {
+        return {
+          'sucesso': false,
+          'mensagem': 'O servidor está indisponível. Tente novamente',
+        };
+      }
+      if (resposta.statusCode == 429) {
+        return {
+          'sucesso': false,
+          'mensagem': 'Aguarde um pouco antes de tentar novamente',
+        };
+      }
+      final corpo = _decodificarResposta(resposta);
+      final dados = corpo['dados'];
+      if (resposta.statusCode == 200) {
+        if (corpo['sucesso'] == false || dados is! Map) {
+          throw const FormatException('Detalhes da carona invalidos');
+        }
+        final carona = Carona.fromJson(Map<String, dynamic>.from(dados));
+        if (carona.id != idCarona) {
+          throw const FormatException('Carona diferente da consultada');
+        }
+        return {'sucesso': true, 'dados': carona};
+      }
       return {
         'sucesso': false,
         'mensagem': _obterMensagem(corpo, 'Não foi possível carregar a carona'),
+      };
+    } on TimeoutException {
+      return {
+        'sucesso': false,
+        'mensagem': 'A consulta da carona demorou demais. Tente novamente',
       };
     } catch (_) {
       return {
         'sucesso': false,
         'mensagem': 'Não foi possível carregar a carona. Tente novamente.',
       };
+    } finally {
+      encerrada = true;
+      cliente.close();
     }
   }
 

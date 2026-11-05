@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
+import '../models/carona.dart';
 import '../models/pagamento_pix.dart';
 import '../models/solicitacao_enviada.dart';
 import '../models/solicitacao_recebida.dart';
 import '../navigation/navegacao_principal.dart';
 import '../services/auth_service.dart';
 import '../services/avaliacao_service.dart';
+import '../services/carona_service.dart';
 import '../services/memoria_solicitacoes.dart';
 import '../services/mensagem_service.dart';
 import '../services/pagamento_service.dart';
@@ -20,6 +22,7 @@ import '../widgets/dialogo_avaliacao.dart';
 import '../widgets/dialogo_cancelamento.dart';
 import '../widgets/visual_buscaeu.dart';
 import 'acompanhar_corrida.dart';
+import 'detalhes_carona.dart';
 import 'pagamento_pix.dart';
 
 typedef CarregarSolicitacoes = Future<Map<String, dynamic>> Function();
@@ -30,6 +33,7 @@ class MinhasCaronasTela extends StatefulWidget {
   final CarregarSolicitacoes? carregarRecebidas;
   final CarregarSolicitacoes? carregarEnviadas;
   final MemoriaSolicitacoes? memoria;
+  final Future<Map<String, dynamic>> Function(int)? carregarCarona;
 
   const MinhasCaronasTela({
     super.key,
@@ -38,6 +42,7 @@ class MinhasCaronasTela extends StatefulWidget {
     this.carregarRecebidas,
     this.carregarEnviadas,
     this.memoria,
+    this.carregarCarona,
   }) : assert(abaInicial == 0 || abaInicial == 1);
 
   @override
@@ -57,6 +62,7 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela>
   late final EscopoSolicitacoes _escopo;
   bool _temListaValida = false;
   bool _dialogoAberto = false;
+  int? _idAbrindoDetalhes;
 
   bool get _fontePersonalizada =>
       widget.memoria != null ||
@@ -72,6 +78,13 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela>
       _temListaValida &&
       _memoria.confirmada(_escopo) &&
       !consultando &&
+      _idAbrindoDetalhes == null &&
+      idProcessando == null &&
+      !_dialogoAberto;
+
+  bool get _podeAbrirDetalhes =>
+      _sessaoValida &&
+      _idAbrindoDetalhes == null &&
       idProcessando == null &&
       !_dialogoAberto;
 
@@ -84,6 +97,7 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela>
       _temListaValida = false;
       carregando = false;
       idProcessando = null;
+      _idAbrindoDetalhes = null;
       mensagemErro =
           'Sua sessão mudou. Entre novamente para consultar as caronas.';
     });
@@ -164,6 +178,60 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela>
   }
 
   void atualizarEstadoCaronas() => carregarDados();
+
+  Future<void> abrirDetalhes(int idSolicitacao, int idCarona) async {
+    if (!_podeAbrirDetalhes || ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
+    setState(() => _idAbrindoDetalhes = idSolicitacao);
+    try {
+      final resultado = await Future.sync(
+        () => (widget.carregarCarona ?? CaronaService.buscarDetalhesCarona)(
+          idCarona,
+        ),
+      ).timeout(const Duration(seconds: 25));
+      if (!mounted ||
+          !_sessaoValida ||
+          ModalRoute.of(context)?.isCurrent != true) {
+        return;
+      }
+      final carona = resultado['dados'];
+      if (resultado['sucesso'] != true ||
+          carona is! Carona ||
+          carona.id != idCarona) {
+        _mostrarMensagem(
+          resultado['mensagem']?.toString() ??
+              'Não foi possível carregar a carona. Tente novamente.',
+          tipo: TipoAviso.erro,
+        );
+        return;
+      }
+      await Navigator.push<bool>(
+        context,
+        MaterialPageRoute(
+          builder: (_) => DetalhesCaronaTela(
+            carona: carona,
+            indiceNavegacaoOrigem: 2,
+            permitirSolicitacao: false,
+            somenteConsulta: true,
+          ),
+        ),
+      );
+    } catch (_) {
+      if (mounted && _sessaoValida) {
+        _mostrarMensagem(
+          'Não foi possível carregar a carona. Tente novamente.',
+          tipo: TipoAviso.erro,
+        );
+      }
+      return;
+    } finally {
+      if (mounted) setState(() => _idAbrindoDetalhes = null);
+    }
+    if (mounted && _sessaoValida && ModalRoute.of(context)?.isCurrent == true) {
+      await carregarDados();
+    }
+  }
 
   Future<void> carregarDados({bool invalidar = true}) async {
     if (!_sessaoValida || (!_fontePersonalizada && _idUsuario <= 0)) {
@@ -612,6 +680,10 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela>
         solicitacoesRecebidas,
         (solicitacao) => CardSolicitacaoRecebida(
           solicitacao: solicitacao,
+          onAbrirDetalhes: () =>
+              abrirDetalhes(solicitacao.id, solicitacao.idCarona),
+          detalhesHabilitados: _podeAbrirDetalhes,
+          abrindoDetalhes: _idAbrindoDetalhes == solicitacao.id,
           processando: idProcessando == solicitacao.id,
           acoesHabilitadas: _acoesHabilitadas,
           onAceitar: () => responder(solicitacao, 'ACEITA'),
@@ -650,6 +722,10 @@ class _MinhasCaronasTelaState extends State<MinhasCaronasTela>
               solicitacoesEnviadas,
               (solicitacao) => CardSolicitacaoEnviada(
                 solicitacao: solicitacao,
+                onAbrirDetalhes: () =>
+                    abrirDetalhes(solicitacao.id, solicitacao.idCarona),
+                detalhesHabilitados: _podeAbrirDetalhes,
+                abrindoDetalhes: _idAbrindoDetalhes == solicitacao.id,
                 processando: idProcessando == solicitacao.id,
                 acoesHabilitadas: _acoesHabilitadas,
                 onPagarPix: () => pagarComPix(solicitacao),

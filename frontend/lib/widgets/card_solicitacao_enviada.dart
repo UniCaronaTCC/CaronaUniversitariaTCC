@@ -10,6 +10,9 @@ class CardSolicitacaoEnviada extends StatelessWidget {
   final SolicitacaoEnviada solicitacao;
   final bool processando;
   final bool acoesHabilitadas;
+  final VoidCallback? onAbrirDetalhes;
+  final bool abrindoDetalhes;
+  final bool detalhesHabilitados;
   final VoidCallback? onAvaliar;
   final VoidCallback? onCancelar;
   final VoidCallback? onPagarPix;
@@ -20,6 +23,9 @@ class CardSolicitacaoEnviada extends StatelessWidget {
     required this.solicitacao,
     this.processando = false,
     this.acoesHabilitadas = true,
+    this.onAbrirDetalhes,
+    this.abrindoDetalhes = false,
+    this.detalhesHabilitados = true,
     this.onAvaliar,
     this.onCancelar,
     this.onPagarPix,
@@ -40,75 +46,104 @@ class CardSolicitacaoEnviada extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                AvatarUsuario(
-                  nome: solicitacao.motorista,
-                  urlFoto: solicitacao.fotoMotorista,
-                  raio: 20,
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    solicitacao.motorista,
-                    style: const TextStyle(
-                      color: AppColors.text,
-                      fontSize: 17,
-                      fontWeight: FontWeight.bold,
+            InkWell(
+              onTap: detalhesHabilitados && !abrindoDetalhes
+                  ? onAbrirDetalhes
+                  : null,
+              borderRadius: BorderRadius.circular(8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      AvatarUsuario(
+                        nome: solicitacao.motorista,
+                        urlFoto: solicitacao.fotoMotorista,
+                        raio: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          solicitacao.motorista,
+                          style: const TextStyle(
+                            color: AppColors.text,
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                      if (onAbrirDetalhes != null)
+                        SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: abrindoDetalhes
+                              ? const CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  semanticsLabel:
+                                      'Carregando detalhes da carona',
+                                )
+                              : const Tooltip(
+                                  message: 'Ver detalhes da carona',
+                                  child: Icon(
+                                    Icons.chevron_right,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: Text(
+                      solicitacao.valorFormatado,
+                      style: const TextStyle(
+                        color: AppColors.primary,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: Text(
-                solicitacao.valorFormatado,
-                style: const TextStyle(
-                  color: AppColors.primary,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                  const SizedBox(height: 8),
+                  Align(
+                    alignment: Alignment.centerRight,
+                    child: StatusSolicitacao(
+                      status: solicitacao.expirada
+                          ? 'EXPIRADA'
+                          : solicitacao.caronaFinalizada
+                          ? 'FINALIZADA'
+                          : solicitacao.statusExibicao,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  _LinhaSolicitacao(
+                    icone: Icons.access_time,
+                    texto:
+                        '${solicitacao.horarioFormatado} · ${solicitacao.dataFormatada}',
+                    destaque: true,
+                  ),
+                  const SizedBox(height: 12),
+                  _LinhaSolicitacao(
+                    icone: Icons.location_on_outlined,
+                    texto: solicitacao.destino,
+                  ),
+                  const SizedBox(height: 12),
+                  _LinhaSolicitacao(
+                    icone: Icons.person_pin_circle_outlined,
+                    texto: solicitacao.localEmbarque,
+                  ),
+                  if (solicitacao.podePagarPix &&
+                      solicitacao.prazoPagamentoFormatado != null) ...[
+                    const SizedBox(height: 12),
+                    _LinhaSolicitacao(
+                      icone: Icons.hourglass_bottom,
+                      texto: 'Pague até ${solicitacao.prazoPagamentoFormatado}',
+                      destaque: true,
+                    ),
+                  ],
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: StatusSolicitacao(
-                status: solicitacao.expirada
-                    ? 'EXPIRADA'
-                    : solicitacao.caronaFinalizada
-                    ? 'FINALIZADA'
-                    : solicitacao.statusExibicao,
-              ),
-            ),
-            const SizedBox(height: 16),
-            _LinhaSolicitacao(
-              icone: Icons.access_time,
-              texto:
-                  '${solicitacao.horarioFormatado} · ${solicitacao.dataFormatada}',
-              destaque: true,
-            ),
-            const SizedBox(height: 12),
-            _LinhaSolicitacao(
-              icone: Icons.location_on_outlined,
-              texto: solicitacao.destino,
-            ),
-            const SizedBox(height: 12),
-            _LinhaSolicitacao(
-              icone: Icons.person_pin_circle_outlined,
-              texto: solicitacao.localEmbarque,
-            ),
-            if (solicitacao.podePagarPix &&
-                solicitacao.prazoPagamentoFormatado != null) ...[
-              const SizedBox(height: 12),
-              _LinhaSolicitacao(
-                icone: Icons.hourglass_bottom,
-                texto: 'Pague até ${solicitacao.prazoPagamentoFormatado}',
-                destaque: true,
-              ),
-            ],
             if (solicitacao.podeAcompanharCorrida && onAcompanhar != null) ...[
               const Divider(height: 30),
               SizedBox(

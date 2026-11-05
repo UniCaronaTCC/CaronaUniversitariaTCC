@@ -10,6 +10,9 @@ class CardSolicitacaoRecebida extends StatelessWidget {
   final SolicitacaoRecebida solicitacao;
   final bool processando;
   final bool acoesHabilitadas;
+  final VoidCallback? onAbrirDetalhes;
+  final bool abrindoDetalhes;
+  final bool detalhesHabilitados;
   final VoidCallback onAceitar;
   final VoidCallback onRecusar;
   final VoidCallback? onAvaliar;
@@ -20,6 +23,9 @@ class CardSolicitacaoRecebida extends StatelessWidget {
     required this.solicitacao,
     required this.processando,
     this.acoesHabilitadas = true,
+    this.onAbrirDetalhes,
+    this.abrindoDetalhes = false,
+    this.detalhesHabilitados = true,
     required this.onAceitar,
     required this.onRecusar,
     this.onAvaliar,
@@ -51,75 +57,110 @@ class CardSolicitacaoRecebida extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Wrap(
-              spacing: 12,
-              runSpacing: 8,
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                AvatarUsuario(
-                  nome: solicitacao.passageiro,
-                  urlFoto: solicitacao.fotoPassageiro,
-                  raio: 20,
-                ),
-                Text(
-                  solicitacao.passageiro,
-                  style: const TextStyle(
-                    color: AppColors.text,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+            InkWell(
+              onTap: detalhesHabilitados && !abrindoDetalhes
+                  ? onAbrirDetalhes
+                  : null,
+              borderRadius: BorderRadius.circular(8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Wrap(
+                          spacing: 12,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            AvatarUsuario(
+                              nome: solicitacao.passageiro,
+                              urlFoto: solicitacao.fotoPassageiro,
+                              raio: 20,
+                            ),
+                            Text(
+                              solicitacao.passageiro,
+                              style: const TextStyle(
+                                color: AppColors.text,
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            StatusSolicitacao(
+                              status: solicitacao.encerradaPorTempo
+                                  ? 'ENCERRADA_POR_TEMPO'
+                                  : solicitacao.expirada
+                                  ? 'EXPIRADA'
+                                  : finalizada
+                                  ? 'FINALIZADA'
+                                  : solicitacao.statusExibicao,
+                            ),
+                          ],
+                        ),
+                      ),
+                      if (onAbrirDetalhes != null)
+                        SizedBox(
+                          width: 24,
+                          height: 24,
+                          child: abrindoDetalhes
+                              ? const CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  semanticsLabel:
+                                      'Carregando detalhes da carona',
+                                )
+                              : const Tooltip(
+                                  message: 'Ver detalhes da carona',
+                                  child: Icon(
+                                    Icons.chevron_right,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                        ),
+                    ],
                   ),
-                ),
-                StatusSolicitacao(
-                  status: solicitacao.encerradaPorTempo
-                      ? 'ENCERRADA_POR_TEMPO'
-                      : solicitacao.expirada
-                      ? 'EXPIRADA'
-                      : finalizada
-                      ? 'FINALIZADA'
-                      : solicitacao.statusExibicao,
-                ),
-              ],
-            ),
 
-            const SizedBox(height: 18),
+                  const SizedBox(height: 18),
 
-            _LinhaInformacao(
-              icone: Icons.access_time,
-              texto:
-                  '${solicitacao.horarioFormatado} · ${solicitacao.dataFormatada}',
-              destaque: true,
-            ),
+                  _LinhaInformacao(
+                    icone: Icons.access_time,
+                    texto:
+                        '${solicitacao.horarioFormatado} · ${solicitacao.dataFormatada}',
+                    destaque: true,
+                  ),
 
-            const SizedBox(height: 12),
+                  const SizedBox(height: 12),
 
-            _LinhaInformacao(
-              icone: Icons.location_on_outlined,
-              texto: solicitacao.destino,
-            ),
+                  _LinhaInformacao(
+                    icone: Icons.location_on_outlined,
+                    texto: solicitacao.destino,
+                  ),
 
-            const SizedBox(height: 12),
+                  const SizedBox(height: 12),
 
-            Text(
-              tituloEmbarque,
-              style: const TextStyle(color: Colors.black54, fontSize: 13),
-            ),
+                  Text(
+                    tituloEmbarque,
+                    style: const TextStyle(color: Colors.black54, fontSize: 13),
+                  ),
 
-            const SizedBox(height: 5),
+                  const SizedBox(height: 5),
 
-            _LinhaInformacao(
-              icone: iconeEmbarque,
-              texto: solicitacao.localEmbarque.isNotEmpty
-                  ? solicitacao.localEmbarque
-                  : 'Local de embarque não informado',
-            ),
+                  _LinhaInformacao(
+                    icone: iconeEmbarque,
+                    texto: solicitacao.localEmbarque.isNotEmpty
+                        ? solicitacao.localEmbarque
+                        : 'Local de embarque não informado',
+                  ),
 
-            if (solicitacao.pontoNovoSolicitado && pendente) ...[
-              const SizedBox(height: 8),
-              const Text(
-                'Este local foi sugerido pelo passageiro e ainda depende da aprovação do motorista.',
-                style: TextStyle(color: Colors.black54, fontSize: 12),
+                  if (solicitacao.pontoNovoSolicitado && pendente) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Este local foi sugerido pelo passageiro e ainda depende da aprovação do motorista.',
+                      style: TextStyle(color: Colors.black54, fontSize: 12),
+                    ),
+                  ],
+                ],
               ),
-            ],
+            ),
 
             if (pendente) ...[
               const Divider(height: 30),
