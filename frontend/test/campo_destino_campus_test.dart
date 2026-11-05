@@ -97,6 +97,8 @@ Future<void> montar(
   ValueChanged<LocalizacaoSelecionada>? selecionar,
   ValueChanged<String>? alterar,
   bool mostrarAoAbrir = true,
+  bool visualAtualizado = false,
+  bool selecionarCidadeNaLista = false,
   double escala = 1,
 }) async {
   await tester.pumpWidget(
@@ -112,6 +114,8 @@ Future<void> montar(
               enderecoService: enderecos ?? EnderecosTeste(),
               referenciaInicial: referencia,
               mostrarAoAbrir: mostrarAoAbrir,
+              visualAtualizado: visualAtualizado,
+              selecionarCidadeNaLista: selecionarCidadeNaLista,
               onSelecionado: selecionar ?? (_) {},
               onChanged: alterar,
             ),
@@ -136,6 +140,91 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     controller.dispose();
   }
+
+  for (final configuracao in [(true, true), (true, false), (false, true)]) {
+    testWidgets(
+      'cabecalho de cidade respeita visual e seletor: $configuracao',
+      (tester) async {
+        await montar(
+          tester,
+          controller: controller,
+          catalogo: catalogo,
+          visualAtualizado: configuracao.$1,
+          selecionarCidadeNaLista: configuracao.$2,
+        );
+        await tester.pumpAndSettle();
+        final moderno = configuracao.$1 && configuracao.$2;
+        expect(find.text('Alterar'), moderno ? findsOneWidget : findsNothing);
+        expect(
+          find.byIcon(Icons.location_city_outlined),
+          moderno ? findsNothing : findsOneWidget,
+        );
+        expect(
+          find.text(moderno ? 'Araçatuba, SP' : 'Faculdades em Araçatuba/SP'),
+          findsOneWidget,
+        );
+        expect(find.byTooltip('Alterar cidade'), findsOneWidget);
+        expect(tester.takeException(), isNull);
+        await fechar(tester);
+      },
+    );
+  }
+
+  testWidgets('cabecalho compartilhado acomoda cidade longa em tela estreita', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 700);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    catalogo.cidadeDetectada = const CidadeCampus(
+      'São José do Vale do Rio Preto',
+      'RJ',
+    );
+    await montar(
+      tester,
+      controller: controller,
+      catalogo: catalogo,
+      visualAtualizado: true,
+      selecionarCidadeNaLista: true,
+      escala: 1.8,
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('São José do Vale do Rio Preto, RJ'), findsOneWidget);
+    expect(find.text('Alterar'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    final cidade = tester.getRect(
+      find.text('São José do Vale do Rio Preto, RJ'),
+    );
+    final alterar = tester.getRect(find.text('Alterar'));
+    expect(cidade.right, lessThanOrEqualTo(alterar.left));
+    expect(alterar.right, lessThanOrEqualTo(320));
+    await fechar(tester);
+  });
+
+  testWidgets(
+    'cabecalho compartilhado permite escolher cidade sem GPS disponivel',
+    (tester) async {
+      catalogo.cidadeDetectada = null;
+      await montar(
+        tester,
+        controller: controller,
+        catalogo: catalogo,
+        visualAtualizado: true,
+        selecionarCidadeNaLista: true,
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Selecionar cidade'), findsOneWidget);
+      expect(find.text('Alterar'), findsOneWidget);
+      expect(find.byTooltip('Alterar cidade'), findsOneWidget);
+      expect(
+        find.text('Localização indisponível. Selecione uma cidade.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
+      await fechar(tester);
+    },
+  );
 
   for (final tipo in TipoFalhaEndereco.values) {
     testWidgets(

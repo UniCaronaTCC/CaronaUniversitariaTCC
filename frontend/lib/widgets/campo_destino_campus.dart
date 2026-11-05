@@ -617,8 +617,9 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
       ),
       if (_visivel) ...[
         const SizedBox(height: 8),
-        if (widget.telaCompleta)
-          _cidadeTelaCompleta()
+        if (widget.telaCompleta ||
+            (widget.visualAtualizado && widget.selecionarCidadeNaLista))
+          _cabecalhoCidade()
         else
           Row(
             children: [
@@ -772,7 +773,7 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
     );
   }
 
-  Widget _cidadeTelaCompleta() {
+  Widget _cabecalhoCidade() {
     return Row(
       children: [
         const Icon(

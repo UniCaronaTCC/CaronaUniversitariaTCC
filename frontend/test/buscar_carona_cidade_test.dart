@@ -164,6 +164,11 @@ void main() {
       );
       expect(campo.selecionarCidadeNaLista, isTrue);
       expect(campo.idUsuario, 7);
+      await tocar(tester, campoDestino);
+      expect(find.text('Alterar'), findsOneWidget);
+      expect(find.text('Araçatuba, SP'), findsOneWidget);
+      expect(find.byIcon(Icons.location_on_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.location_city_outlined), findsNothing);
       await abrirCidades(tester);
       expect(
         find.byKey(ValueKey('cidade-${cidadeA.cidade}-SP')),
