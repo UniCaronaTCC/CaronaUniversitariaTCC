@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:uni_carona/config/app_colors.dart';
 import 'package:uni_carona/models/carona.dart';
 import 'package:uni_carona/models/ponto_embarque.dart';
 import 'package:uni_carona/widgets/card_carona_disponivel.dart';
@@ -59,6 +60,7 @@ Future<void> abrir(
   WidgetTester tester,
   Carona carona, {
   bool visualHome = true,
+  bool destacarPublicacao = false,
   bool recorrencia = false,
   VoidCallback? onTap,
   Widget? acao,
@@ -77,6 +79,7 @@ Future<void> abrir(
         child: CardCaronaDisponivel(
           carona: carona,
           visualHome: visualHome,
+          destacarPublicacao: destacarPublicacao,
           mostrarRecorrencia: recorrencia,
           onTap: onTap,
           acaoCabecalho: acao,
@@ -87,6 +90,59 @@ Future<void> abrir(
 );
 
 void main() {
+  for (final visualHome in [false, true]) {
+    testWidgets(
+      'destaque visualHome=$visualHome muda so o contorno e preserva o toque',
+      (tester) async {
+        tester.view.physicalSize = const Size(320, 700);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        var toques = 0;
+        final escala = visualHome ? 1.8 : 1.0;
+        final carona = viagem();
+        final card = find.byKey(const ValueKey('card-carona-10'));
+        await abrir(
+          tester,
+          carona,
+          visualHome: visualHome,
+          escala: escala,
+          onTap: () => toques++,
+        );
+        await tester.pumpAndSettle();
+        final tamanhoOriginal = tester.getSize(card);
+        final materialOriginal = tester.widget<Material>(card);
+        if (visualHome) {
+          expect(
+            (materialOriginal.shape! as RoundedRectangleBorder).side.color,
+            const Color(0xFFE2E2E8),
+          );
+        } else {
+          expect(materialOriginal.shape, isNull);
+          expect(materialOriginal.borderRadius, BorderRadius.circular(8));
+        }
+        await abrir(
+          tester,
+          carona,
+          visualHome: visualHome,
+          destacarPublicacao: true,
+          escala: escala,
+          onTap: () => toques++,
+        );
+        await tester.pumpAndSettle();
+        final material = tester.widget<Material>(card);
+        final borda = (material.shape! as RoundedRectangleBorder).side;
+        expect(borda.color, AppColors.primary);
+        expect(borda.width, 2);
+        expect(material.color, materialOriginal.color);
+        expect(tester.getSize(card), tamanhoOriginal);
+        expect(tester.takeException(), isNull);
+        await tester.tap(find.text('Henrique'));
+        expect(toques, 1);
+      },
+    );
+  }
+
   testWidgets('home organiza horario preco motorista veiculo e encontro', (
     tester,
   ) async {

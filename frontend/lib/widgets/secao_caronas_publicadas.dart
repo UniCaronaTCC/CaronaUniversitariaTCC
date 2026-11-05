@@ -85,6 +85,7 @@ class SecaoCaronasPublicadas extends StatelessWidget {
               final carona = caronasVisiveis[index];
 
               return CardCaronaDisponivel(
+                destacarPublicacao: true,
                 mostrarRecorrencia: true,
                 carona: carona,
                 onTap: () => onAbrirCarona(carona),

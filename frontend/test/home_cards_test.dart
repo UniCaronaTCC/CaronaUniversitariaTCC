@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:uni_carona/config/app_colors.dart';
 import 'package:uni_carona/home/detalhes_carona.dart';
 import 'package:uni_carona/home/tela_inicial.dart';
 import 'package:uni_carona/services/auth_service.dart';
@@ -109,6 +110,18 @@ void main() {
           isFalse,
         );
         expect(find.byKey(const ValueKey('menu-carona-99')), findsOneWidget);
+        for (final item in cards) {
+          expect(item.destacarPublicacao, item.carona.id == 99);
+          final material = tester.widget<Material>(
+            find.byKey(ValueKey('card-carona-${item.carona.id}')),
+          );
+          final borda = (material.shape! as RoundedRectangleBorder).side;
+          expect(
+            borda.color,
+            item.carona.id == 99 ? AppColors.primary : const Color(0xFFE2E2E8),
+          );
+          expect(borda.width, item.carona.id == 99 ? 2 : 1);
+        }
         expect(find.byKey(const ValueKey('card-carona-13')), findsNothing);
         final card = find.byKey(const ValueKey('card-carona-10'));
         await tester.ensureVisible(card);

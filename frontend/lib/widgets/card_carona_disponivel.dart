@@ -9,6 +9,7 @@ class CardCaronaDisponivel extends StatelessWidget {
   final Widget? acaoCabecalho;
   final bool mostrarRecorrencia;
   final bool visualHome;
+  final bool destacarPublicacao;
 
   const CardCaronaDisponivel({
     super.key,
@@ -17,6 +18,7 @@ class CardCaronaDisponivel extends StatelessWidget {
     this.acaoCabecalho,
     this.mostrarRecorrencia = false,
     this.visualHome = false,
+    this.destacarPublicacao = false,
   });
 
   @override
@@ -25,7 +27,13 @@ class CardCaronaDisponivel extends StatelessWidget {
     return Material(
       key: ValueKey('card-carona-${carona.id}'),
       color: carona.finalizada ? const Color(0xFFF1F1F1) : Colors.white,
-      borderRadius: BorderRadius.circular(8),
+      borderRadius: destacarPublicacao ? null : BorderRadius.circular(8),
+      shape: destacarPublicacao
+          ? RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+              side: const BorderSide(color: AppColors.primary, width: 2),
+            )
+          : null,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(8),
@@ -255,7 +263,9 @@ class CardCaronaDisponivel extends StatelessWidget {
       color: carona.finalizada ? const Color(0xFFF1F1F1) : Colors.white,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
-        side: const BorderSide(color: Color(0xFFE2E2E8)),
+        side: destacarPublicacao
+            ? const BorderSide(color: AppColors.primary, width: 2)
+            : const BorderSide(color: Color(0xFFE2E2E8)),
       ),
       child: InkWell(
         onTap: onTap,
