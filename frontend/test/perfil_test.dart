@@ -187,7 +187,16 @@ void main() {
     await tester.tap(find.byTooltip('Voltar'));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.byTooltip('Editar perfil'));
+    await tester.scrollUntilVisible(
+      find.byKey(const ValueKey('alterar-instituicao')),
+      200,
+      scrollable: rolagemPerfil,
+    );
+    await tester.ensureVisible(
+      find.byKey(const ValueKey('alterar-instituicao')),
+    );
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('alterar-instituicao')));
     await tester.pumpAndSettle();
 
     await tester.enterText(find.byType(TextField).at(0), 'Fatec');

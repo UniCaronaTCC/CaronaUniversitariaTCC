@@ -91,7 +91,8 @@ Future<void> tocar(
 }
 
 Future<void> editar(WidgetTester tester, {bool aguardar = true}) async {
-  await tocar(tester, find.byTooltip('Editar perfil'));
+  await mostrarAlterarInstituicao(tester);
+  await tocar(tester, find.byKey(const ValueKey('alterar-instituicao')));
   await tester.enterText(find.byType(TextField), 'Fatec');
   await tester.pump(const Duration(milliseconds: 500));
   await tester.pumpAndSettle();
@@ -100,6 +101,19 @@ Future<void> editar(WidgetTester tester, {bool aguardar = true}) async {
     tester,
     find.widgetWithText(FilledButton, 'Salvar'),
     aguardar: aguardar,
+  );
+}
+
+Future<void> mostrarAlterarInstituicao(WidgetTester tester) async {
+  await tester.scrollUntilVisible(
+    find.byKey(const ValueKey('alterar-instituicao')),
+    200,
+    scrollable: find
+        .descendant(
+          of: find.byType(ConteudoPerfilBuscaEu),
+          matching: find.byType(Scrollable),
+        )
+        .first,
   );
 }
 
@@ -142,6 +156,99 @@ void main() {
   tearDown(() {
     AuthService.tokenUsuarioLogado = null;
     AuthService.usuarioLogado = null;
+  });
+
+  testWidgets(
+    'instituicao tem acesso unico sem lapis no cabecalho e preserva cancelamento',
+    (tester) async {
+      var salvamentos = 0;
+      await abrir(
+        tester,
+        atualizar: (_, _) async {
+          salvamentos++;
+          return {'sucesso': false};
+        },
+      );
+      expect(find.byTooltip('Editar perfil'), findsNothing);
+      expect(find.byIcon(Icons.edit_outlined), findsNothing);
+      expect(find.byTooltip('Voltar'), findsOneWidget);
+      expect(tester.widget<AppBar>(find.byType(AppBar)).actions, isNull);
+      await mostrarAlterarInstituicao(tester);
+      final botao = find.byKey(const ValueKey('alterar-instituicao'));
+      expect(botao, findsOneWidget);
+      expect(find.text('Alterar instituição'), findsOneWidget);
+      expect(
+        find.descendant(
+          of: botao,
+          matching: find.byIcon(Icons.school_outlined),
+        ),
+        findsOneWidget,
+      );
+      await tocar(tester, botao);
+      final dialogo = tester.widget<AlertDialog>(find.byType(AlertDialog));
+      expect((dialogo.title! as Text).data, 'Alterar instituição');
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller!.text,
+        'UniSalesiano',
+      );
+      await tocar(tester, find.text('Cancelar'));
+      expect(salvamentos, 0);
+      expect(dados(tester).usuario, usuario);
+      expect(find.byType(AvisoApp), findsNothing);
+      expect(find.byType(AlertDialog), findsNothing);
+    },
+  );
+
+  testWidgets('alterar instituicao exige selecao valida antes de salvar', (
+    tester,
+  ) async {
+    var salvamentos = 0;
+    await abrir(
+      tester,
+      atualizar: (_, _) async {
+        salvamentos++;
+        return {'sucesso': false};
+      },
+    );
+    await mostrarAlterarInstituicao(tester);
+    await tocar(tester, find.byKey(const ValueKey('alterar-instituicao')));
+    await tester.enterText(find.byType(TextField), '');
+    await tester.pump(const Duration(milliseconds: 600));
+    await tester.pumpAndSettle();
+    final salvar = tester.widget<FilledButton>(
+      find.widgetWithText(FilledButton, 'Salvar'),
+    );
+    expect(salvar.onPressed, isNull);
+    expect(salvamentos, 0);
+    await tocar(tester, find.text('Cancelar'));
+    expect(dados(tester).usuario, usuario);
+  });
+
+  testWidgets('alterar instituicao cabe em tela estreita com fonte ampliada', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(320, 640);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+    tester.platformDispatcher.textScaleFactorTestValue = 1.8;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await abrir(tester);
+    await mostrarAlterarInstituicao(tester);
+    final botao = find.byKey(const ValueKey('alterar-instituicao'));
+    await tester.ensureVisible(botao);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    final limites = tester.getRect(botao);
+    final texto = tester.getRect(
+      find.descendant(of: botao, matching: find.text('Alterar instituição')),
+    );
+    expect(texto.left, greaterThanOrEqualTo(limites.left));
+    expect(texto.right, lessThanOrEqualTo(limites.right));
+    await tocar(tester, botao);
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await tocar(tester, find.text('Cancelar'));
   });
 
   for (final temMensagem in [false, true]) {
@@ -339,10 +446,11 @@ void main() {
           return {'sucesso': false};
         },
       );
+      if (alvo == 'perfil') await mostrarAlterarInstituicao(tester);
       await tocar(
         tester,
         alvo == 'perfil'
-            ? find.byTooltip('Editar perfil')
+            ? find.byKey(const ValueKey('alterar-instituicao'))
             : find.widgetWithText(ListTile, 'Honda Civic'),
       );
       await tocar(tester, find.text('Cancelar'));

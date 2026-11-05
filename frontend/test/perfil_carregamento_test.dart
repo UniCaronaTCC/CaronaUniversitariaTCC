@@ -92,6 +92,42 @@ void main() {
   });
 
   testWidgets(
+    'botao de instituicao aguarda confirmacao do perfil sem depender das notas',
+    (tester) async {
+      AuthService.usuarioLogado = Map<String, dynamic>.from(usuario);
+      final pendente = Completer<Map<String, dynamic>>();
+      final notas = Completer<Map<String, dynamic>>();
+      await tester.pumpWidget(
+        tela(
+          carregar: () => pendente.future,
+          avaliacoes: (_, _) => notas.future,
+        ),
+      );
+      await tester.pump();
+      final botao = find.byKey(const ValueKey('alterar-instituicao'));
+      await tester.scrollUntilVisible(
+        botao,
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(ConteudoPerfilBuscaEu),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      expect(tester.widget<OutlinedButton>(botao).onPressed, isNull);
+      pendente.complete(perfilOk());
+      await tester.pump();
+      await tester.pump();
+      expect(tester.widget<OutlinedButton>(botao).onPressed, isNotNull);
+      expect(conteudo(tester).carregandoAvaliacoes, isTrue);
+      notas.complete(avaliacoesOk());
+      await tester.pumpAndSettle();
+      await limpar(tester);
+    },
+  );
+
+  testWidgets(
     'libera perfil antes de terminar avaliacoes sem inventar nota zero',
     (tester) async {
       final pendente = Completer<Map<String, dynamic>>();
@@ -436,7 +472,21 @@ void main() {
         tela(atualizar: (_, _) async => throw StateError('teste')),
       );
       await tester.pumpAndSettle();
-      await tester.tap(find.byTooltip('Editar perfil'));
+      await tester.scrollUntilVisible(
+        find.byKey(const ValueKey('alterar-instituicao')),
+        200,
+        scrollable: find
+            .descendant(
+              of: find.byType(ConteudoPerfilBuscaEu),
+              matching: find.byType(Scrollable),
+            )
+            .first,
+      );
+      await tester.ensureVisible(
+        find.byKey(const ValueKey('alterar-instituicao')),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const ValueKey('alterar-instituicao')));
       await tester.pumpAndSettle();
       await tester.tap(find.widgetWithText(FilledButton, 'Salvar'));
       await tester.pumpAndSettle();

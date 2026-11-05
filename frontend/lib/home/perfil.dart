@@ -354,7 +354,7 @@ class _PerfilTelaState extends State<PerfilTela> {
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, atualizarDialogo) => AlertDialog(
-          title: const Text('Editar perfil'),
+          title: const Text('Alterar instituição'),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
@@ -739,16 +739,7 @@ class _PerfilTelaState extends State<PerfilTela> {
     return VisualBuscaEu(
       child: Scaffold(
         backgroundColor: AppColors.background,
-        appBar: BarraSuperiorPadrao(
-          titulo: 'Perfil',
-          actions: [
-            IconButton(
-              tooltip: 'Editar perfil',
-              onPressed: _podeAlterar ? editarPerfil : null,
-              icon: const Icon(Icons.edit_outlined),
-            ),
-          ],
-        ),
+        appBar: const BarraSuperiorPadrao(titulo: 'Perfil'),
         bottomNavigationBar: BarraNavegacaoHome(
           currentIndex: 3,
           onTap: (indice) =>

@@ -284,9 +284,10 @@ class ConteudoPerfilBuscaEu extends StatelessWidget {
         ),
         const SizedBox(height: 20),
         OutlinedButton.icon(
+          key: const ValueKey('alterar-instituicao'),
           onPressed: carregando || !acoesHabilitadas ? null : onEditar,
-          icon: const Icon(Icons.edit_outlined, size: 20),
-          label: const Text('Editar perfil'),
+          icon: const Icon(Icons.school_outlined, size: 20),
+          label: const Text('Alterar instituição'),
         ),
         const SizedBox(height: 8),
         TextButton.icon(
