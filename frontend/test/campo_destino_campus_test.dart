@@ -2,12 +2,16 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:http/http.dart' as http;
+import 'package:http/testing.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:uni_carona/mapa/models/localizacao_selecionada.dart';
 import 'package:uni_carona/mapa/services/endereco_service.dart';
 import 'package:uni_carona/models/campus_destino.dart';
+import 'package:uni_carona/services/auth_service.dart';
 import 'package:uni_carona/services/campus_destino_service.dart';
 import 'package:uni_carona/widgets/campo_destino_campus.dart';
+import 'package:uni_carona/widgets/formulario_ofertar_carona.dart';
 
 const cidadeA = CidadeCampus('Araçatuba', 'SP');
 const referenciaA = LocalizacaoSelecionada(
@@ -153,7 +157,7 @@ void main() {
           selecionarCidadeNaLista: configuracao.$2,
         );
         await tester.pumpAndSettle();
-        final moderno = configuracao.$1 && configuracao.$2;
+        final moderno = configuracao.$1;
         expect(find.text('Alterar'), moderno ? findsOneWidget : findsNothing);
         expect(
           find.byIcon(Icons.location_city_outlined),
@@ -166,6 +170,124 @@ void main() {
         expect(find.byTooltip('Alterar cidade'), findsOneWidget);
         expect(tester.takeException(), isNull);
         await fechar(tester);
+      },
+    );
+  }
+
+  for (final estreita in [false, true]) {
+    testWidgets(
+      'oferta reaproveita controle de cidade e mantem destino e mapa: estreita=$estreita',
+      (tester) async {
+        tester.view.physicalSize = Size(estreita ? 320 : 390, 844);
+        tester.view.devicePixelRatio = 1;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+        final campos = List.generate(6, (_) => TextEditingController());
+        campos[0].text = 'UNESP · Odontologia';
+        addTearDown(() {
+          for (final campo in campos) {
+            campo.dispose();
+          }
+          AuthService.tokenUsuarioLogado = null;
+        });
+        AuthService.tokenUsuarioLogado = 'token-sintetico';
+        var publicacoes = 0;
+        var destinos = 0;
+        var mapas = 0;
+        await http.runWithClient(
+          () async {
+            await tester.pumpWidget(
+              MaterialApp(
+                builder: (context, child) => MediaQuery(
+                  data: MediaQuery.of(
+                    context,
+                  ).copyWith(textScaler: TextScaler.linear(estreita ? 1.8 : 1)),
+                  child: child!,
+                ),
+                home: Scaffold(
+                  body: SingleChildScrollView(
+                    padding: const EdgeInsets.all(24),
+                    child: FormularioOfertarCarona(
+                      destinoController: campos[0],
+                      dataController: campos[1],
+                      horarioController: campos[2],
+                      vagasController: campos[3],
+                      valorController: campos[4],
+                      observacoesController: campos[5],
+                      caronaRecorrente: false,
+                      enviandoCarona: false,
+                      diasSelecionados: const [],
+                      pontosEmbarque: const [],
+                      referenciaDestino: referenciaA,
+                      pontosEmbarqueEditaveis: true,
+                      possuiVeiculo: true,
+                      onSelecionarDestino: () => mapas++,
+                      onSelecionarData: () {},
+                      onSelecionarHorario: () {},
+                      onAdicionarPontoEmbarque: () {},
+                      onRemoverPontoEmbarque: (_) {},
+                      onOfertarCarona: () => publicacoes++,
+                      onCadastrarVeiculo: () {},
+                      onDestinoChanged: (_) {},
+                      onDestinoSelecionado: (_) => destinos++,
+                      onRecorrenciaChanged: (_) {},
+                      onDiaSelecionado: (_) {},
+                    ),
+                  ),
+                ),
+              ),
+            );
+            await tester.pumpAndSettle();
+            final destino = find.descendant(
+              of: find.byType(CampoDestinoCampus),
+              matching: find.byType(TextField),
+            );
+            await tester.ensureVisible(destino);
+            await tester.pumpAndSettle();
+            await tester.tap(destino);
+            await tester.pumpAndSettle();
+            expect(find.text('Araçatuba, SP'), findsOneWidget);
+            expect(find.text('Alterar'), findsOneWidget);
+            expect(find.byIcon(Icons.location_city_outlined), findsNothing);
+            expect(find.byTooltip('Escolher destino no mapa'), findsOneWidget);
+            expect(tester.takeException(), isNull);
+            await tester.ensureVisible(find.text('Alterar'));
+            await tester.pumpAndSettle();
+            await tester.tap(find.text('Alterar'));
+            await tester.pumpAndSettle();
+            expect(find.text('Cidade das faculdades'), findsOneWidget);
+            expect(
+              tester
+                  .widget<TextFormField>(find.byType(TextFormField).first)
+                  .initialValue,
+              'Araçatuba',
+            );
+            await tester.enterText(
+              find.byType(TextFormField).first,
+              'Campinas',
+            );
+            await tester.ensureVisible(find.text('Aplicar'));
+            await tester.pumpAndSettle();
+            await tester.tap(find.text('Aplicar'));
+            await tester.pumpAndSettle();
+            expect(find.text('Campinas, SP'), findsOneWidget);
+            expect(campos[0].text, 'UNESP · Odontologia');
+            expect(publicacoes, 0);
+            expect(destinos, 0);
+            expect(mapas, 0);
+            await tester.ensureVisible(
+              find.byTooltip('Escolher destino no mapa'),
+            );
+            await tester.pumpAndSettle();
+            await tester.tap(find.byTooltip('Escolher destino no mapa'));
+            expect(mapas, 1);
+            expect(tester.takeException(), isNull);
+            await fechar(tester);
+          },
+          () => MockClient(
+            (_) async => http.Response('{"sucesso":true,"dados":[]}', 200),
+          ),
+        );
       },
     );
   }

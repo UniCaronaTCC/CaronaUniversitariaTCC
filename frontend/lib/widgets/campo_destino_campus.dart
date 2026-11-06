@@ -617,8 +617,7 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
       ),
       if (_visivel) ...[
         const SizedBox(height: 8),
-        if (widget.telaCompleta ||
-            (widget.visualAtualizado && widget.selecionarCidadeNaLista))
+        if (widget.telaCompleta || widget.visualAtualizado)
           _cabecalhoCidade()
         else
           Row(
@@ -774,7 +773,7 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
   }
 
   Widget _cabecalhoCidade() {
-    return Row(
+    final cidade = Row(
       children: [
         const Icon(
           Icons.location_on_outlined,
@@ -790,17 +789,36 @@ class _CampoDestinoCampusState extends State<CampoDestinoCampus> {
             style: const TextStyle(color: Color(0xFF646B7B), fontSize: 14),
           ),
         ),
-        Tooltip(
-          message: 'Alterar cidade',
-          child: TextButton.icon(
-            onPressed: _alterandoCidade ? null : _trocarCidade,
-            style: TextButton.styleFrom(foregroundColor: AppColors.primary),
-            icon: const Icon(Icons.keyboard_arrow_down, size: 20),
-            iconAlignment: IconAlignment.end,
-            label: const Text('Alterar'),
-          ),
-        ),
       ],
+    );
+    final alterar = Tooltip(
+      message: 'Alterar cidade',
+      child: TextButton.icon(
+        onPressed: _alterandoCidade ? null : _trocarCidade,
+        style: TextButton.styleFrom(foregroundColor: AppColors.primary),
+        icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+        iconAlignment: IconAlignment.end,
+        label: const Text('Alterar'),
+      ),
+    );
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        if (constraints.maxWidth < 280) {
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              cidade,
+              Align(alignment: Alignment.centerRight, child: alterar),
+            ],
+          );
+        }
+        return Row(
+          children: [
+            Expanded(child: cidade),
+            alterar,
+          ],
+        );
+      },
     );
   }
 
