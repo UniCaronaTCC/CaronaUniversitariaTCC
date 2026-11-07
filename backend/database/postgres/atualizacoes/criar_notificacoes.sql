@@ -78,6 +78,10 @@ BEGIN
 
   WHEN 'solicitacoes' THEN
     IF TG_OP = 'UPDATE' AND OLD.status = NEW.status THEN RETURN NEW; END IF;
+    -- O cancelamento da viagem inteira possui um único aviso próprio.
+    IF NEW.status = 'CANCELADA_MOTORISTA' AND EXISTS (
+      SELECT 1 FROM unicarona.caronas WHERE id_carona = NEW.id_carona AND status = 'CANCELADA'
+    ) THEN RETURN NEW; END IF;
     SELECT c.id_usuario, c.destino, u.nome INTO motorista, destino, nome
       FROM unicarona.caronas c JOIN unicarona.usuarios u ON u.id_usuario = NEW.id_passageiro
       WHERE c.id_carona = NEW.id_carona;
@@ -114,6 +118,7 @@ BEGIN
         'Sua carona para ' || NEW.destino || ' foi publicada.', refs, chave || ':criada');
       RETURN NEW;
     END IF;
+    IF NEW.status = 'CANCELADA' THEN RETURN NEW; END IF;
     IF OLD.status IS DISTINCT FROM NEW.status AND NEW.status IN ('EM_ANDAMENTO', 'FINALIZADA', 'CANCELADA', 'EXPIRADA') THEN
       titulo := CASE NEW.status WHEN 'EM_ANDAMENTO' THEN 'Carona iniciada'
         WHEN 'FINALIZADA' THEN 'Carona encerrada' WHEN 'CANCELADA' THEN 'Carona cancelada' ELSE 'Carona expirada' END;
@@ -138,6 +143,20 @@ BEGIN
       WHERE s.id_solicitacao = NEW.id_solicitacao;
     refs := jsonb_build_object('tela', 'SOLICITACOES', 'aba', 'ENVIADAS', 'idSolicitacao', NEW.id_solicitacao, 'idCarona', aviso.id_carona);
     chave := 'pagamento:' || NEW.id_pagamento::TEXT || ':';
+    IF NEW.estorno_simulado_em IS NOT NULL THEN
+      IF (TG_OP = 'INSERT' OR OLD.estorno_simulado_em IS NULL) AND NOT EXISTS (
+        SELECT 1 FROM unicarona.notificacoes
+        WHERE id_usuario = aviso.id_passageiro
+          AND chave_evento = 'cancelamento-carona:' || aviso.id_carona::TEXT || ':' || NEW.id_solicitacao::TEXT
+          AND referencias @> '{"estornoSimulado":true}'::jsonb
+      ) THEN
+        PERFORM unicarona.registrar_notificacao(aviso.id_passageiro, 'PAGAMENTO', 'Estorno simulado registrado',
+          'Sua participação foi encerrada. O estorno do pagamento de teste foi registrado, sem movimentação de dinheiro real.',
+          refs || jsonb_build_object('tela', 'HISTORICO', 'estornoSimulado', true),
+          'estorno-simulado:' || NEW.id_pagamento::TEXT);
+      END IF;
+      RETURN NEW;
+    END IF;
     IF TG_OP = 'UPDATE' AND OLD.status_provedor IS NOT DISTINCT FROM NEW.status_provedor THEN
       IF OLD.status_criacao IS DISTINCT FROM NEW.status_criacao AND NEW.status_criacao IN ('FALHOU', 'INCERTA') THEN
         PERFORM unicarona.registrar_notificacao(aviso.id_passageiro, 'PAGAMENTO', 'Confira seu pagamento',
@@ -204,7 +223,7 @@ DROP TRIGGER IF EXISTS central_notificar_carona ON unicarona.caronas;
 CREATE TRIGGER central_notificar_carona AFTER INSERT OR UPDATE OF status, origem, destino, data_inicio, horario, valor ON unicarona.caronas
   FOR EACH ROW EXECUTE FUNCTION unicarona.registrar_evento_notificacao();
 DROP TRIGGER IF EXISTS central_notificar_pagamento ON unicarona.pagamentos;
-CREATE TRIGGER central_notificar_pagamento AFTER INSERT OR UPDATE OF status_provedor, status_criacao ON unicarona.pagamentos
+CREATE TRIGGER central_notificar_pagamento AFTER INSERT OR UPDATE OF status_provedor, status_criacao, estorno_simulado_em ON unicarona.pagamentos
   FOR EACH ROW EXECUTE FUNCTION unicarona.registrar_evento_notificacao();
 DROP TRIGGER IF EXISTS central_notificar_avaliacao ON unicarona.avaliacoes;
 CREATE TRIGGER central_notificar_avaliacao AFTER INSERT ON unicarona.avaliacoes

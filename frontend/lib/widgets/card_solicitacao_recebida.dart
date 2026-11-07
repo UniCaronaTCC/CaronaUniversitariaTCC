@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../models/solicitacao_recebida.dart';
 import 'status_solicitacao.dart';
+import 'aviso_estorno_simulado.dart';
 import 'avatar_usuario.dart';
 import 'visual_buscaeu.dart';
 
@@ -162,6 +163,7 @@ class CardSolicitacaoRecebida extends StatelessWidget {
               ),
             ),
 
+            if (solicitacao.estornoSimulado) const AvisoEstornoSimulado(),
             if (pendente) ...[
               const Divider(height: 30),
               CamposLadoALado(

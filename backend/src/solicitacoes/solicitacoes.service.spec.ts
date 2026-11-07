@@ -268,6 +268,86 @@ describe('SolicitacoesService', () => {
     );
   });
 
+  it.each([
+    'CANCELADA_MOTORISTA',
+    'CANCELADA_PASSAGEIRO',
+    'EXPIRADA',
+    'ACEITA',
+  ])(
+    'distingue estorno de pagamento atual na solicitação %s',
+    async (status) => {
+      atualizarQueryBuilder.getMany.mockResolvedValue([
+        {
+          idSolicitacao: 12,
+          status,
+          carona: { status: 'ATIVA', recorrente: false },
+        },
+      ]);
+      pagamentosQueryBuilder.getRawMany.mockResolvedValue([
+        {
+          idSolicitacao: '12',
+          estornoSimuladoEm: new Date('2026-09-15T11:00:00Z'),
+        },
+      ]);
+      const [resultado] = await service.listarEnviadas(1);
+      expect(resultado.pagamentoConfirmado).toBe(false);
+      expect(resultado.estornoSimulado).toBe(status !== 'ACEITA');
+    },
+  );
+
+  it.each([1, 2])(
+    'impede usuário %i de cancelar individualmente participação paga',
+    async (idUsuario) => {
+      const carona = {
+        idCarona: 10,
+        status: 'LOTADA',
+        vagas: 0,
+        usuario: { idUsuario: 2 },
+      };
+      const solicitacao = {
+        idSolicitacao: 1,
+        status: 'ACEITA',
+        passageiro: { idUsuario: 1 },
+        carona,
+      };
+      const consulta = {
+        innerJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        setLock: jest.fn().mockReturnThis(),
+        getOne: jest.fn().mockResolvedValue(solicitacao),
+      };
+      const salvar = jest.fn();
+      dataSource.transaction.mockImplementation(
+        (executar: (manager: unknown) => Promise<unknown>) =>
+          executar({
+            getRepository: (entidade: unknown) =>
+              entidade === Solicitacao
+                ? { createQueryBuilder: () => consulta, save: salvar }
+                : {
+                    createQueryBuilder: () => ({
+                      where: jest.fn().mockReturnThis(),
+                      setLock: jest.fn().mockReturnThis(),
+                      getMany: jest
+                        .fn()
+                        .mockResolvedValue([
+                          { statusProvedor: 'PAID', estornoSimuladoEm: null },
+                        ]),
+                    }),
+                    save: salvar,
+                  },
+          }),
+      );
+      await expect(
+        service.cancelarSolicitacao(1, idUsuario),
+      ).rejects.toMatchObject({
+        response: { codigo: 'PARTICIPACAO_PAGA' },
+      });
+      expect(carona.vagas).toBe(0);
+      expect(solicitacao.status).toBe('ACEITA');
+      expect(salvar).not.toHaveBeenCalled();
+    },
+  );
+
   it('impede solicitar vaga na própria carona', async () => {
     caronasRepository.findOne.mockResolvedValue({
       idCarona: 10,
@@ -535,7 +615,14 @@ describe('SolicitacoesService', () => {
                   createQueryBuilder: () => queryBuilder,
                   save: salvarSolicitacao,
                 }
-              : { save: salvarCarona },
+              : {
+                  save: salvarCarona,
+                  createQueryBuilder: () => ({
+                    where: jest.fn().mockReturnThis(),
+                    setLock: jest.fn().mockReturnThis(),
+                    getMany: jest.fn().mockResolvedValue([]),
+                  }),
+                },
         }),
     );
 

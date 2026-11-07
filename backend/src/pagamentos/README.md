@@ -48,7 +48,7 @@ O estado e conferido novamente depois da chamada externa antes de devolver o
 codigo. A consulta de pagamentos ja confirmados continua disponivel ao dono.
 Para cobrancas pendentes bloqueadas, a API retorna PAGAMENTO_INDISPONIVEL; a tela
 retira o codigo e interrompe as consultas automaticas. Isso nao revoga um codigo
-ja emitido no provedor nem implementa reembolso.
+ja emitido no provedor nem executa reembolso real. O prototipo registra estornos simulados em separado, conforme `FLUXO.md`.
 
 As ofertas exigem valor positivo, de pelo menos R$ 1,00, com ate duas casas
 decimais. A regra vale na publicacao, edicao e geracao de novas ocorrencias.
@@ -192,5 +192,8 @@ Ainda nao ha carteira, saldo ou repasse.
 - https://docs.abacatepay.com/pages/webhooks/events/transparent
 - https://docs.nestjs.com/faq/raw-body
 
-O prazo e a liberacao de reservas vencidas estao em `FLUXO.md`. O reembolso e
-o tratamento de uma confirmacao tardia ainda nao foram implementados.
+O prazo, a liberacao de reservas vencidas, o cancelamento integral e o estorno
+simulado de confirmacoes tardias estao em `FLUXO.md`. Reembolso financeiro real
+continua fora do escopo. Aplicar tambem a migracao
+`supabase/migrations/20261106120000_cancelamento_estorno_simulado.sql` antes
+de publicar esta versao do backend.

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
+import '../widgets/dialogo_cancelar_carona.dart';
 import '../mapa/models/localizacao_selecionada.dart';
 import '../mapa/screens/mapa_screen.dart';
 import '../models/carona.dart';
@@ -386,25 +387,7 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
   }
 
   Future<void> confirmarExclusao() async {
-    final confirmou = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Excluir carona?'),
-        content: const Text(
-          'A oferta deixará de aparecer para os passageiros.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('CANCELAR'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('EXCLUIR'),
-          ),
-        ],
-      ),
-    );
+    final confirmou = await confirmarCancelamentoCarona(context);
 
     if (confirmou != true || !mounted) {
       return;
@@ -427,8 +410,8 @@ class _DetalhesCaronaTelaState extends State<DetalhesCaronaTela> {
     _mostrarMensagem(
       resultado['mensagem']?.toString() ??
           (resultado['sucesso'] == true
-              ? 'Carona excluída'
-              : 'Erro ao excluir carona'),
+              ? 'Carona cancelada'
+              : 'Erro ao cancelar carona'),
       tipo: resultado['sucesso'] == true ? TipoAviso.sucesso : TipoAviso.erro,
     );
 

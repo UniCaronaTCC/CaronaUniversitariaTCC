@@ -58,6 +58,7 @@ export class ExpiracaoSolicitacoesService
              SELECT 1 FROM unicarona.pagamentos pagamento
              WHERE pagamento.id_solicitacao = solicitacao.id_solicitacao
                AND pagamento.status_provedor = 'PAID'
+               AND pagamento.estorno_simulado_em IS NULL
            )
          ORDER BY solicitacao.pagamento_limite_em`,
         [agora, idCarona ?? null],
@@ -87,6 +88,8 @@ export class ExpiracaoSolicitacoesService
     const consultas = new Map<number, ConsultaPix>();
 
     for (const tentativa of tentativas) {
+      if (tentativa.participacaoEncerradaEm || tentativa.estornoSimuladoEm)
+        continue;
       if (tentativa.statusProvedor === 'PAID') return;
       if (
         tentativa.statusCriacao === 'PREPARADA' ||
@@ -142,6 +145,8 @@ export class ExpiracaoSolicitacoesService
         .getMany();
 
       for (const pagamento of pagamentos) {
+        if (pagamento.participacaoEncerradaEm || pagamento.estornoSimuladoEm)
+          continue;
         if (pagamento.statusProvedor === 'PAID') return;
         if (
           pagamento.statusCriacao === 'PREPARADA' ||

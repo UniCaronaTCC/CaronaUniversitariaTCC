@@ -22,6 +22,7 @@ export class Solicitacao {
   avaliada = false;
   podeAvaliar = false;
   pagamentoConfirmado = false;
+  estornoSimulado = false;
 
   @PrimaryGeneratedColumn({ name: 'id_solicitacao' })
   idSolicitacao!: number;

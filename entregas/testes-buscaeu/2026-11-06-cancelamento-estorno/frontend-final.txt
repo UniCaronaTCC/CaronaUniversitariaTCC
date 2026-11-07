@@ -1,0 +1,3 @@
+Comando: flutter test --no-pub --reporter compact
+02:42 +1990: All tests passed!
+flutter analyze --no-pub: No issues found!

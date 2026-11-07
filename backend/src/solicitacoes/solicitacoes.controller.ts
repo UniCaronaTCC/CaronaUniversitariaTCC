@@ -139,6 +139,7 @@ export class SolicitacoesController {
         id: solicitacao.idSolicitacao,
         status: solicitacao.status,
         pagamentoConfirmado: solicitacao.pagamentoConfirmado,
+        estornoSimulado: solicitacao.estornoSimulado,
         avaliada: solicitacao.avaliada,
         podeAvaliar: solicitacao.podeAvaliar,
 
@@ -247,6 +248,7 @@ export class SolicitacoesController {
       id: solicitacao.idSolicitacao,
       status: solicitacao.status,
       pagamentoConfirmado: solicitacao.pagamentoConfirmado,
+      estornoSimulado: solicitacao.estornoSimulado,
       avaliada: solicitacao.avaliada,
       podeAvaliar: solicitacao.podeAvaliar,
 

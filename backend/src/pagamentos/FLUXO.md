@@ -14,7 +14,7 @@ O webhook confirma o pagamento. A vaga e a participação passam a ser definitiv
 
 ## Expiração
 
-Se o prazo terminar sem pagamento, o backend verifica as cobranças pendentes com a AbacatePay, expira a solicitação e libera a vaga. Se o provedor ainda indicar pagamento pendente ou a criação for incerta, a vaga permanece reservada até haver certeza. Confirmações recebidas após a expiração ainda deverão ser tratadas, evitando que alguém pague sem possuir uma vaga.
+Se o prazo terminar sem pagamento, o backend verifica as cobranças pendentes com a AbacatePay, expira a solicitação e libera a vaga. Se o provedor ainda indicar pagamento pendente ou a criação for incerta, a vaga permanece reservada até haver certeza. Confirmações recebidas após expiração ou cancelamento registram um estorno simulado, sem reativar a participação. O status PAID recebido do provedor é preservado no histórico.
 
 ## Início do percurso
 
@@ -22,11 +22,17 @@ Antes de iniciar, o backend verifica as reservas vencidas daquela carona. Depois
 
 ## Cancelamento
 
-Antes do pagamento, o cancelamento libera a vaga. Reembolso após pagamento não está implementado e não faz parte desta alteração; ocultar o Pix no aplicativo não revoga uma cobrança já emitida no provedor.
+Antes da confirmação do pagamento, o cancelamento individual libera a vaga. Após PAID, motorista e passageiro não podem cancelar apenas aquela participação. O motorista pode cancelar a carona inteira antes de iniciá-la, mediante confirmação no aplicativo. Viagens em andamento ou encerradas não são canceladas por esse fluxo.
+
+O cancelamento integral ocorre em uma transação: encerra pedidos pendentes e aceitos, preserva o histórico, registra estorno simulado de pagamentos Dev Mode confirmados e envia avisos aos passageiros e ao motorista. O aviso identifica claramente que não houve movimentação de dinheiro real. Repetir o cancelamento ou a confirmação não duplica esses registros.
+
+Uma confirmação tardia, recebida por webhook ou conciliação, registra o estorno simulado sem reativar a reserva. A tentativa guarda `participacao_encerrada_em` mesmo antes da confirmação; assim, reutilizar a solicitação não permite pagar a nova reserva com um Pix antigo. `estorno_simulado_em` só é preenchido após PAID em Dev Mode. Confirmação e cancelamento concorrentes bloqueiam a mesma tentativa no PostgreSQL.
+
+Isso não revoga um Pix no provedor e não executa reembolso financeiro real. A implantação exige aplicar `supabase/migrations/20261106120000_cancelamento_estorno_simulado.sql` antes do novo backend. A migração regulariza tentativas de participações já canceladas/expiradas sem emitir avisos retroativos.
 
 ## Registro mínimo
 
-O banco armazena prazos, tentativas de pagamento, expiração e eventos de webhook. Não há fluxo completo de reembolso.
+O banco armazena prazos, tentativas de pagamento, expiração e eventos de webhook. O estorno do protótipo é um registro local separado do estado do provedor; não existe fluxo financeiro de reembolso real.
 
 ## Fora do escopo
 

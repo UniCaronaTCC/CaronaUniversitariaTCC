@@ -379,9 +379,15 @@ class _StatusPix extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (icone, cor, titulo, descricao) = switch ((
-      pagamento.statusCriacao,
+      pagamento.estornoSimulado ? 'ESTORNO_SIMULADO' : pagamento.statusCriacao,
       pagamento.status,
     )) {
+      ('ESTORNO_SIMULADO', _) => (
+        Icons.undo,
+        const Color(0xFF7A5600),
+        'Estorno simulado registrado',
+        'Sua participação foi encerrada. O estorno é apenas uma simulação, sem movimentação de dinheiro real.',
+      ),
       ('CONFIRMADA', 'PENDING') => (
         Icons.schedule,
         const Color(0xFF7A5600),

@@ -71,6 +71,16 @@ export class Pagamento {
   })
   statusProvedor: StatusPix | null = null;
 
+  @Column({ name: 'estorno_simulado_em', type: 'timestamptz', nullable: true })
+  estornoSimuladoEm: Date | null = null;
+
+  @Column({
+    name: 'participacao_encerrada_em',
+    type: 'timestamptz',
+    nullable: true,
+  })
+  participacaoEncerradaEm: Date | null = null;
+
   @Column({ name: 'pix_copia_e_cola', type: 'text', nullable: true })
   pixCopiaECola: string | null = null;
 

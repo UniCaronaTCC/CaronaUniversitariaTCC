@@ -73,7 +73,8 @@ export class CaronasController {
 
     return {
       sucesso: true,
-      mensagem: 'Carona excluída com sucesso',
+      mensagem:
+        'Carona cancelada. Os passageiros foram avisados e os estornos simulados foram registrados quando aplicáveis',
     };
   }
 

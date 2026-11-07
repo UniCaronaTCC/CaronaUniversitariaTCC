@@ -7,7 +7,7 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { randomUUID } from 'node:crypto';
-import { DataSource, In, Repository } from 'typeorm';
+import { DataSource, In, IsNull, Repository } from 'typeorm';
 
 import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 import { AbacatePayService } from './abacatepay.service';
@@ -61,6 +61,12 @@ export class PagamentosService {
     }
 
     if (pagamento.statusProvedor !== 'PAID') {
+      if (pagamento.participacaoEncerradaEm) {
+        throw new ConflictException({
+          message: 'Esta tentativa pertence a uma participação encerrada',
+          codigo: 'PAGAMENTO_INDISPONIVEL',
+        });
+      }
       this.exigirSolicitacaoPagavel(pagamento.solicitacao);
     }
     return pagamento;
@@ -204,6 +210,8 @@ export class PagamentosService {
         where: {
           solicitacao: { idSolicitacao },
           statusCriacao: In(STATUS_QUE_BLOQUEIAM_NOVA_TENTATIVA),
+          estornoSimuladoEm: IsNull(),
+          participacaoEncerradaEm: IsNull(),
         },
         relations: { solicitacao: true },
         order: { criadoEm: 'DESC' },

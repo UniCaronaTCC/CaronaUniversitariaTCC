@@ -11,6 +11,7 @@ import { AvaliacoesService } from '../avaliacoes/avaliacoes.service';
 import { Carona } from '../caronas/carona.entity';
 import { CaronasService } from '../caronas/caronas.service';
 import { partidaNoFuturo } from '../caronas/partida-carona';
+import { exigirParticipacaoCancelavel } from '../pagamentos/pagamentos-participacao';
 import { PontoEmbarque } from '../caronas/ponto-embarque.entity';
 import { Conversa } from '../mensagens/conversa.entity';
 import { Pagamento } from '../pagamentos/pagamento.entity';
@@ -435,6 +436,8 @@ export class SolicitacoesService {
         throw new ConflictException('Esta solicitação não pode ser cancelada');
       }
 
+      await exigirParticipacaoCancelavel(manager, idSolicitacao);
+
       if (solicitacao.status === 'ACEITA') {
         solicitacao.carona.vagas = Math.min(solicitacao.carona.vagas + 1, 4);
 
@@ -488,9 +491,14 @@ export class SolicitacoesService {
 
     for (const solicitacao of solicitacoes) {
       solicitacao.avaliada = idsAvaliados.has(solicitacao.idSolicitacao);
-      solicitacao.pagamentoConfirmado = pagamentosConfirmados.has(
+      solicitacao.pagamentoConfirmado = pagamentosConfirmados.pagos.has(
         solicitacao.idSolicitacao,
       );
+      solicitacao.estornoSimulado =
+        (solicitacao.status.startsWith('CANCELADA_') ||
+          solicitacao.status === 'EXPIRADA' ||
+          solicitacao.carona.status === 'CANCELADA') &&
+        pagamentosConfirmados.estornos.has(solicitacao.idSolicitacao);
 
       solicitacao.podeAvaliar =
         !solicitacao.avaliada &&
@@ -502,23 +510,36 @@ export class SolicitacoesService {
 
   private async buscarSolicitacoesPagas(
     idsSolicitacoes: number[],
-  ): Promise<Set<number>> {
+  ): Promise<{ pagos: Set<number>; estornos: Set<number> }> {
     if (idsSolicitacoes.length === 0) {
-      return new Set();
+      return { pagos: new Set(), estornos: new Set() };
     }
 
     const registros = await this.pagamentosRepository
       .createQueryBuilder('pagamento')
       .innerJoin('pagamento.solicitacao', 'solicitacao')
-      .select('solicitacao.idSolicitacao', 'idSolicitacao')
+      .select(
+        'solicitacao.idSolicitacao AS "idSolicitacao", pagamento.estornoSimuladoEm AS "estornoSimuladoEm"',
+      )
       .where('solicitacao.idSolicitacao IN (:...idsSolicitacoes)', {
         idsSolicitacoes,
       })
       .andWhere('pagamento.statusProvedor = :statusPago', {
         statusPago: 'PAID',
       })
-      .getRawMany<{ idSolicitacao: string }>();
+      .getRawMany<{ idSolicitacao: string; estornoSimuladoEm: Date | null }>();
 
-    return new Set(registros.map((item) => Number(item.idSolicitacao)));
+    return {
+      pagos: new Set(
+        registros
+          .filter((item) => !item.estornoSimuladoEm)
+          .map((item) => Number(item.idSolicitacao)),
+      ),
+      estornos: new Set(
+        registros
+          .filter((item) => item.estornoSimuladoEm)
+          .map((item) => Number(item.idSolicitacao)),
+      ),
+    };
   }
 }

@@ -444,7 +444,9 @@ void main() {
             final Future<void> operacao = estado.confirmarExclusao();
             await tester.pumpAndSettle();
             expect(exclusoes, 0);
-            await tester.tap(find.widgetWithText(FilledButton, 'EXCLUIR'));
+            await tester.tap(
+              find.widgetWithText(FilledButton, 'CANCELAR CARONA'),
+            );
             await tester.pumpAndSettle();
             await operacao;
             conferirAviso(tester, sucesso);

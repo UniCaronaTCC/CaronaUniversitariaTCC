@@ -1,3 +1,4 @@
+import 'aviso_estorno_simulado.dart';
 import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
@@ -132,6 +133,7 @@ class CardSolicitacaoEnviada extends StatelessWidget {
                     icone: Icons.person_pin_circle_outlined,
                     texto: solicitacao.localEmbarque,
                   ),
+                  if (solicitacao.estornoSimulado) const AvisoEstornoSimulado(),
                   if (solicitacao.podePagarPix &&
                       solicitacao.prazoPagamentoFormatado != null) ...[
                     const SizedBox(height: 12),

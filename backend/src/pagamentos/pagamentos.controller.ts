@@ -81,6 +81,7 @@ export class PagamentosController {
       qrCodeBase64: pagamento.qrCodeBase64,
       expiraEm: pagamento.expiraEm,
       modoTeste: pagamento.modoTeste,
+      estornoSimuladoEm: pagamento.estornoSimuladoEm ?? null,
     };
   }
 

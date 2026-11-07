@@ -79,6 +79,7 @@ describe('PagamentosController', () => {
     expect(resultado).toEqual({
       sucesso: true,
       dados: {
+        estornoSimuladoEm: null,
         id: 30,
         idSolicitacao: 10,
         metodo: 'PIX',

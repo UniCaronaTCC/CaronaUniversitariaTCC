@@ -4,7 +4,7 @@ import {
   NotFoundException,
   ServiceUnavailableException,
 } from '@nestjs/common';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, IsNull, Repository } from 'typeorm';
 
 import { Solicitacao } from '../solicitacoes/solicitacao.entity';
 import { AbacatePayService } from './abacatepay.service';
@@ -125,6 +125,20 @@ describe('PagamentosService', () => {
 
   afterEach(() => {
     jest.useRealTimers();
+  });
+
+  it('não simula Pix antigo se uma solicitação cancelada foi reutilizada', async () => {
+    pagamentosRepository.findOne.mockResolvedValue({
+      idPagamento: 30,
+      modoTeste: true,
+      statusProvedor: 'PENDING',
+      participacaoEncerradaEm: new Date('2026-09-03T11:00:00Z'),
+      solicitacao: solicitacaoAceita,
+    });
+    await expect(service.simularPagamento(30, 1)).rejects.toMatchObject({
+      response: { codigo: 'PAGAMENTO_INDISPONIVEL' },
+    });
+    expect(abacatePayService.simularPagamento).not.toHaveBeenCalled();
   });
 
   it('consulta o pagamento somente para o passageiro vinculado', async () => {
@@ -351,8 +365,17 @@ describe('PagamentosService', () => {
 
     await expect(service.criarOuObterPix(10, 1)).resolves.toBe(existente);
     expect(pagamentosTransacaoRepository.findOne).toHaveBeenCalledWith(
-      expect.objectContaining({ relations: { solicitacao: true } }),
+      expect.objectContaining({
+        relations: { solicitacao: true },
+      }),
     );
+    const [consulta] = pagamentosTransacaoRepository.findOne.mock.calls[0] as [
+      {
+        where: { estornoSimuladoEm: unknown; participacaoEncerradaEm: unknown };
+      },
+    ];
+    expect(consulta.where.estornoSimuladoEm).toEqual(IsNull());
+    expect(consulta.where.participacaoEncerradaEm).toEqual(IsNull());
     expect(pagamentosTransacaoRepository.create).not.toHaveBeenCalled();
     expect(abacatePayService.criarPix).not.toHaveBeenCalled();
   });

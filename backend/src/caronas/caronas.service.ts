@@ -288,23 +288,22 @@ export class CaronasService {
   }
 
   async excluirCarona(idCarona: number, idUsuario: number): Promise<void> {
-    await this.encerramentoCorridas.encerrarVencidas();
-    const carona = await this.buscarCaronaDoUsuario(idCarona, idUsuario);
-
-    if (carona.status === STATUS_ENCERRADA_POR_TEMPO) {
-      throw new ConflictException(MENSAGEM_ENCERRADA_POR_TEMPO);
-    }
-
-    if (carona.status === 'EM_ANDAMENTO') {
-      throw new ConflictException(
-        'Não é possível excluir uma corrida em andamento',
-      );
-    }
-
-    // Mantém a carona no histórico.
-    carona.status = 'CANCELADA';
-
-    await this.caronasRepository.save(carona);
+    await this.comCaronaBloqueada(
+      idCarona,
+      idUsuario,
+      async (manager, carona) => {
+        if (carona.status === 'CANCELADA') return;
+        if (!['ATIVA', 'LOTADA'].includes(carona.status)) {
+          throw new ConflictException(
+            'Só é possível cancelar uma carona antes do início da corrida',
+          );
+        }
+        // O gatilho encerra as participações, registra os estornos de teste e
+        // notifica todos na mesma transação, sem apagar o histórico.
+        carona.status = 'CANCELADA';
+        await manager.getRepository(Carona).save(carona);
+      },
+    );
   }
 
   async finalizarCaronasVencidas(): Promise<void> {
@@ -543,10 +542,6 @@ export class CaronasService {
 
       .where('usuario.idUsuario = :idUsuario', {
         idUsuario,
-      })
-
-      .andWhere('carona.status <> :statusCancelada', {
-        statusCancelada: 'CANCELADA',
       })
 
       .orderBy('carona.dataInicio', 'DESC')

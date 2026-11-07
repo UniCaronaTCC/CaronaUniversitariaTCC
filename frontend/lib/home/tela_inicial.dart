@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
+import '../widgets/dialogo_cancelar_carona.dart';
 import '../mapa/models/localizacao_selecionada.dart';
 import '../mapa/services/endereco_service.dart';
 import '../mapa/services/localizacao_service.dart';
@@ -335,25 +336,7 @@ class _TelaInicialState extends State<TelaInicial> {
   }
 
   Future<void> cancelarCaronaPublicada(Carona carona) async {
-    final confirmou = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Cancelar carona?'),
-        content: const Text(
-          'A carona deixará de aparecer para os passageiros.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('VOLTAR'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('CANCELAR CARONA'),
-          ),
-        ],
-      ),
-    );
+    final confirmou = await confirmarCancelamentoCarona(context);
 
     if (!mounted || confirmou != true) {
       return;

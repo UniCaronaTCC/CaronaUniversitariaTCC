@@ -24,6 +24,7 @@ class SolicitacaoRecebida {
   final bool avaliada;
   final bool podeAvaliar;
   final bool pagamentoConfirmado;
+  final bool estornoSimulado;
   final DateTime? pagamentoLimiteEm;
 
   const SolicitacaoRecebida({
@@ -44,6 +45,7 @@ class SolicitacaoRecebida {
     this.avaliada = false,
     this.podeAvaliar = false,
     this.pagamentoConfirmado = false,
+    this.estornoSimulado = false,
     this.pagamentoLimiteEm,
   });
 
@@ -92,6 +94,7 @@ class SolicitacaoRecebida {
       podeAvaliar: json['podeAvaliar'] == true,
 
       pagamentoConfirmado: json['pagamentoConfirmado'] == true,
+      estornoSimulado: json['estornoSimulado'] == true,
 
       pagamentoLimiteEm: DataHoraUtils.interpretarInstanteEmBrasilia(
         json['pagamentoLimiteEm'],
@@ -117,7 +120,9 @@ class SolicitacaoRecebida {
       expirada ||
       statusCarona == 'CANCELADA';
 
-  String get statusExibicao => encerradaPorTempo
+  String get statusExibicao => (cancelada || statusCarona == 'CANCELADA')
+      ? (cancelada ? status : 'CANCELADA_MOTORISTA')
+      : encerradaPorTempo
       ? 'ENCERRADA_POR_TEMPO'
       : expirada
       ? 'EXPIRADA'

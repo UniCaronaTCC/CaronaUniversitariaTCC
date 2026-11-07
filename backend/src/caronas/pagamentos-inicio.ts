@@ -18,6 +18,7 @@ export async function exigirPagamentosParaInicio(
       SELECT 1 FROM unicarona.pagamentos pagamento
       WHERE pagamento.id_solicitacao = solicitacao.id_solicitacao
         AND pagamento.status_provedor = 'PAID'
+        AND pagamento.estorno_simulado_em IS NULL
     )`,
     )
     .getCount();

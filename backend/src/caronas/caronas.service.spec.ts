@@ -348,6 +348,37 @@ describe('CaronasService', () => {
     expect(repository.save).toHaveBeenCalledWith(carona);
   });
 
+  it.each(['FINALIZADA', 'EM_ANDAMENTO', 'ENCERRADA_POR_TEMPO', 'EXPIRADA'])(
+    'preserva a carona %s ao tentar cancelar',
+    async (status) => {
+      const carona = { idCarona: 5, usuario: { idUsuario: 1 }, status };
+      prepararEdicao(carona as Partial<Carona>);
+      await expect(service.excluirCarona(5, 1)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(carona.status).toBe(status);
+      expect(repository.save).not.toHaveBeenCalled();
+    },
+  );
+
+  it('repetir cancelamento não salva nem dispara novamente os efeitos', async () => {
+    prepararEdicao({ idCarona: 5, status: 'CANCELADA' });
+    await service.excluirCarona(5, 1);
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
+  it('restringe o cancelamento ao motorista na consulta bloqueada', async () => {
+    const bloqueio = prepararEdicao(null);
+    await expect(service.excluirCarona(5, 9)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(bloqueio.andWhere).toHaveBeenCalledWith(
+      'carona.id_usuario = :idUsuario',
+      { idUsuario: 9 },
+    );
+    expect(repository.save).not.toHaveBeenCalled();
+  });
+
   it('finaliza automaticamente caronas vencidas', async () => {
     await service.finalizarCaronasVencidas();
 

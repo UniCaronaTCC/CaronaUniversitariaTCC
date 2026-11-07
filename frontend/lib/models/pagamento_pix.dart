@@ -13,6 +13,7 @@ class PagamentoPix {
   final String? qrCodeBase64;
   final DateTime? expiraEm;
   final bool modoTeste;
+  final DateTime? estornoSimuladoEm;
 
   const PagamentoPix({
     required this.id,
@@ -25,6 +26,7 @@ class PagamentoPix {
     required this.qrCodeBase64,
     required this.expiraEm,
     required this.modoTeste,
+    this.estornoSimuladoEm,
   });
 
   factory PagamentoPix.fromJson(Map<String, dynamic> json) {
@@ -34,6 +36,10 @@ class PagamentoPix {
     final metodo = json['metodo']?.toString() ?? '';
     final statusCriacao = json['statusCriacao']?.toString() ?? '';
     final modoTeste = json['modoTeste'] == true;
+    final estornoTexto = json['estornoSimuladoEm']?.toString();
+    final estornoEm = estornoTexto == null
+        ? null
+        : DateTime.tryParse(estornoTexto)?.toLocal();
     final expiraEmTexto = json['expiraEm']?.toString();
     final expiraEm = expiraEmTexto == null
         ? null
@@ -45,6 +51,7 @@ class PagamentoPix {
         metodo != 'PIX' ||
         !_statusCriacaoValidos.contains(statusCriacao) ||
         !modoTeste ||
+        (estornoTexto != null && estornoEm == null) ||
         (expiraEmTexto != null && expiraEm == null)) {
       throw const FormatException('Pagamento Pix inválido');
     }
@@ -60,13 +67,17 @@ class PagamentoPix {
       qrCodeBase64: json['qrCodeBase64']?.toString(),
       expiraEm: expiraEm,
       modoTeste: modoTeste,
+      estornoSimuladoEm: estornoEm,
     );
   }
 
-  bool get aguardandoConfirmacao =>
-      statusCriacao == 'CONFIRMADA' && status == 'PENDING';
+  bool get estornoSimulado => estornoSimuladoEm != null;
 
-  bool get pago => statusCriacao == 'CONFIRMADA' && status == 'PAID';
+  bool get aguardandoConfirmacao =>
+      !estornoSimulado && statusCriacao == 'CONFIRMADA' && status == 'PENDING';
+
+  bool get pago =>
+      !estornoSimulado && statusCriacao == 'CONFIRMADA' && status == 'PAID';
 
   bool get pixDisponivel =>
       aguardandoConfirmacao &&

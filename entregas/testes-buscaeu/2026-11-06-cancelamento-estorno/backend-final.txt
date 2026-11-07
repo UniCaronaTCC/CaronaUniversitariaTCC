@@ -1,0 +1,8 @@
+Comando: node node_modules/jest/bin/jest.js --runInBand
+Test Suites: 51 passed, 51 total
+Tests:       751 passed, 751 total
+Snapshots:   0 total
+Time:        10.288 s, estimated 21 s
+Ran all test suites.
+Build: npm run build — aprovado.
+ESLint dos arquivos TypeScript alterados: aprovado.
