@@ -465,33 +465,39 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
 
   Widget _conteudo() {
     if (carregando) {
-      return const EstadoConteudoPadrao(
-        carregando: true,
-        titulo: 'Carregando mensagens',
-        mensagem: 'Buscando o histórico desta conversa.',
+      return _estadoConversa(
+        const EstadoConteudoPadrao(
+          carregando: true,
+          titulo: 'Carregando mensagens',
+          mensagem: 'Buscando o histórico desta conversa.',
+        ),
       );
     }
 
     if (mensagemErro != null) {
-      return EstadoConteudoPadrao(
-        icone: Icons.cloud_off_outlined,
-        corIcone: const Color(0xFFB3261E),
-        titulo: 'Não foi possível carregar as mensagens',
-        mensagem: mensagemErro!,
-        textoBotao: 'Tentar novamente',
-        iconeBotao: Icons.refresh_rounded,
-        onPressed: carregarDados,
+      return _estadoConversa(
+        EstadoConteudoPadrao(
+          icone: Icons.cloud_off_outlined,
+          corIcone: const Color(0xFFB3261E),
+          titulo: 'Não foi possível carregar as mensagens',
+          mensagem: mensagemErro!,
+          textoBotao: 'Tentar novamente',
+          iconeBotao: Icons.refresh_rounded,
+          onPressed: carregarDados,
+        ),
       );
     }
 
     if (mensagens.isEmpty) {
-      return EstadoConteudoPadrao(
-        icone: encerrada ? Icons.lock_outline : Icons.forum_outlined,
-        corIcone: encerrada ? Colors.black45 : AppColors.primary,
-        titulo: encerrada ? 'Conversa encerrada' : 'Comece a conversa',
-        mensagem: encerrada
-            ? 'Esta conversa foi encerrada antes do envio de mensagens.'
-            : 'Envie uma mensagem para combinar os detalhes da carona.',
+      return _estadoConversa(
+        EstadoConteudoPadrao(
+          icone: encerrada ? Icons.lock_outline : Icons.forum_outlined,
+          corIcone: encerrada ? Colors.black45 : AppColors.primary,
+          titulo: encerrada ? 'Conversa encerrada' : 'Comece a conversa',
+          mensagem: encerrada
+              ? 'Esta conversa foi encerrada antes do envio de mensagens.'
+              : 'Envie uma mensagem para combinar os detalhes da carona.',
+        ),
       );
     }
 
@@ -504,6 +510,9 @@ class _ConversaDetalheTelaState extends State<ConversaDetalheTela>
       itemBuilder: (context, index) => _itemMensagem(index),
     );
   }
+
+  Widget _estadoConversa(EstadoConteudoPadrao estado) =>
+      Center(child: SingleChildScrollView(primary: false, child: estado));
 
   Widget _itemMensagem(int index) {
     final mensagem = mensagens[index];

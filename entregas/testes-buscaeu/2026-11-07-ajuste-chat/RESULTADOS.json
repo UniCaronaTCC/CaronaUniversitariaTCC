@@ -1,0 +1,60 @@
+{
+  "data": "2026-11-07",
+  "fuso": "America/Sao_Paulo",
+  "branch": "revisao",
+  "mudanca": "Avisos do chat centralizados quando cabem e rolaveis quando falta altura; estados carregando/erro/vazio. Lista de mensagens e envio preservados.",
+  "arquivos_alterados_nesta_tarefa": [
+    "frontend/lib/home/conversa_detalhe.dart"
+  ],
+  "arquivos_novos_nesta_tarefa": [
+    "frontend/test/chat_estado_responsivo_test.dart"
+  ],
+  "outros_arquivos_preservados": 586,
+  "reproducao_antes": {
+    "error": 4,
+    "success": 3
+  },
+  "direcionados": {
+    "casos": 36,
+    "sucesso": true
+  },
+  "flutter_completo": {
+    "casos": 1997,
+    "sucesso": true
+  },
+  "android": {
+    "modelo": "25078RA3EL",
+    "versao": "15",
+    "casos": 2,
+    "sucesso": true,
+    "camada": "Widgets no Android com caronas/mensagens sinteticas; teclado/area logica controlados",
+    "antes": "Os mesmos casos registraram overflow de 13 e 24 px na rodada anterior",
+    "depois": "Sem overflow e com a mensagem acessivel por rolagem; campo de envio conforme conversa ativa/encerrada"
+  },
+  "fases": {
+    "flutter-completo": {
+      "fase": "flutter-completo",
+      "exit_code": 0,
+      "duracao_segundos": 331.42
+    },
+    "analise": {
+      "fase": "analise",
+      "exit_code": 0,
+      "duracao_segundos": 47.55
+    },
+    "apk": {
+      "fase": "apk",
+      "exit_code": 0,
+      "duracao_segundos": 65.75
+    }
+  },
+  "apk": {
+    "caminho": "C:\\TCC\\CaronaUniversitariaTCC\\frontend\\build\\app\\outputs\\flutter-apk\\app-debug.apk",
+    "api": "https://buscaeu-api-henrique.onrender.com",
+    "sha256": "c1d9b2598d76fe5034622d75b7f699abca22d00327308e54b5e9ccd43ac6fba0",
+    "instalado_no_celular": true,
+    "instalacao_preservou_dados": true
+  },
+  "limite": "Nao retesta backend/provedores ou GPS em trajeto. Nenhuma API, dado pessoal ou regra de negocio alterada nesta tarefa.",
+  "commit_push_deploy": false
+}
