@@ -1,0 +1,10 @@
+HTTP CNH: 11 passed, 11 total; 1 suite passed; 1.69 s.
+Unidade backend:
+Test Suites: 51 passed, 51 total
+Tests:       751 passed, 751 total
+Snapshots:   0 total
+Time:        9.66 s, estimated 10 s
+Ran all test suites.
+Build: aprovado.
+Lint e formato do teste HTTP: aprovados.
+JSON/YAML da automação: válidos.

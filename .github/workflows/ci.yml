@@ -34,6 +34,9 @@ jobs:
       - name: Executar testes unitários
         run: npm test -- --runInBand
 
+      - name: Testar endpoints da CNH com serviços simulados
+        run: npm run test:cnh:http
+
       - name: Fazer build do backend
         run: npm run build
 

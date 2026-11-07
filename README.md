@@ -29,7 +29,12 @@ testados, dentro de `backend/src`. Os testes do aplicativo Flutter ficam em
 
 O workflow de integração contínua é executado em pushes e pull requests para
 as branches `master` e `desenvolvimento`. Ele instala as dependências, executa
-os testes unitários, faz o build do backend e gera um APK de teste.
+os testes unitários, verifica os endpoints da CNH com serviços simulados, faz o
+build do backend e gera um APK de teste.
+
+O teste HTTP da CNH acompanha o envio da leitura `mlkit-v1`, sem o antigo campo
+de nome digitado. Ele usa autenticação e conferência de dados simuladas, sem
+conectar ao banco, executar o OCR ou consultar serviços externos.
 
 Para verificar o backend localmente:
 
@@ -37,6 +42,7 @@ Para verificar o backend localmente:
 cd backend
 npm ci
 npm test -- --runInBand
+npm run test:cnh:http
 npm run build
 ```
 

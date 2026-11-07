@@ -77,7 +77,26 @@ describe('VerificacaoCnhController (HTTP)', () => {
     },
   );
 
-  it('recebe OCR em JSON sem arquivos e usa conta autenticada', async () => {
+  it.each(['verificar', 'verificar-mlkit'])(
+    'recebe leitura sem nome digitado e usa conta autenticada em %s',
+    async (rota) => {
+      const leitura = { largura: 1000, altura: 800, linhas: [] };
+      await request(app.getHttpServer())
+        .post(`/usuarios/cnh/${rota}`)
+        .set('Authorization', 'Bearer token-teste')
+        .send({
+          versaoLeitura: 'mlkit-v1',
+          aceitePrivacidade: true,
+          leitura,
+          idUsuario: 1,
+        })
+        .expect(201);
+      expect(verificar).toHaveBeenCalledTimes(1);
+      expect(verificar).toHaveBeenCalledWith(42, leitura);
+    },
+  );
+
+  it('ignora nome digitado enviado por uma versão antiga do app', async () => {
     const leitura = { largura: 1000, altura: 800, linhas: [] };
     await request(app.getHttpServer())
       .post('/usuarios/cnh/verificar-mlkit')
@@ -85,13 +104,28 @@ describe('VerificacaoCnhController (HTTP)', () => {
       .send({
         versaoLeitura: 'mlkit-v1',
         aceitePrivacidade: true,
-        nomeCompleto: 'Maria Silva',
+        nomeCompleto: 'Nome digitado de teste',
         leitura,
-        idUsuario: 1,
       })
       .expect(201);
-    expect(verificar).toHaveBeenCalledWith(42, leitura, 'Maria Silva');
+    expect(verificar).toHaveBeenCalledWith(42, leitura);
   });
+
+  it.each([undefined, false, 'true'])(
+    'não encaminha leitura sem aceite de privacidade válido: %s',
+    async (aceitePrivacidade) => {
+      await request(app.getHttpServer())
+        .post('/usuarios/cnh/verificar-mlkit')
+        .set('Authorization', 'Bearer token-teste')
+        .send({
+          versaoLeitura: 'mlkit-v1',
+          aceitePrivacidade,
+          leitura: { largura: 1000, altura: 800, linhas: [] },
+        })
+        .expect(400);
+      expect(verificar).not.toHaveBeenCalled();
+    },
+  );
   it('informa atualização para o contrato antigo', async () => {
     await request(app.getHttpServer())
       .post('/usuarios/cnh/verificar')
