@@ -2,45 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 
-class CampoTextoPadrao extends StatelessWidget {
-  final String label;
-  final TextEditingController? controller;
-  final bool obscureText;
-  final TextInputType? keyboardType;
-  final String? valorInicial;
-  final ValueChanged<String>? onChanged;
-
-  const CampoTextoPadrao({
-    super.key,
-    required this.label,
-    this.controller,
-    this.obscureText = false,
-    this.keyboardType,
-    this.valorInicial,
-    this.onChanged,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      initialValue: controller == null ? valorInicial : null,
-      obscureText: obscureText,
-      keyboardType: keyboardType,
-      onChanged: onChanged,
-      decoration: InputDecoration(
-        labelText: label,
-        enabledBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: AppColors.primary),
-        ),
-        focusedBorder: const OutlineInputBorder(
-          borderSide: BorderSide(color: AppColors.primary, width: 3),
-        ),
-      ),
-    );
-  }
-}
-
 class EstadoConteudoPadrao extends StatelessWidget {
   final bool carregando;
   final String? titulo;

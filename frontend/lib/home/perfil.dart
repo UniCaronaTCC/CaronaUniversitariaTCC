@@ -659,19 +659,6 @@ class _PerfilTelaState extends State<PerfilTela> {
     );
   }
 
-  Widget itemPerfil({
-    required IconData icone,
-    required String titulo,
-    required String valor,
-  }) {
-    return ListTile(
-      contentPadding: EdgeInsets.zero,
-      leading: Icon(icone, color: AppColors.primary),
-      title: Text(titulo),
-      subtitle: Text(valor),
-    );
-  }
-
   String textoTipoPerfil() {
     final cnh = VerificacaoCnh.fromPerfil(usuario);
     return cnh.permiteOferecerCarona()

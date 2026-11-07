@@ -157,9 +157,9 @@ BEGIN
       RETURN NEW;
     END IF;
     IF NEW.status = 'CANCELADA' THEN RETURN NEW; END IF;
-    IF OLD.status IS DISTINCT FROM NEW.status AND NEW.status IN ('EM_ANDAMENTO', 'FINALIZADA', 'CANCELADA', 'EXPIRADA') THEN
+    IF OLD.status IS DISTINCT FROM NEW.status AND NEW.status IN ('EM_ANDAMENTO', 'FINALIZADA', 'EXPIRADA') THEN
       titulo := CASE NEW.status WHEN 'EM_ANDAMENTO' THEN 'Carona iniciada'
-        WHEN 'FINALIZADA' THEN 'Carona encerrada' WHEN 'CANCELADA' THEN 'Carona cancelada' ELSE 'Carona expirada' END;
+        WHEN 'FINALIZADA' THEN 'Carona encerrada' ELSE 'Carona expirada' END;
       descricao := 'A carona para ' || NEW.destino || ' teve seu estado atualizado.';
       chave := chave || ':' || NEW.status;
       PERFORM unicarona.registrar_notificacao(NEW.id_usuario, 'CARONA', titulo, descricao, refs, chave);

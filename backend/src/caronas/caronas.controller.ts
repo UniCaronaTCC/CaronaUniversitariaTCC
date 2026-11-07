@@ -231,16 +231,6 @@ export class CaronasController {
     return idCarona;
   }
 
-  private textoOpcional(valor: unknown, limite?: number): string | null {
-    const texto = valor?.toString().trim() ?? '';
-
-    if (limite != null && texto.length > limite) {
-      throw new BadRequestException('Texto muito longo');
-    }
-
-    return texto || null;
-  }
-
   private validarCoordenada(
     valorRecebido: unknown,
     minimo: number,

@@ -1,0 +1,20 @@
+src/avaliacoes/avaliacoes.controller.spec.ts(21,11): error TS2352: Conversion of type '{ idAvaliacao: number; nota: number; comentario: string; criadoEm: Date; avaliador: { idUsuario: number; nome: string; email: string; senha: string; }; }' to type 'Avaliacao' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ idAvaliacao: number; nota: number; comentario: string; criadoEm: Date; avaliador: { idUsuario: number; nome: string; email: string; senha: string; }; }' is missing the following properties from type 'Avaliacao': solicitacao, avaliado
+src/caronas/caronas.controller.spec.ts(200,12): error TS2531: Object is possibly 'null'.
+src/caronas/caronas.controller.spec.ts(201,12): error TS2531: Object is possibly 'null'.
+src/caronas/caronas.controller.spec.ts(204,12): error TS18047: 'detalhes.dados.usuario.veiculo' is possibly 'null'.
+src/caronas/caronas.service.spec.ts(312,7): error TS2740: Type '{ idUsuario: number; }' is missing the following properties from type 'User': authId, nome, email, idInstituicao, and 18 more.
+src/caronas/caronas.service.spec.ts(402,20): error TS2352: Conversion of type '{ idCarona: number; usuario: { idUsuario: number; }; recorrente: false; status: string; dataInicio: string; horario: string; pontosEmbarque: never[]; }' to type 'Carona' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ idCarona: number; usuario: { idUsuario: number; }; recorrente: false; status: string; dataInicio: string; horario: string; pontosEmbarque: never[]; }' is missing the following properties from type 'Carona': veiculoPublicado, idRecorrencia, dataOcorrencia, origem, and 14 more.
+src/caronas/caronas.service.spec.ts(455,20): error TS2352: Conversion of type '{ idCarona: number; usuario: { idUsuario: number; }; recorrente: false; status: string; pontosEmbarque: never[]; }' to type 'Carona' may be a mistake because neither type sufficiently overlaps with the other. If this was intentional, convert the expression to 'unknown' first.
+  Type '{ idCarona: number; usuario: { idUsuario: number; }; recorrente: false; status: string; pontosEmbarque: never[]; }' is missing the following properties from type 'Carona': veiculoPublicado, idRecorrencia, dataOcorrencia, origem, and 16 more.
+src/caronas/caronas.service.spec.ts(556,7): error TS2740: Type '{ idUsuario: number; }' is missing the following properties from type 'User': authId, nome, email, idInstituicao, and 18 more.
+src/instituicoes/destinos-campus.spec.ts(130,34): error TS2322: Type '{ rotuloUnidade: undefined; enderecoCompleto: undefined; idCampus: number; idInstituicao: number; nome: string; municipio: string; uf: string; latitude: string | null; longitude: string | null; ativo: boolean; } | { ...; } | { ...; }' is not assignable to type 'InstituicaoCampus'.
+  Type '{ rotuloUnidade: undefined; enderecoCompleto: undefined; idCampus: number; idInstituicao: number; nome: string; municipio: string; uf: string; latitude: string | null; longitude: string | null; ativo: boolean; }' is not assignable to type 'InstituicaoCampus'.
+    Types of property 'rotuloUnidade' are incompatible.
+      Type 'undefined' is not assignable to type 'string | null'.
+src/users/verificacao-cnh.service.spec.ts(352,9): error TS2353: Object literal may only specify known properties, and 'code' does not exist in type 'Error'.
+test/verificacao-cnh.e2e-spec.ts(49,5): error TS2322: Type 'App' is not assignable to type 'INestApplication<App>'.
+  Type 'string' is not assignable to type 'INestApplication<App>'.
+test/verificacao-cnh.e2e-spec.ts(49,40): error TS2344: Type 'App' does not satisfy the constraint 'INestApplication<any>'.
+  Type 'string' is not assignable to type 'INestApplication<any>'.

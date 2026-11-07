@@ -74,44 +74,6 @@ class _AuthCampoTextoState extends State<AuthCampoTexto> {
   }
 }
 
-class AuthBotaoPrincipal extends StatelessWidget {
-  final String texto;
-  final VoidCallback? onPressed;
-
-  const AuthBotaoPrincipal({
-    super.key,
-    required this.texto,
-    required this.onPressed,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      height: 54,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: Colors.white,
-          foregroundColor: AppColors.primary,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(28),
-          ),
-          elevation: 0,
-        ),
-        onPressed: onPressed,
-        child: Text(
-          texto,
-          style: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1,
-          ),
-        ),
-      ),
-    );
-  }
-}
-
 class AuthCard extends StatelessWidget {
   final List<Widget> children;
 

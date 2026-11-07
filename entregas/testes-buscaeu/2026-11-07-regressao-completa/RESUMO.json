@@ -1,0 +1,145 @@
+{
+  "data_cliente": "2026-11-07",
+  "branch": "revisao",
+  "commit_base": "83944d8",
+  "codigo_local_com_alteracoes_nao_commitadas": true,
+  "backend": {
+    "backend-unit.json": {
+      "numTotalTests": 751,
+      "numPassedTests": 751,
+      "numFailedTests": 0,
+      "numTotalTestSuites": 51
+    },
+    "backend-http.json": {
+      "numTotalTests": 20,
+      "numPassedTests": 20,
+      "numFailedTests": 0,
+      "numTotalTestSuites": 2
+    }
+  },
+  "flutter": {
+    "testes": 1990,
+    "arquivos": 136,
+    "aprovado": true
+  },
+  "sql": {
+    "cenarios": 9,
+    "concorrencia_nao_executada_nesta_rodada": true
+  },
+  "eslint": {
+    "erros": 12,
+    "avisos": 11
+  },
+  "tipagem_completa_testes": {
+    "erros": 12,
+    "mesmos_12_diagnosticos_antes_da_limpeza": true
+  },
+  "estrutura_banco": {
+    "camada": "metadados PostgreSQL em READ ONLY",
+    "entidades": 16,
+    "colunasMapeadas": 169,
+    "colunasAusentes": [],
+    "gatilhosAtivos": [
+      "aplicar_cancelamento_carona",
+      "central_notificar_pagamento",
+      "estornar_participacao_encerrada",
+      "preparar_estorno_simulado"
+    ],
+    "aprovado": true
+  },
+  "etapas_finais": {
+    "backend-unit": {
+      "fase": "backend-unit",
+      "codigo": 0,
+      "segundos": 34.68
+    },
+    "sql-cancelamento-temporario": {
+      "codigo": 0,
+      "fase": "sql-cancelamento-temporario",
+      "segundos": 2.4
+    },
+    "backend-http": {
+      "fase": "backend-http",
+      "codigo": 0,
+      "segundos": 12.72
+    },
+    "flutter-analyze": {
+      "codigo": 0,
+      "segundos": 14.27,
+      "fase": "flutter-analyze"
+    },
+    "backend-build": {
+      "fase": "backend-build",
+      "codigo": 0,
+      "segundos": 11
+    },
+    "backend-eslint": {
+      "codigo": 1,
+      "fase": "backend-eslint",
+      "segundos": 18.74
+    },
+    "backend-types-build": {
+      "codigo": 0,
+      "fase": "backend-types-build",
+      "segundos": 3.71
+    },
+    "backend-types-tests": {
+      "codigo": 2,
+      "fase": "backend-types-tests",
+      "segundos": 3.29
+    },
+    "flutter-tests": {
+      "codigo": 0,
+      "segundos": 259.87,
+      "fase": "flutter-tests"
+    },
+    "flutter-apk": {
+      "codigo": 0,
+      "segundos": 52.74,
+      "fase": "flutter-apk"
+    }
+  },
+  "total_casos": 2770,
+  "por_dominio": {
+    "Perfil, foto, veículo e CNH": {
+      "PASSOU": 594
+    },
+    "Caronas e solicitações": {
+      "PASSOU": 532
+    },
+    "Pagamentos e reservas": {
+      "PASSOU": 208
+    },
+    "Conversas e notificações": {
+      "PASSOU": 171
+    },
+    "Mapas, destinos e viagem": {
+      "PASSOU": 666
+    },
+    "Autenticação e sessão": {
+      "PASSOU": 263
+    },
+    "Interface e componentes gerais": {
+      "PASSOU": 254
+    },
+    "Recorrências": {
+      "PASSOU": 42
+    },
+    "Histórico e avaliações": {
+      "PASSOU": 40
+    }
+  },
+  "escopo": "Automatizado, conforme escolha do usuário; sem aparelho, sem AppModule real, sem pagamentos reais, sem alteração de regras",
+  "integridade": {
+    "arquivosConferidos": 587,
+    "sha256Antes": "7f7cc2d829f6291e826b1b1a542a80ad46b7a3541d7fad4da558cee12df2545a",
+    "sha256Depois": "7f7cc2d829f6291e826b1b1a542a80ad46b7a3541d7fad4da558cee12df2545a",
+    "preservado": true
+  },
+  "apk": {
+    "caminho": "C:/TCC/CaronaUniversitariaTCC/frontend/build/app/outputs/flutter-apk/app-debug.apk",
+    "bytes": 209961750,
+    "sha256": "e76ca32c40600a6dba202eeaf8103bda49ee22859737de5bbcfc201ae9bd42f3",
+    "apiBaseUrl": "https://buscaeu-api-henrique.onrender.com"
+  }
+}

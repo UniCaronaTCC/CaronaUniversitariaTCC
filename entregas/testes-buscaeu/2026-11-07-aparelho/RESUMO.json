@@ -1,0 +1,93 @@
+{
+  "data": "2026-11-07",
+  "fuso": "America/Sao_Paulo",
+  "branch": "revisao",
+  "base": "83944d8",
+  "dispositivo": {
+    "modelo": "25078RA3EL",
+    "android": "15",
+    "resolucao": "720x1600",
+    "dpi": 320
+  },
+  "app_normal": "com.tcchej.uni_carona",
+  "qa": "com.tcchej.uni_carona.qa",
+  "servidor_app_normal": "https://buscaeu-api-henrique.onrender.com",
+  "rodadas": [
+    {
+      "id": 1,
+      "casos": 155,
+      "resultados": {
+        "PASSOU": 139,
+        "FALHOU": 16
+      },
+      "sucesso_runner": false
+    },
+    {
+      "id": 2,
+      "casos": 193,
+      "resultados": {
+        "PASSOU": 184,
+        "FALHOU": 9
+      },
+      "sucesso_runner": false
+    },
+    {
+      "id": 3,
+      "casos": 10,
+      "resultados": {
+        "FALHOU": 5,
+        "PASSOU": 5
+      },
+      "sucesso_runner": false
+    }
+  ],
+  "execucoes_de_casos": 358,
+  "casos_unicos": 312,
+  "resultado_mais_recente_por_caso": {
+    "PASSOU": 300,
+    "FALHOU": 4,
+    "BLOQUEADO": 8
+  },
+  "codigo_preservado": true,
+  "arquivos_conferidos": 439,
+  "alterados_durante_rodada": [],
+  "recursos_nativos": [
+    {
+      "nome": "NATIVO: resolucao real e renderizacao do Android",
+      "estado": "PASSOU"
+    },
+    {
+      "nome": "NATIVO: ML Kit reconhece documento sintetico em 0 graus",
+      "estado": "PASSOU"
+    },
+    {
+      "nome": "NATIVO: ML Kit reconhece documento sintetico em 90 graus",
+      "estado": "PASSOU"
+    },
+    {
+      "nome": "NATIVO: ML Kit reconhece documento sintetico em 180 graus",
+      "estado": "PASSOU"
+    },
+    {
+      "nome": "NATIVO: ML Kit reconhece documento sintetico em 270 graus",
+      "estado": "PASSOU"
+    },
+    {
+      "nome": "NATIVO: camera traseira inicializa e libera sem fotografar",
+      "estado": "PASSOU"
+    },
+    {
+      "nome": "NATIVO: localizacao responde sem registrar coordenadas",
+      "estado": "PASSOU"
+    }
+  ],
+  "limites": [
+    "Copia QA usa fontes de produto iguais; dependencia integration_test e pequenos ajustes de executor sao exclusivos da copia.",
+    "Servicos de conta/caronas/Pix/chat/campus sao simulados; nao comprova jornada com banco e provedores reais.",
+    "OCR com imagem inteiramente sintetica, sem validar identidade oficial ou qualidade de fotos reais.",
+    "Camera inicializada/liberada e orientacao travada, sem fotografar documentos ou ambiente pessoal.",
+    "GPS respondeu parado; nao valida precisao em ponte/estrada, deslocamento ou segundo plano.",
+    "Dimensoes/fontes/teclado dos casos visuais sao simulados no mesmo aparelho; nao foram testados outros modelos ou iPhone.",
+    "Backend local nao foi publicado. Conta pessoal, CNH, caronas e mensagens foram preservadas."
+  ]
+}

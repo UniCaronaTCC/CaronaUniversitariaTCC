@@ -1,0 +1,169 @@
+{
+  "totais": {
+    "erros": 12,
+    "avisos": 11
+  },
+  "diagnosticos": [
+    {
+      "arquivo": "backend/src/users/foto-perfil-http.spec.ts",
+      "linha": 52,
+      "nivel": "erro",
+      "regra": "@typescript-eslint/require-await",
+      "mensagem": "Async arrow function has no 'await' expression."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil-http.spec.ts",
+      "linha": 52,
+      "nivel": "erro",
+      "regra": "@typescript-eslint/no-unsafe-return",
+      "mensagem": "Unsafe return of a value of type `any`."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil-http.spec.ts",
+      "linha": 52,
+      "nivel": "erro",
+      "regra": "@typescript-eslint/no-unsafe-assignment",
+      "mensagem": "Unsafe assignment of an `any` value."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil-http.spec.ts",
+      "linha": 62,
+      "nivel": "aviso",
+      "regra": "@typescript-eslint/no-unsafe-argument",
+      "mensagem": "Unsafe argument of type `any` assigned to a parameter of type `App`."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil-http.spec.ts",
+      "linha": 71,
+      "nivel": "aviso",
+      "regra": "@typescript-eslint/no-unsafe-argument",
+      "mensagem": "Unsafe argument of type `any` assigned to a parameter of type `App`."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil-http.spec.ts",
+      "linha": 76,
+      "nivel": "erro",
+      "regra": "@typescript-eslint/no-unsafe-member-access",
+      "mensagem": "Unsafe member access .dados on an `any` value."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil-http.spec.ts",
+      "linha": 80,
+      "nivel": "aviso",
+      "regra": "@typescript-eslint/no-unsafe-argument",
+      "mensagem": "Unsafe argument of type `any` assigned to a parameter of type `App`."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil-http.spec.ts",
+      "linha": 88,
+      "nivel": "aviso",
+      "regra": "@typescript-eslint/no-unsafe-argument",
+      "mensagem": "Unsafe argument of type `any` assigned to a parameter of type `App`."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil-http.spec.ts",
+      "linha": 96,
+      "nivel": "aviso",
+      "regra": "@typescript-eslint/no-unsafe-argument",
+      "mensagem": "Unsafe argument of type `any` assigned to a parameter of type `App`."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil-http.spec.ts",
+      "linha": 109,
+      "nivel": "aviso",
+      "regra": "@typescript-eslint/no-unsafe-argument",
+      "mensagem": "Unsafe argument of type `any` assigned to a parameter of type `App`."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil-http.spec.ts",
+      "linha": 118,
+      "nivel": "aviso",
+      "regra": "@typescript-eslint/no-unsafe-argument",
+      "mensagem": "Unsafe argument of type `any` assigned to a parameter of type `App`."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil-http.spec.ts",
+      "linha": 127,
+      "nivel": "aviso",
+      "regra": "@typescript-eslint/no-unsafe-argument",
+      "mensagem": "Unsafe argument of type `any` assigned to a parameter of type `App`."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil.service.spec.ts",
+      "linha": 61,
+      "nivel": "erro",
+      "regra": "@typescript-eslint/no-unsafe-member-access",
+      "mensagem": "Unsafe member access [0] on an `any` value."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil.service.spec.ts",
+      "linha": 64,
+      "nivel": "erro",
+      "regra": "@typescript-eslint/no-unsafe-member-access",
+      "mensagem": "Unsafe member access [2] on an `any` value."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil.service.ts",
+      "linha": 113,
+      "nivel": "aviso",
+      "regra": "@typescript-eslint/no-unsafe-argument",
+      "mensagem": "Unsafe argument of type `any` assigned to a parameter of type `string | URL | Request`."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil.service.ts",
+      "linha": 113,
+      "nivel": "aviso",
+      "regra": "@typescript-eslint/no-unsafe-argument",
+      "mensagem": "Unsafe argument of type `any` assigned to a parameter of type `RequestInit | undefined`."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil.service.ts",
+      "linha": 115,
+      "nivel": "aviso",
+      "regra": "@typescript-eslint/no-unsafe-argument",
+      "mensagem": "Unsafe argument of type `any[]` assigned to a parameter of type `AbortSignal[]`."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil.service.ts",
+      "linha": 117,
+      "nivel": "erro",
+      "regra": "@typescript-eslint/no-unsafe-assignment",
+      "mensagem": "Unsafe spread of an `any` value in an array."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil.service.ts",
+      "linha": 117,
+      "nivel": "erro",
+      "regra": "@typescript-eslint/no-unsafe-member-access",
+      "mensagem": "Unsafe member access .signal on an `any` value."
+    },
+    {
+      "arquivo": "backend/src/users/foto-perfil.service.ts",
+      "linha": 117,
+      "nivel": "erro",
+      "regra": "@typescript-eslint/no-unsafe-member-access",
+      "mensagem": "Unsafe member access .signal on an `any` value."
+    },
+    {
+      "arquivo": "backend/src/users/users.controller.spec.ts",
+      "linha": 266,
+      "nivel": "erro",
+      "regra": "@typescript-eslint/require-await",
+      "mensagem": "Async arrow function has no 'await' expression."
+    },
+    {
+      "arquivo": "backend/src/users/users.controller.spec.ts",
+      "linha": 266,
+      "nivel": "erro",
+      "regra": "@typescript-eslint/no-unsafe-return",
+      "mensagem": "Unsafe return of a value of type `any`."
+    },
+    {
+      "arquivo": "backend/src/users/users.controller.spec.ts",
+      "linha": 266,
+      "nivel": "erro",
+      "regra": "@typescript-eslint/no-unsafe-assignment",
+      "mensagem": "Unsafe assignment of an `any` value."
+    }
+  ]
+}

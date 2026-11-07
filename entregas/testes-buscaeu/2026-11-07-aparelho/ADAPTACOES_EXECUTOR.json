@@ -1,0 +1,214 @@
+[
+  {
+    "arquivo": "atalhos_home_test.dart",
+    "antes": "75cf97183a9dc284f5dfbc3ee5dff3e933f56bcac1cb7c8db1c4258d84f2f15a",
+    "depois": "8697add3eb09dc58cfedaf6ff2819332eaa100520a8c9318e1bdb1af1d1f1704",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "auth_perfil_erros_test.dart",
+    "antes": "91252fe3cd42059951db581f973f46524692a94df28b7bc9d5ad8b365f280e43",
+    "depois": "0b7075257bd35c5002bb36c36a9d0be035fdedf6fe1d1d920c28d068135d8672",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "avaliacao_consulta_service_test.dart",
+    "antes": "c917e08f0c555b7f9ebcef5092ef584ab1ec02318a062024393f7ba20244337d",
+    "depois": "6c31db2216abff7dc41299c7592802b887831eac014c26a5f0fb5fd7530911a4",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "avisos_caronas_solicitacoes_test.dart",
+    "antes": "d8a0cd2fc2b7f2a6c9fd4130e67daaadcc013302934be52792bca80b285f3277",
+    "depois": "0d10cac1399d933bd912c17d03f561f8e5a11a305bc34ecad557d6fb32f60f2d",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "avisos_mapa_test.dart",
+    "antes": "333a2b118c8ba0bac4a6057a0e63f607a1654a21c9cf3e9d71b0623eb306b7e5",
+    "depois": "9e6470f6508d23c3dcd14e46c90e9eda2fceb104c2b23b578d4f77b482ada7ee",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "buscar_carona_erros_test.dart",
+    "antes": "81f1cea61f4b2640dba162729b9dcaec81408edd3d76010d1a4dd87d7a0c7034",
+    "depois": "c5bcb1f9abf13e3e5f4069a81f386961013b1806506d3ff889150e1a546e1161",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "busca_caronas_service_test.dart",
+    "antes": "5ed7e34424ec662ae9cf7a407f36075236e646f44516172cae82e0b8ff80fb18",
+    "depois": "d1a72105375547680cbeff1736982eb9688467065e830c9efe4912173a0bd47c",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "campus_destino_service_test.dart",
+    "antes": "eafbfba7c26ae007e67f1913fb254723b1ed42d5f862f6b7f1c05cfce1357c52",
+    "depois": "fe59fc65c74b3ae64b57329f36eb57a1f156471396d3a23e16b26524944030af",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "capacidade_carona_test.dart",
+    "antes": "ff7056518d0cbac14826dd7e61f99632085807073d16ea90a88d7094d8cd5a38",
+    "depois": "b3aa8e8ca1d7499bde7aeaa2a2d6a136030337d94d9472ae82c7f7555d3eb0db",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "carona_detalhes_service_test.dart",
+    "antes": "15a8bccf04189d08f62fc46bc5bf5f59cf6446b91ee9af2c713b2395bfe4b689",
+    "depois": "6991bd5d188126c00d79b1bdbb0b273c6063649cafd7a6da64344afdf41530c6",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "contador_solicitacoes_memoria_test.dart",
+    "antes": "97328614dec2289cba072e2ff9c18da181e18444fdc218228fdbc3ddf36be4d7",
+    "depois": "1e179d0fd1d6c517283fd9927c37f2eb090de35cfc61150c457615f75b91dc66",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "conversas_memoria_test.dart",
+    "antes": "14a31441b50673d08e180415f5fa182a443d8b83fdcf9601a0fbd303187bd203",
+    "depois": "d436db31b555be06a7383195b473e3c3f8b0c979b79092c0fdf6687773a0ca5f",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "destino_campus_integracao_test.dart",
+    "antes": "e14fe39b21bdd69bed0f5f3a74dd4d8f412238edfeb694da566bf66c4a070bc0",
+    "depois": "1b9f7d66c199de9b304d0be1e4c5ea445f6f3d607a463319308fd3a40025b7fb",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "destino_home_test.dart",
+    "antes": "5ef7265a1e4bc1ea9e8fc273aa331d63b42e7bbf4222a7b2be4810a1b7181e77",
+    "depois": "575d8f53fd2f1d7b4d9dbcafa0eb8bf5ae1bf84973e8abcc7b55ed67631f20cb",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "detalhes_carona_solicitacao_test.dart",
+    "antes": "0c56d7c007f02cbf6fdc700bf37e6f51234a3992789dc49f63b5bd52ba04758b",
+    "depois": "fe2349f3ec9b44130047efb3851b4b6fa4302d15e11681d57cd774248436d9f4",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "detalhes_carona_test.dart",
+    "antes": "4aedc4d6357c826bd6a7728f3ad8882cf648885e5c2223dca3e38c481c666818",
+    "depois": "9105a823b591d8f55aff76769e8bb8f76009a78e6b3733624cd9fb323d71eb16",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "editar_capacidade_carona_test.dart",
+    "antes": "b33c0500f1cbcabab433853abf69a8256b14e1826e947e2dd8906584a3fb1400",
+    "depois": "71d7afc66c5ce547999c649a6cc4c0af6f966a73b49b1792e492391aa6c94600",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "foto_solicitacoes_test.dart",
+    "antes": "c9a35325562fb7a868c75ea36a192632c4d0574fdd0d43273ef6b2cfe53d26f6",
+    "depois": "ec3387b1e75ae11df8f07f0f4b5cf86de27734b99fb31fb6efd9062df60324a1",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "inicializacao_sdk_test.dart",
+    "antes": "f6916b8ac5aef187543b4cb838564c6481f849dfe8577e7e7aaa588ea1ed9628",
+    "depois": "3f223baa1f1652a3cb404aa356b56107e4bad787c76d09d63e85af56730214d2",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "listas_solicitacoes_service_test.dart",
+    "antes": "9a55d27e4267900ad4003591f38f53a5a622f5662d2d9440852b723d0d333ebd",
+    "depois": "4207fd26ec18c1eed2793240a6a8144ffddcb30d90f560b7d8797b604d494a61",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "lista_conversas_service_test.dart",
+    "antes": "f8d33ee6ad7e23ea51736ed3c15630c2da23d5d0fa0e0a31c7f876a96e9721a8",
+    "depois": "f69a4ef265bc8e3d67a4140bd58598adc45a5d28a460dd9233bea3d7532c8ba5",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "mapa_encontro_sem_gps_test.dart",
+    "antes": "cdecb0d8f28c79e59cc3a10f68ce24e3bffebe1a505e1be90597b9a549b90066",
+    "depois": "8f5bc9238a282e2ef175efc27de94044fe6c72a659fe94fe9858a5e7000f8dd4",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "mapa_precisao_test.dart",
+    "antes": "04abb65626c21c871dd7ab924cfb82b1fbb676ff11652c426f0cf9332ce5059b",
+    "depois": "8a8c4f00c8dc36ca1d42f9da556abe1f0e62e2d5c58dc364bae1a18786498b2b",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "minhas_caronas_detalhes_test.dart",
+    "antes": "31e59dc1a6eedeecd51934a04a3cd37c8182eb1427f1d335160a66bad8f343ec",
+    "depois": "af8cec523252dc16f04ce8bb38b0dae7c0f448dd16be9ae7853ac9807cec2b31",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "minhas_caronas_memoria_test.dart",
+    "antes": "2ef9374b7d4844f3e43b7c638437cb465b936fc4c781d2a0a37f37a560d7cfe0",
+    "depois": "7ffe7a696abb8a47ee855b328d65f17a9db84d04827e6a9fab5fd25391aff515",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "notificacoes_regressoes_test.dart",
+    "antes": "cf7c382ac904fadcdcf607b5ea7430f6ba3d588a64851da82a3bb35bf9bc703a",
+    "depois": "3143cef8f75b81d922b13ba6d9291ef770133e5cba8e1d8c4e7ad95528f407b4",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "perfil_carregamento_test.dart",
+    "antes": "e8a01de0c5260bfecd94dd1ff19432f551483ec88666e1676f76ba6d773a912d",
+    "depois": "f766af064a1de28e4a69aaefffed6b7c07575c2e5d04b92198610140c4687cf1",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "perfil_foto_test.dart",
+    "antes": "1dc374e13a507b0378fb8812b37ac3b5b23aa45efe501e08e301246d296cfdf7",
+    "depois": "7643ba3201a25bbd015c09caad7f05a1bde39081ad8421878f5315be98276620",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "publicar_por_encontro_test.dart",
+    "antes": "eda94d9029dd897aa3c27268168bdecd1150f6cafb60703024b365fc6e8ec658",
+    "depois": "1ffa4aafbe4de60d6785086d54840c6733e77ba24e96c2433d6503ed8133f59f",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "resumo_perfil_service_test.dart",
+    "antes": "18678ce98eecb54987bbaa421b28a76c98995e7657d3c8fc2d8e08eee113800f",
+    "depois": "36f846f26842950ff592eab25dfb22a322d4c40a960f908224e3235cf98d6322",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "sessao_renovacao_test.dart",
+    "antes": "174faa96e1a7c5214418f93d50ea2791365620fe77e759604bb0e397b92d6dd7",
+    "depois": "f8fc6ccb2d04084a6836d81005a5393e97419e0cabac4613351ff5ee46927a19",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "solicitacao_enviada_service_test.dart",
+    "antes": "33335f399498afb6d0beb9105c4c84f5c3089fbef72952576794a4ff55f0d002",
+    "depois": "3e4e34545abbc1089abc51a672e3342612db67b159e2be228edc976f61d65888",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "solicitacao_recebida_service_test.dart",
+    "antes": "7fb1f9c38701120d1c71a7ddb8c1b5d6d6a3c9e48d55adef864414510b9dcee9",
+    "depois": "c911deb90203d42e8ffe0f1766d25897900e4c49d03df8b8ba9a42a485bd92d9",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "visual_buscaeu_test.dart",
+    "antes": "2112d4249faaccbd1051cc49e66f73bb850008ce7d886331b47e584a9da0a6cb",
+    "depois": "708ec625487becd5ce533c709615df9499f8afdff274ebcba026b2df8cdee3d7",
+    "mudanca": "Adaptacao de transporte de mock para callbacks de frames nativos; mesmas assercoes"
+  },
+  {
+    "arquivo": "perfil_test.dart",
+    "mudanca": "Rolar ate que o alvo deixe a area coberta pelo cabecalho; nenhuma expectativa alterada"
+  },
+  {
+    "arquivo": "mapa_acompanhamento_passageiro_test.dart",
+    "mudanca": "Completer ficticio criado na zona dos callbacks de frame para erro de teste nao cruzar zonas de erro; assercoes preservadas"
+  }
+]

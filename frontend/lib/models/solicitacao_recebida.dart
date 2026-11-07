@@ -132,6 +132,4 @@ class SolicitacaoRecebida {
       !arquivada && !pagamentoConfirmado && status == 'ACEITA';
 
   bool get pontoNovoSolicitado => tipoPontoEmbarque == 'NOVO_SOLICITADO';
-
-  bool get pontoExistente => tipoPontoEmbarque == 'EXISTENTE';
 }

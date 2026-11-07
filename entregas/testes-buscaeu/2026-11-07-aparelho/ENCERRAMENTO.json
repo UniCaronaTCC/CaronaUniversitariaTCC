@@ -1,0 +1,10 @@
+{
+  "copiaQaRemovida": true,
+  "appNormalInstalado": true,
+  "activityNormalEmFoco": true,
+  "configuracaoManterTela": "0",
+  "componenteEstadoIgualAoHEAD": true,
+  "chatIgualAoHEAD": true,
+  "documentosOuCaronasPessoaisAlterados": false,
+  "commitPushDeploy": false
+}
