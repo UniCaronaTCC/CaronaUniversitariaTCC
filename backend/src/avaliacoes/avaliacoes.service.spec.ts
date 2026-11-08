@@ -1,4 +1,8 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Repository } from 'typeorm';
 
 import { CaronasService } from '../caronas/caronas.service';
@@ -74,6 +78,7 @@ describe('AvaliacoesService', () => {
       passageiro: { idUsuario: 1 },
       carona: {
         status: 'FINALIZADA',
+        iniciadaEm: new Date('2026-11-08T12:00:00Z'),
         usuario: { idUsuario: 2 },
       },
     });
@@ -111,6 +116,7 @@ describe('AvaliacoesService', () => {
       passageiro: { idUsuario: 1 },
       carona: {
         status: 'FINALIZADA',
+        iniciadaEm: new Date('2026-11-08T12:00:00Z'),
         usuario: { idUsuario: 2 },
       },
     });
@@ -121,42 +127,136 @@ describe('AvaliacoesService', () => {
     );
   });
 
-  it('libera avaliação recorrente depois da primeira ocorrência', () => {
-    const solicitacao = {
-      status: 'ACEITA',
-      criadoEm: new Date(2026, 7, 10, 8),
-      atualizadoEm: new Date(2026, 7, 10, 8),
-      carona: {
-        recorrente: true,
-        dataInicio: '2026-08-10',
-        dataFim: null,
-        horario: '19:00:00',
-        diasSemana: ['SEG'],
-      },
-    } as Solicitacao;
+  for (const idAvaliador of [1, 2]) {
+    describe(`avaliador ${idAvaliador === 1 ? 'passageiro' : 'motorista'}`, () => {
+      const participacao = (
+        status = 'ACEITA',
+        statusCarona = 'FINALIZADA',
+        iniciadaEm: Date | null = new Date('2026-11-08T12:00:00Z'),
+      ) => ({
+        idSolicitacao: 10,
+        status,
+        passageiro: { idUsuario: 1 },
+        carona: {
+          status: statusCarona,
+          iniciadaEm,
+          usuario: { idUsuario: 2 },
+        },
+      });
 
+      it('avalia a outra pessoa da participação, uma vez por autor', async () => {
+        solicitacoesRepository.findOne.mockResolvedValue(participacao());
+        // A outra pessoa já avaliou; isso não bloqueia o autor atual.
+        avaliacoesRepository.findOne.mockImplementation(
+          ({ where }: { where: { avaliador: { idUsuario: number } } }) =>
+            Promise.resolve(
+              where.avaliador.idUsuario === idAvaliador
+                ? null
+                : { idAvaliacao: 3 },
+            ),
+        );
+        await service.criar(idAvaliador, 10, 4, 'Boa viagem');
+        expect(avaliacoesRepository.findOne).toHaveBeenCalledWith({
+          where: {
+            solicitacao: { idSolicitacao: 10 },
+            avaliador: { idUsuario: idAvaliador },
+          },
+        });
+        expect(avaliacoesRepository.save).toHaveBeenCalledWith(
+          expect.objectContaining({
+            avaliador: { idUsuario: idAvaliador },
+            avaliado: { idUsuario: idAvaliador === 1 ? 2 : 1 },
+            nota: 4,
+          }),
+        );
+      });
+
+      it.each([
+        'PENDENTE',
+        'RECUSADA',
+        'EXPIRADA',
+        'CANCELADA_PASSAGEIRO',
+        'CANCELADA_MOTORISTA',
+      ])(
+        'bloqueia participação %s mesmo após a finalização',
+        async (status) => {
+          solicitacoesRepository.findOne.mockResolvedValue(
+            participacao(status),
+          );
+          await expect(
+            service.criar(idAvaliador, 10, 5, null),
+          ).rejects.toBeInstanceOf(ConflictException);
+          expect(avaliacoesRepository.save).not.toHaveBeenCalled();
+        },
+      );
+
+      it.each([
+        'ATIVA',
+        'LOTADA',
+        'EM_ANDAMENTO',
+        'CANCELADA',
+        'EXPIRADA',
+        'ENCERRADA_POR_TEMPO',
+      ])('bloqueia carona %s mesmo com participação aceita', async (status) => {
+        solicitacoesRepository.findOne.mockResolvedValue(
+          participacao('ACEITA', status),
+        );
+        await expect(
+          service.criar(idAvaliador, 10, 5, null),
+        ).rejects.toBeInstanceOf(ConflictException);
+        expect(avaliacoesRepository.save).not.toHaveBeenCalled();
+      });
+
+      it('bloqueia oferta vencida sem corrida iniciada', async () => {
+        solicitacoesRepository.findOne.mockResolvedValue(
+          participacao('ACEITA', 'FINALIZADA', null),
+        );
+        await expect(
+          service.criar(idAvaliador, 10, 5, null),
+        ).rejects.toBeInstanceOf(ConflictException);
+        expect(avaliacoesRepository.save).not.toHaveBeenCalled();
+      });
+
+      it('bloqueia repetição da avaliação do mesmo autor', async () => {
+        solicitacoesRepository.findOne.mockResolvedValue(participacao());
+        avaliacoesRepository.findOne.mockResolvedValue({ idAvaliacao: 3 });
+        await expect(service.criar(idAvaliador, 10, 5, null)).rejects.toThrow(
+          'Você já avaliou esta carona',
+        );
+        expect(avaliacoesRepository.save).not.toHaveBeenCalled();
+      });
+    });
+  }
+
+  it('não libera carona recorrente antiga apenas porque passou o horário', () => {
     expect(
-      service.podeAvaliarSolicitacao(solicitacao, new Date(2026, 7, 10, 20)),
-    ).toBe(true);
+      service.podeAvaliarSolicitacao({
+        status: 'ACEITA',
+        carona: {
+          recorrente: true,
+          status: 'ATIVA',
+          dataInicio: '2020-01-01',
+          horario: '12:00:00',
+          diasSemana: ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'],
+        },
+      } as Solicitacao),
+    ).toBe(false);
   });
 
-  it('mantém avaliação recorrente bloqueada antes da primeira ocorrência', () => {
-    const solicitacao = {
+  it('não permite que um terceiro avalie a participação', async () => {
+    solicitacoesRepository.findOne.mockResolvedValue({
       status: 'ACEITA',
-      criadoEm: new Date(2026, 7, 10, 8),
-      atualizadoEm: new Date(2026, 7, 10, 8),
+      passageiro: { idUsuario: 1 },
       carona: {
-        recorrente: true,
-        dataInicio: '2026-08-10',
-        dataFim: null,
-        horario: '19:00:00',
-        diasSemana: ['SEG'],
+        status: 'FINALIZADA',
+        iniciadaEm: new Date('2026-11-08T12:00:00Z'),
+        usuario: { idUsuario: 2 },
       },
-    } as Solicitacao;
-
-    expect(
-      service.podeAvaliarSolicitacao(solicitacao, new Date(2026, 7, 10, 18)),
-    ).toBe(false);
+    });
+    await expect(service.criar(99, 10, 5, null)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+    expect(avaliacoesRepository.save).not.toHaveBeenCalled();
   });
 
   it('lista as avaliacoes recebidas com media e paginacao', async () => {

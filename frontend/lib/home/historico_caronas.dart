@@ -14,6 +14,7 @@ import '../widgets/card_solicitacao_enviada.dart';
 import '../widgets/componentes_padrao.dart';
 import '../widgets/dialogo_avaliacao.dart';
 import '../widgets/visual_buscaeu.dart';
+import 'avaliar_passageiros.dart';
 import 'detalhes_carona.dart';
 
 typedef CarregarHistorico = Future<Map<String, dynamic>> Function();
@@ -21,11 +22,13 @@ typedef CarregarHistorico = Future<Map<String, dynamic>> Function();
 class HistoricoCaronasTela extends StatefulWidget {
   final CarregarHistorico? carregarOfertas;
   final CarregarHistorico? carregarPedidos;
+  final CarregarPassageirosAvaliacao? carregarPassageiros;
 
   const HistoricoCaronasTela({
     super.key,
     this.carregarOfertas,
     this.carregarPedidos,
+    this.carregarPassageiros,
   });
 
   @override
@@ -138,6 +141,22 @@ class _HistoricoCaronasTelaState extends State<HistoricoCaronasTela> {
     }
   }
 
+  Future<void> abrirAvaliacaoPassageiros(Carona carona) async {
+    if (carona.status != 'FINALIZADA' ||
+        ModalRoute.of(context)?.isCurrent != true) {
+      return;
+    }
+    await Navigator.push<void>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AvaliarPassageirosTela(
+          idCarona: carona.id,
+          carregarPassageiros: widget.carregarPassageiros,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final fonteAmpliada = MediaQuery.textScalerOf(context).scale(14) > 18;
@@ -209,6 +228,9 @@ class _HistoricoCaronasTelaState extends State<HistoricoCaronasTela> {
       construirItem: (carona) => CardCaronaHistorico(
         carona: carona,
         onTap: () => abrirDetalhes(carona),
+        onAvaliarPassageiros: carona.status == 'FINALIZADA'
+            ? () => abrirAvaliacaoPassageiros(carona)
+            : null,
       ),
     );
   }

@@ -1,10 +1,118 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:uni_carona/home/avaliar_passageiros.dart';
 import 'package:uni_carona/home/historico_caronas.dart';
 import 'package:uni_carona/models/carona.dart';
 import 'package:uni_carona/models/solicitacao_enviada.dart';
+import 'package:uni_carona/models/solicitacao_recebida.dart';
 
 void main() {
+  for (final status in [
+    'ATIVA',
+    'EM_ANDAMENTO',
+    'CANCELADA',
+    'ENCERRADA_POR_TEMPO',
+    'FINALIZADA',
+  ]) {
+    testWidgets('ação de avaliar passageiros no histórico de carona $status', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: HistoricoCaronasTela(
+            carregarOfertas: () async => {
+              'sucesso': true,
+              'dados': [_criarCarona(id: 1, status: status)],
+            },
+            carregarPedidos: () async => {
+              'sucesso': true,
+              'dados': <SolicitacaoEnviada>[],
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.text('AVALIAR PASSAGEIROS'),
+        status == 'FINALIZADA' ? findsOneWidget : findsNothing,
+      );
+    });
+  }
+
+  testWidgets('abre os passageiros da carona correta a partir do histórico', (
+    tester,
+  ) async {
+    int? idConsultado;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: HistoricoCaronasTela(
+          carregarOfertas: () async => {
+            'sucesso': true,
+            'dados': [_criarCarona(id: 42, status: 'FINALIZADA')],
+          },
+          carregarPedidos: () async => {
+            'sucesso': true,
+            'dados': <SolicitacaoEnviada>[],
+          },
+          carregarPassageiros: (idCarona) async {
+            idConsultado = idCarona;
+            return {'sucesso': true, 'dados': <SolicitacaoRecebida>[]};
+          },
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    await tester.drag(
+      find.byType(RefreshIndicator).first,
+      const Offset(0, -300),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('AVALIAR PASSAGEIROS').hitTestable(), findsOneWidget);
+    await tester.tap(find.text('AVALIAR PASSAGEIROS'));
+    await tester.pumpAndSettle();
+    expect(find.byType(AvaliarPassageirosTela), findsOneWidget);
+    expect(idConsultado, 42);
+    expect(find.textContaining('Nenhum passageiro disponível'), findsOneWidget);
+  });
+
+  testWidgets(
+    'passageiro continua podendo abrir avaliação do motorista no histórico',
+    (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: HistoricoCaronasTela(
+            carregarOfertas: () async => {'sucesso': true, 'dados': <Carona>[]},
+            carregarPedidos: () async => {
+              'sucesso': true,
+              'dados': [
+                SolicitacaoEnviada(
+                  id: 3,
+                  status: 'ACEITA',
+                  localEmbarque: 'Praça',
+                  motorista: 'Motorista teste',
+                  idCarona: 4,
+                  destino: 'Campus',
+                  dataInicio: DateTime(2026, 11, 8),
+                  horario: '12:00:00',
+                  valor: 8,
+                  statusCarona: 'FINALIZADA',
+                  podeAvaliar: true,
+                ),
+              ],
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Como passageiro'));
+      await tester.pumpAndSettle();
+      await tester.ensureVisible(find.text('AVALIAR'));
+      await tester.tap(find.text('AVALIAR'));
+      await tester.pumpAndSettle();
+      expect(find.text('Avaliar Motorista teste'), findsOneWidget);
+    },
+  );
+
   for (final statusCarona in ['ATIVA', 'FINALIZADA']) {
     testWidgets(
       'mantem solicitacao expirada no historico com carona $statusCarona',

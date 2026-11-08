@@ -7,11 +7,13 @@ import 'visual_buscaeu.dart';
 class CardCaronaHistorico extends StatelessWidget {
   final Carona carona;
   final VoidCallback onTap;
+  final VoidCallback? onAvaliarPassageiros;
 
   const CardCaronaHistorico({
     super.key,
     required this.carona,
     required this.onTap,
+    this.onAvaliarPassageiros,
   });
 
   @override
@@ -128,6 +130,15 @@ class CardCaronaHistorico extends StatelessWidget {
                 ),
               ],
             ),
+            if (carona.status == 'FINALIZADA' &&
+                onAvaliarPassageiros != null) ...[
+              const SizedBox(height: 16),
+              OutlinedButton.icon(
+                onPressed: onAvaliarPassageiros,
+                icon: const Icon(Icons.star_outline),
+                label: const Text('AVALIAR PASSAGEIROS'),
+              ),
+            ],
           ],
         ),
       ),

@@ -63,7 +63,9 @@ export class AvaliacoesService {
     }
 
     if (!this.podeAvaliarSolicitacao(solicitacao)) {
-      throw new ConflictException('A carona ainda não foi finalizada');
+      throw new ConflictException(
+        'Só é possível avaliar uma corrida iniciada e finalizada',
+      );
     }
 
     const idPassageiro = solicitacao.passageiro.idUsuario;
@@ -97,20 +99,13 @@ export class AvaliacoesService {
     return this.avaliacoesRepository.save(novaAvaliacao);
   }
 
-  podeAvaliarSolicitacao(
-    solicitacao: Solicitacao,
-    agora = new Date(),
-  ): boolean {
-    if (solicitacao.status !== 'ACEITA') {
-      return false;
-    }
-
-    if (!solicitacao.carona.recorrente) {
-      return solicitacao.carona.status === 'FINALIZADA';
-    }
-
-    const primeiraOcorrencia = this.buscarPrimeiraOcorrencia(solicitacao);
-    return primeiraOcorrencia != null && primeiraOcorrencia <= agora;
+  podeAvaliarSolicitacao(solicitacao: Solicitacao): boolean {
+    // Ofertas encerradas só pelo horário não comprovam início de corrida.
+    return (
+      solicitacao.status === 'ACEITA' &&
+      solicitacao.carona.status === 'FINALIZADA' &&
+      solicitacao.carona.iniciadaEm != null
+    );
   }
 
   async buscarSolicitacoesAvaliadas(
@@ -172,65 +167,5 @@ export class AvaliacoesService {
       totalPaginas: total === 0 ? 0 : Math.ceil(total / limite),
       avaliacoes,
     };
-  }
-
-  private buscarPrimeiraOcorrencia(solicitacao: Solicitacao): Date | null {
-    const carona = solicitacao.carona;
-    const diasSemana = carona.diasSemana ?? [];
-
-    if (diasSemana.length === 0) {
-      return null;
-    }
-
-    const partesData = carona.dataInicio.split('-').map(Number);
-    const partesHorario = carona.horario.split(':').map(Number);
-
-    if (partesData.length !== 3 || partesHorario.length < 2) {
-      return null;
-    }
-
-    const [ano, mes, dia] = partesData;
-    const [hora, minuto, segundo = 0] = partesHorario;
-    const inicio = new Date(ano, mes - 1, dia, hora, minuto, segundo);
-
-    if (Number.isNaN(inicio.getTime())) {
-      return null;
-    }
-
-    const aceitaEm = solicitacao.atualizadoEm ?? solicitacao.criadoEm;
-    const dataBase = aceitaEm > inicio ? aceitaEm : inicio;
-    const primeiroDia = new Date(
-      dataBase.getFullYear(),
-      dataBase.getMonth(),
-      dataBase.getDate(),
-      hora,
-      minuto,
-      segundo,
-    );
-    const nomesDias = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SAB'];
-
-    for (let quantidadeDias = 0; quantidadeDias < 7; quantidadeDias++) {
-      const data = new Date(primeiroDia);
-      data.setDate(primeiroDia.getDate() + quantidadeDias);
-
-      if (carona.dataFim != null && data > this.fimDoDia(carona.dataFim)) {
-        return null;
-      }
-
-      if (
-        data >= inicio &&
-        data >= aceitaEm &&
-        diasSemana.includes(nomesDias[data.getDay()])
-      ) {
-        return data;
-      }
-    }
-
-    return null;
-  }
-
-  private fimDoDia(dataRecebida: string): Date {
-    const [ano, mes, dia] = dataRecebida.split('-').map(Number);
-    return new Date(ano, mes - 1, dia, 23, 59, 59);
   }
 }
