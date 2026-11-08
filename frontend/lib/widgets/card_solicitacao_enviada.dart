@@ -6,6 +6,7 @@ import '../models/solicitacao_enviada.dart';
 import 'status_solicitacao.dart';
 import 'avatar_usuario.dart';
 import 'visual_buscaeu.dart';
+import 'indicador_reputacao.dart';
 
 class CardSolicitacaoEnviada extends StatelessWidget {
   final SolicitacaoEnviada solicitacao;
@@ -64,13 +65,21 @@ class CardSolicitacaoEnviada extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(
-                          solicitacao.motorista,
-                          style: const TextStyle(
-                            color: AppColors.text,
-                            fontSize: 17,
-                            fontWeight: FontWeight.bold,
-                          ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              solicitacao.motorista,
+                              style: const TextStyle(
+                                color: AppColors.text,
+                                fontSize: 17,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            IndicadorReputacao(
+                              reputacao: solicitacao.reputacaoMotorista,
+                            ),
+                          ],
                         ),
                       ),
                       if (onAbrirDetalhes != null)

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../config/app_colors.dart';
 import '../models/carona.dart';
+import 'indicador_reputacao.dart';
 
 class CardCaronaDisponivel extends StatelessWidget {
   final Carona carona;
@@ -77,6 +78,10 @@ class CardCaronaDisponivel extends StatelessWidget {
                 ],
               ),
 
+              Padding(
+                padding: const EdgeInsets.only(left: 36),
+                child: IndicadorReputacao(reputacao: carona.reputacaoMotorista),
+              ),
               const SizedBox(height: 20),
 
               Text(
@@ -365,6 +370,9 @@ class CardCaronaDisponivel extends StatelessWidget {
                             fontWeight: FontWeight.w600,
                             color: AppColors.text,
                           ),
+                        ),
+                        IndicadorReputacao(
+                          reputacao: carona.reputacaoMotorista,
                         ),
                         if (veiculo.isNotEmpty) ...[
                           const SizedBox(height: 2),

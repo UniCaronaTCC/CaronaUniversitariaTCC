@@ -4,6 +4,7 @@ import '../config/app_colors.dart';
 import '../models/carona.dart';
 import '../utils/formatador_data.dart';
 import 'visual_buscaeu.dart';
+import 'indicador_reputacao.dart';
 
 class CardCaronaPublicada extends StatelessWidget {
   final Carona carona;
@@ -49,6 +50,7 @@ class CardCaronaPublicada extends StatelessWidget {
                 alignment: Alignment.centerLeft,
                 child: SeloBuscaEu(texto: status, cor: cor),
               ),
+              IndicadorReputacao(reputacao: carona.reputacaoMotorista),
               const SizedBox(height: 12),
               Wrap(
                 spacing: 16,

@@ -10,6 +10,7 @@ import { CaronasService } from './caronas.service';
 import { RecorrenciaCarona } from './recorrencia.entity';
 import { RecorrenciasController } from './recorrencias.controller';
 import { RecorrenciasService } from './recorrencias.service';
+import { ReputacoesService } from '../avaliacoes/reputacoes.service';
 
 describe('HTTP de publicacao por encontro (sem banco real)', () => {
   let app: INestApplication<Server>;
@@ -46,6 +47,10 @@ describe('HTTP de publicacao por encontro (sem banco real)', () => {
       controllers: [CaronasController, RecorrenciasController],
       providers: [
         { provide: CaronasService, useValue: caronas },
+        {
+          provide: ReputacoesService,
+          useValue: { buscarResumos: () => Promise.resolve(new Map()) },
+        },
         { provide: RecorrenciasService, useValue: recorrencias },
         {
           provide: SupabaseAuthService,

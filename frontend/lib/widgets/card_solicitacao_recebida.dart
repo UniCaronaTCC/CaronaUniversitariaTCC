@@ -6,6 +6,7 @@ import 'status_solicitacao.dart';
 import 'aviso_estorno_simulado.dart';
 import 'avatar_usuario.dart';
 import 'visual_buscaeu.dart';
+import 'indicador_reputacao.dart';
 
 class CardSolicitacaoRecebida extends StatelessWidget {
   final SolicitacaoRecebida solicitacao;
@@ -120,6 +121,9 @@ class CardSolicitacaoRecebida extends StatelessWidget {
                     ],
                   ),
 
+                  IndicadorReputacao(
+                    reputacao: solicitacao.reputacaoPassageiro,
+                  ),
                   const SizedBox(height: 18),
 
                   _LinhaInformacao(

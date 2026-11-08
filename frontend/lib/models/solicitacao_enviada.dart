@@ -2,6 +2,7 @@ import '../utils/conversores_json.dart';
 import '../utils/data_hora_utils.dart';
 import '../utils/formatador_data.dart';
 import '../utils/formatador_moeda.dart';
+import 'reputacao.dart';
 
 class SolicitacaoEnviada {
   final int id;
@@ -11,6 +12,7 @@ class SolicitacaoEnviada {
   final double? embarqueLongitude;
   final String motorista;
   final String? fotoMotorista;
+  final Reputacao? reputacaoMotorista;
   final int idCarona;
   final String destino;
   final double? destinoLatitude;
@@ -34,6 +36,7 @@ class SolicitacaoEnviada {
     this.embarqueLongitude,
     required this.motorista,
     this.fotoMotorista,
+    this.reputacaoMotorista,
     required this.idCarona,
     required this.destino,
     this.destinoLatitude,
@@ -70,6 +73,7 @@ class SolicitacaoEnviada {
         json['embarqueLongitude'],
       ),
       motorista: motorista['nome']?.toString() ?? 'Motorista',
+      reputacaoMotorista: Reputacao.tentarLer(motorista['reputacao']),
       fotoMotorista: foto is String && foto.trim().isNotEmpty
           ? foto.trim()
           : null,

@@ -1,4 +1,5 @@
 import 'ponto_embarque.dart';
+import 'reputacao.dart';
 
 import '../utils/conversores_json.dart';
 import '../utils/data_hora_utils.dart';
@@ -34,6 +35,7 @@ class Carona {
   final int idMotorista;
   final String motorista;
   final String? fotoMotorista;
+  final Reputacao? reputacaoMotorista;
   final String? veiculoModelo;
   final String? veiculoCor;
   final String? veiculoPlaca;
@@ -63,6 +65,7 @@ class Carona {
     this.idMotorista = 0,
     required this.motorista,
     this.fotoMotorista,
+    this.reputacaoMotorista,
     this.veiculoModelo,
     this.veiculoCor,
     this.veiculoPlaca,
@@ -136,6 +139,9 @@ class Carona {
       motorista: usuario is Map
           ? usuario['nome']?.toString() ?? 'Motorista'
           : 'Motorista',
+      reputacaoMotorista: Reputacao.tentarLer(
+        usuario is Map ? usuario['reputacao'] : null,
+      ),
 
       veiculoModelo: veiculo is Map ? veiculo['modelo']?.toString() : null,
       fotoMotorista: foto is String && foto.trim().isNotEmpty
@@ -171,6 +177,7 @@ class Carona {
     idMotorista: idMotorista,
     motorista: motorista,
     fotoMotorista: fotoMotorista,
+    reputacaoMotorista: reputacaoMotorista,
     veiculoModelo: veiculoModelo,
     veiculoCor: veiculoCor,
     veiculoPlaca: veiculoPlaca,

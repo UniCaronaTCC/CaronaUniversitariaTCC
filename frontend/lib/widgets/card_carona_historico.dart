@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
 import '../models/carona.dart';
 import 'visual_buscaeu.dart';
+import 'indicador_reputacao.dart';
 
 class CardCaronaHistorico extends StatelessWidget {
   final Carona carona;
@@ -65,6 +66,7 @@ class CardCaronaHistorico extends StatelessWidget {
                 ),
               ],
             ),
+            IndicadorReputacao(reputacao: carona.reputacaoMotorista),
             const SizedBox(height: 16),
             Text(
               carona.rotuloHorario,

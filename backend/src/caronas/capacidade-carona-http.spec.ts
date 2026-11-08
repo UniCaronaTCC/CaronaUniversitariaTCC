@@ -11,6 +11,7 @@ import { UsersService } from '../users/users.service';
 import { Carona } from './carona.entity';
 import { CaronasController } from './caronas.controller';
 import { CaronasService } from './caronas.service';
+import { ReputacoesService } from '../avaliacoes/reputacoes.service';
 
 describe('HTTP de capacidade (sem banco real)', () => {
   let app: INestApplication<Server>;
@@ -49,6 +50,10 @@ describe('HTTP de capacidade (sem banco real)', () => {
       controllers: [CaronasController],
       providers: [
         { provide: CaronasService, useValue: service },
+        {
+          provide: ReputacoesService,
+          useValue: { buscarResumos: () => Promise.resolve(new Map()) },
+        },
         {
           provide: SupabaseAuthService,
           useValue: {

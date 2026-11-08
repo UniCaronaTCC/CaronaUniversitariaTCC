@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AuthModule } from '../auth/auth.module';
 import { AvaliacoesModule } from '../avaliacoes/avaliacoes.module';
+import { ReputacoesModule } from '../avaliacoes/reputacoes.module';
 import { Carona } from '../caronas/carona.entity';
 import { CaronasModule } from '../caronas/caronas.module';
 import { PontoEmbarque } from '../caronas/ponto-embarque.entity';
@@ -18,6 +19,7 @@ import { SolicitacoesService } from './solicitacoes.service';
     TypeOrmModule.forFeature([Solicitacao, Carona, PontoEmbarque, Pagamento]),
     AuthModule,
     AvaliacoesModule,
+    ReputacoesModule,
     CaronasModule,
     PagamentosModule,
   ],

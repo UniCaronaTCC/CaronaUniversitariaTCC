@@ -12,6 +12,10 @@ import {
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { RequisicaoComUsuario } from '../auth/requisicao-com-usuario';
+import {
+  ReputacoesService,
+  ResumoReputacao,
+} from '../avaliacoes/reputacoes.service';
 
 import { Solicitacao } from './solicitacao.entity';
 import { SolicitacoesService } from './solicitacoes.service';
@@ -21,7 +25,10 @@ type DadosSolicitacaoRecebidos = Record<string, unknown> | undefined;
 @UseGuards(JwtAuthGuard)
 @Controller()
 export class SolicitacoesController {
-  constructor(private readonly solicitacoesService: SolicitacoesService) {}
+  constructor(
+    private readonly solicitacoesService: SolicitacoesService,
+    private readonly reputacoes: ReputacoesService,
+  ) {}
 
   @Post('caronas/:idCarona/solicitacoes')
   async criarSolicitacao(
@@ -98,11 +105,17 @@ export class SolicitacoesController {
     const solicitacoes = await this.solicitacoesService.listarRecebidas(
       request.usuario.sub,
     );
+    const resumos = await this.reputacoes.buscarResumos(
+      solicitacoes.map((solicitacao) => solicitacao.passageiro.idUsuario),
+    );
 
     return {
       sucesso: true,
       dados: solicitacoes.map((solicitacao) =>
-        this.formatarSolicitacaoRecebida(solicitacao),
+        this.formatarSolicitacaoRecebida(
+          solicitacao,
+          resumos.get(solicitacao.passageiro.idUsuario),
+        ),
       ),
     };
   }
@@ -118,11 +131,17 @@ export class SolicitacoesController {
       request.usuario.sub,
       idCarona,
     );
+    const resumos = await this.reputacoes.buscarResumos(
+      solicitacoes.map((solicitacao) => solicitacao.passageiro.idUsuario),
+    );
 
     return {
       sucesso: true,
       dados: solicitacoes.map((solicitacao) =>
-        this.formatarSolicitacaoRecebida(solicitacao),
+        this.formatarSolicitacaoRecebida(
+          solicitacao,
+          resumos.get(solicitacao.passageiro.idUsuario),
+        ),
       ),
     };
   }
@@ -131,6 +150,9 @@ export class SolicitacoesController {
   async listarEnviadas(@Req() request: RequisicaoComUsuario) {
     const solicitacoes = await this.solicitacoesService.listarEnviadas(
       request.usuario.sub,
+    );
+    const resumos = await this.reputacoes.buscarResumos(
+      solicitacoes.map((solicitacao) => solicitacao.carona.usuario.idUsuario),
     );
 
     return {
@@ -157,6 +179,7 @@ export class SolicitacoesController {
           id: solicitacao.carona.usuario.idUsuario,
           nome: solicitacao.carona.usuario.nome,
           fotoPerfil: solicitacao.carona.usuario.fotoPerfil ?? null,
+          reputacao: resumos.get(solicitacao.carona.usuario.idUsuario) ?? null,
         },
 
         carona: {
@@ -243,7 +266,10 @@ export class SolicitacoesController {
     };
   }
 
-  private formatarSolicitacaoRecebida(solicitacao: Solicitacao) {
+  private formatarSolicitacaoRecebida(
+    solicitacao: Solicitacao,
+    reputacao?: ResumoReputacao,
+  ) {
     return {
       id: solicitacao.idSolicitacao,
       status: solicitacao.status,
@@ -266,6 +292,7 @@ export class SolicitacoesController {
         id: solicitacao.passageiro.idUsuario,
         nome: solicitacao.passageiro.nome,
         fotoPerfil: solicitacao.passageiro.fotoPerfil ?? null,
+        reputacao: reputacao ?? null,
       },
 
       carona: {

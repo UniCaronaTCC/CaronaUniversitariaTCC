@@ -1,9 +1,13 @@
 import { BadRequestException } from '@nestjs/common';
+import { ReputacoesService } from '../avaliacoes/reputacoes.service';
 
 import { CaronasController } from './caronas.controller';
 import { CaronasService } from './caronas.service';
 
 describe('CaronasController', () => {
+  const reputacoes = {
+    buscarResumos: () => Promise.resolve(new Map()),
+  } as unknown as ReputacoesService;
   it.each(['https://imagens.exemplo.com/motorista.jpg', null, undefined])(
     'retorna somente dados publicos do motorista com foto %s',
     async (fotoPerfil) => {
@@ -26,6 +30,7 @@ describe('CaronasController', () => {
       };
       const controller = new CaronasController(
         service as unknown as CaronasService,
+        reputacoes,
       );
       const request = { usuario: { sub: 1 } } as never;
       const disponiveis = await controller.listarCaronas(request);
@@ -40,6 +45,7 @@ describe('CaronasController', () => {
           idUsuario: 2,
           nome: 'Maria',
           fotoPerfil: fotoPerfil ?? null,
+          reputacao: null,
           veiculo: null,
         });
         expect(JSON.stringify(resultado)).not.toContain('privad');
@@ -84,6 +90,7 @@ describe('CaronasController', () => {
     };
     const controller = new CaronasController(
       service as unknown as CaronasService,
+      reputacoes,
     );
 
     const resultado = await controller.criarCarona(
@@ -124,6 +131,7 @@ describe('CaronasController', () => {
     const service = { criarCarona: jest.fn() };
     const controller = new CaronasController(
       service as unknown as CaronasService,
+      reputacoes,
     );
 
     await expect(
@@ -190,6 +198,7 @@ describe('CaronasController', () => {
     };
     const controller = new CaronasController(
       service as unknown as CaronasService,
+      reputacoes,
     );
     const request = { usuario: { sub: 1 } } as never;
 
@@ -224,6 +233,7 @@ describe('CaronasController', () => {
       };
       const controller = new CaronasController(
         service as unknown as CaronasService,
+        reputacoes,
       );
       const resultado = await controller.buscarDetalhesCarona('1', {
         usuario: { sub: 1 },
@@ -248,6 +258,7 @@ describe('CaronasController', () => {
     };
     const controller = new CaronasController(
       service as unknown as CaronasService,
+      reputacoes,
     );
     const resultado = await controller.buscarDetalhesCarona('1', {
       usuario: { sub: 1 },
@@ -261,6 +272,7 @@ describe('CaronasController', () => {
       const service = { buscarDetalhesCarona: jest.fn() };
       const controller = new CaronasController(
         service as unknown as CaronasService,
+        reputacoes,
       );
       await expect(
         controller.buscarDetalhesCarona(id, { usuario: { sub: 1 } } as never),
@@ -273,6 +285,7 @@ describe('CaronasController', () => {
     const service = { atualizarPosicaoAtual: jest.fn() };
     const controller = new CaronasController(
       service as unknown as CaronasService,
+      reputacoes,
     );
 
     await expect(

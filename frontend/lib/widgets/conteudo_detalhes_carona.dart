@@ -7,6 +7,7 @@ import '../models/ponto_embarque.dart';
 import '../utils/formatador_data.dart';
 import 'avatar_usuario.dart';
 import 'visual_buscaeu.dart';
+import 'indicador_reputacao.dart';
 
 class ConteudoDetalhesCarona extends StatelessWidget {
   final Carona carona;
@@ -45,6 +46,7 @@ class ConteudoDetalhesCarona extends StatelessWidget {
                       const Text('Motorista', style: VisualBuscaEu.descricao),
                       const SizedBox(height: 3),
                       Text(carona.motorista, style: VisualBuscaEu.titulo),
+                      IndicadorReputacao(reputacao: carona.reputacaoMotorista),
                     ],
                   ),
                 ),

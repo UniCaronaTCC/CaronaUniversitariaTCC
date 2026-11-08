@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { AuthModule } from '../auth/auth.module';
+import { ReputacoesModule } from '../avaliacoes/reputacoes.module';
 // Importa o módulo de autenticação para usar o JwtAuthGuard
 
 import { Carona } from './carona.entity';
@@ -33,6 +34,7 @@ import { PagamentosModule } from '../pagamentos/pagamentos.module';
     // Permite usar os repositórios de Carona e PontoEmbarque
 
     AuthModule,
+    ReputacoesModule,
     PagamentosModule,
     // Permite proteger rotas de caronas com JWT
   ],

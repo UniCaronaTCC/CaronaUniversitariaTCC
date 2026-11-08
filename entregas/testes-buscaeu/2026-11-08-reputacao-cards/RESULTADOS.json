@@ -1,0 +1,44 @@
+{
+  "data": "2026-11-08",
+  "branch": "desenvolvimento",
+  "base": "633f8cf",
+  "etapa_1": {
+    "direcionados": { "casos": 59, "aprovados": 59, "suites": 6 },
+    "regressao_backend": { "casos": 799, "aprovados": 799, "suites": 53 },
+    "testes_novos_backend": 20,
+    "build": true,
+    "lint_arquivos_alterados_sem_fix": true
+  },
+  "etapa_2": {
+    "regressao_flutter": { "casos": 2165, "aprovados": 2165 },
+    "testes_novos_flutter": 140,
+    "direcionados_finais": { "funcionais": 140, "capturas": 3, "aprovados": 143 },
+    "larguras_logicas": [320, 412],
+    "escalas_texto": [1, 1.8],
+    "contextos": ["home", "busca", "publicadas", "historico", "recebidas", "enviadas", "detalhes"],
+    "analise_estatica": true
+  },
+  "revisao_final": {
+    "regressao_backend_repetida": true,
+    "analise_flutter_repetida": true,
+    "capturas_inspecionadas": true,
+    "formatacao": true,
+    "diff_check": true,
+    "apk_debug_compilado": true,
+    "apk_sha256": "56efb5be2d89ba047fb98d3a81de5294b43f7472065db28587dc5b1ef11a36ba"
+  },
+  "supabase": {
+    "somente_leitura": true,
+    "schema_alterado": false,
+    "dados_alterados": false,
+    "avaliacoes_no_momento": 5,
+    "indice_id_avaliado_existente": true,
+    "agregacao_conferida": true,
+    "diagnostico_sql_ms": { "execucao": 0.261, "planejamento": 9.518 },
+    "limite": "Consulta diagnostica usa subselect no filtro; nao representa latencia HTTP, celular ou teste de carga."
+  },
+  "commit_push_deploy": false,
+  "instalacao_no_celular": false,
+  "e2e_aparelho_render_nova_versao": "NAO_EXECUTADO",
+  "limite_contagens": "Direcionados e reexecucoes nao devem ser somados aos totais completos. Capturas nao sao novos cenarios funcionais."
+}

@@ -16,6 +16,10 @@ import {
 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import type { RequisicaoComUsuario } from '../auth/requisicao-com-usuario';
+import {
+  ReputacoesService,
+  ResumoReputacao,
+} from '../avaliacoes/reputacoes.service';
 
 import { Carona } from './carona.entity';
 import { CaronasService, DadosPosicaoAtualCarona } from './caronas.service';
@@ -25,7 +29,10 @@ type DadosCaronaRecebidos = Record<string, unknown> | undefined;
 @UseGuards(JwtAuthGuard)
 @Controller('caronas')
 export class CaronasController {
-  constructor(private readonly caronasService: CaronasService) {}
+  constructor(
+    private readonly caronasService: CaronasService,
+    private readonly reputacoes: ReputacoesService,
+  ) {}
 
   @Post()
   async criarCarona(
@@ -149,11 +156,14 @@ export class CaronasController {
     const caronas = await this.caronasService.listarMinhasCaronas(
       request.usuario.sub,
     );
+    const resumos = await this.reputacoes.buscarResumos(
+      caronas.map((carona) => carona.usuario.idUsuario),
+    );
 
     return {
       sucesso: true,
       dados: caronas.map((carona) => ({
-        ...this.formatarCarona(carona),
+        ...this.formatarCarona(carona, resumos.get(carona.usuario.idUsuario)),
         diasRecorrencia:
           carona.programacao?.diasSemana.map((dia) => DIAS_SEMANA[dia % 7]) ??
           [],
@@ -166,10 +176,15 @@ export class CaronasController {
     const caronas = await this.caronasService.listarCaronas(
       request.usuario.sub,
     );
+    const resumos = await this.reputacoes.buscarResumos(
+      caronas.map((carona) => carona.usuario.idUsuario),
+    );
 
     return {
       sucesso: true,
-      dados: caronas.map((carona) => this.formatarCarona(carona)),
+      dados: caronas.map((carona) =>
+        this.formatarCarona(carona, resumos.get(carona.usuario.idUsuario)),
+      ),
     };
   }
 
@@ -182,7 +197,13 @@ export class CaronasController {
       this.validarIdCarona(idRecebido),
       request.usuario.sub,
     );
-    return { sucesso: true, dados: this.formatarCarona(carona) };
+    const resumos = await this.reputacoes.buscarResumos([
+      carona.usuario.idUsuario,
+    ]);
+    return {
+      sucesso: true,
+      dados: this.formatarCarona(carona, resumos.get(carona.usuario.idUsuario)),
+    };
   }
 
   @Get(':idCarona/capacidade')
@@ -246,7 +267,7 @@ export class CaronasController {
     return valor;
   }
 
-  private formatarCarona(carona: Carona) {
+  private formatarCarona(carona: Carona, reputacao?: ResumoReputacao) {
     const veiculo = carona.veiculoPublicado;
     return {
       idCarona: carona.idCarona,
@@ -287,6 +308,7 @@ export class CaronasController {
         idUsuario: carona.usuario.idUsuario,
         nome: carona.usuario.nome,
         fotoPerfil: carona.usuario.fotoPerfil ?? null,
+        reputacao: reputacao ?? null,
         veiculo: veiculo
           ? {
               modelo: veiculo.modelo,

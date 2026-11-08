@@ -1,5 +1,6 @@
 import { SolicitacoesController } from './solicitacoes.controller';
 import { SolicitacoesService } from './solicitacoes.service';
+import { ReputacoesService } from '../avaliacoes/reputacoes.service';
 
 describe('Fotos nas respostas de solicitacoes', () => {
   const req = { usuario: { sub: 7 } } as never;
@@ -11,6 +12,9 @@ describe('Fotos nas respostas de solicitacoes', () => {
   };
   const controller = new SolicitacoesController(
     servico as unknown as SolicitacoesService,
+    {
+      buscarResumos: () => Promise.resolve(new Map()),
+    } as unknown as ReputacoesService,
   );
   beforeEach(() => jest.resetAllMocks());
 
@@ -44,6 +48,7 @@ describe('Fotos nas respostas de solicitacoes', () => {
         id: 8,
         nome: pessoa.nome,
         fotoPerfil: foto ?? null,
+        reputacao: null,
       });
       expect(resposta.dados[0].pagamentoLimiteEm).toBe(prazo);
     });
@@ -59,6 +64,7 @@ describe('Fotos nas respostas de solicitacoes', () => {
           id: 8,
           nome: pessoa.nome,
           fotoPerfil: foto ?? null,
+          reputacao: null,
         });
         expect(resposta.dados[0].pagamentoLimiteEm).toBe(prazo);
       }

@@ -1,6 +1,7 @@
 import '../utils/conversores_json.dart';
 import '../utils/data_hora_utils.dart';
 import '../utils/formatador_data.dart';
+import 'reputacao.dart';
 
 class SolicitacaoRecebida {
   final int id;
@@ -15,6 +16,7 @@ class SolicitacaoRecebida {
 
   final String passageiro;
   final String? fotoPassageiro;
+  final Reputacao? reputacaoPassageiro;
   final int idCarona;
   final String destino;
   final DateTime dataInicio;
@@ -37,6 +39,7 @@ class SolicitacaoRecebida {
     required this.embarqueLongitude,
     required this.passageiro,
     this.fotoPassageiro,
+    this.reputacaoPassageiro,
     required this.idCarona,
     required this.destino,
     required this.dataInicio,
@@ -75,6 +78,7 @@ class SolicitacaoRecebida {
       embarqueLongitude: converterJsonParaDouble(json['embarqueLongitude']),
 
       passageiro: passageiro['nome']?.toString() ?? 'Passageiro',
+      reputacaoPassageiro: Reputacao.tentarLer(passageiro['reputacao']),
       fotoPassageiro: foto is String && foto.trim().isNotEmpty
           ? foto.trim()
           : null,
