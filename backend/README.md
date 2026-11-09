@@ -1,98 +1,93 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# BuscaEu — backend
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+API em **NestJS, TypeScript e Node.js**, com **TypeORM e PostgreSQL**. Centraliza as regras de negócio e as operações de persistência do aplicativo.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+[Voltar ao projeto](../README.md) · [Guia da Parte 4](../docs/PARTE_4_IMPLEMENTACAO.md)
 
-## Description
+## Organização do código
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+| Pasta em `src/` | Responsabilidade |
+|---|---|
+| `auth/` | Validação do token Supabase e identificação do usuário da aplicação |
+| `users/` | Perfil, veículo, fotos e conferência dos dados extraídos da CNH |
+| `caronas/` | Ofertas, recorrências, vagas e ciclo de vida da viagem |
+| `solicitacoes/` | Pedidos, aceite, recusa, cancelamento e expiração |
+| `pagamentos/` | Pix Dev Mode, tentativas, webhook e estornos simulados |
+| `mensagens/` | Conversas e mensagens entre participantes |
+| `notificacoes/` | Avisos internos |
+| `avaliacoes/` | Avaliações e resumo de reputação |
+| `instituicoes/` | Instituições e destinos acadêmicos |
+| `rotas/` | Cálculo de percurso pela integração com OpenRouteService |
+| `database/` | Conversores de tipos utilizados nas entidades |
 
-## Project setup
+A composição dos módulos e a conexão com o banco ficam em [app.module.ts](src/app.module.ts). A inicialização HTTP fica em [main.ts](src/main.ts).
 
-```bash
-$ npm install
-```
+## Camadas de uma operação
 
-## Compile and run the project
+- **Controller:** recebe a requisição, valida os dados de entrada e monta a resposta.
+- **Guard:** valida a autenticação e identifica o usuário.
+- **Service:** aplica autorização e regras de negócio.
+- **Entity / Repository:** mapeia os dados e executa consultas e gravações.
+- **Transação:** mantém relacionadas as alterações que precisam ser confirmadas juntas.
 
-```bash
-# development
-$ npm run start
+Exemplo completo: [aceitar uma solicitação](../docs/PARTE_4_IMPLEMENTACAO.md). O service verifica o motorista, o estado do pedido e a disponibilidade; bloqueia as linhas durante a transação, reduz a vaga e grava a resposta e a conversa.
 
-# watch mode
-$ npm run start:dev
+## Autenticação
 
-# production mode
-$ npm run start:prod
-```
+O Supabase Auth gerencia a autenticação e a sessão. O aplicativo envia o access token no header `Authorization: Bearer <token>`.
 
-## Run tests
+O [JwtAuthGuard](src/auth/jwt-auth.guard.ts) usa o [SupabaseAuthService](src/auth/supabase-auth.service.ts) para consultar `auth.getUser(token)` e associa o identificador do Auth ao usuário de domínio. JWT é o formato do token; não é um segundo sistema independente de login. A autorização sobre cada recurso também é verificada nos services.
 
-```bash
-# unit tests
-$ npm run test
+## Configuração local
 
-# e2e tests
-$ npm run test:e2e
+Use Node.js compatível com NestJS 11 (Node 20 ou superior), npm e acesso ao PostgreSQL e aos serviços configurados para o projeto.
 
-# test coverage
-$ npm run test:cov
-```
+Crie `backend/.env` localmente. Os principais nomes utilizados pelo código são:
 
-## Deployment
+| Grupo | Variáveis |
+|---|---|
+| API | `PORT` (padrão 3000) |
+| PostgreSQL | `DB_HOST`, `DB_PORT`, `DB_USERNAME`, `DB_PASSWORD`, `DB_DATABASE`, `DB_SCHEMA` |
+| TLS do banco | `DB_SSL`, `DB_SSL_REJECT_UNAUTHORIZED` |
+| Supabase Auth | `SUPABASE_URL`, `SUPABASE_PUBLISHABLE_KEY` |
+| Fotos | `SUPABASE_SECRET_KEY`, `SUPABASE_PROFILE_BUCKET` |
+| Rotas | `OPENROUTESERVICE_API_KEY` |
+| Pix de teste | `ABACATEPAY_API_KEY`, `ABACATEPAY_WEBHOOK_SECRET` |
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+Essa lista cobre os principais serviços, não todas as opções do projeto. Use os valores e requisitos do ambiente da equipe. Senhas e chaves secretas ficam somente no servidor e nunca devem aparecer no repositório, nos slides ou na gravação.
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+npm ci
+npm run start:dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+Para compilar e iniciar o código compilado:
 
-## Resources
+```bash
+npm run build
+npm run start:prod
+```
 
-Check out a few resources that may come in handy when working with NestJS:
+A configuração utiliza `synchronize: false`: iniciar a API não cria ou atualiza automaticamente as tabelas. Consulte o [guia do banco](database/README.md) antes de preparar outro ambiente.
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+## Testes
 
-## Support
+```bash
+npm test -- --runInBand
+npm run test:cnh:http
+npm run build
+```
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+- `src/**/*.spec.ts`: testes unitários junto aos módulos.
+- `test/verificacao-cnh.e2e-spec.ts`: teste HTTP com autenticação e conferência simuladas.
+- `npm run test:cov`: gera relatório de cobertura; cobertura não é apresentada aqui como resultado já medido.
+- `npm run lint`: executa ESLint **com correção automática**, conforme o script atual.
 
-## Stay in touch
+Os testes isolados não comprovam por si só o funcionamento do banco, do OCR nativo, do GPS ou dos provedores reais. Evidências complementares estão em [entregas](../entregas/testes-buscaeu/).
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## Referências do próprio projeto
 
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+- [Regras de pagamento e cancelamento](src/pagamentos/FLUXO.md)
+- [Integração Pix](src/pagamentos/README.md)
+- [Conferência da CNH](src/users/FLUXO_CNH.md)
+- [Fotos de perfil](src/users/FOTO_PERFIL.md)
